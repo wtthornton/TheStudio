@@ -22,6 +22,7 @@ from src.compliance.router import (
     get_repo_by_full_name,
     list_repos,
     register_repo,
+    set_use_in_memory,
     update_repo_tier,
 )
 from src.repo.repo_profile import RepoTier
@@ -30,6 +31,7 @@ from src.repo.repo_profile import RepoTier
 @pytest.fixture(autouse=True)
 def clear_state() -> None:
     """Clear repo registry and transitions before each test."""
+    set_use_in_memory(True)
     clear()
     clear_transitions()
 

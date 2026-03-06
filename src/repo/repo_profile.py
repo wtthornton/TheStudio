@@ -38,6 +38,7 @@ class RepoProfileRow(Base):
     owner: Mapped[str] = mapped_column(String(255), nullable=False)
     repo_name: Mapped[str] = mapped_column(String(255), nullable=False)
     installation_id: Mapped[int] = mapped_column(nullable=False)
+    default_branch: Mapped[str] = mapped_column(String(255), nullable=False, default="main")
     tier: Mapped[RepoTier] = mapped_column(
         Enum(RepoTier, name="repo_tier", create_constraint=True),
         nullable=False,
@@ -51,16 +52,30 @@ class RepoProfileRow(Base):
         nullable=False,
         default=RepoStatus.ACTIVE,
     )
+    writes_enabled: Mapped[bool] = mapped_column(nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None
+    )
 
     __table_args__ = (
         {"comment": "Repo Profile — configuration record for a registered repository"},
     )
+
+    @property
+    def full_name(self) -> str:
+        """Return owner/repo_name format."""
+        return f"{self.owner}/{self.repo_name}"
+
+    @property
+    def is_deleted(self) -> bool:
+        """Check if repo is soft-deleted."""
+        return self.deleted_at is not None
 
 
 class RepoProfileCreate(BaseModel):
@@ -70,8 +85,9 @@ class RepoProfileCreate(BaseModel):
     repo_name: str
     installation_id: int
     webhook_secret: str
+    default_branch: str = "main"
     tier: RepoTier = RepoTier.OBSERVE
-    required_checks: list[str] = Field(default_factory=list)
+    required_checks: list[str] = Field(default_factory=lambda: ["ruff", "pytest"])
     tool_allowlist: list[str] = Field(default_factory=list)
 
 
@@ -84,9 +100,25 @@ class RepoProfileRead(BaseModel):
     owner: str
     repo_name: str
     installation_id: int
+    default_branch: str
     tier: RepoTier
     required_checks: list[str]
     tool_allowlist: list[str]
     status: RepoStatus
+    writes_enabled: bool
     created_at: datetime
     updated_at: datetime
+    deleted_at: datetime | None = None
+
+    @property
+    def full_name(self) -> str:
+        """Return owner/repo_name format."""
+        return f"{self.owner}/{self.repo_name}"
+
+
+class RepoProfileUpdate(BaseModel):
+    """Input for updating a repo profile."""
+
+    default_branch: str | None = None
+    required_checks: list[str] | None = None
+    tool_allowlist: list[str] | None = None
