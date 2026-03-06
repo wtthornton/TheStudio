@@ -1,11 +1,16 @@
-"""Unit tests for Expert Router (Story 1.3)."""
+"""Unit tests for Expert Router (Story 1.3, updated Story 2.7)."""
 
 from datetime import UTC, datetime
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from src.experts.expert import ExpertClass, ExpertRead, LifecycleState, TrustTier
 from src.intake.effective_role import BaseRole, EffectiveRolePolicy, Overlay
+from src.reputation.models import DriftSignal, WeightQueryResult
+from src.reputation.models import TrustTier as RepTrustTier
 from src.routing.router import (
+    DEFAULT_REPUTATION_CONFIDENCE,
+    DEFAULT_REPUTATION_WEIGHT,
+    _compute_selection_score,
     route,
 )
 
@@ -212,3 +217,257 @@ class TestRouterRiskFlags:
             available_experts=[],
         )
         assert plan.selections == ()
+
+
+# --- Story 2.7: Reputation-aware selection tests ---
+
+
+def _make_weight_result(
+    expert_id: UUID,
+    weight: float,
+    confidence: float,
+) -> WeightQueryResult:
+    """Helper to create a WeightQueryResult for testing."""
+    return WeightQueryResult(
+        expert_id=expert_id,
+        expert_version=1,
+        context_key="test-repo:mixed:medium",
+        weight=weight,
+        confidence=confidence,
+        trust_tier=RepTrustTier.PROBATION,
+        drift_signal=DriftSignal.STABLE,
+    )
+
+
+class TestSelectionScore:
+    """Tests for _compute_selection_score function."""
+
+    def test_trusted_base_score(self) -> None:
+        score = _compute_selection_score(TrustTier.TRUSTED, 0.5, 0.0)
+        assert score == 3.0
+
+    def test_probation_base_score(self) -> None:
+        score = _compute_selection_score(TrustTier.PROBATION, 0.5, 0.0)
+        assert score == 2.0
+
+    def test_reputation_adjusts_score(self) -> None:
+        # High weight with high confidence increases score
+        base = _compute_selection_score(TrustTier.PROBATION, 0.5, 0.0)
+        boosted = _compute_selection_score(TrustTier.PROBATION, 0.8, 0.9)
+        assert boosted > base
+
+    def test_low_confidence_dampens_weight(self) -> None:
+        # Same weight, different confidence
+        high_conf = _compute_selection_score(TrustTier.PROBATION, 0.8, 0.9)
+        low_conf = _compute_selection_score(TrustTier.PROBATION, 0.8, 0.1)
+        assert high_conf > low_conf
+
+    def test_score_formula_correct(self) -> None:
+        # Formula: trust_tier_score * (1 + weight * confidence)
+        score = _compute_selection_score(TrustTier.TRUSTED, 0.8, 0.5)
+        expected = 3.0 * (1 + 0.8 * 0.5)
+        assert abs(score - expected) < 0.001
+
+
+class TestRouterReputationIntegration:
+    """Router uses reputation weights in expert selection."""
+
+    def test_selection_includes_reputation_fields(self) -> None:
+        policy = EffectiveRolePolicy.compute(BaseRole.DEVELOPER, [Overlay.SECURITY])
+        sec = _make_expert("sec", ExpertClass.SECURITY)
+        qa = _make_expert("qa", ExpertClass.QA_VALIDATION)
+
+        def lookup(expert_id: UUID, repo: str | None) -> WeightQueryResult | None:
+            if expert_id == sec.id:
+                return _make_weight_result(expert_id, 0.75, 0.8)
+            if expert_id == qa.id:
+                return _make_weight_result(expert_id, 0.6, 0.5)
+            return None
+
+        plan = route(
+            policy,
+            risk_flags=None,
+            available_experts=[sec, qa],
+            reputation_lookup=lookup,
+        )
+        sec_sel = [s for s in plan.selections if s.expert_class == ExpertClass.SECURITY]
+        assert len(sec_sel) == 1
+        assert sec_sel[0].reputation_weight == 0.75
+        assert sec_sel[0].reputation_confidence == 0.8
+        assert sec_sel[0].selection_score > 0
+
+    def test_high_confidence_expert_preferred(self) -> None:
+        """Higher confidence expert wins even with same trust tier."""
+        policy = EffectiveRolePolicy.compute(BaseRole.DEVELOPER, [Overlay.SECURITY])
+        sec_low_conf = _make_expert("sec-low", ExpertClass.SECURITY, TrustTier.PROBATION)
+        sec_high_conf = _make_expert("sec-high", ExpertClass.SECURITY, TrustTier.PROBATION)
+        qa = _make_expert("qa", ExpertClass.QA_VALIDATION)
+
+        def lookup(expert_id: UUID, repo: str | None) -> WeightQueryResult | None:
+            if expert_id == sec_low_conf.id:
+                return _make_weight_result(expert_id, 0.7, 0.2)  # Low confidence
+            if expert_id == sec_high_conf.id:
+                return _make_weight_result(expert_id, 0.7, 0.9)  # High confidence
+            if expert_id == qa.id:
+                return _make_weight_result(expert_id, 0.5, 0.5)
+            return None
+
+        plan = route(
+            policy,
+            risk_flags=None,
+            available_experts=[sec_low_conf, sec_high_conf, qa],
+            reputation_lookup=lookup,
+        )
+        sec_sel = [s for s in plan.selections if s.expert_class == ExpertClass.SECURITY]
+        assert len(sec_sel) == 1
+        assert sec_sel[0].expert_id == sec_high_conf.id
+
+    def test_low_confidence_flagged_in_rationale(self) -> None:
+        """Experts with confidence < 0.3 are flagged as probationary selection."""
+        policy = EffectiveRolePolicy.compute(BaseRole.DEVELOPER, [Overlay.SECURITY])
+        sec = _make_expert("sec", ExpertClass.SECURITY)
+        qa = _make_expert("qa", ExpertClass.QA_VALIDATION)
+
+        def lookup(expert_id: UUID, repo: str | None) -> WeightQueryResult | None:
+            if expert_id == sec.id:
+                return _make_weight_result(expert_id, 0.6, 0.1)  # Below threshold
+            if expert_id == qa.id:
+                return _make_weight_result(expert_id, 0.5, 0.8)  # Above threshold
+            return None
+
+        plan = route(
+            policy,
+            risk_flags=None,
+            available_experts=[sec, qa],
+            reputation_lookup=lookup,
+        )
+        assert "probationary selection" in plan.rationale
+        assert "low confidence" in plan.rationale
+
+    def test_rationale_includes_reputation_info(self) -> None:
+        policy = EffectiveRolePolicy.compute(BaseRole.DEVELOPER, [Overlay.SECURITY])
+        sec = _make_expert("sec", ExpertClass.SECURITY)
+        qa = _make_expert("qa", ExpertClass.QA_VALIDATION)
+
+        def lookup(expert_id: UUID, repo: str | None) -> WeightQueryResult | None:
+            if expert_id == sec.id:
+                return _make_weight_result(expert_id, 0.85, 0.7)
+            if expert_id == qa.id:
+                return _make_weight_result(expert_id, 0.5, 0.5)
+            return None
+
+        plan = route(
+            policy,
+            risk_flags=None,
+            available_experts=[sec, qa],
+            reputation_lookup=lookup,
+        )
+        assert "reputation weight" in plan.rationale
+        assert "0.85" in plan.rationale
+        assert "confidence" in plan.rationale
+        assert "0.70" in plan.rationale
+
+    def test_mandatory_coverage_unaffected_by_reputation(self) -> None:
+        """Reputation adjusts within required classes, not across them."""
+        policy = EffectiveRolePolicy.compute(BaseRole.DEVELOPER, [Overlay.SECURITY])
+        sec = _make_expert("sec", ExpertClass.SECURITY, TrustTier.PROBATION)
+        qa = _make_expert("qa", ExpertClass.QA_VALIDATION, TrustTier.TRUSTED)
+
+        def lookup(expert_id: UUID, repo: str | None) -> WeightQueryResult | None:
+            if expert_id == sec.id:
+                return _make_weight_result(expert_id, 0.3, 0.2)  # Low score
+            if expert_id == qa.id:
+                return _make_weight_result(expert_id, 0.9, 0.9)  # High score
+            return None
+
+        plan = route(
+            policy,
+            risk_flags=None,
+            available_experts=[sec, qa],
+            reputation_lookup=lookup,
+        )
+        classes = {s.expert_class for s in plan.selections}
+        assert ExpertClass.SECURITY in classes
+        assert ExpertClass.QA_VALIDATION in classes
+
+    def test_missing_weight_uses_defaults(self) -> None:
+        """Experts with no reputation history get default values."""
+        policy = EffectiveRolePolicy.compute(BaseRole.DEVELOPER, [Overlay.SECURITY])
+        sec = _make_expert("sec", ExpertClass.SECURITY)
+        qa = _make_expert("qa", ExpertClass.QA_VALIDATION)
+
+        def lookup(expert_id: UUID, repo: str | None) -> WeightQueryResult | None:
+            return None  # No reputation data for any expert
+
+        plan = route(
+            policy,
+            risk_flags=None,
+            available_experts=[sec, qa],
+            reputation_lookup=lookup,
+        )
+        for selection in plan.selections:
+            assert selection.reputation_weight == DEFAULT_REPUTATION_WEIGHT
+            assert selection.reputation_confidence == DEFAULT_REPUTATION_CONFIDENCE
+
+    def test_no_lookup_uses_defaults(self) -> None:
+        """Without reputation_lookup, defaults are used."""
+        policy = EffectiveRolePolicy.compute(BaseRole.DEVELOPER, [Overlay.SECURITY])
+        sec = _make_expert("sec", ExpertClass.SECURITY)
+        qa = _make_expert("qa", ExpertClass.QA_VALIDATION)
+        plan = route(
+            policy,
+            risk_flags=None,
+            available_experts=[sec, qa],
+        )
+        for selection in plan.selections:
+            assert selection.reputation_weight == DEFAULT_REPUTATION_WEIGHT
+            assert selection.reputation_confidence == DEFAULT_REPUTATION_CONFIDENCE
+
+    def test_ranking_by_selection_score(self) -> None:
+        """Candidates within a class are ranked by selection score."""
+        policy = EffectiveRolePolicy.compute(BaseRole.DEVELOPER, [Overlay.SECURITY])
+        sec_bad = _make_expert("sec-bad", ExpertClass.SECURITY, TrustTier.PROBATION)
+        sec_good = _make_expert("sec-good", ExpertClass.SECURITY, TrustTier.PROBATION)
+        qa = _make_expert("qa", ExpertClass.QA_VALIDATION)
+
+        def lookup(expert_id: UUID, repo: str | None) -> WeightQueryResult | None:
+            if expert_id == sec_bad.id:
+                return _make_weight_result(expert_id, 0.3, 0.5)  # Lower score
+            if expert_id == sec_good.id:
+                return _make_weight_result(expert_id, 0.9, 0.9)  # Higher score
+            if expert_id == qa.id:
+                return _make_weight_result(expert_id, 0.5, 0.5)
+            return None
+
+        plan = route(
+            policy,
+            risk_flags=None,
+            available_experts=[sec_bad, sec_good, qa],
+            reputation_lookup=lookup,
+        )
+        sec_sel = [s for s in plan.selections if s.expert_class == ExpertClass.SECURITY]
+        assert len(sec_sel) == 1
+        assert sec_sel[0].expert_id == sec_good.id
+
+
+class TestRouterReputationWithRepo:
+    """Router passes repo to reputation lookup."""
+
+    def test_repo_passed_to_lookup(self) -> None:
+        policy = EffectiveRolePolicy.compute(BaseRole.DEVELOPER, [Overlay.SECURITY])
+        sec = _make_expert("sec", ExpertClass.SECURITY)
+        qa = _make_expert("qa", ExpertClass.QA_VALIDATION)
+        captured_repos: list[str | None] = []
+
+        def lookup(expert_id: UUID, repo: str | None) -> WeightQueryResult | None:
+            captured_repos.append(repo)
+            return _make_weight_result(expert_id, 0.5, 0.5)
+
+        route(
+            policy,
+            risk_flags=None,
+            available_experts=[sec, qa],
+            reputation_lookup=lookup,
+            repo="my-repo",
+        )
+        assert all(r == "my-repo" for r in captured_repos)

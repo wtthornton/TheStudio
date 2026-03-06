@@ -5,17 +5,20 @@ Architecture reference: thestudioarc/05-expert-router.md
 The Router is the single entry point for expert consultation. It:
 1. Determines required expert classes from EffectiveRolePolicy + risk flags
 2. Queries Expert Library by class + capability tags
-3. Ranks candidates by trust_tier (trusted > probation; shadow excluded)
-4. Enforces budget limits
-5. Produces a ConsultPlan with rationale
-6. Emits Recruiter callback when no eligible expert exists
+3. Queries Reputation Engine for weights and confidence
+4. Ranks candidates by selection score (trust_tier * reputation-adjusted)
+5. Enforces budget limits
+6. Produces a ConsultPlan with rationale
+7. Emits Recruiter callback when no eligible expert exists
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from uuid import UUID
 
 from src.experts.expert import ExpertClass, ExpertRead, TrustTier
 from src.intake.effective_role import EffectiveRolePolicy
+from src.reputation.models import WeightQueryResult
 
 
 @dataclass(frozen=True)
@@ -26,6 +29,9 @@ class ExpertSelection:
     expert_version: int
     expert_class: ExpertClass
     pattern: str  # "parallel" or "staged"
+    reputation_weight: float  # From Reputation Engine (0.0-1.0, default 0.5)
+    reputation_confidence: float  # From Reputation Engine (0.0-1.0, default 0.0)
+    selection_score: float  # Computed: trust_tier_score * (1 + weight * confidence)
 
 
 @dataclass(frozen=True)
@@ -52,6 +58,43 @@ SIGNAL_ROUTING_DECISION_MADE = "routing_decision_made"
 SIGNAL_MANDATORY_COVERAGE_TRIGGERED = "mandatory_coverage_triggered"
 SIGNAL_EXPERT_GAP_TRIGGERED = "expert_gap_triggered"
 
+# Trust tier base scores for selection algorithm
+TRUST_TIER_SCORES: dict[TrustTier, float] = {
+    TrustTier.TRUSTED: 3.0,
+    TrustTier.PROBATION: 2.0,
+    TrustTier.SHADOW: 1.0,  # Not auto-selected, but included for completeness
+}
+
+# Threshold below which confidence is flagged as "probationary selection"
+LOW_CONFIDENCE_THRESHOLD = 0.3
+
+# Default reputation values for experts with no history
+DEFAULT_REPUTATION_WEIGHT = 0.5
+DEFAULT_REPUTATION_CONFIDENCE = 0.0
+
+
+def _compute_selection_score(
+    trust_tier: TrustTier,
+    reputation_weight: float,
+    reputation_confidence: float,
+) -> float:
+    """Compute selection score for ranking experts.
+
+    Formula: trust_tier_score * (1 + reputation_weight * confidence)
+
+    This means:
+    - Trust tier is the base factor
+    - Reputation weight adjusts within the tier (scaled by confidence)
+    - High confidence amplifies reputation; low confidence dampens it
+    """
+    base_score = TRUST_TIER_SCORES.get(trust_tier, 1.0)
+    reputation_adjustment = 1.0 + (reputation_weight * reputation_confidence)
+    return base_score * reputation_adjustment
+
+
+# Type alias for reputation lookup function (injected for testability)
+ReputationLookupFn = Callable[[UUID, str | None], WeightQueryResult | None]
+
 
 # Default capability tags to search for each expert class
 CLASS_DEFAULT_TAGS: dict[ExpertClass, list[str]] = {
@@ -66,11 +109,65 @@ CLASS_DEFAULT_TAGS: dict[ExpertClass, list[str]] = {
 }
 
 
+@dataclass(frozen=True)
+class ScoredCandidate:
+    """Intermediate structure for ranking candidates."""
+
+    expert: ExpertRead
+    reputation_weight: float
+    reputation_confidence: float
+    selection_score: float
+
+
+def _get_reputation_for_expert(
+    expert: ExpertRead,
+    repo: str | None,
+    reputation_lookup: ReputationLookupFn | None,
+) -> tuple[float, float]:
+    """Get reputation weight and confidence for an expert.
+
+    Returns (weight, confidence), defaulting to (0.5, 0.0) if no data.
+    """
+    if reputation_lookup is None:
+        return DEFAULT_REPUTATION_WEIGHT, DEFAULT_REPUTATION_CONFIDENCE
+
+    result = reputation_lookup(expert.id, repo)
+    if result is None:
+        return DEFAULT_REPUTATION_WEIGHT, DEFAULT_REPUTATION_CONFIDENCE
+
+    return result.weight, result.confidence
+
+
+def _score_and_rank_candidates(
+    candidates: list[ExpertRead],
+    repo: str | None,
+    reputation_lookup: ReputationLookupFn | None,
+) -> list[ScoredCandidate]:
+    """Score candidates using reputation and rank by selection score."""
+    scored: list[ScoredCandidate] = []
+
+    for expert in candidates:
+        weight, confidence = _get_reputation_for_expert(expert, repo, reputation_lookup)
+        score = _compute_selection_score(expert.trust_tier, weight, confidence)
+        scored.append(ScoredCandidate(
+            expert=expert,
+            reputation_weight=weight,
+            reputation_confidence=confidence,
+            selection_score=score,
+        ))
+
+    # Sort by selection_score descending
+    scored.sort(key=lambda c: c.selection_score, reverse=True)
+    return scored
+
+
 def route(
     effective_role: EffectiveRolePolicy,
     risk_flags: dict[str, bool] | None,
     available_experts: list[ExpertRead],
     max_experts_per_consult: int | None = None,
+    reputation_lookup: ReputationLookupFn | None = None,
+    repo: str | None = None,
 ) -> ConsultPlan:
     """Select expert subset and produce a ConsultPlan.
 
@@ -80,6 +177,10 @@ def route(
         available_experts: All active experts from Expert Library.
         max_experts_per_consult: Budget limit on total experts.
             If None, uses the policy's max_experts_per_consult.
+        reputation_lookup: Optional function to query Reputation Engine.
+            Signature: (expert_id, repo) -> WeightQueryResult | None.
+            If None, defaults are used (weight=0.5, confidence=0.0).
+        repo: Optional repo identifier for context-specific reputation lookup.
 
     Returns:
         ConsultPlan with selections, recruiter requests, and rationale.
@@ -142,20 +243,37 @@ def route(
             )
             continue
 
-        # Select the best candidate (already ranked by trust_tier from search)
-        best = candidates[0]
+        # Score and rank candidates using reputation
+        scored_candidates = _score_and_rank_candidates(
+            candidates, repo, reputation_lookup
+        )
+        best = scored_candidates[0]
+
+        # Build rationale with reputation info
+        rationale_suffix = ""
+        if best.reputation_confidence < LOW_CONFIDENCE_THRESHOLD:
+            rationale_suffix = " [probationary selection — low confidence]"
+        reputation_info = (
+            f"reputation weight {best.reputation_weight:.2f} "
+            f"(confidence {best.reputation_confidence:.2f})"
+        )
+
         selections.append(
             ExpertSelection(
-                expert_id=best.id,
-                expert_version=best.current_version,
-                expert_class=best.expert_class,
+                expert_id=best.expert.id,
+                expert_version=best.expert.current_version,
+                expert_class=best.expert.expert_class,
                 pattern="parallel",  # Default: parallel consult for independent domains
+                reputation_weight=best.reputation_weight,
+                reputation_confidence=best.reputation_confidence,
+                selection_score=best.selection_score,
             )
         )
         budget -= 1
         rationale_parts.append(
-            f"Selected {best.name} (v{best.current_version}, {best.trust_tier.value}) "
-            f"for {required_class.value} coverage"
+            f"Selected {best.expert.name} (v{best.expert.current_version}, "
+            f"{best.expert.trust_tier.value}) for {required_class.value} coverage — "
+            f"{reputation_info}{rationale_suffix}"
         )
 
     rationale = "; ".join(rationale_parts) if rationale_parts else "Empty consult plan"
