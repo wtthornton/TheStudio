@@ -14,6 +14,11 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
+from src.compliance.execution_plane import (
+    CredentialScopeChecker,
+    ExecutionPlaneChecker,
+    PublisherIdempotencyChecker,
+)
 from src.compliance.models import (
     REMEDIATION_HINTS,
     REQUIRED_LABELS,
@@ -56,18 +61,30 @@ class ComplianceChecker:
     def __init__(
         self,
         github_client: Any | None = None,
-        execution_plane_checker: Any | None = None,
+        execution_plane_checker: ExecutionPlaneChecker | None = None,
+        publisher_idempotency_checker: PublisherIdempotencyChecker | None = None,
+        credential_scope_checker: CredentialScopeChecker | None = None,
     ) -> None:
         """Initialize compliance checker.
 
         Args:
             github_client: GitHub API client for fetching repo configuration.
                           If None, uses mock responses (for testing).
-            execution_plane_checker: Callable to check execution plane health.
-                                    If None, execution plane checks return pass.
+            execution_plane_checker: Checker for workspace, workers, verification.
+                                    If None, creates default checker.
+            publisher_idempotency_checker: Checker for Publisher idempotency guard.
+                                          If None, creates default checker.
+            credential_scope_checker: Checker for GitHub token scopes.
+                                     If None, creates default checker.
         """
         self._github_client = github_client
-        self._execution_plane_checker = execution_plane_checker
+        self._execution_plane_checker = execution_plane_checker or ExecutionPlaneChecker()
+        self._publisher_idempotency_checker = (
+            publisher_idempotency_checker or PublisherIdempotencyChecker()
+        )
+        self._credential_scope_checker = (
+            credential_scope_checker or CredentialScopeChecker()
+        )
         self._check_results: list[ComplianceCheckResult] = []
 
     async def check_compliance(
@@ -78,6 +95,7 @@ class ComplianceChecker:
         *,
         projects_v2_waived: bool = False,
         check_execution_plane: bool = True,
+        target_tier: str = "execute",
     ) -> ComplianceResult:
         """Run full compliance check for a repository.
 
@@ -109,7 +127,7 @@ class ComplianceChecker:
             if check_execution_plane:
                 await self._check_execution_plane_health(repo_id)
                 await self._check_publisher_idempotency(repo_id)
-                await self._check_credentials_scoped(repo_id)
+                await self._check_credentials_scoped(repo_id, target_tier)
 
             # Calculate overall result
             passed_count = sum(1 for r in self._check_results if r.passed)
@@ -330,52 +348,106 @@ class ComplianceChecker:
         )
 
     async def _check_execution_plane_health(self, repo_id: UUID) -> None:
-        """Check that execution plane is healthy (Story 3.2 placeholder)."""
+        """Check that execution plane is healthy.
+
+        Validates:
+        - Workspace directory exists and is accessible
+        - Workers are registered and healthy
+        - Verification runner tools (ruff, pytest) are available
+        """
         check = ComplianceCheck.EXECUTION_PLANE_HEALTH
 
-        if self._execution_plane_checker:
-            try:
-                result = await self._execution_plane_checker(repo_id)
-                if result.get("healthy", False):
-                    self._add_pass(check, details=result)
-                else:
-                    self._add_failure(
-                        check,
-                        result.get("reason", "Execution plane unhealthy"),
-                        details=result,
-                    )
-            except Exception as e:
+        try:
+            health = await self._execution_plane_checker.check_health(repo_id)
+            if health.healthy:
+                self._add_pass(check, details=health.to_dict())
+            else:
                 self._add_failure(
                     check,
-                    f"Failed to check execution plane health: {e}",
-                    details={"error": str(e)},
+                    health.reason or "Execution plane unhealthy",
+                    details=health.to_dict(),
                 )
-        else:
-            # Placeholder - pass by default when no checker provided
-            self._add_pass(
+        except Exception as e:
+            self._add_failure(
                 check,
-                details={"note": "Execution plane health check not configured"},
+                f"Failed to check execution plane health: {e}",
+                details={"error": str(e)},
             )
 
     async def _check_publisher_idempotency(self, repo_id: UUID) -> None:
-        """Check that Publisher idempotency guard is operational (Story 3.2 placeholder)."""
+        """Check that Publisher idempotency guard is operational.
+
+        The idempotency guard prevents duplicate PRs by looking up existing
+        TaskPackets before creating new ones.
+        """
         check = ComplianceCheck.PUBLISHER_IDEMPOTENCY
 
-        # Placeholder - pass by default
-        self._add_pass(
-            check,
-            details={"note": "Publisher idempotency check not yet implemented"},
-        )
+        try:
+            health = await self._publisher_idempotency_checker.check_health(repo_id)
+            if health.healthy:
+                self._add_pass(
+                    check,
+                    details={
+                        "lookup_operational": health.lookup_operational,
+                        "test_key_result": health.test_key_result,
+                    },
+                )
+            else:
+                self._add_failure(
+                    check,
+                    health.reason or "Publisher idempotency guard unhealthy",
+                    details={
+                        "lookup_operational": health.lookup_operational,
+                    },
+                )
+        except Exception as e:
+            self._add_failure(
+                check,
+                f"Failed to check Publisher idempotency: {e}",
+                details={"error": str(e)},
+            )
 
-    async def _check_credentials_scoped(self, repo_id: UUID) -> None:
-        """Check that credentials are scoped correctly (Story 3.2 placeholder)."""
+    async def _check_credentials_scoped(
+        self,
+        repo_id: UUID,
+        target_tier: str,
+    ) -> None:
+        """Check that credentials are scoped correctly for the target tier.
+
+        Execute tier requires specific permissions (repo, workflow) but should
+        not be over-permissioned.
+        """
         check = ComplianceCheck.CREDENTIALS_SCOPED
 
-        # Placeholder - pass by default
-        self._add_pass(
-            check,
-            details={"note": "Credential scope check not yet implemented"},
-        )
+        try:
+            health = await self._credential_scope_checker.check_scopes(
+                repo_id, target_tier
+            )
+            if health.healthy:
+                self._add_pass(
+                    check,
+                    details={
+                        "expected_scopes": health.expected_scopes,
+                        "actual_scopes": health.actual_scopes,
+                        "excess_scopes": health.excess_scopes,
+                    },
+                )
+            else:
+                self._add_failure(
+                    check,
+                    health.reason or "Credential scopes incorrect",
+                    details={
+                        "expected_scopes": health.expected_scopes,
+                        "actual_scopes": health.actual_scopes,
+                        "missing_scopes": health.missing_scopes,
+                    },
+                )
+        except Exception as e:
+            self._add_failure(
+                check,
+                f"Failed to check credential scopes: {e}",
+                details={"error": str(e)},
+            )
 
     def _add_pass(
         self,
