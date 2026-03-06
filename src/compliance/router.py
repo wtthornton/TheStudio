@@ -6,7 +6,7 @@ Architecture reference: thestudioarc/23-admin-control-ui.md
 
 import logging
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
@@ -82,6 +82,45 @@ class EligibilityResponse(BaseModel):
     compliance_score: float | None = None
 
 
+class RepoRegistrationRequest(BaseModel):
+    """Request to register a new repository."""
+
+    owner: str
+    repo: str
+    installation_id: int
+    default_branch: str = "main"
+
+
+class RepoRegistrationResponse(BaseModel):
+    """Response from repo registration."""
+
+    id: UUID
+    owner: str
+    repo: str
+    tier: RepoTier
+    installation_id: int
+    message: str
+
+
+class RepoInfo(BaseModel):
+    """Information about a registered repository."""
+
+    id: UUID
+    owner: str
+    repo: str
+    tier: RepoTier
+    installation_id: int
+    full_name: str
+
+
+class RepoListResponse(BaseModel):
+    """Response from listing repos."""
+
+    repos: list[RepoInfo]
+    total: int
+    by_tier: dict[str, int]
+
+
 # In-memory repo registry for testing (will be replaced with database)
 _repos: dict[UUID, dict[str, Any]] = {}
 
@@ -92,13 +131,17 @@ def register_repo(
     repo: str,
     tier: RepoTier = RepoTier.OBSERVE,
     repo_info: GitHubRepoInfo | None = None,
-) -> None:
+    installation_id: int = 0,
+) -> dict[str, Any]:
     """Register a repo (in-memory stub)."""
+    full_name = f"{owner}/{repo}"
     _repos[repo_id] = {
         "id": repo_id,
         "owner": owner,
         "repo": repo,
+        "full_name": full_name,
         "tier": tier,
+        "installation_id": installation_id,
         "repo_info": repo_info or GitHubRepoInfo(
             owner=owner,
             repo=repo,
@@ -110,6 +153,7 @@ def register_repo(
             codeowners_paths=[],
         ),
     }
+    return _repos[repo_id]
 
 
 def get_repo(repo_id: UUID) -> dict[str, Any] | None:
@@ -126,6 +170,28 @@ def update_repo_tier(repo_id: UUID, tier: RepoTier) -> None:
 def clear() -> None:
     """Clear all repos (for testing)."""
     _repos.clear()
+
+
+def list_repos() -> list[dict[str, Any]]:
+    """List all registered repos."""
+    return list(_repos.values())
+
+
+def get_repo_by_full_name(full_name: str) -> dict[str, Any] | None:
+    """Get repo by full name (owner/repo)."""
+    for repo in _repos.values():
+        if repo["full_name"] == full_name:
+            return repo
+    return None
+
+
+def count_repos_by_tier() -> dict[str, int]:
+    """Count repos by tier."""
+    counts: dict[str, int] = {}
+    for repo in _repos.values():
+        tier_value = repo["tier"].value
+        counts[tier_value] = counts.get(tier_value, 0) + 1
+    return counts
 
 
 # Service instances (can be overridden for testing)
@@ -309,4 +375,100 @@ async def check_eligibility(repo_id: UUID, target_tier: RepoTier) -> Eligibility
         compliance_score=(
             result.compliance_result.score if result.compliance_result else None
         ),
+    )
+
+
+@router.post("/register", response_model=RepoRegistrationResponse)
+async def register_new_repo(request: RepoRegistrationRequest) -> RepoRegistrationResponse:
+    """Register a new repository.
+
+    New repos start at Observe tier. Promotion to Execute requires compliance check.
+    """
+    full_name = f"{request.owner}/{request.repo}"
+
+    # Check if repo already registered
+    existing = get_repo_by_full_name(full_name)
+    if existing is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Repository {full_name} is already registered",
+        )
+
+    repo_id = uuid4()
+    repo_info = GitHubRepoInfo(
+        owner=request.owner,
+        repo=request.repo,
+        default_branch=request.default_branch,
+        rulesets=[],
+        branch_protection=None,
+        labels=[],
+        codeowners_exists=False,
+        codeowners_paths=[],
+    )
+
+    register_repo(
+        repo_id=repo_id,
+        owner=request.owner,
+        repo=request.repo,
+        tier=RepoTier.OBSERVE,
+        repo_info=repo_info,
+        installation_id=request.installation_id,
+    )
+
+    logger.info(
+        "Registered repo %s with ID %s at Observe tier",
+        full_name,
+        repo_id,
+    )
+
+    return RepoRegistrationResponse(
+        id=repo_id,
+        owner=request.owner,
+        repo=request.repo,
+        tier=RepoTier.OBSERVE,
+        installation_id=request.installation_id,
+        message=f"Registered {full_name} at Observe tier",
+    )
+
+
+@router.get("", response_model=RepoListResponse)
+async def list_registered_repos() -> RepoListResponse:
+    """List all registered repositories."""
+    repos = list_repos()
+    by_tier = count_repos_by_tier()
+
+    return RepoListResponse(
+        repos=[
+            RepoInfo(
+                id=r["id"],
+                owner=r["owner"],
+                repo=r["repo"],
+                tier=r["tier"],
+                installation_id=r["installation_id"],
+                full_name=r["full_name"],
+            )
+            for r in repos
+        ],
+        total=len(repos),
+        by_tier=by_tier,
+    )
+
+
+@router.get("/{repo_id}", response_model=RepoInfo)
+async def get_repo_info(repo_id: UUID) -> RepoInfo:
+    """Get information about a specific repository."""
+    repo = get_repo(repo_id)
+    if repo is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Repository {repo_id} not found",
+        )
+
+    return RepoInfo(
+        id=repo["id"],
+        owner=repo["owner"],
+        repo=repo["repo"],
+        tier=repo["tier"],
+        installation_id=repo["installation_id"],
+        full_name=repo["full_name"],
     )

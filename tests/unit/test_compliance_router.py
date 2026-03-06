@@ -17,7 +17,10 @@ from src.compliance.promotion import PromotionService
 from src.compliance.promotion import clear as clear_transitions
 from src.compliance.router import (
     clear,
+    count_repos_by_tier,
     get_repo,
+    get_repo_by_full_name,
+    list_repos,
     register_repo,
     update_repo_tier,
 )
@@ -285,6 +288,67 @@ class TestFirstRepoPromotion:
             repo = get_repo(repo_id)
             assert repo is not None
             assert repo["tier"] == RepoTier.EXECUTE
+
+
+class TestMultiRepoRegistration:
+    """Tests for Story 3.5: Multi-Repo Registration."""
+
+    def test_register_multiple_repos(self) -> None:
+        """Can register 3+ repos."""
+        repo1_id = uuid4()
+        repo2_id = uuid4()
+        repo3_id = uuid4()
+
+        register_repo(repo1_id, "org1", "repo1", installation_id=1001)
+        register_repo(repo2_id, "org1", "repo2", installation_id=1001)
+        register_repo(repo3_id, "org2", "repo3", installation_id=2001)
+
+        repos = list_repos()
+        assert len(repos) == 3
+
+    def test_repos_have_separate_tiers(self) -> None:
+        """Each repo maintains its own tier."""
+        repo1_id = uuid4()
+        repo2_id = uuid4()
+        repo3_id = uuid4()
+
+        register_repo(repo1_id, "org", "repo1", RepoTier.OBSERVE)
+        register_repo(repo2_id, "org", "repo2", RepoTier.SUGGEST)
+        register_repo(repo3_id, "org", "repo3", RepoTier.EXECUTE)
+
+        assert get_repo(repo1_id)["tier"] == RepoTier.OBSERVE
+        assert get_repo(repo2_id)["tier"] == RepoTier.SUGGEST
+        assert get_repo(repo3_id)["tier"] == RepoTier.EXECUTE
+
+    def test_count_repos_by_tier(self) -> None:
+        """Count repos grouped by tier."""
+        register_repo(uuid4(), "org", "observe1", RepoTier.OBSERVE)
+        register_repo(uuid4(), "org", "observe2", RepoTier.OBSERVE)
+        register_repo(uuid4(), "org", "suggest1", RepoTier.SUGGEST)
+        register_repo(uuid4(), "org", "execute1", RepoTier.EXECUTE)
+
+        counts = count_repos_by_tier()
+        assert counts["observe"] == 2
+        assert counts["suggest"] == 1
+        assert counts["execute"] == 1
+
+    def test_get_repo_by_full_name(self) -> None:
+        """Can retrieve repo by full name."""
+        repo_id = uuid4()
+        register_repo(repo_id, "thestudio", "demo-repo")
+
+        repo = get_repo_by_full_name("thestudio/demo-repo")
+        assert repo is not None
+        assert repo["id"] == repo_id
+
+    def test_repos_have_installation_id(self) -> None:
+        """Each repo stores its installation ID for credential scoping."""
+        repo_id = uuid4()
+        register_repo(repo_id, "org", "repo", installation_id=12345)
+
+        repo = get_repo(repo_id)
+        assert repo is not None
+        assert repo["installation_id"] == 12345
 
 
 class TestComplianceCheck:
