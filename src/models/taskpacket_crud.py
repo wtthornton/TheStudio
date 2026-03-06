@@ -112,7 +112,7 @@ async def update_enrichment(
     task_id: UUID,
     scope: dict[str, Any],
     risk_flags: dict[str, bool],
-    complexity_index: str,
+    complexity_index: dict[str, Any],
     context_packs: list[dict[str, Any]],
 ) -> TaskPacketRead:
     """Update enrichment fields and transition status to ENRICHED."""

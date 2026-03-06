@@ -73,10 +73,12 @@ class TaskPacketRow(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
 
-    # Enrichment fields (Story 0.3 — Context Manager)
+    # Enrichment fields (Story 0.3 — Context Manager, upgraded in Story 2.1)
     scope: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     risk_flags: Mapped[dict[str, bool] | None] = mapped_column(JSON, nullable=True)
-    complexity_index: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # Complexity Index v1: JSONB with score, band, and dimensions
+    # See docs/architecture/complexity-index-v1.md
+    complexity_index: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     context_packs: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, nullable=True)
 
     # Intent fields (Story 0.4 — Intent Builder)
@@ -116,7 +118,8 @@ class TaskPacketRead(BaseModel):
     status: TaskPacketStatus
     scope: dict[str, Any] | None = None
     risk_flags: dict[str, bool] | None = None
-    complexity_index: str | None = None
+    # Complexity Index v1: dict with score, band, and dimensions
+    complexity_index: dict[str, Any] | None = None
     context_packs: list[dict[str, Any]] | None = None
     intent_spec_id: UUID | None = None
     intent_version: int | None = None
