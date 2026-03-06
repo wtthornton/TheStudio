@@ -1,0 +1,1 @@
+{"call_id": "751d368deaa84aaf", "tool_name": "tapps_server_info", "status": "success", "duration_ms": 60517.68, "started_at": "2026-03-05T23:40:48.272525+00:00", "completed_at": "2026-03-05T23:41:48.790204+00:00", "file_path": null, "gate_passed": null, "score": null, "error_code": null, "degraded": false, "session_id": "1d3252ec6672"}

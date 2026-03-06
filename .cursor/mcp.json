@@ -1,0 +1,30 @@
+{
+  "mcpServers": {
+    "tapps-mcp": {
+      "command": "C:\\Users\\tappt\\.local\\bin\\tapps-mcp.exe",
+      "args": [
+        "serve"
+      ],
+      "env": {
+        "TAPPS_MCP_PROJECT_ROOT": "c:\\cursor\\TheStudio"
+      }
+    },
+    "Context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ],
+      "env": {
+        "CONTEXT7_API_KEY": "${env:CONTEXT7_API_KEY}"
+      }
+    },
+    "docs-mcp": {
+      "command": "C:\\cursor\\TappMCP\\dist\\docsmcp.exe",
+      "args": ["serve"],
+      "env": {
+        "DOCS_MCP_PROJECT_ROOT": "${workspaceFolder}"
+      }
+    }
+  }
+}
