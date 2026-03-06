@@ -63,21 +63,95 @@ class OutcomeSignal(BaseModel):
 
 
 class QuarantineReason(enum.StrEnum):
-    """Reasons a signal may be quarantined."""
+    """Reasons a signal may be quarantined.
+
+    Per thestudioarc/12-outcome-ingestor.md lines 83-93:
+    - missing_correlation_id: no correlation_id in payload
+    - unknown_taskpacket: taskpacket_id not found in database
+    - unknown_repo: repo_id not found in database
+    - invalid_event: event type not in SignalEvent enum
+    - invalid_category_severity: invalid defect_category or defect_severity value
+    - idempotency_conflict: duplicate event with conflicting payload
+    """
 
     MISSING_CORRELATION_ID = "missing_correlation_id"
     UNKNOWN_TASKPACKET = "unknown_taskpacket"
+    UNKNOWN_REPO = "unknown_repo"
     INVALID_EVENT = "invalid_event"
     INVALID_CATEGORY_SEVERITY = "invalid_category_severity"
     IDEMPOTENCY_CONFLICT = "idempotency_conflict"
 
 
+class QuarantinedEvent(BaseModel):
+    """A signal that failed validation and was quarantined for operator review.
+
+    Per thestudioarc/12-outcome-ingestor.md lines 83-105:
+    Quarantined events can be corrected and replayed.
+    """
+
+    quarantine_id: UUID
+    event_payload: dict[str, Any]
+    reason: QuarantineReason
+    repo_id: str | None = None
+    category: str | None = None
+    created_at: datetime
+    corrected_at: datetime | None = None
+    corrected_payload: dict[str, Any] | None = None
+    replayed_at: datetime | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "quarantine_id": str(self.quarantine_id),
+            "event_payload": self.event_payload,
+            "reason": self.reason.value,
+            "repo_id": self.repo_id,
+            "category": self.category,
+            "created_at": self.created_at.isoformat(),
+            "corrected_at": self.corrected_at.isoformat() if self.corrected_at else None,
+            "corrected_payload": self.corrected_payload,
+            "replayed_at": self.replayed_at.isoformat() if self.replayed_at else None,
+        }
+
+
 class QuarantinedSignal(BaseModel):
-    """A signal that failed validation and was quarantined for review."""
+    """Legacy model — use QuarantinedEvent for new code."""
 
     raw_payload: dict[str, Any]
     reason: QuarantineReason
     timestamp: datetime
+
+
+class DeadLetterEvent(BaseModel):
+    """An event that failed parsing/validation after max attempts.
+
+    Per thestudioarc/12-outcome-ingestor.md lines 94-96:
+    Events moved to dead-letter preserve raw payload and failure reason.
+    """
+
+    id: UUID
+    raw_payload: bytes
+    failure_reason: str
+    attempt_count: int
+    created_at: datetime
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": str(self.id),
+            "raw_payload": self.raw_payload.decode("utf-8", errors="replace"),
+            "failure_reason": self.failure_reason,
+            "attempt_count": self.attempt_count,
+            "created_at": self.created_at.isoformat(),
+        }
+
+
+class ReplayResult(BaseModel):
+    """Result of replaying a quarantined event."""
+
+    quarantine_id: UUID
+    success: bool
+    signal: OutcomeSignal | None = None
+    error: str | None = None
+    replayed_at: datetime
 
 
 class ReputationIndicator(BaseModel):

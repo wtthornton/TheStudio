@@ -1,7 +1,8 @@
-"""Unit tests for Outcome Ingestor (Story 1.8 stub, Story 2.2 full).
+"""Unit tests for Outcome Ingestor (Story 1.8 stub, Story 2.2 full, Story 2.3 hardening).
 
 Architecture reference: thestudioarc/12-outcome-ingestor.md
 Story 2.2 adds: normalization by complexity, attribution via provenance.
+Story 2.3 adds: quarantine + dead-letter + replay.
 """
 
 from datetime import UTC, datetime
@@ -455,3 +456,451 @@ class TestComplexityMultipliers:
         m = COMPLEXITY_MULTIPLIERS["medium"]
         assert m["success"] == 1.0
         assert m["failure"] == 1.0
+
+
+# --- Story 2.3: Quarantine + Dead-Letter + Replay Tests ---
+
+
+from src.outcome.quarantine import QuarantineStore, clear as clear_quarantine
+from src.outcome.dead_letter import DeadLetterStore, FailureTracker, clear as clear_dead_letter
+from src.outcome.replay import replay_quarantined, replay_batch, replay_deterministic
+from src.outcome.models import QuarantinedEvent, DeadLetterEvent, ReplayResult
+
+
+class TestQuarantineStore:
+    """Test QuarantineStore CRUD operations (Story 2.3)."""
+
+    def setup_method(self) -> None:
+        """Clear stores before each test."""
+        clear_quarantine()
+        clear_dead_letter()
+
+    def test_quarantine_creates_event(self) -> None:
+        """Quarantine creates a new QuarantinedEvent."""
+        store = QuarantineStore()
+        payload = {"event": "test", "taskpacket_id": str(uuid4())}
+
+        qid = store.quarantine(
+            event_payload=payload,
+            reason=QuarantineReason.MISSING_CORRELATION_ID,
+            repo_id="owner/repo",
+            category="test",
+        )
+
+        assert qid is not None
+        event = store.get_quarantined(qid)
+        assert event is not None
+        assert event.reason == QuarantineReason.MISSING_CORRELATION_ID
+        assert event.repo_id == "owner/repo"
+
+    def test_list_quarantined_by_repo(self) -> None:
+        """List quarantined events filtered by repo_id."""
+        store = QuarantineStore()
+
+        store.quarantine(
+            {"event": "a"}, QuarantineReason.UNKNOWN_TASKPACKET, repo_id="repo1"
+        )
+        store.quarantine(
+            {"event": "b"}, QuarantineReason.UNKNOWN_TASKPACKET, repo_id="repo2"
+        )
+        store.quarantine(
+            {"event": "c"}, QuarantineReason.INVALID_EVENT, repo_id="repo1"
+        )
+
+        repo1_events = store.list_quarantined(repo_id="repo1")
+        assert len(repo1_events) == 2
+
+        repo2_events = store.list_quarantined(repo_id="repo2")
+        assert len(repo2_events) == 1
+
+    def test_list_quarantined_by_reason(self) -> None:
+        """List quarantined events filtered by reason."""
+        store = QuarantineStore()
+
+        store.quarantine(
+            {"event": "a"}, QuarantineReason.UNKNOWN_TASKPACKET
+        )
+        store.quarantine(
+            {"event": "b"}, QuarantineReason.INVALID_EVENT
+        )
+
+        tp_events = store.list_quarantined(reason=QuarantineReason.UNKNOWN_TASKPACKET)
+        assert len(tp_events) == 1
+        assert tp_events[0].reason == QuarantineReason.UNKNOWN_TASKPACKET
+
+    def test_mark_corrected_updates_payload(self) -> None:
+        """Mark corrected sets corrected_at and corrected_payload."""
+        store = QuarantineStore()
+        original_payload = {"event": "bad"}
+        corrected_payload = {"event": "verification_passed", "correlation_id": str(uuid4())}
+
+        qid = store.quarantine(original_payload, QuarantineReason.INVALID_EVENT)
+        result = store.mark_corrected(qid, corrected_payload)
+
+        assert result is True
+        event = store.get_quarantined(qid)
+        assert event is not None
+        assert event.corrected_at is not None
+        assert event.corrected_payload == corrected_payload
+
+    def test_mark_corrected_fails_if_replayed(self) -> None:
+        """Cannot correct an already-replayed event."""
+        store = QuarantineStore()
+        qid = store.quarantine({"event": "test"}, QuarantineReason.INVALID_EVENT)
+        store.mark_replayed(qid)
+
+        result = store.mark_corrected(qid, {"event": "fixed"})
+        assert result is False
+
+    def test_mark_replayed_sets_timestamp(self) -> None:
+        """Mark replayed sets replayed_at timestamp."""
+        store = QuarantineStore()
+        qid = store.quarantine({"event": "test"}, QuarantineReason.INVALID_EVENT)
+
+        result = store.mark_replayed(qid)
+        assert result is True
+
+        event = store.get_quarantined(qid)
+        assert event is not None
+        assert event.replayed_at is not None
+
+    def test_list_excludes_replayed_by_default(self) -> None:
+        """List excludes replayed events unless include_replayed=True."""
+        store = QuarantineStore()
+        qid1 = store.quarantine({"event": "a"}, QuarantineReason.INVALID_EVENT)
+        store.quarantine({"event": "b"}, QuarantineReason.INVALID_EVENT)
+        store.mark_replayed(qid1)
+
+        # Default excludes replayed
+        events = store.list_quarantined()
+        assert len(events) == 1
+
+        # Include replayed
+        all_events = store.list_quarantined(include_replayed=True)
+        assert len(all_events) == 2
+
+    def test_count_by_reason(self) -> None:
+        """Count quarantined events by reason."""
+        store = QuarantineStore()
+        store.quarantine({"a": 1}, QuarantineReason.MISSING_CORRELATION_ID)
+        store.quarantine({"b": 2}, QuarantineReason.MISSING_CORRELATION_ID)
+        store.quarantine({"c": 3}, QuarantineReason.UNKNOWN_TASKPACKET)
+
+        counts = store.count_by_reason()
+        assert counts[QuarantineReason.MISSING_CORRELATION_ID] == 2
+        assert counts[QuarantineReason.UNKNOWN_TASKPACKET] == 1
+
+
+class TestDeadLetterStore:
+    """Test DeadLetterStore operations (Story 2.3)."""
+
+    def setup_method(self) -> None:
+        """Clear stores before each test."""
+        clear_dead_letter()
+
+    def test_add_dead_letter(self) -> None:
+        """Add event to dead-letter store."""
+        store = DeadLetterStore()
+        raw = b'{"invalid": json}'
+
+        dl_id = store.add_dead_letter(
+            raw_payload=raw,
+            failure_reason="JSON parse error",
+            attempt_count=3,
+        )
+
+        assert dl_id is not None
+        event = store.get_dead_letter(dl_id)
+        assert event is not None
+        assert event.raw_payload == raw
+        assert event.failure_reason == "JSON parse error"
+        assert event.attempt_count == 3
+
+    def test_list_dead_letters_sorted_by_created(self) -> None:
+        """List dead-letters sorted by created_at descending."""
+        import time
+        store = DeadLetterStore()
+
+        store.add_dead_letter(b"first", "error1", 1)
+        time.sleep(0.01)  # Ensure different timestamps
+        store.add_dead_letter(b"second", "error2", 2)
+
+        events = store.list_dead_letters()
+        assert len(events) == 2
+        # Most recent first
+        assert events[0].failure_reason == "error2"
+        assert events[1].failure_reason == "error1"
+
+    def test_count_dead_letters(self) -> None:
+        """Count total dead-letter events."""
+        store = DeadLetterStore()
+        assert store.count() == 0
+
+        store.add_dead_letter(b"a", "err", 1)
+        store.add_dead_letter(b"b", "err", 1)
+        assert store.count() == 2
+
+    def test_delete_dead_letter(self) -> None:
+        """Delete a dead-letter event."""
+        store = DeadLetterStore()
+        dl_id = store.add_dead_letter(b"data", "error", 3)
+
+        result = store.delete(dl_id)
+        assert result is True
+        assert store.get_dead_letter(dl_id) is None
+
+
+class TestFailureTracker:
+    """Test FailureTracker for dead-letter eligibility (Story 2.3)."""
+
+    def test_record_failure_increments_count(self) -> None:
+        """Recording failure increments attempt count."""
+        tracker = FailureTracker(max_attempts=3)
+        
+        count1 = tracker.record_failure("hash1")
+        count2 = tracker.record_failure("hash1")
+        count3 = tracker.record_failure("hash1")
+
+        assert count1 == 1
+        assert count2 == 2
+        assert count3 == 3
+
+    def test_should_dead_letter_at_max_attempts(self) -> None:
+        """Should dead-letter when max attempts reached."""
+        tracker = FailureTracker(max_attempts=3)
+
+        tracker.record_failure("hash1")
+        assert tracker.should_dead_letter("hash1") is False
+
+        tracker.record_failure("hash1")
+        assert tracker.should_dead_letter("hash1") is False
+
+        tracker.record_failure("hash1")
+        assert tracker.should_dead_letter("hash1") is True
+
+    def test_clear_failures_resets_count(self) -> None:
+        """Clear failures resets count for a hash."""
+        tracker = FailureTracker(max_attempts=3)
+        tracker.record_failure("hash1")
+        tracker.record_failure("hash1")
+
+        tracker.clear_failures("hash1")
+        assert tracker.get_attempt_count("hash1") == 0
+
+
+class TestReplayMechanism:
+    """Test replay of quarantined events (Story 2.3)."""
+
+    def setup_method(self) -> None:
+        """Clear stores before each test."""
+        clear_quarantine()
+        clear_dead_letter()
+        clear()
+
+    @pytest.mark.asyncio
+    async def test_replay_success(self) -> None:
+        """Successful replay returns signal and marks as replayed."""
+        store = QuarantineStore()
+        valid_payload = _make_payload("verification_passed")
+
+        # Quarantine it first
+        qid = store.quarantine(valid_payload, QuarantineReason.UNKNOWN_TASKPACKET)
+
+        # Replay with valid ingest function
+        result = await replay_quarantined(qid, ingest_signal, store)
+
+        assert result.success is True
+        assert result.signal is not None
+        assert result.signal.event == SignalEvent.VERIFICATION_PASSED
+
+        # Event should be marked as replayed
+        event = store.get_quarantined(qid)
+        assert event is not None
+        assert event.replayed_at is not None
+
+    @pytest.mark.asyncio
+    async def test_replay_uses_corrected_payload(self) -> None:
+        """Replay uses corrected payload if available."""
+        store = QuarantineStore()
+        original = {"event": "invalid_event", "taskpacket_id": str(uuid4())}
+        corrected = _make_payload("qa_passed")
+
+        qid = store.quarantine(original, QuarantineReason.INVALID_EVENT)
+        store.mark_corrected(qid, corrected)
+
+        result = await replay_quarantined(qid, ingest_signal, store)
+
+        assert result.success is True
+        assert result.signal is not None
+        assert result.signal.event == SignalEvent.QA_PASSED
+
+    @pytest.mark.asyncio
+    async def test_replay_not_found(self) -> None:
+        """Replay returns error if quarantine_id not found."""
+        store = QuarantineStore()
+        fake_id = uuid4()
+
+        result = await replay_quarantined(fake_id, ingest_signal, store)
+
+        assert result.success is False
+        assert "not found" in (result.error or "").lower()
+
+    @pytest.mark.asyncio
+    async def test_replay_already_replayed(self) -> None:
+        """Replay returns error if already replayed."""
+        store = QuarantineStore()
+        qid = store.quarantine(_make_payload(), QuarantineReason.UNKNOWN_TASKPACKET)
+        store.mark_replayed(qid)
+
+        result = await replay_quarantined(qid, ingest_signal, store)
+
+        assert result.success is False
+        assert "already replayed" in (result.error or "").lower()
+
+    @pytest.mark.asyncio
+    async def test_replay_batch_processes_in_order(self) -> None:
+        """Batch replay processes events in order."""
+        store = QuarantineStore()
+        payloads = [_make_payload("verification_passed") for _ in range(3)]
+        qids = [store.quarantine(p, QuarantineReason.UNKNOWN_TASKPACKET) for p in payloads]
+
+        results = await replay_batch(qids, ingest_signal, store)
+
+        assert len(results) == 3
+        assert all(r.success for r in results)
+
+    def test_replay_deterministic(self) -> None:
+        """Deterministic replay produces same outputs for same inputs."""
+        events = [
+            QuarantinedEvent(
+                quarantine_id=uuid4(),
+                event_payload=_make_payload("verification_passed"),
+                reason=QuarantineReason.UNKNOWN_TASKPACKET,
+                created_at=datetime.now(UTC),
+            ),
+            QuarantinedEvent(
+                quarantine_id=uuid4(),
+                event_payload=_make_payload("qa_passed"),
+                reason=QuarantineReason.UNKNOWN_TASKPACKET,
+                created_at=datetime.now(UTC),
+            ),
+        ]
+
+        def sync_ingest(payload: dict[str, object]) -> OutcomeSignal:
+            return OutcomeSignal(
+                event=SignalEvent(str(payload.get("event", "verification_passed"))),
+                taskpacket_id=UUID(str(payload["taskpacket_id"])),
+                correlation_id=UUID(str(payload["correlation_id"])),
+                timestamp=datetime.now(UTC),
+                payload=dict(payload),
+            )
+
+        # Run twice — same input should produce consistent results
+        signals1 = replay_deterministic(events, sync_ingest)
+        signals2 = replay_deterministic(events, sync_ingest)
+
+        assert len(signals1) == len(signals2) == 2
+        for s1, s2 in zip(signals1, signals2):
+            assert s1.event == s2.event
+            assert s1.taskpacket_id == s2.taskpacket_id
+
+
+class TestQuarantineUnknownRepo:
+    """Quarantine signals referencing unknown repo_id (Story 2.3)."""
+
+    def setup_method(self) -> None:
+        """Clear stores before each test."""
+        clear_quarantine()
+        clear()
+
+    @pytest.mark.asyncio
+    async def test_unknown_repo_quarantined(self) -> None:
+        """Signals with unknown repo_id are quarantined."""
+        payload = _make_payload("verification_passed")
+        payload["repo_id"] = "unknown/repo"
+
+        async def repo_not_found(_id: str) -> bool:
+            return False
+
+        async def tp_found(_id: UUID) -> bool:
+            return True
+
+        result = await ingest_signal(
+            payload,
+            taskpacket_exists_fn=tp_found,
+            repo_exists_fn=repo_not_found,
+        )
+
+        assert isinstance(result, QuarantinedSignal)
+        assert result.reason == QuarantineReason.UNKNOWN_REPO
+
+    @pytest.mark.asyncio
+    async def test_known_repo_accepted(self) -> None:
+        """Signals with known repo_id are accepted."""
+        payload = _make_payload("verification_passed")
+        payload["repo_id"] = "known/repo"
+
+        async def repo_found(_id: str) -> bool:
+            return True
+
+        async def tp_found(_id: UUID) -> bool:
+            return True
+
+        result = await ingest_signal(
+            payload,
+            taskpacket_exists_fn=tp_found,
+            repo_exists_fn=repo_found,
+        )
+
+        assert isinstance(result, OutcomeSignal)
+
+
+class TestIdempotencyConflict:
+    """Test idempotency conflict detection (Story 2.3)."""
+
+    def setup_method(self) -> None:
+        """Clear stores before each test."""
+        clear_quarantine()
+        clear()
+
+    @pytest.mark.asyncio
+    async def test_duplicate_with_same_payload_accepted(self) -> None:
+        """Duplicate signal with identical payload returns existing signal."""
+        payload = _make_payload("verification_passed")
+
+        result1 = await ingest_signal(payload)
+        result2 = await ingest_signal(payload)
+
+        assert isinstance(result1, OutcomeSignal)
+        assert isinstance(result2, OutcomeSignal)
+        assert result1 == result2
+        assert len(get_signals()) == 1
+
+    @pytest.mark.asyncio
+    async def test_duplicate_with_different_payload_quarantined(self) -> None:
+        """Duplicate signal with conflicting payload is quarantined."""
+        tp_id = str(uuid4())
+        corr_id = str(uuid4())
+        timestamp = datetime.now(UTC).isoformat()
+
+        payload1 = {
+            "event": "verification_passed",
+            "taskpacket_id": tp_id,
+            "correlation_id": corr_id,
+            "timestamp": timestamp,
+            "extra_field": "original",
+        }
+        payload2 = {
+            "event": "verification_passed",
+            "taskpacket_id": tp_id,
+            "correlation_id": corr_id,
+            "timestamp": timestamp,
+            "extra_field": "conflicting",
+        }
+
+        result1 = await ingest_signal(payload1)
+        result2 = await ingest_signal(payload2)
+
+        assert isinstance(result1, OutcomeSignal)
+        assert isinstance(result2, QuarantinedSignal)
+        assert result2.reason == QuarantineReason.IDEMPOTENCY_CONFLICT

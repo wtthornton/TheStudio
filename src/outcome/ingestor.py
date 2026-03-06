@@ -1,13 +1,16 @@
 """Outcome Ingestor — consumes verification + QA signals, normalizes, and produces indicators.
 
-Full implementation (Story 2.2) with:
+Full implementation (Story 2.2, 2.3) with:
 - Normalization by Complexity Index
 - Attribution via provenance
 - Indicator production for Reputation Engine
+- Quarantine + dead-letter + replay (Story 2.3)
 
 Architecture reference: thestudioarc/12-outcome-ingestor.md
 """
 
+import hashlib
+import json
 import logging
 from datetime import UTC, datetime
 from typing import Any
@@ -19,16 +22,24 @@ from src.observability.conventions import (
     SPAN_OUTCOME_INGEST,
 )
 from src.observability.tracing import get_tracer
+from src.outcome.dead_letter import (
+    DeadLetterStore,
+    FailureTracker,
+    get_dead_letter_store,
+    get_failure_tracker,
+)
 from src.outcome.models import (
     DefectCategory,
     DefectSeverity,
     OutcomeSignal,
     OutcomeType,
+    QuarantinedEvent,
     QuarantinedSignal,
     QuarantineReason,
     ReputationIndicator,
     SignalEvent,
 )
+from src.outcome.quarantine import QuarantineStore, get_quarantine_store
 
 logger = logging.getLogger(__name__)
 tracer = get_tracer("thestudio.outcome")
@@ -46,8 +57,14 @@ def get_signals() -> list[OutcomeSignal]:
 
 
 def get_quarantined() -> list[QuarantinedSignal]:
-    """Return all quarantined signals (for operator review)."""
+    """Return all quarantined signals (for operator review, legacy API)."""
     return list(_quarantined)
+
+
+def get_quarantined_events() -> list[QuarantinedEvent]:
+    """Return all quarantined events from the QuarantineStore."""
+    store = get_quarantine_store()
+    return store.list_quarantined(include_replayed=True)
 
 
 def get_indicators() -> list[ReputationIndicator]:
@@ -60,6 +77,19 @@ def clear() -> None:
     _signals.clear()
     _quarantined.clear()
     _indicators.clear()
+
+    # Also clear new stores
+    from src.outcome.dead_letter import clear as clear_dead_letter
+    from src.outcome.quarantine import clear as clear_quarantine
+
+    clear_quarantine()
+    clear_dead_letter()
+
+
+def _compute_payload_hash(payload: dict[str, Any]) -> str:
+    """Compute a deterministic hash of a payload for failure tracking."""
+    serialized = json.dumps(payload, sort_keys=True, default=str)
+    return hashlib.sha256(serialized.encode()).hexdigest()[:16]
 
 
 # Normalization multipliers by complexity band
@@ -154,27 +184,59 @@ async def ingest_signal(
     taskpacket_exists_fn: Any = None,
     get_taskpacket_fn: Any = None,
     get_provenance_fn: Any = None,
+    repo_exists_fn: Any = None,
+    quarantine_store: QuarantineStore | None = None,
+    dead_letter_store: DeadLetterStore | None = None,
+    failure_tracker: FailureTracker | None = None,
 ) -> OutcomeSignal | QuarantinedSignal:
     """Ingest a signal payload from JetStream.
 
     Validates the payload, correlates to a TaskPacket, normalizes by complexity,
     attributes to experts via provenance, and produces ReputationIndicators.
 
+    Quarantine rules (per thestudioarc/12-outcome-ingestor.md lines 87-93):
+    - missing correlation_id or TaskPacket id
+    - unknown TaskPacket
+    - unknown repo id
+    - invalid category or severity values
+    - duplicated event with conflicting payload (idempotency conflict)
+
     Args:
         raw_payload: The raw JSON payload from JetStream.
         taskpacket_exists_fn: Async callable(UUID) -> bool for existence check.
         get_taskpacket_fn: Async callable(UUID) -> TaskPacketRead for full data.
         get_provenance_fn: Async callable(UUID) -> ProvenanceRecord | None.
+        repo_exists_fn: Async callable(str) -> bool for repo existence check.
+        quarantine_store: Optional QuarantineStore (uses global if not provided).
+        dead_letter_store: Optional DeadLetterStore (uses global if not provided).
+        failure_tracker: Optional FailureTracker (uses global if not provided).
 
     Returns:
         OutcomeSignal if valid, QuarantinedSignal if quarantined.
     """
+    q_store = quarantine_store or get_quarantine_store()
+    dl_store = dead_letter_store or get_dead_letter_store()
+    f_tracker = failure_tracker or get_failure_tracker()
+
     with tracer.start_as_current_span(SPAN_OUTCOME_INGEST) as span:
         now = datetime.now(UTC)
+
+        # Track failures for dead-letter eligibility
+        payload_hash = _compute_payload_hash(raw_payload)
+
+        # Extract repo_id for categorization
+        repo_id = raw_payload.get("repo_id")
+        event_str = raw_payload.get("event", "")
 
         # Validate correlation_id present
         correlation_id_str = raw_payload.get("correlation_id")
         if not correlation_id_str:
+            q_store.quarantine(
+                event_payload=raw_payload,
+                reason=QuarantineReason.MISSING_CORRELATION_ID,
+                repo_id=repo_id,
+                category=event_str or "unknown",
+            )
             quarantined = QuarantinedSignal(
                 raw_payload=raw_payload,
                 reason=QuarantineReason.MISSING_CORRELATION_ID,
@@ -188,6 +250,12 @@ async def ingest_signal(
         try:
             correlation_id = UUID(str(correlation_id_str))
         except ValueError:
+            q_store.quarantine(
+                event_payload=raw_payload,
+                reason=QuarantineReason.MISSING_CORRELATION_ID,
+                repo_id=repo_id,
+                category=event_str or "unknown",
+            )
             quarantined = QuarantinedSignal(
                 raw_payload=raw_payload,
                 reason=QuarantineReason.MISSING_CORRELATION_ID,
@@ -200,10 +268,29 @@ async def ingest_signal(
         span.set_attribute(ATTR_CORRELATION_ID, str(correlation_id))
 
         # Validate event type
-        event_str = raw_payload.get("event", "")
         try:
             event = SignalEvent(event_str)
         except ValueError:
+            # Check if this should go to dead-letter
+            attempt_count = f_tracker.record_failure(payload_hash)
+            if f_tracker.should_dead_letter(payload_hash):
+                dl_store.add_dead_letter(
+                    raw_payload=json.dumps(raw_payload).encode(),
+                    failure_reason=f"Invalid event type: {event_str}",
+                    attempt_count=attempt_count,
+                )
+                f_tracker.clear_failures(payload_hash)
+                logger.warning(
+                    "Dead-lettered signal: invalid event after %d attempts", attempt_count,
+                )
+            else:
+                q_store.quarantine(
+                    event_payload=raw_payload,
+                    reason=QuarantineReason.INVALID_EVENT,
+                    repo_id=repo_id,
+                    category=event_str or "unknown",
+                )
+
             quarantined = QuarantinedSignal(
                 raw_payload=raw_payload,
                 reason=QuarantineReason.INVALID_EVENT,
@@ -216,6 +303,12 @@ async def ingest_signal(
         # Parse taskpacket_id
         taskpacket_id_str = raw_payload.get("taskpacket_id")
         if not taskpacket_id_str:
+            q_store.quarantine(
+                event_payload=raw_payload,
+                reason=QuarantineReason.UNKNOWN_TASKPACKET,
+                repo_id=repo_id,
+                category=event.value,
+            )
             quarantined = QuarantinedSignal(
                 raw_payload=raw_payload,
                 reason=QuarantineReason.UNKNOWN_TASKPACKET,
@@ -228,6 +321,12 @@ async def ingest_signal(
         try:
             taskpacket_id = UUID(str(taskpacket_id_str))
         except ValueError:
+            q_store.quarantine(
+                event_payload=raw_payload,
+                reason=QuarantineReason.UNKNOWN_TASKPACKET,
+                repo_id=repo_id,
+                category=event.value,
+            )
             quarantined = QuarantinedSignal(
                 raw_payload=raw_payload,
                 reason=QuarantineReason.UNKNOWN_TASKPACKET,
@@ -243,6 +342,12 @@ async def ingest_signal(
         if taskpacket_exists_fn is not None:
             exists = await taskpacket_exists_fn(taskpacket_id)
             if not exists:
+                q_store.quarantine(
+                    event_payload=raw_payload,
+                    reason=QuarantineReason.UNKNOWN_TASKPACKET,
+                    repo_id=repo_id,
+                    category=event.value,
+                )
                 quarantined = QuarantinedSignal(
                     raw_payload=raw_payload,
                     reason=QuarantineReason.UNKNOWN_TASKPACKET,
@@ -252,6 +357,25 @@ async def ingest_signal(
                 logger.warning(
                     "Quarantined signal: unknown TaskPacket %s", taskpacket_id,
                 )
+                return quarantined
+
+        # Verify repo_id exists (if checker provided and repo_id present)
+        if repo_exists_fn is not None and repo_id is not None:
+            repo_exists = await repo_exists_fn(repo_id)
+            if not repo_exists:
+                q_store.quarantine(
+                    event_payload=raw_payload,
+                    reason=QuarantineReason.UNKNOWN_REPO,
+                    repo_id=repo_id,
+                    category=event.value,
+                )
+                quarantined = QuarantinedSignal(
+                    raw_payload=raw_payload,
+                    reason=QuarantineReason.UNKNOWN_REPO,
+                    timestamp=now,
+                )
+                _quarantined.append(quarantined)
+                logger.warning("Quarantined signal: unknown repo_id %s", repo_id)
                 return quarantined
 
         # Parse timestamp from payload or use now
@@ -271,6 +395,26 @@ async def ingest_signal(
                 and existing.taskpacket_id == taskpacket_id
                 and existing.timestamp == signal_ts
             ):
+                # Check for conflicting payload (idempotency conflict)
+                if existing.payload != raw_payload:
+                    q_store.quarantine(
+                        event_payload=raw_payload,
+                        reason=QuarantineReason.IDEMPOTENCY_CONFLICT,
+                        repo_id=repo_id,
+                        category=event.value,
+                    )
+                    quarantined = QuarantinedSignal(
+                        raw_payload=raw_payload,
+                        reason=QuarantineReason.IDEMPOTENCY_CONFLICT,
+                        timestamp=now,
+                    )
+                    _quarantined.append(quarantined)
+                    logger.warning(
+                        "Quarantined signal: idempotency conflict for %s at %s",
+                        event, signal_ts,
+                    )
+                    return quarantined
+
                 logger.info(
                     "Duplicate signal ignored: %s for %s", event, taskpacket_id,
                 )
@@ -288,6 +432,12 @@ async def ingest_signal(
                 try:
                     defect_category = DefectCategory(category_str)
                 except ValueError:
+                    q_store.quarantine(
+                        event_payload=raw_payload,
+                        reason=QuarantineReason.INVALID_CATEGORY_SEVERITY,
+                        repo_id=repo_id,
+                        category=event.value,
+                    )
                     quarantined = QuarantinedSignal(
                         raw_payload=raw_payload,
                         reason=QuarantineReason.INVALID_CATEGORY_SEVERITY,
@@ -301,6 +451,12 @@ async def ingest_signal(
                 try:
                     defect_severity = DefectSeverity(severity_str)
                 except ValueError:
+                    q_store.quarantine(
+                        event_payload=raw_payload,
+                        reason=QuarantineReason.INVALID_CATEGORY_SEVERITY,
+                        repo_id=repo_id,
+                        category=event.value,
+                    )
                     quarantined = QuarantinedSignal(
                         raw_payload=raw_payload,
                         reason=QuarantineReason.INVALID_CATEGORY_SEVERITY,
@@ -309,6 +465,9 @@ async def ingest_signal(
                     _quarantined.append(quarantined)
                     logger.warning("Quarantined signal: invalid defect_severity '%s'", severity_str)
                     return quarantined
+
+        # Clear failure tracker on successful processing
+        f_tracker.clear_failures(payload_hash)
 
         # Persist signal
         signal = OutcomeSignal(
