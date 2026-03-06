@@ -48,7 +48,7 @@ class ComplianceCheckResult(BaseModel):
     passed: bool
     failure_reason: str | None = None
     remediation_hint: str | None = None
-    details: dict[str, str | bool | int | list[str]] | None = None
+    details: dict[str, object] | None = None
 
 
 class ComplianceResult(BaseModel):

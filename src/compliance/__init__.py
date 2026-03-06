@@ -19,6 +19,14 @@ from src.compliance.models import (
     ComplianceResult,
     ComplianceResultRow,
 )
+from src.compliance.promotion import (
+    DemotionResult,
+    EligibilityResult,
+    PromotionBlockReason,
+    PromotionResult,
+    PromotionService,
+    TierTransition,
+)
 
 __all__ = [
     "ComplianceCheck",
@@ -28,9 +36,15 @@ __all__ = [
     "ComplianceResultRow",
     "CredentialScopeChecker",
     "CredentialScopeHealth",
+    "DemotionResult",
+    "EligibilityResult",
     "ExecutionPlaneChecker",
     "ExecutionPlaneHealth",
     "GitHubRepoInfo",
+    "PromotionBlockReason",
+    "PromotionResult",
+    "PromotionService",
     "PublisherIdempotencyChecker",
     "PublisherIdempotencyHealth",
+    "TierTransition",
 ]
