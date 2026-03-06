@@ -351,6 +351,159 @@ class TestMultiRepoRegistration:
         assert repo["installation_id"] == 12345
 
 
+class TestMultiRepoTierPromotion:
+    """Tests for Story 3.6: Multi-Repo Tier Promotion."""
+
+    @pytest.mark.asyncio
+    async def test_promote_multiple_repos_independently(self) -> None:
+        """Multiple repos can be promoted independently."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo1_id = uuid4()
+            repo2_id = uuid4()
+            repo3_id = uuid4()
+
+            # Create workspaces for each repo
+            for repo_id in [repo1_id, repo2_id, repo3_id]:
+                workspace = Path(tmpdir) / str(repo_id)
+                workspace.mkdir()
+
+            # Register all repos with compliant info
+            repo_info = make_compliant_repo_info()
+            register_repo(repo1_id, "org", "repo1", RepoTier.OBSERVE, repo_info)
+            register_repo(repo2_id, "org", "repo2", RepoTier.OBSERVE, repo_info)
+            register_repo(repo3_id, "org", "repo3", RepoTier.OBSERVE, repo_info)
+
+            # Set up service
+            execution_plane_checker = ExecutionPlaneChecker(workspace_root=tmpdir)
+            compliance_checker = ComplianceChecker(
+                execution_plane_checker=execution_plane_checker,
+            )
+            service = PromotionService(
+                compliance_checker=compliance_checker,
+                repo_profile_updater=update_repo_tier,
+            )
+
+            # Promote repo1 to Suggest
+            result1 = await service.request_promotion(
+                repo_id=repo1_id,
+                target_tier=RepoTier.SUGGEST,
+                triggered_by="admin",
+                repo_info=repo_info,
+                current_tier=RepoTier.OBSERVE,
+            )
+            assert result1.success is True
+            update_repo_tier(repo1_id, RepoTier.SUGGEST)
+
+            # Promote repo2 to Suggest then Execute
+            result2a = await service.request_promotion(
+                repo_id=repo2_id,
+                target_tier=RepoTier.SUGGEST,
+                triggered_by="admin",
+                repo_info=repo_info,
+                current_tier=RepoTier.OBSERVE,
+            )
+            assert result2a.success is True
+            update_repo_tier(repo2_id, RepoTier.SUGGEST)
+
+            result2b = await service.request_promotion(
+                repo_id=repo2_id,
+                target_tier=RepoTier.EXECUTE,
+                triggered_by="admin",
+                repo_info=repo_info,
+                current_tier=RepoTier.SUGGEST,
+            )
+            assert result2b.success is True
+            update_repo_tier(repo2_id, RepoTier.EXECUTE)
+
+            # repo3 stays at Observe
+
+            # Verify final tier states
+            assert get_repo(repo1_id)["tier"] == RepoTier.SUGGEST
+            assert get_repo(repo2_id)["tier"] == RepoTier.EXECUTE
+            assert get_repo(repo3_id)["tier"] == RepoTier.OBSERVE
+
+            # Verify tier counts
+            counts = count_repos_by_tier()
+            assert counts["observe"] == 1
+            assert counts["suggest"] == 1
+            assert counts["execute"] == 1
+
+    @pytest.mark.asyncio
+    async def test_non_compliant_repos_cannot_reach_execute(self) -> None:
+        """Non-compliant repos are blocked from Execute tier."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo1_id = uuid4()
+            repo2_id = uuid4()
+
+            for repo_id in [repo1_id, repo2_id]:
+                workspace = Path(tmpdir) / str(repo_id)
+                workspace.mkdir()
+
+            compliant_info = make_compliant_repo_info("org", "repo1")
+            non_compliant_info = make_non_compliant_repo_info("org", "repo2")
+
+            register_repo(repo1_id, "org", "repo1", RepoTier.SUGGEST, compliant_info)
+            register_repo(
+                repo2_id, "org", "repo2", RepoTier.SUGGEST, non_compliant_info
+            )
+
+            execution_plane_checker = ExecutionPlaneChecker(workspace_root=tmpdir)
+            compliance_checker = ComplianceChecker(
+                execution_plane_checker=execution_plane_checker,
+            )
+            service = PromotionService(
+                compliance_checker=compliance_checker,
+                repo_profile_updater=update_repo_tier,
+            )
+
+            # Compliant repo can promote to Execute
+            result1 = await service.request_promotion(
+                repo_id=repo1_id,
+                target_tier=RepoTier.EXECUTE,
+                triggered_by="admin",
+                repo_info=compliant_info,
+                current_tier=RepoTier.SUGGEST,
+            )
+            assert result1.success is True
+
+            # Non-compliant repo is blocked
+            result2 = await service.request_promotion(
+                repo_id=repo2_id,
+                target_tier=RepoTier.EXECUTE,
+                triggered_by="admin",
+                repo_info=non_compliant_info,
+                current_tier=RepoTier.SUGGEST,
+            )
+            assert result2.success is False
+            assert result2.block_reason is not None
+
+    @pytest.mark.asyncio
+    async def test_demote_one_repo_others_unaffected(self) -> None:
+        """Demoting one repo doesn't affect others."""
+        repo1_id = uuid4()
+        repo2_id = uuid4()
+
+        register_repo(repo1_id, "org", "repo1", RepoTier.EXECUTE)
+        register_repo(repo2_id, "org", "repo2", RepoTier.EXECUTE)
+
+        service = PromotionService(repo_profile_updater=update_repo_tier)
+
+        # Demote repo1
+        result = await service.demote_tier(
+            repo_id=repo1_id,
+            target_tier=RepoTier.SUGGEST,
+            reason="Compliance violation",
+            triggered_by="monitor",
+            current_tier=RepoTier.EXECUTE,
+        )
+        assert result.success is True
+        update_repo_tier(repo1_id, RepoTier.SUGGEST)
+
+        # repo1 is now Suggest, repo2 remains Execute
+        assert get_repo(repo1_id)["tier"] == RepoTier.SUGGEST
+        assert get_repo(repo2_id)["tier"] == RepoTier.EXECUTE
+
+
 class TestComplianceCheck:
     """Tests for compliance check via ComplianceChecker."""
 
