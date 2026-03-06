@@ -298,7 +298,9 @@ class PromotionService:
 
             # Perform promotion (update repo tier)
             if self._repo_profile_updater:
-                await self._repo_profile_updater(repo_id, target_tier)
+                result_or_coro = self._repo_profile_updater(repo_id, target_tier)
+                if hasattr(result_or_coro, "__await__"):
+                    await result_or_coro
 
             # Record transition
             transition = TierTransition(
@@ -403,7 +405,9 @@ class PromotionService:
 
             # Perform demotion
             if self._repo_profile_updater:
-                await self._repo_profile_updater(repo_id, target_tier)
+                result_or_coro = self._repo_profile_updater(repo_id, target_tier)
+                if hasattr(result_or_coro, "__await__"):
+                    await result_or_coro
 
             # Record transition
             transition = TierTransition(

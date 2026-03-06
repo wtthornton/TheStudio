@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from src.compliance.router import router as compliance_router
 from src.ingress.webhook_handler import router as ingress_router
 from src.observability.middleware import CorrelationMiddleware
 from src.observability.tracing import init_tracing
@@ -20,3 +21,4 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(title="TheStudio", version="0.1.0", lifespan=lifespan)
 app.add_middleware(CorrelationMiddleware)
 app.include_router(ingress_router)
+app.include_router(compliance_router)
