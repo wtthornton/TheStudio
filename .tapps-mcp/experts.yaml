@@ -1,0 +1,122 @@
+# TheStudio Custom Business-Domain Experts
+# These extend the 17 built-in TappsMCP domains with project-specific expertise.
+# Use: tapps_consult_expert(domain="<domain-name>", question="...")
+
+experts:
+  - expert_id: intent-specification
+    expert_name: Intent Specification Expert
+    primary_domain: software-architecture
+    description: >
+      Expert on TheStudio Intent Layer. Advises on goal statements, constraints,
+      invariants, acceptance criteria, non-goals, and scope boundaries. Ensures
+      intent is testable and implementation-ready before agents begin work.
+    keywords:
+      - intent
+      - goal statement
+      - acceptance criteria
+      - constraints
+      - invariants
+      - non-goals
+      - scope
+    rag_sources:
+      - thestudioarc/11-intent-layer.md
+
+  - expert_id: agent-roles-routing
+    expert_name: Agent Roles & Routing Expert
+    primary_domain: software-architecture
+    description: >
+      Expert on TheStudio Agent Plane roles: base roles (Developer, Architect,
+      Planner), overlays (Partner API, Compliance, Security), EffectiveRolePolicy
+      computation, tool allowlists, and expert routing. Advises on role selection,
+      overlay composition, and least-privilege tool access.
+    keywords:
+      - agent role
+      - role policy
+      - overlay
+      - developer role
+      - tool allowlist
+      - expert routing
+      - primary agent
+    rag_sources:
+      - thestudioarc/08-agent-roles.md
+
+  - expert_id: verification-qa
+    expert_name: Verification & QA Expert
+    primary_domain: testing-strategies
+    description: >
+      Expert on TheStudio Verification Gate and QA Layer. Advises on repo-profile
+      checks (ruff, pytest), loopback logic, JetStream signal flow, defect taxonomy,
+      and quality gate enforcement. Knows when to loopback vs reject.
+    keywords:
+      - verification
+      - QA
+      - quality gate
+      - loopback
+      - defect
+      - ruff
+      - pytest
+      - JetStream
+    rag_sources:
+      - thestudioarc/13-verification-gate.md
+      - thestudioarc/14-qa-quality-layer.md
+
+  - expert_id: workflow-orchestration
+    expert_name: Workflow Orchestration Expert
+    primary_domain: software-architecture
+    description: >
+      Expert on TheStudio workflow orchestration using Temporal. Advises on
+      durable workflows, retry policies, timeout configuration, correlation_id
+      propagation, TaskPacket lifecycle, and workflow state management.
+    keywords:
+      - temporal
+      - workflow
+      - orchestration
+      - retry
+      - timeout
+      - correlation_id
+      - TaskPacket
+      - durable
+    rag_sources:
+      - thestudioarc/15-system-runtime-flow.md
+
+  - expert_id: epic-planning
+    expert_name: Epic Planning Expert
+    primary_domain: development-workflow
+    description: >
+      Expert on TheStudio persona chain (Saga, Helm, Meridian). Advises on
+      epic structure, sprint goal format, review checklists, OKR alignment,
+      and the Strategy -> Saga -> Meridian -> Helm -> Meridian -> Execution flow.
+    keywords:
+      - epic
+      - sprint
+      - planning
+      - saga
+      - helm
+      - meridian
+      - OKR
+      - review checklist
+      - persona
+    rag_sources:
+      - thestudioarc/personas/saga-epic-creator.md
+      - thestudioarc/personas/helm-planner-dev-manager.md
+      - thestudioarc/personas/meridian-vp-success.md
+      - thestudioarc/personas/TEAM.md
+
+  - expert_id: publisher-github
+    expert_name: Publisher & GitHub Expert
+    primary_domain: github
+    description: >
+      Expert on TheStudio Publisher component and GitHub integration. Advises on
+      draft PR creation, evidence comments, lifecycle labels, idempotency keys,
+      GitHub App setup, installation tokens, and webhook handling.
+    keywords:
+      - publisher
+      - pull request
+      - PR
+      - evidence comment
+      - lifecycle label
+      - idempotency
+      - github app
+      - webhook
+    rag_sources:
+      - thestudioarc/15-system-runtime-flow.md

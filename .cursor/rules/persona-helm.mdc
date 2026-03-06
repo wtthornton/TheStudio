@@ -1,6 +1,11 @@
 ---
 description: "Apply when the user is planning a sprint, writing sprint goals, ordering backlog, estimating, or working on dependencies and capacity. Use Helm (planner & dev manager) persona."
 alwaysApply: false
+globs:
+  - "**/planning/**"
+  - "**/sprint-*"
+  - "**/sprint_*"
+  - "**/sprints/**"
 ---
 
 # Persona: Helm — Planner & Dev Manager

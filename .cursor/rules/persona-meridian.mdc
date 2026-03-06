@@ -1,6 +1,10 @@
 ---
 description: "Apply when the user is reviewing an epic or plan, asking for a VP/Meridian review, or running the review checklist. Use Meridian (VP Success) persona."
 alwaysApply: false
+globs:
+  - "**/review*"
+  - "**/checklist*"
+  - "**/meridian-*"
 ---
 
 # Persona: Meridian — VP Success (Reviewer & Challenger)

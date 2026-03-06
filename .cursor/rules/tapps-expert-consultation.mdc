@@ -1,0 +1,53 @@
+---
+description: >-
+  TappsMCP domain expert consultation - use when needing
+  guidance on security, performance, architecture, testing,
+  or other domain-specific best practices.
+---
+
+# Expert Consultation
+
+Call `tapps_consult_expert(question)` for domain guidance.
+
+## Built-in Expert Domains (17)
+
+- security, performance-optimization, testing-strategies, code-quality-analysis
+- software-architecture, development-workflow, data-privacy-compliance
+- accessibility, user-experience, documentation-knowledge-management
+- ai-frameworks, agent-learning, observability-monitoring
+- api-design-integration, cloud-infrastructure, database-data-management, github
+
+## TheStudio Custom Domains (6)
+
+Defined in `.tapps-mcp/experts.yaml`. RAG-backed with architecture docs.
+
+| Domain | When to use |
+|--------|-------------|
+| `intent-specification` | Intent layer: goals, constraints, AC, non-goals, scope boundaries |
+| `agent-roles-routing` | Agent roles, overlays, EffectiveRolePolicy, tool allowlists |
+| `verification-qa` | Verification Gate, QA layer, loopbacks, defect taxonomy |
+| `workflow-orchestration` | Temporal workflows, retry/timeout, correlation_id, TaskPacket lifecycle |
+| `epic-planning` | Persona chain (Saga/Helm/Meridian), epic structure, sprint goals, OKRs |
+| `publisher-github` | Publisher, draft PRs, evidence comments, GitHub App, webhooks |
+
+## Usage
+
+Provide a clear question and optionally specify the domain:
+
+```
+tapps_consult_expert(
+    question="How should I handle auth tokens?",
+    domain="security"
+)
+```
+
+```
+tapps_consult_expert(
+    question="What loopback count should Phase 0 use?",
+    domain="verification-qa"
+)
+```
+
+Use `tapps_manage_experts(action="list")` to see all available domains.
+
+Returns RAG-backed expert guidance with confidence scores.

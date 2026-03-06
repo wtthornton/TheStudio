@@ -11,6 +11,7 @@
 | **tapps-mcp** | Local  | Code quality / TAPPS pipeline |
 | **Context7**  | Local (npx) | Up-to-date docs for LLMs   |
 | **docs-mcp**  | Local  | Project docs (TappMCP)        |
+| **Playwright** | Local (npx) | Browser automation / acceptance testing |
 
 All run on your machine (tapps-mcp and docs-mcp via local exe, Context7 via `npx`). docs-mcp uses `DOCS_MCP_PROJECT_ROOT=${workspaceFolder}` (Cursor resolves this to the workspace path).
 

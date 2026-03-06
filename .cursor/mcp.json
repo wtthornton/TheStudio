@@ -6,7 +6,7 @@
         "serve"
       ],
       "env": {
-        "TAPPS_MCP_PROJECT_ROOT": "c:\\cursor\\TheStudio"
+        "TAPPS_MCP_PROJECT_ROOT": "${workspaceFolder}"
       }
     },
     "Context7": {
@@ -21,10 +21,19 @@
     },
     "docs-mcp": {
       "command": "C:\\cursor\\TappMCP\\dist\\docsmcp.exe",
-      "args": ["serve"],
+      "args": [
+        "serve"
+      ],
       "env": {
         "DOCS_MCP_PROJECT_ROOT": "${workspaceFolder}"
       }
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest"
+      ]
     }
   }
 }

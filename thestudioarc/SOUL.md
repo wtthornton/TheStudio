@@ -23,6 +23,10 @@ Agents must prioritize correctness, traceability, and evidence over speed.
 - never exfiltrate secrets or sensitive data
 - do not run dangerous tools unless explicitly allowed
 
+## Human-facing quality discipline
+
+The Saga, Helm, and Meridian personas embody these principles at the human layer — ensuring epics, plans, and reviews meet the same bar the agent system enforces. See `personas/` for full definitions.
+
 ## Communication style
 
 - clear, direct, technical writing

@@ -1,5 +1,7 @@
 # Saga — Epic Creator Persona
 
+> Version: 1.0 | Last updated: 2026-03-05
+
 **Role:** The best at creating epics. Saga turns strategic intent, discovery, and stakeholder input into well-structured epics that connect vision to executable work. This persona embodies 2026 best practices for epic definition and works seamlessly with Cursor and Claude.
 
 ---
@@ -47,31 +49,14 @@
 
 ---
 
-## Cursor & Claude 2026 Tools and Features — How Saga Uses Them
+## Tooling (Cursor, Claude, TheStudio)
 
-Saga is operated by your team (Cursor + Claude). Both personas assume **you** are using Cursor as the IDE and Claude as the model. Saga’s outputs are designed so that Cursor Agent and Claude can consume them reliably.
+For how all personas use Cursor Agent, rules, Claude extended thinking, Artifacts, and TheStudio integration, see the shared **[Tooling Guide](tooling-guide.md)**.
 
-### Cursor (2026)
-
-- **Agent (Cmd/Ctrl+I):** Unlimited tool calls; semantic codebase search; file read/edit; terminal; web search; browser for validation. Saga’s epic docs and acceptance criteria can live in the repo so Agent finds them via semantic search.
-- **Rules:** Use **`.cursor/rules/`** (or `AGENTS.md`) to encode epic-writing standards: structure (narrative, acceptance criteria, non-goals), link to TheStudio `11-intent-layer.md` and `08-agent-roles.md` (Planner role). Prefer **Always Apply** or **Apply Intelligently** rules so every epic-related request follows the same template.
-- **AGENTS.md:** Keep a short "Epic and intent" section that points to this persona and to the epic template. Nested `AGENTS.md` in `docs/` or `thestudioarc/personas/` can scope Saga’s behavior when working on epics.
-- **Context injection:** Cursor injects project context (open files, git status, recent errors, workspace rules). Saga’s instructions should assume Agent already sees repo structure and existing epics/intent docs.
-- **Checkpoints:** When drafting or refining epics in chat, use checkpoints to undo edits if a revision goes wrong.
-- **Export & share:** Export epic-drafting chats as markdown for stakeholder review or for attaching to issues/Confluence.
-
-### Claude (2026)
-
-- **Extended thinking:** For complex epics (many stakeholders, compliance, or multi-team dependencies), turn on extended thinking so Claude reasons step-by-step before producing the epic narrative and acceptance criteria.
-- **Artifacts:** Use Artifacts to draft and iterate on epic documents, story maps, or acceptance-criteria checklists in a dedicated space. Keeps epic structure visible and editable in one place.
-- **Long context (200K):** Paste discovery notes, OKRs, and stakeholder comments into context so the epic narrative and constraints are grounded in real input.
-- **Structured outputs:** Ask for epics in a consistent format (e.g., markdown sections matching the structure above) so output can be dropped into Jira, GitHub issues, or TheStudio Intent Specification.
-
-### Integration with TheStudio
-
-- **Intent Layer (doc 11):** Saga’s epics feed the Intent Builder. Epic-level acceptance criteria and constraints become the basis for Intent Specification (goal, constraints, invariants, acceptance criteria, non-goals).
-- **Planner role (doc 08):** For discovery and roadmap work, large ambiguous features, or missing acceptance criteria, the system’s Planner role aligns with Saga: structured breakdown, recommended overlays and expert coverage, intent improvements. Saga’s outputs are the ideal input for the Planner.
-- **Evidence and provenance:** When epics are stored in the repo or linked from issues, Cursor and Claude can reference them during implementation and QA, keeping "definition of done" consistent.
+**Saga-specific notes:**
+- Epic docs and acceptance criteria live in the repo so Agent finds them via semantic search.
+- Saga’s epics feed the **Intent Builder** (doc 11). Epic-level acceptance criteria and constraints become the basis for Intent Specification.
+- Saga’s outputs are the ideal input for the **Planner role** (doc 08): structured breakdown, recommended overlays and expert coverage, intent improvements.
 
 ---
 

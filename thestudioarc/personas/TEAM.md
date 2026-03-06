@@ -21,7 +21,7 @@
 3. **Meridian** — Reviews epic (run [meridian-review-checklist.md](meridian-review-checklist.md) Saga section). No commit until it passes.
 4. **Helm** — Produces plan: order of work, testable sprint goal, dependency visibility, estimation reasoning, capacity/buffer. Consumes approved epics.
 5. **Meridian** — Reviews plan (run checklist Helm section). No commit until it passes.
-6. **Execution** — Primary Agent + Cursor/Claude implement from epic and plan. Verification and QA gates fail closed. Evidence and provenance required.
+6. **Execution** — Handled by TheStudio agent roles (Developer, Architect from `08-agent-roles.md`), not a persona. **Handoff contract:** approved epic + approved plan = sufficient input for the Agent Plane. Intake, Context Manager, and Intent Builder consume persona outputs directly. Verification and QA gates fail closed. Evidence and provenance required.
 7. **Outcome feedback** — Single-pass success, loopbacks, reopen rate feed back into how Saga and Helm refine.
 
 ---

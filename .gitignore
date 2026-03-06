@@ -1,0 +1,23 @@
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Local tapps-mcp data
+.tapps-mcp/memory/
+.tapps-mcp/metrics/
+.tapps-mcp/sessions/
+.tapps-mcp/backups/
+.tapps-mcp/pre-compact-context.json
+.tapps-mcp/.validation-marker
+.tapps-mcp/.validation-progress.json
+
+# IDE local
+.claude/settings.json
+
+# Environment
+.env
+*.local

@@ -36,6 +36,24 @@ This file is designed for agent runtimes that discover and load role definitions
 - Outcome Ingestor
 - Reputation Engine
 
+## Personas (human-facing quality layer)
+
+Three personas govern the human-facing inputs that the Agent Plane consumes. They sit upstream of the agent roles.
+
+| Persona | Role | Feeds into |
+|---------|------|------------|
+| **Saga** | Epic creator — turns strategy into clear, testable epics | Intent Builder (epic → Intent Specification) |
+| **Helm** | Planner & dev manager — turns backlog into order of work and testable sprint goals | Planner role, Context Manager (plan → scope, dependencies, risk flags) |
+| **Meridian** | VP Success — reviewer & challenger of Saga and Helm | Quality gate before any epic or plan is committed; bar aligns with Verification, QA, and Outcome Ingestor |
+
+**Chain:** Strategy/OKRs → Saga (epic) → Meridian (epic review) → Helm (plan) → Meridian (plan review) → Agent Plane execution.
+
+**Handoff contract:** Approved epic + approved plan = sufficient input for the Agent Plane. Persona outputs are the source of truth for intent, scope, acceptance criteria, and non-goals that Intake, Context Manager, and Intent Builder consume.
+
+Full persona docs: `personas/saga-epic-creator.md`, `personas/helm-planner-dev-manager.md`, `personas/meridian-vp-success.md`.
+Review checklist: `personas/meridian-review-checklist.md`.
+Tooling guide: `personas/tooling-guide.md`.
+
 ## Required Operating Rules
 
 - Agents communicate through artifacts and signals, not free-form chat.

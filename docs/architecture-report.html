@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TheStudio - Agent Expert Framework - Architecture Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+
+/* HomeIQ Design System — Architecture Report */
+:root {{
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #12121a;
+  --bg-tertiary: #1e1e2a;
+  --card-bg: rgba(18, 18, 26, 0.95);
+  --card-bg-alt: rgba(30, 30, 42, 0.95);
+  --card-border: rgba(63, 63, 90, 0.5);
+  --accent-primary: #14b8a6;
+  --accent-secondary: #d4a847;
+  --accent-glow: rgba(20, 184, 166, 0.12);
+  --text-primary: #fafafa;
+  --text-secondary: #d4d4d8;
+  --text-tertiary: #a1a1aa;
+  --text-muted: #71717a;
+  --focus-ring: rgba(20, 184, 166, 0.5);
+  --shadow-card: 0 4px 6px -1px rgba(0,0,0,0.3), 0 0 0 1px rgba(63,63,90,0.3);
+  --shadow-hover: 0 4px 12px -2px rgba(0,0,0,0.25);
+  --radius-md: 0.25rem;
+  --radius-lg: 0.375rem;
+  --radius-xl: 0.5rem;
+  --motion-fast: 150ms;
+  --motion-normal: 250ms;
+  --ease-enter: cubic-bezier(0.4, 0, 0.2, 1);
+  --font-display: 'Outfit', 'Inter', system-ui, sans-serif;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
+}}
+
+* {{ margin: 0; padding: 0; box-sizing: border-box; }}
+
+body {{
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.45;
+  font-size: 0.875rem;
+  font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1, 'cv11' 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}}
+
+/* Scrollbar */
+::-webkit-scrollbar {{ width: 8px; height: 8px; }}
+::-webkit-scrollbar-track {{ background: transparent; }}
+::-webkit-scrollbar-thumb {{ background: #475569; border-radius: 4px; }}
+
+/* Focus */
+:focus-visible {{
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}}
+:focus:not(:focus-visible) {{ outline: none; }}
+
+/* Animations */
+@keyframes fadeIn {{
+  from {{ opacity: 0; transform: translateY(10px); }}
+  to {{ opacity: 1; transform: translateY(0); }}
+}}
+@keyframes fadeInScale {{
+  from {{ opacity: 0; transform: scale(0.95); }}
+  to {{ opacity: 1; transform: scale(1); }}
+}}
+@keyframes pulseGlow {{
+  0%, 100% {{ box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.15); }}
+  50% {{ box-shadow: 0 0 20px 4px rgba(20, 184, 166, 0.08); }}
+}}
+
+/* Hero */
+.hero {{
+  background: linear-gradient(135deg, #0a0a0f 0%, #12121a 30%, #1e1e2a 70%, #0d3d38 100%);
+  padding: 80px 40px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}}
+.hero::before {{
+  content: '';
+  position: absolute;
+  top: -50%; left: -50%;
+  width: 200%; height: 200%;
+  background: radial-gradient(circle at 30% 50%, rgba(20,184,166,0.1) 0%, transparent 50%),
+              radial-gradient(circle at 70% 80%, rgba(212,168,71,0.06) 0%, transparent 50%);
+  animation: pulseGlow 8s ease-in-out infinite;
+}}
+.hero-content {{ position: relative; z-index: 1; max-width: 800px; margin: 0 auto; }}
+.hero-title {{
+  font-family: var(--font-display);
+  font-size: 2.25rem; font-weight: 700;
+  letter-spacing: -0.025em; margin-bottom: 12px;
+  color: var(--text-primary);
+}}
+.hero-subtitle {{
+  font-size: 1rem; color: var(--text-secondary);
+  margin-bottom: 16px; line-height: 1.6;
+}}
+.hero-meta {{
+  font-size: 0.75rem; color: var(--accent-primary);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  font-weight: 600;
+}}
+
+/* Sections */
+.section {{
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 48px 40px;
+  animation: fadeIn 0.4s var(--ease-enter) both;
+}}
+.section-title {{
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  margin-bottom: 16px;
+  color: var(--text-primary);
+  position: relative;
+  padding-bottom: 12px;
+}}
+.section-title::after {{
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 48px; height: 3px;
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+  border-radius: 2px;
+}}
+.section > p {{
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  margin-bottom: 24px;
+  max-width: 900px;
+}}
+
+/* Purpose block */
+.purpose-block {{
+  background: linear-gradient(135deg, var(--card-bg), var(--card-bg-alt));
+  border: 1px solid var(--card-border);
+  border-left: 3px solid var(--accent-primary);
+  border-radius: var(--radius-lg);
+  padding: 24px 28px;
+  margin-bottom: 32px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-card);
+}}
+.purpose-block h3 {{
+  font-family: var(--font-display);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--accent-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
+}}
+.purpose-text {{
+  font-size: 1rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}}
+
+/* Stats grid */
+.stats-grid {{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}}
+.stat-card {{
+  background: linear-gradient(135deg, var(--card-bg), var(--card-bg-alt));
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  text-align: center;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-card);
+  transition: transform var(--motion-fast) var(--ease-enter),
+              box-shadow var(--motion-fast) var(--ease-enter);
+  animation: fadeInScale 0.4s var(--ease-enter) both;
+}}
+.stat-card:nth-child(1) {{ animation-delay: 0.05s; }}
+.stat-card:nth-child(2) {{ animation-delay: 0.1s; }}
+.stat-card:nth-child(3) {{ animation-delay: 0.15s; }}
+.stat-card:nth-child(4) {{ animation-delay: 0.2s; }}
+.stat-card:nth-child(5) {{ animation-delay: 0.25s; }}
+.stat-card:hover {{
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-hover);
+}}
+.stat-number {{
+  font-family: var(--font-mono);
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--accent-primary);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.015em;
+}}
+.stat-label {{
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 500;
+  margin-top: 4px;
+}}
+
+/* Meta badges */
+.meta-details {{
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}}
+.meta-badge {{
+  background: linear-gradient(135deg, var(--card-bg), var(--card-bg-alt));
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-tertiary);
+}}
+
+/* Diagram container */
+.diagram-container {{
+  background: linear-gradient(135deg, var(--card-bg), var(--card-bg-alt));
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin: 24px 0;
+  overflow-x: auto;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-card);
+}}
+.diagram-container svg {{
+  width: 100%;
+  height: auto;
+  display: block;
+}}
+
+/* Component cards */
+.component-card {{
+  background: linear-gradient(135deg, var(--card-bg), var(--card-bg-alt));
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: 16px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-card);
+  transition: transform var(--motion-fast) var(--ease-enter),
+              box-shadow var(--motion-fast) var(--ease-enter);
+  animation: fadeIn 0.4s var(--ease-enter) both;
+}}
+.component-card:hover {{
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-hover);
+}}
+.component-header {{
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}}
+.component-name {{
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: white;
+  margin: 0;
+}}
+.component-stats {{
+  display: flex;
+  gap: 12px;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.75);
+  font-family: var(--font-mono);
+}}
+.component-body {{
+  padding: 20px;
+}}
+.component-description {{
+  color: var(--text-secondary);
+  line-height: 1.6;
+  font-size: 0.875rem;
+}}
+.submodule-list {{
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--card-border);
+}}
+.submodule-list h4 {{
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  margin-bottom: 8px;
+}}
+.submodule-list ul {{
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}}
+.submodule-list li {{
+  background: var(--bg-primary);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: 3px 10px;
+  font-size: 0.75rem;
+}}
+.submodule-list li code {{
+  color: var(--accent-primary);
+  font-family: var(--font-mono);
+  font-size: 0.7em;
+}}
+
+/* API surface */
+.api-module {{
+  margin-bottom: 20px;
+}}
+.api-module-path {{
+  font-size: 0.8125rem;
+  color: var(--accent-primary);
+  font-family: var(--font-mono);
+  padding: 6px 0;
+  border-bottom: 1px solid var(--card-border);
+  margin-bottom: 10px;
+}}
+.api-class {{
+  background: linear-gradient(135deg, var(--card-bg), var(--card-bg-alt));
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: 14px 18px;
+  margin-bottom: 8px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}}
+.api-class-header {{
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}}
+.api-class-name {{
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--accent-primary);
+  font-family: var(--font-mono);
+}}
+.api-bases {{
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+}}
+.api-doc {{
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  margin-bottom: 6px;
+}}
+.api-methods {{
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}}
+.api-methods code {{
+  color: var(--accent-primary);
+  font-family: var(--font-mono);
+  font-size: 0.7em;
+}}
+
+/* Tech stack */
+.dep-group {{
+  margin-bottom: 20px;
+}}
+.dep-group h4 {{
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  margin-bottom: 10px;
+}}
+.dep-tags {{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}}
+.dep-tag {{
+  background: linear-gradient(135deg, var(--card-bg), var(--card-bg-alt));
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  transition: border-color var(--motion-fast) var(--ease-enter),
+              transform var(--motion-fast) var(--ease-enter);
+}}
+.dep-tag:hover {{
+  border-color: var(--accent-primary);
+  transform: translateY(-2px);
+}}
+.dep-tag.dep-dev {{
+  border-style: dashed;
+  color: var(--text-tertiary);
+}}
+
+/* Footer */
+.footer {{
+  text-align: center;
+  padding: 32px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  border-top: 1px solid var(--card-border);
+  margin-top: 32px;
+}}
+.footer strong {{
+  color: var(--accent-primary);
+}}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {{
+  *, *::before, *::after {{
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }}
+}}
+
+/* High contrast */
+@media (prefers-contrast: high) {{
+  .component-card, .stat-card, .api-class {{ border: 2px solid currentColor; }}
+}}
+
+/* Print */
+@media print {{
+  body {{ background: white; color: black; }}
+  .hero {{ background: #f0f0f0; color: black; }}
+  .hero-title, .hero-subtitle, .hero-meta {{ color: black; }}
+  .stat-number {{ color: black; -webkit-text-fill-color: black; }}
+}}
+
+/* Responsive */
+@media (max-width: 768px) {{
+  .hero {{ padding: 48px 20px; }}
+  .hero-title {{ font-size: 1.5rem; }}
+  .section {{ padding: 32px 20px; }}
+  .component-header {{ flex-direction: column; gap: 6px; }}
+  .stats-grid {{ grid-template-columns: repeat(2, 1fr); }}
+}}
+
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <div class="hero-content">
+    <h1 class="hero-title">TheStudio - Agent Expert Framework</h1>
+    <p class="hero-subtitle">Intent in. Proof out.</p>
+    <p class="hero-meta">Architecture Report</p>
+  </div>
+</section>
+<section class="section" id="executive-summary">
+<h2 class="section-title">Executive Summary</h2>
+
+<div class="purpose-block">
+  <h3>Purpose &amp; Intent</h3>
+  <p class="purpose-text">Intent in. Proof out.</p>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-number">0</div>
+    <div class="stat-label">Packages</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number">0</div>
+    <div class="stat-label">Modules</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number">0</div>
+    <div class="stat-label">Public Classes</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number">0</div>
+    <div class="stat-label">Public APIs</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number">0</div>
+    <div class="stat-label">External Deps</div>
+  </div>
+</div>
+</section>
+
+
+
+
+
+<section class="section" id="health-insights">
+<h2 class="section-title">Architecture Health</h2>
+<p>Key indicators for technical leadership assessing system maturity, maintainability risk, and architectural fitness.</p>
+<div class="stats-grid">
+
+<div class="stat-card">
+  <div class="stat-number" style="color:var(--accent-secondary)">Low</div>
+  <div class="stat-label">Modularity</div>
+</div>
+
+<div class="stat-card">
+  <div class="stat-number">0</div>
+  <div class="stat-label">Avg Modules/Package</div>
+</div>
+
+<div class="stat-card">
+  <div class="stat-number" style="color:var(--accent-primary)">Low</div>
+  <div class="stat-label">External Coupling</div>
+</div>
+
+<div class="stat-card">
+  <div class="stat-number">0%</div>
+  <div class="stat-label">API Density</div>
+</div>
+</div>
+<div class="purpose-block">
+<h3>Recommendations</h3>
+<p class="purpose-text">No license detected. Add a license to clarify usage rights.</p>
+</div>
+</section>
+
+<footer class="footer">
+  <p>Generated by <strong>DocsMCP</strong> &mdash; Architecture Report</p>
+  <p style="margin-top:6px">
+    0 packages &middot; 0 modules &middot;
+    0 public classes &middot; 2026-03-06 00:56 UTC
+  </p>
+</footer>
+</body>
+</html>

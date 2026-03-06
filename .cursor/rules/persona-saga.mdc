@@ -1,6 +1,10 @@
 ---
 description: "Apply when the user is creating or editing an epic: scope, acceptance criteria, success metrics, non-goals, or epic structure. Use Saga (epic creator) persona."
 alwaysApply: false
+globs:
+  - "**/epics/**"
+  - "**/epic-*"
+  - "**/epic_*"
 ---
 
 # Persona: Saga — Epic Creator
