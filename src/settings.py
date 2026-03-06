@@ -6,7 +6,7 @@ class Settings(BaseSettings):
 
     model_config = {"env_prefix": "THESTUDIO_"}
 
-    database_url: str = "postgresql+asyncpg://thestudio:thestudio_dev@localhost:5432/thestudio"
+    database_url: str = "postgresql+asyncpg://thestudio:thestudio_dev@localhost:5434/thestudio"
     temporal_host: str = "localhost:7233"
     temporal_namespace: str = "default"
     temporal_task_queue: str = "thestudio-main"
@@ -16,6 +16,17 @@ class Settings(BaseSettings):
     otel_service_name: str = "thestudio"
     otel_exporter: str = "console"  # "console" or "otlp"
     otel_otlp_endpoint: str = "http://localhost:4317"
+
+    # Primary Agent (Story 0.5)
+    anthropic_api_key: str = ""
+    agent_model: str = "claude-sonnet-4-5"
+    agent_max_turns: int = 30
+    agent_max_budget_usd: float = 5.0
+    agent_max_loopbacks: int = 2
+
+    # Publisher (Story 0.7)
+    github_app_id: str = ""
+    github_private_key_path: str = ""
 
 
 settings = Settings()

@@ -39,4 +39,4 @@ async def start_workflow(taskpacket_id: UUID, correlation_id: UUID) -> str:
         id=str(taskpacket_id),
         task_queue=settings.temporal_task_queue,
     )
-    return handle.result_run_id
+    return handle.result_run_id or ""

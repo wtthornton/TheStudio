@@ -20,6 +20,8 @@ dependencies = [
     "opentelemetry-instrumentation-sqlalchemy>=0.50b0",
     "opentelemetry-instrumentation-httpx>=0.50b0",
     "httpx>=0.28.0",
+    "claude-agent-sdk>=0.1.40",
+    "anyio>=4.0.0",
 ]
 
 [project.optional-dependencies]
@@ -49,7 +51,7 @@ select = ["E", "F", "W", "I", "N", "UP", "S", "B", "A", "C4", "PT", "RUF"]
 ignore = ["S104"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["S101"]
+"tests/**/*.py" = ["S101", "S108"]
 
 [tool.mypy]
 python_version = "3.12"

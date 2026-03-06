@@ -10,11 +10,10 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from src.settings import settings
 
-SQL_UP = """
-CREATE TYPE repo_tier AS ENUM ('observe', 'suggest', 'execute');
-CREATE TYPE repo_status AS ENUM ('active', 'paused', 'disabled');
-
-CREATE TABLE repo_profile (
+SQL_UP = [
+    "CREATE TYPE repo_tier AS ENUM ('observe', 'suggest', 'execute')",
+    "CREATE TYPE repo_status AS ENUM ('active', 'paused', 'disabled')",
+    """CREATE TABLE repo_profile (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     owner VARCHAR(255) NOT NULL,
     repo_name VARCHAR(255) NOT NULL,
@@ -27,31 +26,31 @@ CREATE TABLE repo_profile (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (owner, repo_name)
-);
+)""",
+    "CREATE INDEX ix_repo_profile_status ON repo_profile (status)",
+    "COMMENT ON TABLE repo_profile IS 'Repo Profile — registered repository config'",
+]
 
-CREATE INDEX ix_repo_profile_status ON repo_profile (status);
-
-COMMENT ON TABLE repo_profile IS 'Repo Profile — configuration record for a registered repository';
-"""
-
-SQL_DOWN = """
-DROP TABLE IF EXISTS repo_profile;
-DROP TYPE IF EXISTS repo_status;
-DROP TYPE IF EXISTS repo_tier;
-"""
+SQL_DOWN = [
+    "DROP TABLE IF EXISTS repo_profile",
+    "DROP TYPE IF EXISTS repo_status",
+    "DROP TYPE IF EXISTS repo_tier",
+]
 
 
 async def migrate_up() -> None:
     engine = create_async_engine(settings.database_url)
     async with engine.begin() as conn:
-        await conn.execute(text(SQL_UP))
+        for stmt in SQL_UP:
+            await conn.execute(text(stmt))
     await engine.dispose()
 
 
 async def migrate_down() -> None:
     engine = create_async_engine(settings.database_url)
     async with engine.begin() as conn:
-        await conn.execute(text(SQL_DOWN))
+        for stmt in SQL_DOWN:
+            await conn.execute(text(stmt))
     await engine.dispose()
 
 

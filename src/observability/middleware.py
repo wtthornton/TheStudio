@@ -3,7 +3,7 @@
 from uuid import UUID
 
 from fastapi import Request
-from opentelemetry import trace
+from opentelemetry import context, trace
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import Response
 
@@ -34,6 +34,4 @@ class CorrelationMiddleware(BaseHTTPMiddleware):
             response.headers["X-Correlation-ID"] = str(correlation_id)
             return response
         finally:
-            from opentelemetry import context
-
             context.detach(token)

@@ -1,5 +1,6 @@
 """Correlation ID generation and propagation via OpenTelemetry baggage."""
 
+from contextvars import Token
 from uuid import UUID, uuid4
 
 from opentelemetry import baggage, context
@@ -23,10 +24,10 @@ def get_correlation_id(ctx: Context | None = None) -> UUID | None:
     value = baggage.get_baggage(BAGGAGE_CORRELATION_ID, context=ctx)
     if value is None:
         return None
-    return UUID(value)
+    return UUID(str(value))
 
 
-def attach_correlation_id(correlation_id: UUID) -> object:
+def attach_correlation_id(correlation_id: UUID) -> Token[Context]:
     """Set correlation_id in baggage and attach to current context. Returns token for detach."""
     new_ctx = set_correlation_id(correlation_id)
     return context.attach(new_ctx)

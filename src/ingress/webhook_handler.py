@@ -106,9 +106,9 @@ async def github_webhook(
             span.set_attribute(ATTR_OUTCOME, "workflow_start_failed")
             return Response(status_code=201, content="TaskPacket created, workflow pending")
 
-        from opentelemetry import context
+        from opentelemetry import context as otel_context
 
-        context.detach(token)
+        otel_context.detach(token)
 
         span.set_attribute(ATTR_OUTCOME, "created")
         return Response(status_code=201, content="TaskPacket created, workflow started")

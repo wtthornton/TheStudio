@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: thestudio_dev
       POSTGRES_DB: thestudio
     ports:
-      - "5432:5432"
+      - "5434:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -20,7 +20,7 @@ services:
     ports:
       - "7233:7233"
     environment:
-      - DB=postgresql
+      - DB=postgres12
       - DB_PORT=5432
       - POSTGRES_USER=thestudio
       - POSTGRES_PWD=thestudio_dev
@@ -30,9 +30,9 @@ services:
         condition: service_healthy
 
   temporal-ui:
-    image: temporalio/ui:2.31
+    image: temporalio/ui:latest
     ports:
-      - "8080:8080"
+      - "8088:8080"
     environment:
       - TEMPORAL_ADDRESS=temporal:7233
     depends_on:

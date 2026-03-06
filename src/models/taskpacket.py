@@ -6,10 +6,12 @@ Every downstream component reads from and/or updates the TaskPacket.
 
 import enum
 from datetime import datetime
+from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
-from sqlalchemy import DateTime, Enum, String, func
+from sqlalchemy import DateTime, Enum, Integer, String, UniqueConstraint, func
+from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -71,8 +73,23 @@ class TaskPacketRow(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
 
+    # Enrichment fields (Story 0.3 — Context Manager)
+    scope: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    risk_flags: Mapped[dict[str, bool] | None] = mapped_column(JSON, nullable=True)
+    complexity_index: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    context_packs: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, nullable=True)
+
+    # Intent fields (Story 0.4 — Intent Builder)
+    intent_spec_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True), nullable=True
+    )
+    intent_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    # Verification fields (Story 0.6 — Verification Gate)
+    loopback_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
     __table_args__ = (
-        # Dedupe index: (delivery_id, repo) must be unique
+        UniqueConstraint("delivery_id", "repo", name="ix_taskpacket_delivery_repo"),
         {"comment": "TaskPacket — durable work record"},
     )
 
@@ -97,5 +114,12 @@ class TaskPacketRead(BaseModel):
     delivery_id: str
     correlation_id: UUID
     status: TaskPacketStatus
+    scope: dict[str, Any] | None = None
+    risk_flags: dict[str, bool] | None = None
+    complexity_index: str | None = None
+    context_packs: list[dict[str, Any]] | None = None
+    intent_spec_id: UUID | None = None
+    intent_version: int | None = None
+    loopback_count: int = 0
     created_at: datetime
     updated_at: datetime
