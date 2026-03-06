@@ -9,6 +9,8 @@ SPAN_AGENT_LOOPBACK = "agent.loopback"
 SPAN_VERIFICATION_RUN = "verification.run"
 SPAN_VERIFICATION_CHECK = "verification.check"
 SPAN_PUBLISHER_PUBLISH = "publisher.publish"
+SPAN_INTENT_REFINE = "intent.refine"
+SPAN_OUTCOME_INGEST = "outcome.ingest"
 
 # Standard span attribute keys
 ATTR_CORRELATION_ID = "thestudio.correlation_id"

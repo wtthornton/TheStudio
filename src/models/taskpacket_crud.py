@@ -1,5 +1,6 @@
 """CRUD operations for TaskPacket."""
 
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
@@ -104,3 +105,82 @@ async def update_status(
     await session.commit()
     await session.refresh(row)
     return TaskPacketRead.model_validate(row)
+
+
+async def update_enrichment(
+    session: AsyncSession,
+    task_id: UUID,
+    scope: dict[str, Any],
+    risk_flags: dict[str, bool],
+    complexity_index: str,
+    context_packs: list[dict[str, Any]],
+) -> TaskPacketRead:
+    """Update enrichment fields and transition status to ENRICHED."""
+    row = await session.get(TaskPacketRow, task_id)
+    if row is None:
+        raise ValueError(f"TaskPacket {task_id} not found")
+
+    current = row.status
+    if TaskPacketStatus.ENRICHED not in ALLOWED_TRANSITIONS.get(current, set()):
+        raise InvalidStatusTransitionError(current, TaskPacketStatus.ENRICHED)
+
+    row.scope = scope
+    row.risk_flags = risk_flags
+    row.complexity_index = complexity_index
+    row.context_packs = context_packs
+    row.status = TaskPacketStatus.ENRICHED
+    await session.commit()
+    await session.refresh(row)
+    return TaskPacketRead.model_validate(row)
+
+
+async def update_intent(
+    session: AsyncSession,
+    task_id: UUID,
+    intent_spec_id: UUID,
+    intent_version: int,
+) -> TaskPacketRead:
+    """Update intent reference and transition status to INTENT_BUILT."""
+    row = await session.get(TaskPacketRow, task_id)
+    if row is None:
+        raise ValueError(f"TaskPacket {task_id} not found")
+
+    current = row.status
+    if TaskPacketStatus.INTENT_BUILT not in ALLOWED_TRANSITIONS.get(current, set()):
+        raise InvalidStatusTransitionError(current, TaskPacketStatus.INTENT_BUILT)
+
+    row.intent_spec_id = intent_spec_id
+    row.intent_version = intent_version
+    row.status = TaskPacketStatus.INTENT_BUILT
+    await session.commit()
+    await session.refresh(row)
+    return TaskPacketRead.model_validate(row)
+
+
+async def update_intent_version(
+    session: AsyncSession,
+    task_id: UUID,
+    intent_spec_id: UUID,
+    intent_version: int,
+) -> TaskPacketRead:
+    """Update intent reference without changing status (for refinement)."""
+    row = await session.get(TaskPacketRow, task_id)
+    if row is None:
+        raise ValueError(f"TaskPacket {task_id} not found")
+
+    row.intent_spec_id = intent_spec_id
+    row.intent_version = intent_version
+    await session.commit()
+    await session.refresh(row)
+    return TaskPacketRead.model_validate(row)
+
+
+async def increment_loopback(session: AsyncSession, task_id: UUID) -> int:
+    """Increment and return the loopback count."""
+    row = await session.get(TaskPacketRow, task_id)
+    if row is None:
+        raise ValueError(f"TaskPacket {task_id} not found")
+    row.loopback_count += 1
+    await session.commit()
+    await session.refresh(row)
+    return row.loopback_count
