@@ -70,7 +70,7 @@ def route(
     effective_role: EffectiveRolePolicy,
     risk_flags: dict[str, bool] | None,
     available_experts: list[ExpertRead],
-    max_experts_per_consult: int = 3,
+    max_experts_per_consult: int | None = None,
 ) -> ConsultPlan:
     """Select expert subset and produce a ConsultPlan.
 
@@ -79,10 +79,15 @@ def route(
         risk_flags: Risk flags from TaskPacket context enrichment.
         available_experts: All active experts from Expert Library.
         max_experts_per_consult: Budget limit on total experts.
+            If None, uses the policy's max_experts_per_consult.
 
     Returns:
         ConsultPlan with selections, recruiter requests, and rationale.
     """
+    # Use policy budget if not explicitly overridden
+    if max_experts_per_consult is None:
+        max_experts_per_consult = effective_role.max_experts_per_consult
+
     # Determine required classes from EffectiveRolePolicy
     required_classes = set(effective_role.mandatory_expert_classes)
 
