@@ -42,6 +42,18 @@
                         <span class="mr-2">&#9660;</span> Workflows
                     </a>
                 </li>
+                <li>
+                    <a href="/admin/ui/metrics"
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'metrics' %}bg-gray-800 text-white{% else %}text-gray-300{% endif %}">
+                        <span class="mr-2">&#9650;</span> Metrics
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/ui/experts"
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'experts' %}bg-gray-800 text-white{% else %}text-gray-300{% endif %}">
+                        <span class="mr-2">&#9733;</span> Experts
+                    </a>
+                </li>
                 {% if current_user_role and current_user_role.value == 'admin' %}
                 <li>
                     <a href="/admin/ui/audit"

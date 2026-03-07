@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Expert Performance{% endblock %}
+{% block page_title %}Expert Performance{% endblock %}
+
+{% block content %}
+<div class="mb-4 flex gap-3">
+    <div>
+        <label class="text-sm font-medium text-gray-600 mr-1">Repo:</label>
+        <select id="expert-repo-filter" name="repo"
+                hx-get="/admin/ui/partials/experts"
+                hx-target="#experts-content"
+                hx-swap="innerHTML"
+                hx-include="#expert-repo-filter, #expert-tier-filter"
+                class="border border-gray-300 rounded px-3 py-1 text-sm">
+            <option value="">All</option>
+        </select>
+    </div>
+    <div>
+        <label class="text-sm font-medium text-gray-600 mr-1">Tier:</label>
+        <select id="expert-tier-filter" name="tier"
+                hx-get="/admin/ui/partials/experts"
+                hx-target="#experts-content"
+                hx-swap="innerHTML"
+                hx-include="#expert-repo-filter, #expert-tier-filter"
+                class="border border-gray-300 rounded px-3 py-1 text-sm">
+            <option value="">All</option>
+            <option value="shadow">Shadow</option>
+            <option value="probation">Probation</option>
+            <option value="trusted">Trusted</option>
+        </select>
+    </div>
+</div>
+<div hx-get="/admin/ui/partials/experts" hx-trigger="load" hx-target="#experts-content" hx-swap="innerHTML">
+</div>
+<div id="experts-content">
+    <div class="text-center py-12 text-gray-400">
+        <p class="text-sm">Loading experts...</p>
+    </div>
+</div>
+{% endblock %}

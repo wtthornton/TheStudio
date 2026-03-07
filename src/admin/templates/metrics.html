@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Metrics & Trends{% endblock %}
+{% block page_title %}Metrics & Trends{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <label class="text-sm font-medium text-gray-600 mr-2">Repo Filter:</label>
+    <select id="repo-filter"
+            hx-get="/admin/ui/partials/metrics"
+            hx-target="#metrics-content"
+            hx-swap="innerHTML"
+            hx-include="#repo-filter"
+            name="repo"
+            class="border border-gray-300 rounded px-3 py-1 text-sm">
+        <option value="">All Repos</option>
+    </select>
+</div>
+<div hx-get="/admin/ui/partials/metrics" hx-trigger="load" hx-target="#metrics-content" hx-swap="innerHTML">
+</div>
+<div id="metrics-content">
+    <div class="text-center py-12 text-gray-400">
+        <p class="text-sm">Loading metrics...</p>
+    </div>
+</div>
+{% endblock %}

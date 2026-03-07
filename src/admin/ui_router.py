@@ -18,6 +18,8 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from src.admin.audit import AuditEventType, AuditLogFilter, get_audit_service
+from src.admin.experts import get_expert_service
+from src.admin.metrics import get_metrics_service
 from src.admin.rbac import ROLE_PERMISSIONS, Permission, Role, get_rbac_service
 from src.admin.router import (
     get_health_service,
@@ -496,3 +498,108 @@ async def partial_audit(
         "limit": limit,
     }
     return templates.TemplateResponse("partials/audit_list.html", ctx)
+
+
+# --- Metrics Page Routes (Story 5.7) ---
+
+
+@ui_router.get("/metrics", response_class=HTMLResponse)
+async def metrics_page(request: Request) -> Response:
+    """Render Metrics & Trends page."""
+    user_id = request.headers.get("X-User-ID")
+    role = await _resolve_role(user_id)
+    ctx = _base_context(request, role)
+    ctx["active_page"] = "metrics"
+    return templates.TemplateResponse("metrics.html", ctx)
+
+
+@ui_router.get("/partials/metrics", response_class=HTMLResponse)
+async def metrics_partial(
+    request: Request,
+    repo: str | None = Query(None),
+) -> Response:
+    """Render metrics dashboard partial."""
+    svc = get_metrics_service()
+    repo_filter = repo if repo else None
+
+    single_pass = svc.get_single_pass(repo_filter=repo_filter)
+    loopbacks = svc.get_loopbacks(repo_filter=repo_filter)
+    reopen = svc.get_reopen(repo_filter=repo_filter)
+
+    ctx = {
+        "request": request,
+        "single_pass": single_pass,
+        "loopbacks": loopbacks,
+        "reopen": reopen,
+    }
+    return templates.TemplateResponse("partials/metrics_content.html", ctx)
+
+
+# --- Expert Performance Routes (Story 5.8) ---
+
+
+@ui_router.get("/experts", response_class=HTMLResponse)
+async def experts_page(request: Request) -> Response:
+    """Render Expert Performance page."""
+    user_id = request.headers.get("X-User-ID")
+    role = await _resolve_role(user_id)
+    ctx = _base_context(request, role)
+    ctx["active_page"] = "experts"
+    return templates.TemplateResponse("experts.html", ctx)
+
+
+@ui_router.get("/partials/experts", response_class=HTMLResponse)
+async def experts_partial(
+    request: Request,
+    repo: str | None = Query(None),
+    tier: str | None = Query(None),
+) -> Response:
+    """Render expert list partial."""
+    svc = get_expert_service()
+    repo_filter = repo if repo else None
+    tier_filter = tier if tier else None
+    experts = svc.list_experts(repo_filter=repo_filter, tier_filter=tier_filter)
+
+    ctx = {
+        "request": request,
+        "experts": [e.to_dict() for e in experts],
+    }
+    return templates.TemplateResponse("partials/experts_list.html", ctx)
+
+
+@ui_router.get("/experts/{expert_id}", response_class=HTMLResponse)
+async def expert_detail_page(request: Request, expert_id: str) -> Response:
+    """Render expert detail page."""
+    user_id = request.headers.get("X-User-ID")
+    role = await _resolve_role(user_id)
+    svc = get_expert_service()
+    detail = svc.get_expert(expert_id)
+
+    if detail is None:
+        ctx = _base_context(request, role)
+        ctx["active_page"] = "experts"
+        ctx["detail"] = "Expert not found"
+        return templates.TemplateResponse("error.html", ctx)
+
+    ctx = _base_context(request, role)
+    ctx["active_page"] = "experts"
+    ctx["expert"] = detail.to_dict()
+    return templates.TemplateResponse("expert_detail.html", ctx)
+
+
+@ui_router.get("/partials/expert/{expert_id}", response_class=HTMLResponse)
+async def expert_detail_partial(request: Request, expert_id: str) -> Response:
+    """Render expert detail partial."""
+    svc = get_expert_service()
+    detail = svc.get_expert(expert_id)
+
+    if detail is None:
+        return HTMLResponse("<p class='text-gray-400 text-sm'>Expert not found.</p>")
+
+    ctx = {
+        "request": request,
+        "expert": detail.to_dict(),
+    }
+    return templates.TemplateResponse(
+        "partials/expert_detail_content.html", ctx
+    )

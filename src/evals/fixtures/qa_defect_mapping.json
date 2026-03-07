@@ -1,0 +1,116 @@
+[
+  {
+    "id": "qa-all-mapped-1",
+    "eval_type": "qa_defect_mapping",
+    "input_data": {
+      "acceptance_criteria": [
+        "Login endpoint accepts email and password",
+        "JWT token returned on successful login",
+        "Invalid credentials return 401 error"
+      ],
+      "qa_defects": [
+        {
+          "description": "Login endpoint fails to accept valid email and password credentials",
+          "category": "implementation_bug",
+          "severity": "s1"
+        },
+        {
+          "description": "Invalid credentials do not return 401 error code as expected",
+          "category": "implementation_bug",
+          "severity": "s1"
+        }
+      ]
+    },
+    "expected_output": {
+      "unmapped_classification": {
+        "intent_gap": 0,
+        "implementation_bug": 2
+      }
+    },
+    "metadata": {
+      "description": "All defects map to existing criteria — pure implementation bugs"
+    }
+  },
+  {
+    "id": "qa-intent-gap-1",
+    "eval_type": "qa_defect_mapping",
+    "input_data": {
+      "acceptance_criteria": [
+        "Users can create new posts",
+        "Posts display author name and timestamp"
+      ],
+      "qa_defects": [
+        {
+          "description": "Rate limiting not enforced on post creation endpoint",
+          "category": "security",
+          "severity": "s1"
+        },
+        {
+          "description": "Author name displayed correctly on new posts",
+          "category": "implementation_bug",
+          "severity": "s2"
+        }
+      ]
+    },
+    "expected_output": {
+      "unmapped_classification": {
+        "intent_gap": 1,
+        "implementation_bug": 1
+      }
+    },
+    "metadata": {
+      "description": "Rate limiting defect has no matching criterion — intent gap; author display maps to criterion"
+    }
+  },
+  {
+    "id": "qa-all-gaps-1",
+    "eval_type": "qa_defect_mapping",
+    "input_data": {
+      "acceptance_criteria": [
+        "Dashboard shows user profile picture",
+        "Profile picture can be uploaded in PNG or JPEG format"
+      ],
+      "qa_defects": [
+        {
+          "description": "Database connection pool exhausted under concurrent load",
+          "category": "performance",
+          "severity": "s0"
+        },
+        {
+          "description": "Memory leak in background worker process",
+          "category": "operability",
+          "severity": "s1"
+        }
+      ]
+    },
+    "expected_output": {
+      "unmapped_classification": {
+        "intent_gap": 2,
+        "implementation_bug": 0
+      }
+    },
+    "metadata": {
+      "description": "All defects are operational issues with no matching acceptance criteria — all intent gaps"
+    }
+  },
+  {
+    "id": "qa-no-defects-1",
+    "eval_type": "qa_defect_mapping",
+    "input_data": {
+      "acceptance_criteria": [
+        "API returns paginated results",
+        "Pagination supports limit and offset parameters"
+      ],
+      "qa_defects": []
+    },
+    "expected_output": {
+      "unmapped_classification": {
+        "intent_gap": 0,
+        "implementation_bug": 0
+      }
+    },
+    "metadata": {
+      "description": "No defects found — perfect QA pass"
+    }
+  }
+]

@@ -1,0 +1,55 @@
+[
+  {
+    "id": "routing-all-covered-1",
+    "eval_type": "routing_correctness",
+    "input_data": {
+      "risk_flags": ["security_sensitive", "compliance_required"],
+      "consulted_expert_classes": ["security", "compliance", "technical"],
+      "mandatory_coverage_rules": {
+        "security_sensitive": ["security"],
+        "compliance_required": ["compliance"]
+      }
+    },
+    "expected_output": {
+      "all_covered": true
+    },
+    "metadata": {
+      "description": "All required expert classes consulted — security and compliance both present"
+    }
+  },
+  {
+    "id": "routing-missing-class-1",
+    "eval_type": "routing_correctness",
+    "input_data": {
+      "risk_flags": ["security_sensitive", "partner_integration"],
+      "consulted_expert_classes": ["technical", "security"],
+      "mandatory_coverage_rules": {
+        "security_sensitive": ["security"],
+        "partner_integration": ["partner", "technical"]
+      }
+    },
+    "expected_output": {
+      "all_covered": false
+    },
+    "metadata": {
+      "description": "Missing partner expert class despite partner_integration risk flag"
+    }
+  },
+  {
+    "id": "routing-no-requirements-1",
+    "eval_type": "routing_correctness",
+    "input_data": {
+      "risk_flags": [],
+      "consulted_expert_classes": ["technical"],
+      "mandatory_coverage_rules": {
+        "security_sensitive": ["security"]
+      }
+    },
+    "expected_output": {
+      "all_covered": true
+    },
+    "metadata": {
+      "description": "No risk flags means no mandatory requirements — any routing is valid"
+    }
+  }
+]

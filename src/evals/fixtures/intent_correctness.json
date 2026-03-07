@@ -1,0 +1,60 @@
+[
+  {
+    "id": "intent-clear-match-1",
+    "eval_type": "intent_correctness",
+    "input_data": {
+      "issue_text": "Add authentication endpoint for login with email and password. Return access token on success. Include refresh and logout endpoints.",
+      "goal": "Add authentication endpoint for login with email and password, return access token on success, include refresh and logout endpoints.",
+      "acceptance_criteria": [
+        "Authentication endpoint accepts login with email and password",
+        "Return access token on success from login endpoint",
+        "Include refresh endpoint that extends token validity",
+        "Include logout endpoint that invalidates the access token"
+      ]
+    },
+    "expected_output": {
+      "match_quality": "clear_match"
+    },
+    "metadata": {
+      "description": "Well-aligned intent: all key concepts from issue captured in goal and criteria"
+    }
+  },
+  {
+    "id": "intent-partial-match-1",
+    "eval_type": "intent_correctness",
+    "input_data": {
+      "issue_text": "Configure alembic for database schema migration tracking and rollback support.",
+      "goal": "Configure alembic for database schema migration tracking.",
+      "acceptance_criteria": [
+        "Alembic configuration file created for database schema",
+        "Initial migration generated from current database models",
+        "Migration upgrade and downgrade commands work correctly"
+      ]
+    },
+    "expected_output": {
+      "match_quality": "partial_match"
+    },
+    "metadata": {
+      "description": "Partial match: goal captures alembic setup but criteria miss rollback details"
+    }
+  },
+  {
+    "id": "intent-mismatch-1",
+    "eval_type": "intent_correctness",
+    "input_data": {
+      "issue_text": "Fix the payment processing timeout that occurs when Stripe webhook delivery is delayed by more than 30 seconds. Users see a blank confirmation page.",
+      "goal": "Improve application performance and response times across all endpoints.",
+      "acceptance_criteria": [
+        "Response time under 200ms for all GET endpoints",
+        "Database query optimization applied",
+        "Caching layer added for frequent queries"
+      ]
+    },
+    "expected_output": {
+      "match_quality": "mismatch"
+    },
+    "metadata": {
+      "description": "Mismatch: issue is about Stripe webhook timeout, but intent addresses generic performance optimization"
+    }
+  }
+]

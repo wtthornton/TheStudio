@@ -1,0 +1,80 @@
+<!-- Expert Detail Partial -->
+<div class="space-y-6 fade-in">
+    <div class="flex items-center justify-between">
+        <a href="/admin/ui/experts" class="text-sm text-blue-600 hover:text-blue-800">&larr; Back to Experts</a>
+    </div>
+
+    <!-- Expert Summary Card -->
+    <div class="bg-white rounded-lg border border-gray-200 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h3 class="text-lg font-semibold font-mono">{{ expert.expert_id[:12] }}...</h3>
+                <p class="text-sm text-gray-500">Version {{ expert.expert_version }}</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="inline-block px-2 py-1 rounded text-xs font-medium
+                    {% if expert.trust_tier == 'trusted' %}bg-green-100 text-green-800
+                    {% elif expert.trust_tier == 'probation' %}bg-yellow-100 text-yellow-800
+                    {% else %}bg-gray-100 text-gray-600{% endif %}">
+                    {{ expert.trust_tier | upper }}
+                </span>
+                <span class="inline-flex items-center text-xs">
+                    <span class="w-2 h-2 rounded-full mr-1
+                        {% if expert.drift_signal == 'improving' %}bg-green-500
+                        {% elif expert.drift_signal == 'declining' %}bg-red-500
+                        {% else %}bg-gray-400{% endif %}"></span>
+                    {{ expert.drift_signal | capitalize }}
+                </span>
+            </div>
+        </div>
+        <div class="grid grid-cols-3 gap-4 text-center">
+            <div>
+                <p class="text-2xl font-bold">{{ "%.3f"|format(expert.weight) }}</p>
+                <p class="text-sm text-gray-500">Weight</p>
+            </div>
+            <div>
+                <p class="text-2xl font-bold">{{ "%.1f"|format(expert.confidence * 100) }}%</p>
+                <p class="text-sm text-gray-500">Confidence</p>
+            </div>
+            <div>
+                <p class="text-2xl font-bold">{{ expert.sample_count }}</p>
+                <p class="text-sm text-gray-500">Samples</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Per-Repo Breakdown -->
+    <div class="bg-white rounded-lg border border-gray-200 p-6">
+        <h3 class="text-lg font-semibold mb-4">Per-Repo Breakdown</h3>
+        {% if expert.repos %}
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="text-left text-gray-500 border-b">
+                    <th class="py-2">Repo</th>
+                    <th class="py-2 text-right">Consults</th>
+                    <th class="py-2 text-right">Avg Weight</th>
+                    <th class="py-2">Drift</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for repo in expert.repos %}
+                <tr class="border-b border-gray-100">
+                    <td class="py-2 font-mono text-xs">{{ repo.repo }}</td>
+                    <td class="py-2 text-right">{{ repo.consults }}</td>
+                    <td class="py-2 text-right">{{ "%.3f"|format(repo.avg_weight) }}</td>
+                    <td class="py-2">
+                        <span class="inline-block w-2 h-2 rounded-full mr-1
+                            {% if repo.drift_signal == 'improving' %}bg-green-500
+                            {% elif repo.drift_signal == 'declining' %}bg-red-500
+                            {% else %}bg-gray-400{% endif %}"></span>
+                        <span class="text-xs capitalize">{{ repo.drift_signal }}</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-sm text-gray-400">No per-repo data available.</p>
+        {% endif %}
+    </div>
+</div>

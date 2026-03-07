@@ -1,0 +1,81 @@
+<!-- Metrics Dashboard Partial -->
+<div class="space-y-6 fade-in">
+
+    <!-- Single-Pass Success -->
+    <div class="bg-white rounded-lg border border-gray-200 p-6" id="single-pass-card">
+        <h3 class="text-lg font-semibold mb-4">Single-Pass Success Rate</h3>
+        <div class="grid grid-cols-2 gap-4">
+            <div class="text-center">
+                <p class="text-3xl font-bold {% if single_pass.overall_rate_7d >= 0.6 %}text-green-600{% elif single_pass.overall_rate_7d >= 0.4 %}text-yellow-600{% else %}text-red-600{% endif %}">
+                    {{ "%.1f"|format(single_pass.overall_rate_7d * 100) }}%
+                </p>
+                <p class="text-sm text-gray-500">7-day rate</p>
+                <p class="text-xs text-gray-400">{{ single_pass.successful_7d }}/{{ single_pass.total_workflows_7d }} workflows</p>
+            </div>
+            <div class="text-center">
+                <p class="text-3xl font-bold text-gray-700">
+                    {{ "%.1f"|format(single_pass.overall_rate_30d * 100) }}%
+                </p>
+                <p class="text-sm text-gray-500">30-day rate</p>
+                <p class="text-xs text-gray-400">{{ single_pass.successful_30d }}/{{ single_pass.total_workflows_30d }} workflows</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loopback Breakdown -->
+    <div class="bg-white rounded-lg border border-gray-200 p-6" id="loopback-card">
+        <h3 class="text-lg font-semibold mb-4">Verification Loopbacks</h3>
+        <p class="text-sm text-gray-500 mb-3">Total: {{ loopbacks.total_loopbacks }}</p>
+        {% if loopbacks.categories %}
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="text-left text-gray-500 border-b">
+                    <th class="py-2">Category</th>
+                    <th class="py-2 text-right">Count</th>
+                    <th class="py-2 text-right">%</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cat in loopbacks.categories %}
+                <tr class="border-b border-gray-100">
+                    <td class="py-2 capitalize">{{ cat.category }}</td>
+                    <td class="py-2 text-right">{{ cat.count }}</td>
+                    <td class="py-2 text-right">{{ "%.1f"|format(cat.percentage) }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-sm text-gray-400">No loopback data available.</p>
+        {% endif %}
+    </div>
+
+    <!-- Reopen Rate -->
+    <div class="bg-white rounded-lg border border-gray-200 p-6" id="reopen-card">
+        <h3 class="text-lg font-semibold mb-4">Reopen Rate</h3>
+        {% if reopen.note %}
+        <p class="text-sm text-gray-400">{{ reopen.note }}</p>
+        {% else %}
+        <div class="grid grid-cols-2 gap-4 mb-4">
+            <div class="text-center">
+                <p class="text-3xl font-bold text-gray-700">{{ reopen.total_reopened }}</p>
+                <p class="text-sm text-gray-500">Total Reopened</p>
+            </div>
+            <div class="text-center">
+                <p class="text-3xl font-bold">{{ "%.1f"|format(reopen.reopen_rate * 100) }}%</p>
+                <p class="text-sm text-gray-500">Reopen Rate</p>
+            </div>
+        </div>
+        <h4 class="text-sm font-medium text-gray-600 mb-2">Attribution Breakdown</h4>
+        <div class="grid grid-cols-2 gap-2 text-sm">
+            {% for key, count in reopen.attribution.items() %}
+            <div class="flex justify-between px-3 py-1 bg-gray-50 rounded">
+                <span class="capitalize">{{ key | replace("_", " ") }}</span>
+                <span class="font-medium">{{ count }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+</div>
