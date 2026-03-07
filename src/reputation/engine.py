@@ -13,6 +13,7 @@ The Reputation Engine:
 import logging
 from datetime import UTC, datetime
 from math import exp, log
+from typing import Protocol, runtime_checkable
 from uuid import UUID
 
 from src.reputation.models import (
@@ -31,6 +32,24 @@ from src.reputation.models import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+@runtime_checkable
+class ReputationEngineProtocol(Protocol):
+    """Interface for reputation engine implementations."""
+
+    def update_weight(self, update: WeightUpdate) -> ExpertWeight: ...
+    def query_weights(self, query: WeightQuery) -> list[WeightQueryResult]: ...
+    def get_weight(self, expert_id: UUID, context_key: str) -> ExpertWeight | None: ...
+    def get_all_weights(self) -> list[ExpertWeight]: ...
+    def get_expert_weights_for_router(
+        self, expert_id: UUID, repo: str | None = None, min_confidence: float = 0.0,
+    ) -> list[WeightQueryResult]: ...
+    def get_best_experts_for_context(
+        self, context_key: str, min_confidence: float = 0.0,
+        trust_tier: TrustTier | None = None, limit: int = 10,
+    ) -> list[WeightQueryResult]: ...
+    def clear(self) -> None: ...
 
 
 # In-memory stores (stub — replaced by DB in Phase 2)
@@ -362,3 +381,47 @@ def get_best_experts_for_context(
     )
     results = query_weights(query)
     return results[:limit]
+
+
+class InMemoryReputationEngine:
+    """Class wrapper around module-level reputation engine functions.
+
+    Delegates to the module-level functions for backwards compatibility.
+    Implements ReputationEngineProtocol for use with persistence adapters.
+    """
+
+    def update_weight(self, update: WeightUpdate) -> ExpertWeight:
+        return update_weight(update)
+
+    def query_weights(self, query: WeightQuery) -> list[WeightQueryResult]:
+        return query_weights(query)
+
+    def get_weight(self, expert_id: UUID, context_key: str) -> ExpertWeight | None:
+        return get_weight(expert_id, context_key)
+
+    def get_all_weights(self) -> list[ExpertWeight]:
+        return get_all_weights()
+
+    def get_expert_weights_for_router(
+        self, expert_id: UUID, repo: str | None = None, min_confidence: float = 0.0,
+    ) -> list[WeightQueryResult]:
+        return get_expert_weights_for_router(expert_id, repo, min_confidence)
+
+    def get_best_experts_for_context(
+        self, context_key: str, min_confidence: float = 0.0,
+        trust_tier: TrustTier | None = None, limit: int = 10,
+    ) -> list[WeightQueryResult]:
+        return get_best_experts_for_context(context_key, min_confidence, trust_tier, limit)
+
+    def clear(self) -> None:
+        clear()
+
+
+_reputation_engine: InMemoryReputationEngine | None = None
+
+
+def get_reputation_engine() -> ReputationEngineProtocol:
+    global _reputation_engine
+    if _reputation_engine is None:
+        _reputation_engine = InMemoryReputationEngine()
+    return _reputation_engine

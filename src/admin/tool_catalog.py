@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, UTC
 from enum import StrEnum
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
 
 
 class ApprovalStatus(StrEnum):
@@ -104,7 +104,19 @@ class SuiteDuplicateError(Exception):
         super().__init__(f"Tool suite '{name}' already registered")
 
 
-class ToolCatalog:
+@runtime_checkable
+class ToolCatalogProtocol(Protocol):
+    """Interface for tool suite registries."""
+
+    def register(self, suite: ToolSuite) -> None: ...
+    def get_suite(self, name: str) -> ToolSuite: ...
+    def list_suites(self) -> list[ToolSuite]: ...
+    def promote_suite(self, name: str) -> ToolSuite: ...
+    def get_suites_for_tier(self, tier: str) -> list[ToolSuite]: ...
+    def clear(self) -> None: ...
+
+
+class InMemoryToolCatalog:
     """In-memory registry of tool suites."""
 
     def __init__(self) -> None:
@@ -231,10 +243,14 @@ class AccessDecision:
         }
 
 
+# Backwards-compatible alias
+ToolCatalog = InMemoryToolCatalog
+
+
 class ToolPolicyEngine:
     """Enforces tool access based on role, overlays, and repo tier."""
 
-    def __init__(self, catalog: ToolCatalog) -> None:
+    def __init__(self, catalog: ToolCatalogProtocol) -> None:
         self._catalog = catalog
 
     def check_access(
@@ -374,14 +390,14 @@ DEFAULT_PROFILES = [
 
 # --- Global instances ---
 
-_catalog: ToolCatalog | None = None
+_catalog: InMemoryToolCatalog | None = None
 _policy_engine: ToolPolicyEngine | None = None
 
 
-def get_tool_catalog() -> ToolCatalog:
+def get_tool_catalog() -> ToolCatalogProtocol:
     global _catalog
     if _catalog is None:
-        _catalog = ToolCatalog()
+        _catalog = InMemoryToolCatalog()
         seed_standard_suites(_catalog)
     return _catalog
 

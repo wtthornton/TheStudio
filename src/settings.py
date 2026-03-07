@@ -28,5 +28,10 @@ class Settings(BaseSettings):
     github_app_id: str = ""
     github_private_key_path: str = ""
 
+    # Feature flags (Epic 8 Sprint 2)
+    llm_provider: str = "mock"  # "mock" or "anthropic"
+    github_provider: str = "mock"  # "mock" or "real"
+    store_backend: str = "memory"  # "memory" or "postgres"
+
 
 settings = Settings()

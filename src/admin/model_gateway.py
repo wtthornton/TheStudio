@@ -11,7 +11,7 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime, UTC
 from enum import StrEnum
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
 from uuid import UUID, uuid4
 
 logger = logging.getLogger(__name__)
@@ -350,7 +350,19 @@ class ModelRouter:
         return candidates[0]
 
 
-class BudgetEnforcer:
+@runtime_checkable
+class BudgetEnforcerProtocol(Protocol):
+    """Interface for budget enforcement."""
+
+    def set_budget(self, repo_id: str, budget: BudgetSpec) -> None: ...
+    def get_budget(self, repo_id: str) -> BudgetSpec: ...
+    def check_budget(self, task_id: str, repo_id: str = "") -> bool: ...
+    def record_spend(self, task_id: str, step: str, cost: float, tokens: int, repo_id: str = "") -> None: ...
+    def get_task_spend(self, task_id: str) -> float: ...
+    def clear(self) -> None: ...
+
+
+class InMemoryBudgetEnforcer:
     """Tracks and enforces per-task model spend budgets."""
 
     def __init__(self) -> None:
@@ -399,7 +411,22 @@ class BudgetEnforcer:
         self._budgets.clear()
 
 
-class ModelAuditStore:
+@runtime_checkable
+class ModelAuditStoreProtocol(Protocol):
+    """Interface for model call audit storage."""
+
+    def record(self, audit: ModelCallAudit) -> None: ...
+    def query(
+        self,
+        task_id: str | None = None,
+        step: str | None = None,
+        provider: str | None = None,
+        limit: int = 100,
+    ) -> list[ModelCallAudit]: ...
+    def clear(self) -> None: ...
+
+
+class InMemoryModelAuditStore:
     """In-memory store for model call audit records."""
 
     def __init__(self) -> None:
@@ -428,11 +455,16 @@ class ModelAuditStore:
         self._records.clear()
 
 
+# Backwards-compatible aliases
+BudgetEnforcer = InMemoryBudgetEnforcer
+ModelAuditStore = InMemoryModelAuditStore
+
+
 # --- Global instances ---
 
 _router: ModelRouter | None = None
-_budget_enforcer: BudgetEnforcer | None = None
-_audit_store: ModelAuditStore | None = None
+_budget_enforcer: InMemoryBudgetEnforcer | None = None
+_audit_store: InMemoryModelAuditStore | None = None
 
 
 def get_model_router() -> ModelRouter:
@@ -442,15 +474,15 @@ def get_model_router() -> ModelRouter:
     return _router
 
 
-def get_budget_enforcer() -> BudgetEnforcer:
+def get_budget_enforcer() -> BudgetEnforcerProtocol:
     global _budget_enforcer
     if _budget_enforcer is None:
-        _budget_enforcer = BudgetEnforcer()
+        _budget_enforcer = InMemoryBudgetEnforcer()
     return _budget_enforcer
 
 
-def get_model_audit_store() -> ModelAuditStore:
+def get_model_audit_store() -> ModelAuditStoreProtocol:
     global _audit_store
     if _audit_store is None:
-        _audit_store = ModelAuditStore()
+        _audit_store = InMemoryModelAuditStore()
     return _audit_store

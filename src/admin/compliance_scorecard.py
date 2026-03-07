@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, UTC
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
 
 
 @dataclass
@@ -67,7 +67,19 @@ class RepoComplianceData:
     execution_plane_healthy: bool = False
 
 
-class ComplianceScorecardService:
+@runtime_checkable
+class ComplianceScorecardProtocol(Protocol):
+    """Interface for compliance scorecard evaluation."""
+
+    def evaluate(
+        self,
+        repo_id: str,
+        data: RepoComplianceData | None = None,
+    ) -> ComplianceScorecard: ...
+    def invalidate_cache(self, repo_id: str) -> None: ...
+
+
+class InMemoryComplianceScorecardService:
     """Evaluates repos against Execute-tier requirements.
 
     7 checks per AC 13:
@@ -174,12 +186,16 @@ class ComplianceScorecardService:
         return RepoComplianceData()
 
 
+# Backwards-compatible alias
+ComplianceScorecardService = InMemoryComplianceScorecardService
+
+
 # Global instance
-_scorecard_service: ComplianceScorecardService | None = None
+_scorecard_service: InMemoryComplianceScorecardService | None = None
 
 
-def get_scorecard_service() -> ComplianceScorecardService:
+def get_scorecard_service() -> ComplianceScorecardProtocol:
     global _scorecard_service
     if _scorecard_service is None:
-        _scorecard_service = ComplianceScorecardService()
+        _scorecard_service = InMemoryComplianceScorecardService()
     return _scorecard_service
