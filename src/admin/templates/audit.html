@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Audit Log{% endblock %}
+{% block page_title %}Audit Log{% endblock %}
+
+{% block content %}
+<!-- Filters -->
+<div class="bg-white rounded-lg border border-gray-200 p-4 mb-6">
+    <div class="flex items-center gap-4">
+        <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Event Type</label>
+            <select id="audit-type-filter" name="event_type" class="border border-gray-300 rounded px-3 py-2 text-sm">
+                <option value="">All</option>
+                <option value="repo_registered">Repo Registered</option>
+                <option value="repo_profile_updated">Profile Updated</option>
+                <option value="repo_tier_changed">Tier Changed</option>
+                <option value="repo_paused">Repo Paused</option>
+                <option value="repo_resumed">Repo Resumed</option>
+                <option value="repo_writes_toggled">Writes Toggled</option>
+                <option value="workflow_verification_rerun">Verification Rerun</option>
+                <option value="workflow_sent_to_agent">Sent to Agent</option>
+                <option value="workflow_escalated">Workflow Escalated</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Actor</label>
+            <input type="text" id="audit-actor-filter" name="actor" placeholder="user@example.com"
+                   class="border border-gray-300 rounded px-3 py-2 text-sm">
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Target ID</label>
+            <input type="text" id="audit-target-filter" name="target_id" placeholder="UUID..."
+                   class="border border-gray-300 rounded px-3 py-2 text-sm">
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Time Range</label>
+            <select id="audit-hours-filter" name="hours" class="border border-gray-300 rounded px-3 py-2 text-sm">
+                <option value="1">Last 1h</option>
+                <option value="6">Last 6h</option>
+                <option value="24" selected>Last 24h</option>
+                <option value="168">Last 7d</option>
+            </select>
+        </div>
+        <div class="self-end">
+            <button hx-get="/admin/ui/partials/audit" hx-target="#audit-content" hx-swap="innerHTML"
+                    hx-include="#audit-type-filter, #audit-actor-filter, #audit-target-filter, #audit-hours-filter"
+                    hx-headers='{"X-User-ID": "{{ current_user_id }}"}'
+                    class="px-4 py-2 bg-gray-600 text-white text-sm rounded hover:bg-gray-700">
+                Apply
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Audit Log Table -->
+<div hx-get="/admin/ui/partials/audit" hx-trigger="load" hx-target="#audit-content" hx-swap="innerHTML"
+     hx-headers='{"X-User-ID": "{{ current_user_id }}"}'>
+</div>
+<div id="audit-content">
+    <div class="text-center py-12 text-gray-400 text-sm">Loading audit log...</div>
+</div>
+{% endblock %}

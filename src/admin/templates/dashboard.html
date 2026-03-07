@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% from "components/status_badge.html" import status_badge, tier_badge %}
+
+{% block title %}Fleet Dashboard{% endblock %}
+{% block page_title %}Fleet Dashboard{% endblock %}
+{% block header_right %}
+<span class="text-xs text-gray-400" id="last-refresh">Loading...</span>
+{% endblock %}
+
+{% block content %}
+<div hx-get="/admin/ui/partials/dashboard" hx-trigger="load, every 5s" hx-target="#dashboard-content" hx-swap="innerHTML">
+</div>
+<div id="dashboard-content">
+    <div class="text-center py-12 text-gray-400">
+        <p class="text-sm">Loading dashboard...</p>
+        <span class="htmx-indicator">Refreshing...</span>
+    </div>
+</div>
+{% endblock %}

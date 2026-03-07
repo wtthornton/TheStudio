@@ -1,0 +1,155 @@
+{% from "components/status_badge.html" import workflow_status_badge, status_badge %}
+
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-lg border border-gray-200 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h3 class="text-lg font-semibold font-mono">{{ workflow.id }}</h3>
+                {% if workflow.issue_ref %}
+                <p class="text-sm text-gray-500 mt-1">Issue: {{ workflow.issue_ref }}</p>
+                {% endif %}
+            </div>
+            <div class="flex items-center gap-2">
+                {{ workflow_status_badge(workflow.status) }}
+            </div>
+        </div>
+        <div class="grid grid-cols-4 gap-4 text-sm">
+            <div>
+                <span class="text-gray-500">Repo:</span>
+                <span class="ml-1 font-medium">{{ workflow.repo_name | default(workflow.repo_id) }}</span>
+            </div>
+            <div>
+                <span class="text-gray-500">Current Step:</span>
+                <span class="ml-1 font-medium">{{ workflow.current_step | default('-') }}</span>
+            </div>
+            <div>
+                <span class="text-gray-500">Attempts:</span>
+                <span class="ml-1 font-medium">{{ workflow.attempt_count | default(1) }}</span>
+            </div>
+            <div>
+                <span class="text-gray-500">Complexity:</span>
+                <span class="ml-1 font-medium">{{ workflow.complexity | default('-') | upper }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="bg-white rounded-lg border border-gray-200 p-6">
+        <h4 class="text-sm font-semibold text-gray-700 mb-4">Timeline</h4>
+        {% if workflow.timeline %}
+        <div class="space-y-3">
+            {% for step in workflow.timeline %}
+            <div class="flex items-start gap-3">
+                <div class="flex-shrink-0 mt-1">
+                    {% if step.status == 'ok' %}
+                    <span class="inline-block w-3 h-3 rounded-full bg-green-500"></span>
+                    {% elif step.status == 'failed' %}
+                    <span class="inline-block w-3 h-3 rounded-full bg-red-500"></span>
+                    {% elif step.status == 'running' %}
+                    <span class="inline-block w-3 h-3 rounded-full bg-blue-500 animate-pulse"></span>
+                    {% else %}
+                    <span class="inline-block w-3 h-3 rounded-full bg-gray-300"></span>
+                    {% endif %}
+                </div>
+                <div class="flex-1">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">{{ step.name }}</span>
+                        {% if step.timestamp %}
+                        <span class="text-xs text-gray-400">{{ step.timestamp }}</span>
+                        {% endif %}
+                    </div>
+                    {% if step.failure_reason %}
+                    <p class="text-xs text-red-600 mt-1">{{ step.failure_reason }}</p>
+                    {% endif %}
+                    {% if step.evidence %}
+                    <pre class="text-xs text-gray-500 mt-1 bg-gray-50 rounded p-2 overflow-x-auto">{{ step.evidence }}</pre>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-sm text-gray-400">No timeline data available.</p>
+        {% endif %}
+    </div>
+
+    <!-- Retry Info -->
+    {% if workflow.retry_info %}
+    <div class="bg-white rounded-lg border border-gray-200 p-6">
+        <h4 class="text-sm font-semibold text-gray-700 mb-4">Retry Info</h4>
+        <div class="grid grid-cols-3 gap-4 text-sm">
+            <div>
+                <span class="text-gray-500">Next Retry:</span>
+                <span class="ml-1 font-medium">{{ workflow.retry_info.next_retry_time | default('-') }}</span>
+            </div>
+            <div>
+                <span class="text-gray-500">Time in Step:</span>
+                <span class="ml-1 font-medium">{{ workflow.retry_info.time_in_current_step | default('-') }}</span>
+            </div>
+            <div>
+                <span class="text-gray-500">Step Attempts:</span>
+                <span class="ml-1 font-medium">{{ workflow.retry_info.attempt_count_for_step | default('-') }}</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Escalation Info -->
+    {% if workflow.escalation %}
+    <div class="bg-yellow-50 rounded-lg border border-yellow-200 p-6">
+        <h4 class="text-sm font-semibold text-yellow-800 mb-4">Escalation</h4>
+        <div class="grid grid-cols-3 gap-4 text-sm text-yellow-700">
+            <div>
+                <span class="text-yellow-600">Trigger:</span>
+                <span class="ml-1 font-medium">{{ workflow.escalation.trigger | default('-') }}</span>
+            </div>
+            <div>
+                <span class="text-yellow-600">Owner:</span>
+                <span class="ml-1 font-medium">{{ workflow.escalation.owner | default('-') }}</span>
+            </div>
+            <div>
+                <span class="text-yellow-600">Human Wait:</span>
+                <span class="ml-1 font-medium">{{ workflow.escalation.human_wait_state | default('-') }}</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Actions -->
+    {% if can_rerun or can_send_to_agent or can_escalate %}
+    <div class="bg-white rounded-lg border border-gray-200 p-6">
+        <h4 class="text-sm font-semibold text-gray-700 mb-4">Controls</h4>
+        <div class="flex flex-wrap gap-3" id="wf-actions">
+            {% if can_rerun %}
+            <button hx-post="/admin/workflows/{{ workflow.id }}/rerun-verification"
+                    hx-headers='{"X-User-ID": "{{ current_user_id }}"}'
+                    hx-target="#wf-action-result" hx-swap="innerHTML"
+                    hx-confirm="Rerun verification for this workflow?"
+                    class="px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
+                Rerun Verification
+            </button>
+            {% endif %}
+            {% if can_send_to_agent %}
+            <button hx-post="/admin/workflows/{{ workflow.id }}/send-to-agent"
+                    hx-headers='{"X-User-ID": "{{ current_user_id }}"}'
+                    hx-target="#wf-action-result" hx-swap="innerHTML"
+                    hx-confirm="Send this workflow back to the agent?"
+                    class="px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700">
+                Send to Agent
+            </button>
+            {% endif %}
+            {% if can_escalate %}
+            <button hx-post="/admin/workflows/{{ workflow.id }}/escalate"
+                    hx-headers='{"X-User-ID": "{{ current_user_id }}"}'
+                    hx-target="#wf-action-result" hx-swap="innerHTML"
+                    hx-confirm="Escalate this workflow for human review?"
+                    class="px-3 py-2 bg-yellow-600 text-white text-sm rounded hover:bg-yellow-700">
+                Escalate
+            </button>
+            {% endif %}
+        </div>
+        <div id="wf-action-result" class="mt-3"></div>
+    </div>
+    {% endif %}
+</div>

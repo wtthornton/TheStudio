@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% from "components/status_badge.html" import tier_badge, health_badge, repo_status_badge %}
+
+{% block title %}Repo Detail{% endblock %}
+{% block page_title %}Repo Detail{% endblock %}
+
+{% block content %}
+<div hx-get="/admin/ui/partials/repo/{{ repo_id }}" hx-trigger="load" hx-target="#repo-detail-content" hx-swap="innerHTML"
+     hx-headers='{"X-User-ID": "{{ current_user_id }}"}'>
+</div>
+<div id="repo-detail-content">
+    <div class="text-center py-12 text-gray-400 text-sm">Loading repo...</div>
+</div>
+{% endblock %}

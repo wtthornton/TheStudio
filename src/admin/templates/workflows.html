@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% from "components/status_badge.html" import workflow_status_badge %}
+{% from "components/empty_state.html" import empty_state %}
+
+{% block title %}Workflows{% endblock %}
+{% block page_title %}Workflow Console{% endblock %}
+
+{% block content %}
+<!-- Filters -->
+<div class="bg-white rounded-lg border border-gray-200 p-4 mb-6">
+    <div class="flex items-center gap-4">
+        <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Status</label>
+            <select id="wf-status-filter" class="border border-gray-300 rounded px-3 py-2 text-sm"
+                    hx-get="/admin/ui/partials/workflows" hx-target="#workflows-content" hx-swap="innerHTML"
+                    hx-include="#wf-repo-filter, #wf-limit-filter"
+                    hx-headers='{"X-User-ID": "{{ current_user_id }}"}'
+                    name="status">
+                <option value="">All</option>
+                <option value="running">Running</option>
+                <option value="stuck">Stuck</option>
+                <option value="completed">Completed</option>
+                <option value="failed">Failed</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Repo ID</label>
+            <input type="text" id="wf-repo-filter" name="repo_id" placeholder="Filter by repo..."
+                   class="border border-gray-300 rounded px-3 py-2 text-sm">
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Limit</label>
+            <select id="wf-limit-filter" name="limit" class="border border-gray-300 rounded px-3 py-2 text-sm">
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+        </div>
+        <div class="self-end">
+            <button hx-get="/admin/ui/partials/workflows" hx-target="#workflows-content" hx-swap="innerHTML"
+                    hx-include="#wf-status-filter, #wf-repo-filter, #wf-limit-filter"
+                    hx-headers='{"X-User-ID": "{{ current_user_id }}"}'
+                    class="px-4 py-2 bg-gray-600 text-white text-sm rounded hover:bg-gray-700">
+                Apply
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Workflow List -->
+<div hx-get="/admin/ui/partials/workflows" hx-trigger="load" hx-target="#workflows-content" hx-swap="innerHTML"
+     hx-headers='{"X-User-ID": "{{ current_user_id }}"}'>
+</div>
+<div id="workflows-content">
+    <div class="text-center py-12 text-gray-400 text-sm">Loading workflows...</div>
+</div>
+{% endblock %}

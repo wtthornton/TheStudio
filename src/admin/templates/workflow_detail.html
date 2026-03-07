@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% from "components/status_badge.html" import workflow_status_badge %}
+
+{% block title %}Workflow Detail{% endblock %}
+{% block page_title %}Workflow Detail{% endblock %}
+
+{% block content %}
+<div hx-get="/admin/ui/partials/workflow/{{ workflow_id }}" hx-trigger="load" hx-target="#wf-detail-content" hx-swap="innerHTML"
+     hx-headers='{"X-User-ID": "{{ current_user_id }}"}'>
+</div>
+<div id="wf-detail-content">
+    <div class="text-center py-12 text-gray-400 text-sm">Loading workflow...</div>
+</div>
+{% endblock %}

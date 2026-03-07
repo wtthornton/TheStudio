@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Admin{% endblock %} - TheStudio</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <style>
+        .htmx-indicator { display: none; }
+        .htmx-request .htmx-indicator { display: inline-block; }
+        .htmx-request.htmx-indicator { display: inline-block; }
+        .fade-in { animation: fadeIn 0.2s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen">
+    <div class="flex min-h-screen">
+        <!-- Sidebar Navigation -->
+        <nav class="w-56 bg-gray-900 text-gray-100 flex flex-col flex-shrink-0">
+            <div class="px-4 py-5 border-b border-gray-700">
+                <h1 class="text-lg font-bold tracking-tight">TheStudio</h1>
+                <p class="text-xs text-gray-400 mt-1">Admin Console</p>
+            </div>
+            <ul class="flex-1 py-4 space-y-1 px-2">
+                <li>
+                    <a href="/admin/ui/dashboard"
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'dashboard' %}bg-gray-800 text-white{% else %}text-gray-300{% endif %}">
+                        <span class="mr-2">&#9632;</span> Dashboard
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/ui/repos"
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'repos' %}bg-gray-800 text-white{% else %}text-gray-300{% endif %}">
+                        <span class="mr-2">&#9654;</span> Repos
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/ui/workflows"
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'workflows' %}bg-gray-800 text-white{% else %}text-gray-300{% endif %}">
+                        <span class="mr-2">&#9660;</span> Workflows
+                    </a>
+                </li>
+                {% if current_user_role and current_user_role.value == 'admin' %}
+                <li>
+                    <a href="/admin/ui/audit"
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'audit' %}bg-gray-800 text-white{% else %}text-gray-300{% endif %}">
+                        <span class="mr-2">&#9679;</span> Audit Log
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+            <div class="px-4 py-3 border-t border-gray-700 text-xs text-gray-400">
+                {% if current_user_id %}
+                <p class="truncate">{{ current_user_id }}</p>
+                <p class="mt-1">
+                    {% if current_user_role %}
+                        <span class="inline-block px-2 py-0.5 rounded text-xs font-medium
+                            {% if current_user_role.value == 'admin' %}bg-red-700 text-red-100
+                            {% elif current_user_role.value == 'operator' %}bg-yellow-700 text-yellow-100
+                            {% else %}bg-blue-700 text-blue-100{% endif %}">
+                            {{ current_user_role.value | upper }}
+                        </span>
+                    {% else %}
+                        <span class="inline-block px-2 py-0.5 rounded text-xs font-medium bg-gray-600 text-gray-300">NO ROLE</span>
+                    {% endif %}
+                </p>
+                {% else %}
+                <p>Not authenticated</p>
+                {% endif %}
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col">
+            <!-- Header -->
+            <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                <h2 class="text-xl font-semibold">{% block page_title %}{% endblock %}</h2>
+                <div class="text-sm text-gray-500" id="page-status">
+                    {% block header_right %}{% endblock %}
+                </div>
+            </header>
+
+            <!-- Flash Messages -->
+            {% if flash_messages %}
+            <div class="px-6 pt-4 space-y-2" id="flash-container">
+                {% for msg in flash_messages %}
+                <div class="px-4 py-3 rounded text-sm fade-in
+                    {% if msg.level == 'error' %}bg-red-50 text-red-800 border border-red-200
+                    {% elif msg.level == 'warning' %}bg-yellow-50 text-yellow-800 border border-yellow-200
+                    {% else %}bg-green-50 text-green-800 border border-green-200{% endif %}">
+                    {{ msg.text }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Content -->
+            <div class="flex-1 p-6">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+</body>
+</html>

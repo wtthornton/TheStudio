@@ -1,0 +1,142 @@
+{% from "components/status_badge.html" import tier_badge, health_badge, repo_status_badge %}
+
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-lg border border-gray-200 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h3 class="text-lg font-semibold">{{ repo.owner }}/{{ repo.repo }}</h3>
+                <p class="text-sm text-gray-500 mt-1">ID: {{ repo.id }}</p>
+            </div>
+            <div class="flex items-center gap-2">
+                {{ tier_badge(repo.tier) }}
+                {{ repo_status_badge(repo.status) }}
+                {{ health_badge(repo.health) }}
+            </div>
+        </div>
+        <div class="grid grid-cols-3 gap-4 text-sm">
+            <div>
+                <span class="text-gray-500">Installation ID:</span>
+                <span class="ml-1 font-medium">{{ repo.installation_id }}</span>
+            </div>
+            <div>
+                <span class="text-gray-500">Default Branch:</span>
+                <span class="ml-1 font-medium">{{ repo.default_branch | default('main') }}</span>
+            </div>
+            <div>
+                <span class="text-gray-500">Created:</span>
+                <span class="ml-1 font-medium">{{ repo.created_at }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile -->
+    {% if repo.profile %}
+    <div class="bg-white rounded-lg border border-gray-200 p-6">
+        <h4 class="text-sm font-semibold text-gray-700 mb-4">Repo Profile</h4>
+        {% if can_update_profile %}
+        <form hx-patch="/admin/repos/{{ repo.id }}/profile" hx-target="#profile-result" hx-swap="innerHTML"
+              hx-headers='{"X-User-ID": "{{ current_user_id }}", "Content-Type": "application/json"}'
+              hx-ext="json-enc">
+        {% endif %}
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Language</label>
+                <input type="text" name="language" value="{{ repo.profile.language | default('') }}"
+                       class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                       {% if not can_update_profile %}disabled{% endif %}>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Build Commands</label>
+                <input type="text" name="build_commands" value="{{ repo.profile.build_commands | default('') }}"
+                       class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                       {% if not can_update_profile %}disabled{% endif %}>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Required Checks</label>
+                <input type="text" name="required_checks" value="{{ repo.profile.required_checks | default('') }}"
+                       class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                       {% if not can_update_profile %}disabled{% endif %}>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Risk Paths</label>
+                <input type="text" name="risk_paths" value="{{ repo.profile.risk_paths | default('') }}"
+                       class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                       {% if not can_update_profile %}disabled{% endif %}>
+            </div>
+        </div>
+        {% if can_update_profile %}
+        <div class="mt-4">
+            <button type="submit" class="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">Update Profile</button>
+        </div>
+        </form>
+        <div id="profile-result" class="mt-3"></div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Actions -->
+    <div class="bg-white rounded-lg border border-gray-200 p-6">
+        <h4 class="text-sm font-semibold text-gray-700 mb-4">Actions</h4>
+        <div class="flex flex-wrap gap-3" id="repo-actions">
+            {% if can_change_tier %}
+            <div class="flex items-center gap-2">
+                <select id="tier-select" class="border border-gray-300 rounded px-3 py-2 text-sm">
+                    <option value="observe" {% if repo.tier == 'observe' %}selected{% endif %}>Observe</option>
+                    <option value="suggest" {% if repo.tier == 'suggest' %}selected{% endif %}>Suggest</option>
+                    <option value="execute" {% if repo.tier == 'execute' %}selected{% endif %}>Execute</option>
+                </select>
+                <button hx-patch="/admin/repos/{{ repo.id }}/tier"
+                        hx-headers='{"X-User-ID": "{{ current_user_id }}", "Content-Type": "application/json"}'
+                        hx-vals='js:{"tier": document.getElementById("tier-select").value}'
+                        hx-target="#action-result" hx-swap="innerHTML"
+                        hx-confirm="Change tier?"
+                        class="px-3 py-2 bg-purple-600 text-white text-sm rounded hover:bg-purple-700">
+                    Change Tier
+                </button>
+            </div>
+            {% endif %}
+
+            {% if can_pause %}
+            {% if repo.status == 'paused' %}
+            <button hx-post="/admin/repos/{{ repo.id }}/resume"
+                    hx-headers='{"X-User-ID": "{{ current_user_id }}"}'
+                    hx-target="#action-result" hx-swap="innerHTML"
+                    class="px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700">
+                Resume
+            </button>
+            {% else %}
+            <button hx-post="/admin/repos/{{ repo.id }}/pause"
+                    hx-headers='{"X-User-ID": "{{ current_user_id }}"}'
+                    hx-target="#action-result" hx-swap="innerHTML"
+                    hx-confirm="Pause this repo?"
+                    class="px-3 py-2 bg-yellow-600 text-white text-sm rounded hover:bg-yellow-700">
+                Pause
+            </button>
+            {% endif %}
+            {% endif %}
+
+            {% if can_toggle_writes %}
+            <button hx-post="/admin/repos/{{ repo.id }}/writes"
+                    hx-headers='{"X-User-ID": "{{ current_user_id }}", "Content-Type": "application/json"}'
+                    hx-vals='{"enabled": {{ "false" if repo.writes_enabled else "true" }}}'
+                    hx-target="#action-result" hx-swap="innerHTML"
+                    hx-confirm="Toggle writes?"
+                    class="px-3 py-2 bg-orange-600 text-white text-sm rounded hover:bg-orange-700">
+                {{ "Disable Writes" if repo.writes_enabled else "Enable Writes" }}
+            </button>
+            {% endif %}
+
+            {% if can_delete %}
+            <button hx-delete="/admin/repos/{{ repo.id }}"
+                    hx-headers='{"X-User-ID": "{{ current_user_id }}"}'
+                    hx-target="#action-result" hx-swap="innerHTML"
+                    hx-confirm="Delete this repo? This action is soft-delete and can be reversed."
+                    class="px-3 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700">
+                Delete
+            </button>
+            {% endif %}
+        </div>
+        <div id="action-result" class="mt-3"></div>
+    </div>
+</div>

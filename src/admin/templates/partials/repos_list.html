@@ -1,0 +1,35 @@
+{% from "components/status_badge.html" import tier_badge, health_badge, repo_status_badge %}
+{% from "components/empty_state.html" import empty_state %}
+
+{% if repos %}
+<div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Repo</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tier</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Health</th>
+                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+            {% for repo in repos %}
+            <tr class="hover:bg-gray-50">
+                <td class="px-4 py-3 text-sm">
+                    <a href="/admin/ui/repos/{{ repo.id }}" class="text-blue-600 hover:underline font-medium">{{ repo.owner }}/{{ repo.repo }}</a>
+                </td>
+                <td class="px-4 py-3">{{ tier_badge(repo.tier) }}</td>
+                <td class="px-4 py-3">{{ repo_status_badge(repo.status) }}</td>
+                <td class="px-4 py-3">{{ health_badge(repo.health) }}</td>
+                <td class="px-4 py-3 text-right">
+                    <a href="/admin/ui/repos/{{ repo.id }}" class="text-blue-600 hover:underline text-sm">View</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+{{ empty_state("No repos registered. Register your first repo to get started.") }}
+{% endif %}

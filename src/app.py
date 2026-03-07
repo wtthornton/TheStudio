@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from src.admin.router import router as admin_router
+from src.admin.ui_router import ui_router
 from src.compliance.router import router as compliance_router
 from src.ingress.webhook_handler import router as ingress_router
 from src.observability.middleware import CorrelationMiddleware
@@ -24,3 +25,4 @@ app.add_middleware(CorrelationMiddleware)
 app.include_router(ingress_router)
 app.include_router(compliance_router)
 app.include_router(admin_router)
+app.include_router(ui_router)
