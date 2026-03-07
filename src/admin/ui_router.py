@@ -98,7 +98,7 @@ async def ui_dashboard(request: Request) -> Response:
     role = await _resolve_role(user_id)
     ctx = _base_context(request, role)
     ctx["active_page"] = "dashboard"
-    return templates.TemplateResponse("dashboard.html", ctx)
+    return templates.TemplateResponse(request, "dashboard.html", ctx)
 
 
 @ui_router.get("/repos", response_class=HTMLResponse)
@@ -108,7 +108,7 @@ async def ui_repos(request: Request) -> Response:
     role = await _resolve_role(user_id)
     ctx = _base_context(request, role)
     ctx["active_page"] = "repos"
-    return templates.TemplateResponse("repos.html", ctx)
+    return templates.TemplateResponse(request, "repos.html", ctx)
 
 
 @ui_router.get("/repos/{repo_id}", response_class=HTMLResponse)
@@ -119,7 +119,7 @@ async def ui_repo_detail(request: Request, repo_id: str) -> Response:
     ctx = _base_context(request, role)
     ctx["active_page"] = "repos"
     ctx["repo_id"] = repo_id
-    return templates.TemplateResponse("repo_detail.html", ctx)
+    return templates.TemplateResponse(request, "repo_detail.html", ctx)
 
 
 @ui_router.get("/workflows", response_class=HTMLResponse)
@@ -129,7 +129,7 @@ async def ui_workflows(request: Request) -> Response:
     role = await _resolve_role(user_id)
     ctx = _base_context(request, role)
     ctx["active_page"] = "workflows"
-    return templates.TemplateResponse("workflows.html", ctx)
+    return templates.TemplateResponse(request, "workflows.html", ctx)
 
 
 @ui_router.get("/workflows/{workflow_id}", response_class=HTMLResponse)
@@ -140,7 +140,7 @@ async def ui_workflow_detail(request: Request, workflow_id: str) -> Response:
     ctx = _base_context(request, role)
     ctx["active_page"] = "workflows"
     ctx["workflow_id"] = workflow_id
-    return templates.TemplateResponse("workflow_detail.html", ctx)
+    return templates.TemplateResponse(request, "workflow_detail.html", ctx)
 
 
 @ui_router.get("/audit", response_class=HTMLResponse)
@@ -150,7 +150,7 @@ async def ui_audit(request: Request) -> Response:
     role = await _resolve_role(user_id)
     ctx = _base_context(request, role)
     ctx["active_page"] = "audit"
-    return templates.TemplateResponse("audit.html", ctx)
+    return templates.TemplateResponse(request, "audit.html", ctx)
 
 
 # --- Partial (HTMX fragment) Routes ---
@@ -217,7 +217,7 @@ async def partial_dashboard(request: Request) -> Response:
             "hot_alerts": hot_alerts,
         },
     }
-    return templates.TemplateResponse("partials/dashboard_content.html", ctx)
+    return templates.TemplateResponse(request, "partials/dashboard_content.html", ctx)
 
 
 @ui_router.get("/partials/repos", response_class=HTMLResponse)
@@ -254,7 +254,7 @@ async def partial_repos(request: Request) -> Response:
         })
 
     ctx = {"request": request, "repos": repos}
-    return templates.TemplateResponse("partials/repos_list.html", ctx)
+    return templates.TemplateResponse(request, "partials/repos_list.html", ctx)
 
 
 @ui_router.get("/partials/repo/{repo_id}", response_class=HTMLResponse)
@@ -310,7 +310,7 @@ async def partial_repo_detail(request: Request, repo_id: str) -> Response:
         "can_toggle_writes": _has_permission(role, Permission.TOGGLE_WRITES),
         "can_delete": _has_permission(role, Permission.REGISTER_REPO),
     }
-    return templates.TemplateResponse("partials/repo_detail_content.html", ctx)
+    return templates.TemplateResponse(request, "partials/repo_detail_content.html", ctx)
 
 
 @ui_router.get("/partials/workflows", response_class=HTMLResponse)
@@ -358,7 +358,7 @@ async def partial_workflows(
         })
 
     ctx = {"request": request, "workflows": workflows}
-    return templates.TemplateResponse("partials/workflows_list.html", ctx)
+    return templates.TemplateResponse(request, "partials/workflows_list.html", ctx)
 
 
 @ui_router.get("/partials/workflow/{workflow_id}", response_class=HTMLResponse)
@@ -438,7 +438,7 @@ async def partial_workflow_detail(request: Request, workflow_id: str) -> Respons
         "can_send_to_agent": _has_permission(role, Permission.SEND_TO_AGENT),
         "can_escalate": _has_permission(role, Permission.ESCALATE_WORKFLOW),
     }
-    return templates.TemplateResponse("partials/workflow_detail_content.html", ctx)
+    return templates.TemplateResponse(request, "partials/workflow_detail_content.html", ctx)
 
 
 @ui_router.get("/partials/audit", response_class=HTMLResponse)
@@ -502,7 +502,7 @@ async def partial_audit(
         "offset": offset,
         "limit": limit,
     }
-    return templates.TemplateResponse("partials/audit_list.html", ctx)
+    return templates.TemplateResponse(request, "partials/audit_list.html", ctx)
 
 
 # --- Metrics Page Routes (Story 5.7) ---
@@ -515,7 +515,7 @@ async def metrics_page(request: Request) -> Response:
     role = await _resolve_role(user_id)
     ctx = _base_context(request, role)
     ctx["active_page"] = "metrics"
-    return templates.TemplateResponse("metrics.html", ctx)
+    return templates.TemplateResponse(request, "metrics.html", ctx)
 
 
 @ui_router.get("/partials/metrics", response_class=HTMLResponse)
@@ -541,7 +541,7 @@ async def metrics_partial(
         "reopen": reopen,
         "success_gate": success_gate,
     }
-    return templates.TemplateResponse("partials/metrics_content.html", ctx)
+    return templates.TemplateResponse(request, "partials/metrics_content.html", ctx)
 
 
 # --- Expert Performance Routes (Story 5.8) ---
@@ -554,7 +554,7 @@ async def experts_page(request: Request) -> Response:
     role = await _resolve_role(user_id)
     ctx = _base_context(request, role)
     ctx["active_page"] = "experts"
-    return templates.TemplateResponse("experts.html", ctx)
+    return templates.TemplateResponse(request, "experts.html", ctx)
 
 
 @ui_router.get("/partials/experts", response_class=HTMLResponse)
@@ -573,7 +573,7 @@ async def experts_partial(
         "request": request,
         "experts": [e.to_dict() for e in experts],
     }
-    return templates.TemplateResponse("partials/experts_list.html", ctx)
+    return templates.TemplateResponse(request, "partials/experts_list.html", ctx)
 
 
 @ui_router.get("/experts/{expert_id}", response_class=HTMLResponse)
@@ -588,12 +588,12 @@ async def expert_detail_page(request: Request, expert_id: str) -> Response:
         ctx = _base_context(request, role)
         ctx["active_page"] = "experts"
         ctx["detail"] = "Expert not found"
-        return templates.TemplateResponse("error.html", ctx)
+        return templates.TemplateResponse(request, "error.html", ctx)
 
     ctx = _base_context(request, role)
     ctx["active_page"] = "experts"
     ctx["expert"] = detail.to_dict()
-    return templates.TemplateResponse("expert_detail.html", ctx)
+    return templates.TemplateResponse(request, "expert_detail.html", ctx)
 
 
 @ui_router.get("/partials/expert/{expert_id}", response_class=HTMLResponse)
@@ -609,9 +609,7 @@ async def expert_detail_partial(request: Request, expert_id: str) -> Response:
         "request": request,
         "expert": detail.to_dict(),
     }
-    return templates.TemplateResponse(
-        "partials/expert_detail_content.html", ctx
-    )
+    return templates.TemplateResponse(request, "partials/expert_detail_content.html", ctx)
 
 
 # --- Tool Hub Routes (Story 7.10) ---
@@ -624,7 +622,7 @@ async def tools_page(request: Request) -> Response:
     role = await _resolve_role(user_id)
     ctx = _base_context(request, role)
     ctx["active_page"] = "tools"
-    return templates.TemplateResponse("tools.html", ctx)
+    return templates.TemplateResponse(request, "tools.html", ctx)
 
 
 @ui_router.get("/partials/tools", response_class=HTMLResponse)
@@ -638,7 +636,7 @@ async def tools_partial(request: Request) -> Response:
         "suites": [s.to_dict() for s in suites],
         "profiles": [p.to_dict() for p in DEFAULT_PROFILES],
     }
-    return templates.TemplateResponse("partials/tools_content.html", ctx)
+    return templates.TemplateResponse(request, "partials/tools_content.html", ctx)
 
 
 # --- Model Gateway Routes (Story 7.11) ---
@@ -651,7 +649,7 @@ async def models_page(request: Request) -> Response:
     role = await _resolve_role(user_id)
     ctx = _base_context(request, role)
     ctx["active_page"] = "models"
-    return templates.TemplateResponse("models.html", ctx)
+    return templates.TemplateResponse(request, "models.html", ctx)
 
 
 @ui_router.get("/partials/models", response_class=HTMLResponse)
@@ -664,7 +662,7 @@ async def models_partial(request: Request) -> Response:
         "providers": [p.to_dict() for p in router.providers],
         "rules": [r.to_dict() for r in router.rules],
     }
-    return templates.TemplateResponse("partials/models_content.html", ctx)
+    return templates.TemplateResponse(request, "partials/models_content.html", ctx)
 
 
 # --- Compliance Scorecard Routes (Story 7.12) ---
@@ -677,7 +675,7 @@ async def compliance_page(request: Request) -> Response:
     role = await _resolve_role(user_id)
     ctx = _base_context(request, role)
     ctx["active_page"] = "compliance"
-    return templates.TemplateResponse("compliance.html", ctx)
+    return templates.TemplateResponse(request, "compliance.html", ctx)
 
 
 @ui_router.get("/partials/compliance", response_class=HTMLResponse)
@@ -693,7 +691,7 @@ async def compliance_partial(
         "request": request,
         "scorecard": scorecard.to_dict(),
     }
-    return templates.TemplateResponse("partials/compliance_content.html", ctx)
+    return templates.TemplateResponse(request, "partials/compliance_content.html", ctx)
 
 
 # --- Operational Targets Partial (Story 7.13) ---
@@ -717,4 +715,4 @@ async def targets_partial(
         "cycle_time": cycle_time,
         "reopen_target": reopen_target,
     }
-    return templates.TemplateResponse("partials/targets_content.html", ctx)
+    return templates.TemplateResponse(request, "partials/targets_content.html", ctx)
