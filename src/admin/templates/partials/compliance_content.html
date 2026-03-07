@@ -1,0 +1,48 @@
+<!-- Compliance Scorecard Partial -->
+<div class="space-y-6 fade-in">
+
+    <!-- Overall Status -->
+    <div class="bg-white rounded-lg border border-gray-200 p-6" id="compliance-status-card">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold">Compliance Scorecard: {{ scorecard.repo_id }}</h3>
+            {% if scorecard.overall_pass %}
+            <span class="inline-block px-3 py-1 rounded text-sm font-medium bg-green-100 text-green-800">PASS</span>
+            {% else %}
+            <span class="inline-block px-3 py-1 rounded text-sm font-medium bg-red-100 text-red-800">FAIL</span>
+            {% endif %}
+        </div>
+        <p class="text-sm text-gray-500">
+            {{ scorecard.checks_passed }}/{{ scorecard.checks_total }} checks passing
+            {% if not scorecard.overall_pass %}
+            &mdash; <span class="text-red-600 font-medium">Execute-tier promotion blocked</span>
+            {% endif %}
+        </p>
+    </div>
+
+    <!-- Individual Checks -->
+    <div class="bg-white rounded-lg border border-gray-200 p-6" id="compliance-checks-card">
+        <h3 class="text-lg font-semibold mb-4">Checks</h3>
+        <div class="space-y-3">
+            {% for check in scorecard.checks %}
+            <div class="flex items-start gap-3 p-3 rounded border {% if check.passed %}border-green-200 bg-green-50{% else %}border-red-200 bg-red-50{% endif %}">
+                <div class="flex-shrink-0 mt-0.5">
+                    {% if check.passed %}
+                    <span class="text-green-600 font-bold">&#10003;</span>
+                    {% else %}
+                    <span class="text-red-600 font-bold">&#10007;</span>
+                    {% endif %}
+                </div>
+                <div class="flex-1">
+                    <p class="text-sm font-medium {% if check.passed %}text-green-800{% else %}text-red-800{% endif %}">
+                        {{ check.description }}
+                    </p>
+                    <p class="text-xs mt-1 {% if check.passed %}text-green-600{% else %}text-red-600{% endif %}">
+                        {{ check.details }}
+                    </p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>

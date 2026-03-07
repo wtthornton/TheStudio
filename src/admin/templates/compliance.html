@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Compliance Scorecard{% endblock %}
+{% block page_title %}Compliance Scorecard{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <label class="text-sm font-medium text-gray-600 mr-2">Repo ID:</label>
+    <input type="text" id="compliance-repo" name="repo_id" value="default"
+           class="border border-gray-300 rounded px-3 py-1 text-sm w-64"
+           placeholder="Enter repo ID">
+    <button hx-get="/admin/ui/partials/compliance"
+            hx-target="#compliance-content"
+            hx-swap="innerHTML"
+            hx-include="#compliance-repo"
+            class="ml-2 px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+        Evaluate
+    </button>
+</div>
+<div hx-get="/admin/ui/partials/compliance?repo_id=default" hx-trigger="load" hx-target="#compliance-content" hx-swap="innerHTML">
+</div>
+<div id="compliance-content">
+    <div class="text-center py-12 text-gray-400">
+        <p class="text-sm">Loading compliance scorecard...</p>
+    </div>
+</div>
+{% endblock %}

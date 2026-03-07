@@ -23,4 +23,14 @@
         <p class="text-sm">Loading metrics...</p>
     </div>
 </div>
+
+<!-- Operational Targets Section -->
+<h3 class="text-lg font-semibold mt-8 mb-4">Operational Targets</h3>
+<div hx-get="/admin/ui/partials/targets" hx-trigger="load" hx-target="#targets-content" hx-swap="innerHTML">
+</div>
+<div id="targets-content" class="space-y-4">
+    <div class="text-center py-8 text-gray-400">
+        <p class="text-sm">Loading targets...</p>
+    </div>
+</div>
 {% endblock %}

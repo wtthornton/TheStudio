@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Tool Hub{% endblock %}
+{% block page_title %}Tool Hub{% endblock %}
+
+{% block content %}
+<div hx-get="/admin/ui/partials/tools" hx-trigger="load" hx-target="#tools-content" hx-swap="innerHTML">
+</div>
+<div id="tools-content">
+    <div class="text-center py-12 text-gray-400">
+        <p class="text-sm">Loading tool catalog...</p>
+    </div>
+</div>
+{% endblock %}

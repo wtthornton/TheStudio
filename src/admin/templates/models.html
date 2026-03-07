@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Model Gateway{% endblock %}
+{% block page_title %}Model Gateway{% endblock %}
+
+{% block content %}
+<div hx-get="/admin/ui/partials/models" hx-trigger="load" hx-target="#models-content" hx-swap="innerHTML">
+</div>
+<div id="models-content">
+    <div class="text-center py-12 text-gray-400">
+        <p class="text-sm">Loading model gateway...</p>
+    </div>
+</div>
+{% endblock %}

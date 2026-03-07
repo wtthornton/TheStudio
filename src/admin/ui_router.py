@@ -18,9 +18,13 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from src.admin.audit import AuditEventType, AuditLogFilter, get_audit_service
+from src.admin.compliance_scorecard import get_scorecard_service
 from src.admin.experts import get_expert_service
 from src.admin.metrics import get_metrics_service
+from src.admin.model_gateway import get_model_router
+from src.admin.operational_targets import get_targets_service
 from src.admin.success_gate import get_success_gate_service
+from src.admin.tool_catalog import DEFAULT_PROFILES, get_tool_catalog
 from src.admin.rbac import ROLE_PERMISSIONS, Permission, Role, get_rbac_service
 from src.admin.router import (
     get_health_service,
@@ -608,3 +612,109 @@ async def expert_detail_partial(request: Request, expert_id: str) -> Response:
     return templates.TemplateResponse(
         "partials/expert_detail_content.html", ctx
     )
+
+
+# --- Tool Hub Routes (Story 7.10) ---
+
+
+@ui_router.get("/tools", response_class=HTMLResponse)
+async def tools_page(request: Request) -> Response:
+    """Render Tool Hub page."""
+    user_id = request.headers.get("X-User-ID")
+    role = await _resolve_role(user_id)
+    ctx = _base_context(request, role)
+    ctx["active_page"] = "tools"
+    return templates.TemplateResponse("tools.html", ctx)
+
+
+@ui_router.get("/partials/tools", response_class=HTMLResponse)
+async def tools_partial(request: Request) -> Response:
+    """Render tool catalog partial."""
+    catalog = get_tool_catalog()
+    suites = catalog.list_suites()
+
+    ctx = {
+        "request": request,
+        "suites": [s.to_dict() for s in suites],
+        "profiles": [p.to_dict() for p in DEFAULT_PROFILES],
+    }
+    return templates.TemplateResponse("partials/tools_content.html", ctx)
+
+
+# --- Model Gateway Routes (Story 7.11) ---
+
+
+@ui_router.get("/models", response_class=HTMLResponse)
+async def models_page(request: Request) -> Response:
+    """Render Model Gateway page."""
+    user_id = request.headers.get("X-User-ID")
+    role = await _resolve_role(user_id)
+    ctx = _base_context(request, role)
+    ctx["active_page"] = "models"
+    return templates.TemplateResponse("models.html", ctx)
+
+
+@ui_router.get("/partials/models", response_class=HTMLResponse)
+async def models_partial(request: Request) -> Response:
+    """Render model gateway partial."""
+    router = get_model_router()
+
+    ctx = {
+        "request": request,
+        "providers": [p.to_dict() for p in router.providers],
+        "rules": [r.to_dict() for r in router.rules],
+    }
+    return templates.TemplateResponse("partials/models_content.html", ctx)
+
+
+# --- Compliance Scorecard Routes (Story 7.12) ---
+
+
+@ui_router.get("/compliance", response_class=HTMLResponse)
+async def compliance_page(request: Request) -> Response:
+    """Render Compliance Scorecard page."""
+    user_id = request.headers.get("X-User-ID")
+    role = await _resolve_role(user_id)
+    ctx = _base_context(request, role)
+    ctx["active_page"] = "compliance"
+    return templates.TemplateResponse("compliance.html", ctx)
+
+
+@ui_router.get("/partials/compliance", response_class=HTMLResponse)
+async def compliance_partial(
+    request: Request,
+    repo_id: str = Query("default"),
+) -> Response:
+    """Render compliance scorecard partial."""
+    svc = get_scorecard_service()
+    scorecard = svc.evaluate(repo_id)
+
+    ctx = {
+        "request": request,
+        "scorecard": scorecard.to_dict(),
+    }
+    return templates.TemplateResponse("partials/compliance_content.html", ctx)
+
+
+# --- Operational Targets Partial (Story 7.13) ---
+
+
+@ui_router.get("/partials/targets", response_class=HTMLResponse)
+async def targets_partial(
+    request: Request,
+    repo: str | None = Query(None),
+) -> Response:
+    """Render operational targets partial (lead time, cycle time, reopen target)."""
+    svc = get_targets_service()
+
+    lead_time = svc.get_lead_time(repo_filter=repo)
+    cycle_time = svc.get_cycle_time(repo_filter=repo)
+    reopen_target = svc.get_reopen_target(repo_filter=repo)
+
+    ctx = {
+        "request": request,
+        "lead_time": lead_time,
+        "cycle_time": cycle_time,
+        "reopen_target": reopen_target,
+    }
+    return templates.TemplateResponse("partials/targets_content.html", ctx)

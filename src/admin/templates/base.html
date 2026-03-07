@@ -54,6 +54,24 @@
                         <span class="mr-2">&#9733;</span> Experts
                     </a>
                 </li>
+                <li>
+                    <a href="/admin/ui/tools"
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'tools' %}bg-gray-800 text-white{% else %}text-gray-300{% endif %}">
+                        <span class="mr-2">&#9881;</span> Tool Hub
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/ui/models"
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'models' %}bg-gray-800 text-white{% else %}text-gray-300{% endif %}">
+                        <span class="mr-2">&#9672;</span> Models
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/ui/compliance"
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'compliance' %}bg-gray-800 text-white{% else %}text-gray-300{% endif %}">
+                        <span class="mr-2">&#10003;</span> Compliance
+                    </a>
+                </li>
                 {% if current_user_role and current_user_role.value == 'admin' %}
                 <li>
                     <a href="/admin/ui/audit"
