@@ -29,17 +29,17 @@
 
 Priority order (first → last). Work items depend on predecessors completing.
 
-| Order | Story ID | Title | Depends On | Size | DoD Reference |
-|-------|----------|-------|------------|------|---------------|
-| 1 | 4.1 | Repo Registry Database Persistence | Epic 3 | M | See DoD below |
-| 2 | 4.2 | Fleet Dashboard API — System Health | 4.1 | M | See DoD below |
-| 3 | 4.3 | Fleet Dashboard API — Workflow Metrics | 4.2 | M | See DoD below |
-| 4 | 4.4 | Repo Management API — List, Register, Update | 4.1 | M | See DoD below |
-| 5 | 4.5 | Repo Management API — Tier, Pause, Writes | 4.4 | M | See DoD below |
-| 6 | 4.6 | Workflow Console API — List, Detail, Timeline | 4.3 | L | See DoD below |
-| 7 | 4.7 | Workflow Console API — Safe Rerun | 4.6 | M | See DoD below |
-| 8 | 4.8 | RBAC — Role Definitions, API Enforcement | 4.4 | M | See DoD below |
-| 9 | 4.9 | Audit Log — Schema, Logging, Query API | 4.8 | M | See DoD below |
+| Order | Story ID | Title | Depends On | Size | Status |
+|-------|----------|-------|------------|------|--------|
+| 1 | 4.1 | Repo Registry Database Persistence | Epic 3 | M | ✅ Complete |
+| 2 | 4.2 | Fleet Dashboard API — System Health | 4.1 | M | ✅ Complete |
+| 3 | 4.3 | Fleet Dashboard API — Workflow Metrics | 4.2 | M | ✅ Complete |
+| 4 | 4.4 | Repo Management API — List, Register, Update | 4.1 | M | ⏳ Next |
+| 5 | 4.5 | Repo Management API — Tier, Pause, Writes | 4.4 | M | ⏳ Pending |
+| 6 | 4.6 | Workflow Console API — List, Detail, Timeline | 4.3 | L | ⏳ Pending |
+| 7 | 4.7 | Workflow Console API — Safe Rerun | 4.6 | M | ⏳ Pending |
+| 8 | 4.8 | RBAC — Role Definitions, API Enforcement | 4.4 | M | ⏳ Pending |
+| 9 | 4.9 | Audit Log — Schema, Logging, Query API | 4.8 | M | ⏳ Pending |
 
 **Explicitly out of Sprint 1:** Stories 4.10–4.14 (Frontend, Deployment). These are Sprint 2.
 
@@ -47,50 +47,56 @@ Priority order (first → last). Work items depend on predecessors completing.
 
 ## Story Definitions of Done
 
-### 4.1: Repo Registry Database Persistence
+### 4.1: Repo Registry Database Persistence ✅ COMPLETE
 
 **Reference:** `thestudioarc/23-admin-control-ui.md` (Repo Registry and Controls)
 
 **Acceptance Criteria:**
-- [ ] `repos` table created with migration: id (UUID), owner, repo, full_name, tier, installation_id, default_branch, created_at, updated_at, deleted_at (soft delete)
-- [ ] Existing in-memory registry functions (`register_repo`, `get_repo`, `list_repos`, etc.) replaced with database operations
-- [ ] Repo Profile fields stored in `repos` table or linked `repo_profiles` table: language, build_commands, required_checks, risk_paths
-- [ ] Migration is idempotent and can run on existing database
-- [ ] All existing tests pass with database-backed registry
-- [ ] New tests: create, read, update, soft-delete repo via database
+- [x] `repos` table created with migration: id (UUID), owner, repo, full_name, tier, installation_id, default_branch, created_at, updated_at, deleted_at (soft delete)
+- [x] Existing in-memory registry functions (`register_repo`, `get_repo`, `list_repos`, etc.) replaced with database operations
+- [x] Repo Profile fields stored in `repos` table or linked `repo_profiles` table: language, build_commands, required_checks, risk_paths
+- [x] Migration is idempotent and can run on existing database
+- [x] All existing tests pass with database-backed registry
+- [x] New tests: create, read, update, soft-delete repo via database
 
 **Estimation reasoning:** Medium. Schema is straightforward. Main risk is ensuring migration works with existing Epic 3 data. Unknown: whether to keep `repo_profiles` separate or inline.
 
+**Implementation:** `src/repo/repository.py`, `src/repo/repo_profile.py` — completed prior to Sprint 1
+
 ---
 
-### 4.2: Fleet Dashboard API — System Health
+### 4.2: Fleet Dashboard API — System Health ✅ COMPLETE
 
 **Reference:** `thestudioarc/23-admin-control-ui.md` (Fleet Dashboard mockup, lines 63–78)
 
 **Acceptance Criteria:**
-- [ ] `GET /admin/health` returns status for: Temporal, JetStream, Postgres, Router
-- [ ] Each service status is: OK, DEGRADED, or DOWN
-- [ ] Health check is fast (< 2s total)
-- [ ] Health check failures are logged with details
-- [ ] Response includes `checked_at` timestamp
+- [x] `GET /admin/health` returns status for: Temporal, JetStream, Postgres, Router
+- [x] Each service status is: OK, DEGRADED, or DOWN
+- [x] Health check is fast (< 2s total)
+- [x] Health check failures are logged with details
+- [x] Response includes `checked_at` timestamp
 
 **Estimation reasoning:** Medium. Temporal and Postgres health checks are standard. JetStream health check needs investigation (ping vs connection test). Router health is self-check (always OK if responding).
 
+**Implementation:** `src/admin/health.py`, `src/admin/router.py` — completed prior to Story 4.3
+
 ---
 
-### 4.3: Fleet Dashboard API — Workflow Metrics
+### 4.3: Fleet Dashboard API — Workflow Metrics ✅ COMPLETE
 
 **Reference:** `thestudioarc/23-admin-control-ui.md` (Fleet Dashboard mockup, lines 63–78)
 
 **Acceptance Criteria:**
-- [ ] `GET /admin/workflows/metrics` returns aggregate: running, stuck, failed, queue_depth
-- [ ] `GET /admin/workflows/metrics?repo_id={id}` returns per-repo metrics
-- [ ] "Stuck" defined as: workflow in active state > configurable threshold (default: 2 hours)
-- [ ] Queue depth queried from Temporal task queue
-- [ ] Response includes 24h pass rate by repo (workflows completing verification + QA on first attempt)
-- [ ] Hot alerts included: repos with elevated failure rates, workflows stuck beyond threshold
+- [x] `GET /admin/workflows/metrics` returns aggregate: running, stuck, failed, queue_depth
+- [x] `GET /admin/workflows/metrics?repo_id={id}` returns per-repo metrics
+- [x] "Stuck" defined as: workflow in active state > configurable threshold (default: 2 hours)
+- [x] Queue depth queried from Temporal task queue
+- [x] Response includes 24h pass rate by repo (workflows completing verification + QA on first attempt)
+- [x] Hot alerts included: repos with elevated failure rates, workflows stuck beyond threshold
 
 **Estimation reasoning:** Medium. Main unknown is Temporal visibility API for queue depth and workflow duration. Need to spike query patterns early.
+
+**Implementation:** `src/admin/workflow_metrics.py`, `src/admin/router.py` — completed 2026-03-06
 
 ---
 
