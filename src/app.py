@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from src.admin.platform_router import platform_router
 from src.admin.router import router as admin_router
 from src.admin.ui_router import ui_router
 from src.compliance.router import router as compliance_router
@@ -26,4 +27,5 @@ app.add_middleware(CorrelationMiddleware)
 app.include_router(ingress_router)
 app.include_router(compliance_router)
 app.include_router(admin_router)
+app.include_router(platform_router)
 app.include_router(ui_router)
