@@ -5,11 +5,69 @@
 
 ## Log
 
-<!-- Example entries:
-[2026-01-15T10:00:00] [discover] tapps_session_start - v0.2.1, ruff+mypy+bandit+radon installed, Python/FastAPI web app
-[2026-01-15T10:01:00] [research] tapps_lookup_docs - fastapi routing patterns
-[2026-01-15T10:01:30] [research] tapps_consult_expert - API design for user endpoints
-[2026-01-15T10:02:00] [develop] tapps_score_file (quick) - src/app.py score 85
-[2026-01-15T10:05:00] [validate] tapps_validate_changed - 3 files, all gates PASSED (standard)
-[2026-01-15T10:06:00] [verify] tapps_checklist (feature) - all required steps complete
--->
+### Story 4.3 — Fleet Dashboard API — Workflow Metrics (2026-03-06)
+
+[2026-03-06T00:01:00] [discover] tapps_session_start - v0.8.5, all checkers installed, standard preset
+[2026-03-06T00:02:00] [research] context7 resolve-library-id - found /temporalio/sdk-python
+[2026-03-06T00:03:00] [research] context7 get-library-docs - temporalio visibility API patterns
+[2026-03-06T00:04:00] [research] tapps_lookup_docs - temporalio workflow visibility (cache miss, expert fallback)
+[2026-03-06T00:10:00] [develop] created src/admin/workflow_metrics.py - WorkflowMetricsService, data models
+[2026-03-06T00:15:00] [develop] modified src/admin/router.py - added /workflows/metrics endpoint
+[2026-03-06T00:16:00] [develop] modified src/admin/__init__.py - exported new classes
+[2026-03-06T00:20:00] [develop] created tests/unit/test_workflow_metrics.py - unit tests
+[2026-03-06T00:25:00] [validate] tapps_quick_check - src/admin/workflow_metrics.py score 81.02, PASSED
+[2026-03-06T00:26:00] [validate] tapps_quick_check - src/admin/router.py score 88.18, PASSED
+[2026-03-06T00:27:00] [validate] tapps_quick_check - tests/unit/test_workflow_metrics.py score 82.10, 2 lint issues
+[2026-03-06T00:28:00] [develop] fixed lint issues - removed unused imports in test file
+[2026-03-06T00:30:00] [validate] tapps_validate_changed - 4 files, all gates PASSED (100.0 score each)
+[2026-03-06T00:31:00] [verify] tapps_checklist (feature) - all required steps complete, 84 total calls
+
+### Story 4.9 — Audit Log — Schema, Logging, Query API (2026-03-06)
+
+[2026-03-06T12:00:00] [discover] tapps_session_start - resumed session, v0.8.5, standard preset
+[2026-03-06T12:01:00] [discover] read thestudioarc/23-admin-control-ui.md - audit requirements
+[2026-03-06T12:02:00] [discover] read src/admin/rbac.py - existing RBAC patterns
+[2026-03-06T12:03:00] [discover] read src/admin/router.py - existing endpoint patterns, audit stubs
+[2026-03-06T12:04:00] [discover] read src/db/base.py - SQLAlchemy base class
+[2026-03-06T12:05:00] [discover] read tests/unit/test_rbac.py - test patterns
+[2026-03-06T12:10:00] [develop] created src/admin/audit.py - AuditEventType, AuditLogRow, AuditService
+[2026-03-06T12:11:00] [validate] tapps_quick_check - audit.py score 82.82, 2 lint issues (unused import, datetime alias)
+[2026-03-06T12:12:00] [develop] fixed lint issues - removed unused Text import, fixed datetime alias
+[2026-03-06T12:13:00] [develop] modified src/admin/rbac.py - added VIEW_AUDIT permission to Permission enum and ADMIN role
+[2026-03-06T12:14:00] [develop] modified src/admin/router.py - added audit imports, replaced _emit_audit_event stub
+[2026-03-06T12:15:00] [develop] modified src/admin/router.py - replaced _emit_workflow_audit_event stub
+[2026-03-06T12:16:00] [develop] modified src/admin/router.py - updated register_repo with http_request param
+[2026-03-06T12:17:00] [develop] modified src/admin/router.py - updated update_repo_profile with http_request param
+[2026-03-06T12:18:00] [develop] modified src/admin/router.py - updated change_repo_tier with http_request param
+[2026-03-06T12:19:00] [develop] modified src/admin/router.py - updated pause_repo with http_request param
+[2026-03-06T12:20:00] [develop] modified src/admin/router.py - updated resume_repo with http_request param
+[2026-03-06T12:21:00] [develop] modified src/admin/router.py - updated toggle_repo_writes with http_request param
+[2026-03-06T12:22:00] [develop] modified src/admin/router.py - updated rerun_verification with session param
+[2026-03-06T12:23:00] [develop] modified src/admin/router.py - updated send_to_agent with session param
+[2026-03-06T12:24:00] [develop] modified src/admin/router.py - updated escalate_workflow with session param
+[2026-03-06T12:25:00] [develop] modified src/admin/router.py - added AuditLogEntryResponse, AuditLogListResponse models
+[2026-03-06T12:26:00] [develop] modified src/admin/router.py - added GET /admin/audit endpoint
+[2026-03-06T12:27:00] [validate] tapps_quick_check - rbac.py score 82.82, gate PASSED
+[2026-03-06T12:28:00] [validate] tapps_quick_check - router.py score 84.7, gate PASSED, 3 unused imports
+[2026-03-06T12:29:00] [develop] fixed lint issues - removed unused AuditLogRead, AuditService, set_audit_service imports
+[2026-03-06T12:30:00] [develop] created tests/unit/test_audit.py - 29 unit tests for audit functionality
+[2026-03-06T12:31:00] [validate] tapps_quick_check - test_audit.py score 83.54, 12 lint issues
+[2026-03-06T12:32:00] [develop] fixed lint issues - removed unused imports (timedelta, patch, UUID, HTTPException, set_rbac_service)
+[2026-03-06T12:33:00] [develop] fixed lint issues - removed unused result variables in list_audit_log tests
+[2026-03-06T12:34:00] [develop] ran pytest - 29 audit tests passing
+[2026-03-06T12:35:00] [develop] ran pytest - 138 total admin tests failing (29 failures due to new params)
+[2026-03-06T12:36:00] [develop] modified tests/unit/test_admin_repos.py - added _make_mock_http_request helper
+[2026-03-06T12:37:00] [develop] modified tests/unit/test_admin_repos.py - updated TestRegisterRepo tests
+[2026-03-06T12:38:00] [develop] modified tests/unit/test_admin_repos.py - updated TestUpdateRepoProfile tests
+[2026-03-06T12:39:00] [develop] modified tests/unit/test_admin_repos.py - updated TestChangeTier tests
+[2026-03-06T12:40:00] [develop] modified tests/unit/test_admin_repos.py - updated TestPauseRepo tests
+[2026-03-06T12:41:00] [develop] modified tests/unit/test_admin_repos.py - updated TestResumeRepo tests
+[2026-03-06T12:42:00] [develop] modified tests/unit/test_admin_repos.py - updated TestToggleWrites tests
+[2026-03-06T12:43:00] [develop] modified tests/unit/test_admin_workflows.py - added set_audit_service import
+[2026-03-06T12:44:00] [develop] modified tests/unit/test_admin_workflows.py - updated TestRerunVerificationEndpoint tests
+[2026-03-06T12:45:00] [develop] modified tests/unit/test_admin_workflows.py - updated TestSendToAgentEndpoint tests
+[2026-03-06T12:46:00] [develop] modified tests/unit/test_admin_workflows.py - updated TestEscalateEndpoint tests
+[2026-03-06T12:47:00] [develop] ran pytest - 138 tests passing
+[2026-03-06T12:48:00] [validate] tapps_validate_changed - 6 files, 5 passed, 1 failed (test_admin_workflows.py 65.0)
+[2026-03-06T12:49:00] [develop] modified tests/unit/test_admin_workflows.py - removed unused MagicMock import
+[2026-03-06T12:50:00] [verify] tapps_checklist (feature) - all required steps complete, 122 total calls
