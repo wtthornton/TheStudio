@@ -33,7 +33,7 @@ def _make_taskpacket(**overrides: object) -> TaskPacketRead:
         "status": TaskPacketStatus.INTENT_BUILT,
         "scope": {"type": "feature", "components": ["api"]},
         "risk_flags": {"auth": False, "migration": False},
-        "complexity_index": "medium",
+        "complexity_index": {"score": 0.4, "band": "medium", "dimensions": {"scope_breadth": 2, "risk_flag_count": 1, "dependency_count": 3, "lines_estimate": 100, "expert_coverage": 1}},
         "context_packs": [],
         "intent_spec_id": uuid4(),
         "intent_version": 1,
@@ -137,7 +137,7 @@ class TestBuildSystemPrompt:
 
     def test_includes_complexity_and_risk(self) -> None:
         tp = _make_taskpacket(
-            complexity_index="high",
+            complexity_index={"score": 0.8, "band": "high", "dimensions": {"scope_breadth": 5, "risk_flag_count": 3, "dependency_count": 5, "lines_estimate": 500, "expert_coverage": 3}},
             risk_flags={"auth": True, "migration": False},
         )
         intent = _make_intent()

@@ -31,7 +31,7 @@ def _make_taskpacket(**overrides: object) -> TaskPacketRead:
         "status": TaskPacketStatus.VERIFICATION_PASSED,
         "scope": {"type": "feature"},
         "risk_flags": {},
-        "complexity_index": "low",
+        "complexity_index": {"score": 0.2, "band": "low", "dimensions": {"scope_breadth": 1, "risk_flag_count": 0, "dependency_count": 1, "lines_estimate": 50, "expert_coverage": 0}},
         "context_packs": [],
         "intent_spec_id": uuid4(),
         "intent_version": 1,

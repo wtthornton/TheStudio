@@ -121,8 +121,8 @@ class TestExpertVersionRead:
 
 
 class TestSeedExperts:
-    def test_seed_has_two_templates(self) -> None:
-        assert len(SEED_EXPERTS) == 2
+    def test_seed_has_five_templates(self) -> None:
+        assert len(SEED_EXPERTS) == 5
 
     def test_security_review_template(self) -> None:
         security = next(e for e in SEED_EXPERTS if e.name == "security-review")

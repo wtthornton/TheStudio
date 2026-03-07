@@ -21,11 +21,11 @@ class TestRepoProfileCreate:
         assert data.repo_name == "myrepo"
         assert data.tier == RepoTier.OBSERVE
 
-    def test_defaults_empty_checks(self) -> None:
+    def test_defaults_standard_checks(self) -> None:
         data = RepoProfileCreate(
             owner="o", repo_name="r", installation_id=1, webhook_secret="s"  # noqa: S106
         )
-        assert data.required_checks == []
+        assert data.required_checks == ["ruff", "pytest"]
         assert data.tool_allowlist == []
 
     def test_missing_required_fields(self) -> None:

@@ -347,12 +347,11 @@ class TestComplexityIndexV1:
 
 
 class TestServiceContextPack:
-    def test_pack_to_dict(self) -> None:
-        pack = ServiceContextPack(name="test-pack", version="1.0", content={"key": "val"})
-        d = pack.to_dict()
-        assert d["name"] == "test-pack"
-        assert d["version"] == "1.0"
-        assert d["content"] == {"key": "val"}
+    def test_pack_fields(self) -> None:
+        pack = ServiceContextPack(name="test-pack", version="1.0", conventions=["use snake_case"])
+        assert pack.name == "test-pack"
+        assert pack.version == "1.0"
+        assert pack.conventions == ["use snake_case"]
 
     def test_get_context_packs_returns_empty(self) -> None:
         """Phase 0 stub returns empty list."""
