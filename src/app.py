@@ -15,8 +15,9 @@ from src.observability.tracing import init_tracing
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Application lifespan: initialize tracing on startup."""
+    """Application lifespan: initialize tracing and register context packs on startup."""
     init_tracing()
+    import src.context.packs  # noqa: F401 — registers production context packs
     yield
 
 

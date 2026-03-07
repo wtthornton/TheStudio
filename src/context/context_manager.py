@@ -6,6 +6,9 @@ GitHub issue content, and updates the TaskPacket with structured enrichment data
 Architecture reference: thestudioarc/03-context-manager.md
 """
 
+import logging
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -24,7 +27,60 @@ from src.observability.conventions import (
 )
 from src.observability.tracing import get_tracer
 
+logger = logging.getLogger(__name__)
 tracer = get_tracer("thestudio.context")
+
+
+@dataclass
+class ContextPackSignal:
+    """Signal emitted when context packs are used or missing during enrichment."""
+
+    signal_type: str  # "pack_used_by_task" or "pack_missing_detected"
+    repo: str
+    taskpacket_id: UUID
+    pack_names: list[str] = field(default_factory=list)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "signal_type": self.signal_type,
+            "repo": self.repo,
+            "taskpacket_id": str(self.taskpacket_id),
+            "pack_names": self.pack_names,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
+# In-memory signal store
+_pack_signals: list[ContextPackSignal] = []
+
+
+def get_pack_signals() -> list[ContextPackSignal]:
+    """Return all emitted context pack signals."""
+    return list(_pack_signals)
+
+
+def clear_pack_signals() -> None:
+    """Clear signal store (for testing)."""
+    _pack_signals.clear()
+
+
+def _emit_pack_signal(
+    signal_type: str,
+    repo: str,
+    taskpacket_id: UUID,
+    pack_names: list[str] | None = None,
+) -> ContextPackSignal:
+    """Emit a context pack signal."""
+    signal = ContextPackSignal(
+        signal_type=signal_type,
+        repo=repo,
+        taskpacket_id=taskpacket_id,
+        pack_names=pack_names or [],
+    )
+    _pack_signals.append(signal)
+    logger.info("Context pack signal: %s for repo=%s", signal_type, repo)
+    return signal
 
 
 async def enrich_taskpacket(
@@ -62,9 +118,23 @@ async def enrich_taskpacket(
         # Flag risks
         risk_flags = flag_risks(issue_title, issue_body)
 
-        # Get context packs
+        # Get context packs and emit signals
         packs = get_context_packs(tp.repo)
         pack_dicts: list[dict[str, Any]] = [p.to_dict() for p in packs]
+
+        if packs:
+            _emit_pack_signal(
+                signal_type="pack_used_by_task",
+                repo=tp.repo,
+                taskpacket_id=taskpacket_id,
+                pack_names=[p.name for p in packs],
+            )
+        else:
+            _emit_pack_signal(
+                signal_type="pack_missing_detected",
+                repo=tp.repo,
+                taskpacket_id=taskpacket_id,
+            )
 
         # Compute Complexity Index v1 with full dimensions
         # Note: mandatory_expert_classes requires EffectiveRolePolicy which is computed

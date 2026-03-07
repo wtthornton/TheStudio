@@ -20,6 +20,7 @@ from fastapi.templating import Jinja2Templates
 from src.admin.audit import AuditEventType, AuditLogFilter, get_audit_service
 from src.admin.experts import get_expert_service
 from src.admin.metrics import get_metrics_service
+from src.admin.success_gate import get_success_gate_service
 from src.admin.rbac import ROLE_PERMISSIONS, Permission, Role, get_rbac_service
 from src.admin.router import (
     get_health_service,
@@ -526,11 +527,15 @@ async def metrics_partial(
     loopbacks = svc.get_loopbacks(repo_filter=repo_filter)
     reopen = svc.get_reopen(repo_filter=repo_filter)
 
+    gate_svc = get_success_gate_service()
+    success_gate = gate_svc.check(repo_filter=repo_filter)
+
     ctx = {
         "request": request,
         "single_pass": single_pass,
         "loopbacks": loopbacks,
         "reopen": reopen,
+        "success_gate": success_gate,
     }
     return templates.TemplateResponse("partials/metrics_content.html", ctx)
 

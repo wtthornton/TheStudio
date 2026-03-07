@@ -7,6 +7,7 @@ from httpx import ASGITransport, AsyncClient
 
 from src.admin.experts import ExpertDetail, ExpertRepoBreakdown, ExpertSummary
 from src.admin.metrics import LoopbackEntry, LoopbackMetrics, ReopenMetrics, SinglePassMetrics
+from src.admin.success_gate import SuccessGateResult
 from src.app import app
 
 
@@ -56,12 +57,21 @@ def mock_ui_services():
         "get_expert": lambda self, eid: expert_detail if eid == "aaaa-1111" else None,
     })()
 
+    mock_gate_result = SuccessGateResult(
+        met=True, current_rate=0.65, threshold=0.60,
+        sample_count=40, window_days=28,
+    )
+    mock_gate_svc = type("MockGateSvc", (), {
+        "check": lambda self, **kw: mock_gate_result,
+    })()
+
     mock_role_svc = AsyncMock()
     mock_role_svc.get_user_role.return_value = None
 
     with (
         patch("src.admin.ui_router.get_metrics_service", return_value=mock_metrics),
         patch("src.admin.ui_router.get_expert_service", return_value=mock_expert_svc),
+        patch("src.admin.ui_router.get_success_gate_service", return_value=mock_gate_svc),
         patch("src.admin.ui_router.get_rbac_service", return_value=mock_role_svc),
         patch("src.admin.ui_router.get_async_session") as mock_session,
     ):

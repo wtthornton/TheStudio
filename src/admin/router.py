@@ -25,6 +25,7 @@ from src.admin.audit import (
 from src.admin.experts import get_expert_service
 from src.admin.health import HealthService
 from src.admin.metrics import get_metrics_service
+from src.admin.success_gate import get_success_gate_service
 from src.admin.rbac import Permission, get_current_user_id, require_permission
 from src.admin.workflow_console import (
     UnsafeRerunError,
@@ -1593,6 +1594,33 @@ async def get_reopen_metrics(
     require_permission(request, Permission.VIEW_METRICS)
     svc = get_metrics_service()
     return svc.get_reopen(repo_filter=repo).to_dict()
+
+
+@router.get("/metrics/success-gate")
+async def get_success_gate(
+    request: Request,
+    repo: str | None = Query(None, description="Filter by repo ID"),
+    _user_id: str = Depends(get_current_user_id),
+) -> dict[str, Any]:
+    """Check single-pass success gate status."""
+    require_permission(request, Permission.VIEW_METRICS)
+    svc = get_success_gate_service()
+    result = svc.check(repo_filter=repo)
+
+    # Emit alert signal if gate fails
+    if not result.met and not result.insufficient_data:
+        _emit_success_gate_signal(result)
+
+    return result.to_dict()
+
+
+def _emit_success_gate_signal(result: Any) -> None:
+    """Log success_gate_failed alert."""
+    logger.warning(
+        "Success gate FAILED: rate=%.1f%% threshold=%.1f%%",
+        result.current_rate * 100,
+        result.threshold * 100,
+    )
 
 
 # ---------------------------------------------------------------------------

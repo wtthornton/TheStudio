@@ -1,6 +1,6 @@
 """Seed the Expert Library with vetted templates.
 
-Sprint 1 seeds 2 templates: Security Review and QA Validation.
+Seeds 5 expert classes: Security, QA Validation, Technical, Compliance, Process Quality.
 """
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -96,6 +96,144 @@ SEED_EXPERTS: list[ExpertCreate] = [
             "failure_modes": [
                 "Missing acceptance criteria → request intent refinement",
                 "Cannot determine pass/fail → flag as intent_gap",
+            ],
+        },
+    ),
+    ExpertCreate(
+        name="technical-review",
+        expert_class=ExpertClass.TECHNICAL,
+        capability_tags=["architecture", "code_quality", "performance", "design_review"],
+        scope_description=(
+            "Review code changes for architecture alignment, code quality, "
+            "performance implications, and design pattern adherence. Identifies "
+            "technical debt, anti-patterns, and scalability concerns."
+        ),
+        tool_policy={
+            "allowed_suites": ["repo_read", "analysis"],
+            "denied_suites": ["repo_write", "publish"],
+            "read_only": True,
+        },
+        trust_tier=TrustTier.PROBATION,
+        definition={
+            "scope_boundaries": [
+                "Architecture pattern compliance",
+                "Code quality and maintainability",
+                "Performance impact analysis",
+                "API design review",
+            ],
+            "expected_outputs": [
+                "Architecture alignment assessment",
+                "Code quality findings with severity",
+                "Performance impact notes",
+                "Suggested refactoring or design improvements",
+            ],
+            "operating_procedure": [
+                "Review changed files for architecture pattern violations",
+                "Assess code complexity and maintainability metrics",
+                "Identify performance-sensitive code paths",
+                "Check API contracts for backward compatibility",
+                "Produce findings with category and actionable recommendations",
+            ],
+            "edge_cases": [
+                "Trade-offs between performance and readability",
+                "Legacy code that cannot follow current patterns",
+                "Cross-cutting concerns spanning multiple services",
+            ],
+            "failure_modes": [
+                "Missing architecture context → request system design docs",
+                "Cannot assess performance without benchmarks → flag for profiling",
+            ],
+        },
+    ),
+    ExpertCreate(
+        name="compliance-check",
+        expert_class=ExpertClass.COMPLIANCE,
+        capability_tags=["regulatory", "data_handling", "audit_trail", "retention"],
+        scope_description=(
+            "Review changes for compliance with regulatory requirements including "
+            "data handling policies, audit trail completeness, retention rules, "
+            "and privacy regulations (GDPR, SOC2, PCI)."
+        ),
+        tool_policy={
+            "allowed_suites": ["repo_read", "analysis"],
+            "denied_suites": ["repo_write", "publish"],
+            "read_only": True,
+        },
+        trust_tier=TrustTier.PROBATION,
+        definition={
+            "scope_boundaries": [
+                "Data handling and privacy compliance",
+                "Audit trail completeness",
+                "Retention policy adherence",
+                "Regulatory requirement verification",
+            ],
+            "expected_outputs": [
+                "Compliance checklist (pass/fail per regulation)",
+                "Data handling findings with regulatory reference",
+                "Audit trail gap identification",
+                "Retention policy violation alerts",
+            ],
+            "operating_procedure": [
+                "Identify data types being processed (PII, financial, health)",
+                "Check data handling against applicable regulations",
+                "Verify audit logging for state-changing operations",
+                "Validate retention and deletion policies are enforced",
+                "Produce compliance findings with regulatory citations",
+            ],
+            "edge_cases": [
+                "Cross-border data transfers with conflicting regulations",
+                "Derived data that inherits sensitivity from source",
+                "Temporary storage that bypasses retention policies",
+            ],
+            "failure_modes": [
+                "Unknown data classification → request data inventory",
+                "Conflicting regulations → escalate to compliance team",
+            ],
+        },
+    ),
+    ExpertCreate(
+        name="process-quality",
+        expert_class=ExpertClass.PROCESS_QUALITY,
+        capability_tags=["release_readiness", "operational_hygiene", "runbook", "incident_response"],
+        scope_description=(
+            "Assess operational readiness of changes including runbook updates, "
+            "monitoring coverage, incident response procedures, and release "
+            "process compliance."
+        ),
+        tool_policy={
+            "allowed_suites": ["repo_read", "analysis"],
+            "denied_suites": ["repo_write", "publish"],
+            "read_only": True,
+        },
+        trust_tier=TrustTier.PROBATION,
+        definition={
+            "scope_boundaries": [
+                "Release readiness verification",
+                "Operational runbook completeness",
+                "Monitoring and alerting coverage",
+                "Incident response procedure updates",
+            ],
+            "expected_outputs": [
+                "Release readiness checklist (pass/fail)",
+                "Runbook gap identification",
+                "Monitoring coverage assessment",
+                "Incident response procedure review",
+            ],
+            "operating_procedure": [
+                "Check for corresponding runbook updates with code changes",
+                "Verify monitoring and alerting covers new functionality",
+                "Assess rollback procedures for the change",
+                "Validate feature flags and gradual rollout configuration",
+                "Review incident response procedures for new failure modes",
+            ],
+            "edge_cases": [
+                "Changes that affect multiple services' runbooks",
+                "Infrastructure changes without corresponding monitoring",
+                "Silent failures that bypass existing alerting",
+            ],
+            "failure_modes": [
+                "No runbook exists for the service → flag for creation",
+                "Cannot assess monitoring without access to dashboards → escalate",
             ],
         },
     ),
