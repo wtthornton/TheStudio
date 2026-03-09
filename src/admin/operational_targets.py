@@ -6,12 +6,14 @@ Architecture reference: thestudioarc/MERIDIAN-ROADMAP-AGGRESSIVE.md (Phase 4 tar
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+import logging
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from src.admin.metrics import get_metrics_service
 
+logger = logging.getLogger(__name__)
 
 DEFAULT_WINDOW_DAYS = 28
 DEFAULT_REOPEN_TARGET = 0.05  # <5%
@@ -98,14 +100,91 @@ def _compute_percentiles(values: list[float]) -> tuple[float, float, float]:
     return _pct(0.50), _pct(0.95), _pct(0.99)
 
 
+@dataclass
+class TimingEvent:
+    """A recorded timing event from a workflow completion."""
+
+    repo_id: str
+    intake_created_at: datetime
+    pr_opened_at: datetime | None = None
+    merge_ready_at: datetime | None = None
+
+    @property
+    def lead_time_hours(self) -> float | None:
+        """Hours from intake to PR opened."""
+        if self.pr_opened_at is None:
+            return None
+        delta = self.pr_opened_at - self.intake_created_at
+        return delta.total_seconds() / 3600.0
+
+    @property
+    def cycle_time_hours(self) -> float | None:
+        """Hours from PR opened to merge-ready."""
+        if self.pr_opened_at is None or self.merge_ready_at is None:
+            return None
+        delta = self.merge_ready_at - self.pr_opened_at
+        return delta.total_seconds() / 3600.0
+
+
+# In-memory timing event store
+_timing_events: list[TimingEvent] = []
+
+
+def record_timing(event: TimingEvent) -> None:
+    """Record a workflow timing event for lead/cycle time tracking."""
+    _timing_events.append(event)
+    logger.info(
+        "Recorded timing event for repo=%s lead=%.2fh cycle=%sh",
+        event.repo_id,
+        event.lead_time_hours or 0.0,
+        f"{event.cycle_time_hours:.2f}" if event.cycle_time_hours else "N/A",
+    )
+
+
+def clear_timing_events() -> None:
+    """Clear all timing events (for testing)."""
+    _timing_events.clear()
+
+
 class OperationalTargetsService:
     """Computes lead time, cycle time, and reopen rate against targets."""
 
-    def __init__(self, lead_times: list[float] | None = None, cycle_times: list[float] | None = None) -> None:
-        # In production, these would come from workflow events.
-        # For now, injected or empty.
-        self._lead_times = lead_times or []
-        self._cycle_times = cycle_times or []
+    def __init__(
+        self,
+        lead_times: list[float] | None = None,
+        cycle_times: list[float] | None = None,
+    ) -> None:
+        # Legacy injected values for backwards compatibility.
+        self._injected_lead_times = lead_times or []
+        self._injected_cycle_times = cycle_times or []
+
+    def _get_lead_times(self, repo_filter: str | None, window_days: int) -> list[float]:
+        """Get lead times from timing events, falling back to injected values."""
+        cutoff = datetime.now(UTC) - timedelta(days=window_days)
+        values = []
+        for evt in _timing_events:
+            if repo_filter and evt.repo_id != repo_filter:
+                continue
+            if evt.intake_created_at < cutoff:
+                continue
+            lt = evt.lead_time_hours
+            if lt is not None:
+                values.append(lt)
+        return values if values else self._injected_lead_times
+
+    def _get_cycle_times(self, repo_filter: str | None, window_days: int) -> list[float]:
+        """Get cycle times from timing events, falling back to injected values."""
+        cutoff = datetime.now(UTC) - timedelta(days=window_days)
+        values = []
+        for evt in _timing_events:
+            if repo_filter and evt.repo_id != repo_filter:
+                continue
+            if evt.intake_created_at < cutoff:
+                continue
+            ct = evt.cycle_time_hours
+            if ct is not None:
+                values.append(ct)
+        return values if values else self._injected_cycle_times
 
     def get_lead_time(
         self,
@@ -114,7 +193,7 @@ class OperationalTargetsService:
         min_samples: int = DEFAULT_MIN_SAMPLES,
     ) -> LeadTimeMetrics:
         """Compute lead time percentiles (intake to PR opened)."""
-        values = self._lead_times  # Would be filtered by repo/window in production
+        values = self._get_lead_times(repo_filter, window_days)
         sample_count = len(values)
 
         if sample_count < min_samples:
@@ -140,7 +219,7 @@ class OperationalTargetsService:
         min_samples: int = DEFAULT_MIN_SAMPLES,
     ) -> CycleTimeMetrics:
         """Compute cycle time percentiles (PR opened to merge-ready)."""
-        values = self._cycle_times
+        values = self._get_cycle_times(repo_filter, window_days)
         sample_count = len(values)
 
         if sample_count < min_samples:

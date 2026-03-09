@@ -1,0 +1,76 @@
+<!-- Quarantine detail partial — shows single event with payload and actions -->
+<div class="bg-white border border-gray-200 rounded-lg p-4 fade-in">
+    <div class="flex justify-between items-start mb-4">
+        <div>
+            <h3 class="text-sm font-semibold">Quarantine Event {{ evt.quarantine_id[:8] }}...</h3>
+            <p class="text-xs text-gray-500 mt-1">Full ID: {{ evt.quarantine_id }}</p>
+        </div>
+        <button class="text-xs text-gray-400 hover:text-gray-600"
+                onclick="document.getElementById('quarantine-detail').innerHTML = ''">
+            Close
+        </button>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4 mb-4 text-sm">
+        <div>
+            <span class="text-gray-500">Reason:</span>
+            <span class="ml-2 inline-block px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
+                {{ evt.reason }}
+            </span>
+        </div>
+        <div>
+            <span class="text-gray-500">Repo:</span>
+            <span class="ml-2">{{ evt.repo_id or 'N/A' }}</span>
+        </div>
+        <div>
+            <span class="text-gray-500">Category:</span>
+            <span class="ml-2">{{ evt.category or 'N/A' }}</span>
+        </div>
+        <div>
+            <span class="text-gray-500">Created:</span>
+            <span class="ml-2 text-xs">{{ evt.created_at }}</span>
+        </div>
+    </div>
+
+    <!-- Payload -->
+    <div class="mb-4">
+        <h4 class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Event Payload</h4>
+        <pre class="bg-gray-50 border border-gray-200 rounded p-3 text-xs overflow-x-auto max-h-48">{{ evt.event_payload | tojson(indent=2) }}</pre>
+    </div>
+
+    {% if evt.corrected_payload %}
+    <div class="mb-4">
+        <h4 class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Corrected Payload</h4>
+        <pre class="bg-green-50 border border-green-200 rounded p-3 text-xs overflow-x-auto max-h-48">{{ evt.corrected_payload | tojson(indent=2) }}</pre>
+    </div>
+    {% endif %}
+
+    <!-- Actions -->
+    {% if not evt.replayed_at %}
+    <div class="flex gap-2 pt-2 border-t border-gray-200">
+        {% if not evt.corrected_at %}
+        <button class="px-3 py-1.5 text-xs font-medium bg-yellow-500 text-white rounded hover:bg-yellow-600"
+                hx-post="/admin/ui/partials/quarantine/{{ evt.quarantine_id }}/replay"
+                hx-target="#quarantine-detail" hx-swap="innerHTML">
+            Replay Original
+        </button>
+        {% else %}
+        <button class="px-3 py-1.5 text-xs font-medium bg-green-500 text-white rounded hover:bg-green-600"
+                hx-post="/admin/ui/partials/quarantine/{{ evt.quarantine_id }}/replay"
+                hx-target="#quarantine-detail" hx-swap="innerHTML">
+            Replay Corrected
+        </button>
+        {% endif %}
+        <button class="px-3 py-1.5 text-xs font-medium bg-red-500 text-white rounded hover:bg-red-600"
+                hx-delete="/admin/ui/partials/quarantine/{{ evt.quarantine_id }}"
+                hx-target="#quarantine-detail" hx-swap="innerHTML"
+                hx-confirm="Delete this quarantined event?">
+            Delete
+        </button>
+    </div>
+    {% else %}
+    <div class="pt-2 border-t border-gray-200 text-xs text-green-600">
+        Replayed at {{ evt.replayed_at }}
+    </div>
+    {% endif %}
+</div>

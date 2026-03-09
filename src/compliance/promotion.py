@@ -72,6 +72,24 @@ class DemotionResult:
 
 
 @dataclass
+class RemediationItem:
+    """A specific action to remediate a failed compliance check."""
+
+    check_name: str
+    description: str
+    severity: str = "required"  # required | recommended
+    resolved: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "check_name": self.check_name,
+            "description": self.description,
+            "severity": self.severity,
+            "resolved": self.resolved,
+        }
+
+
+@dataclass
 class TierTransition:
     """Record of a tier transition for audit trail."""
 
@@ -83,7 +101,21 @@ class TierTransition:
     compliance_score: float | None = None
     compliance_result_id: UUID | None = None
     reason: str = ""
+    remediation_items: list[RemediationItem] = field(default_factory=list)
     transitioned_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": str(self.id),
+            "repo_id": str(self.repo_id),
+            "from_tier": self.from_tier.value,
+            "to_tier": self.to_tier.value,
+            "triggered_by": self.triggered_by,
+            "compliance_score": self.compliance_score,
+            "reason": self.reason,
+            "remediation_items": [r.to_dict() for r in self.remediation_items],
+            "transitioned_at": self.transitioned_at.isoformat(),
+        }
 
 
 # Valid promotion paths
@@ -203,12 +235,36 @@ class PromotionService:
 
                 if not compliance_result.overall_passed:
                     failed_checks = [
-                        c.check.value for c in compliance_result.checks if not c.passed
+                        c for c in compliance_result.checks if not c.passed
                     ]
+                    failed_names = [c.check.value for c in failed_checks]
+
+                    # Generate structured remediation items
+                    remediation = [
+                        RemediationItem(
+                            check_name=c.check.value,
+                            description=c.details or f"Fix {c.check.value} to pass compliance",
+                        )
+                        for c in failed_checks
+                    ]
+
+                    # Store remediation on a blocked transition record
+                    blocked_transition = TierTransition(
+                        repo_id=repo_id,
+                        from_tier=current_tier,
+                        to_tier=target_tier,
+                        triggered_by="eligibility_check",
+                        compliance_score=compliance_result.score,
+                        compliance_result_id=compliance_result.id,
+                        reason=f"Blocked: {', '.join(failed_names)}",
+                        remediation_items=remediation,
+                    )
+                    store_transition(blocked_transition)
+
                     return EligibilityResult(
                         eligible=False,
                         block_reason=PromotionBlockReason.COMPLIANCE_FAILED,
-                        block_details=f"Compliance check failed: {', '.join(failed_checks)}",
+                        block_details=f"Compliance check failed: {', '.join(failed_names)}",
                         compliance_result=compliance_result,
                     )
 

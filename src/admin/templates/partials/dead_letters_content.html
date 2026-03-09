@@ -1,0 +1,48 @@
+<!-- Dead-letter list partial — loaded via HTMX -->
+<div class="space-y-4 fade-in">
+    <div class="text-sm text-gray-500">
+        {{ events | length }} dead-letter event(s)
+    </div>
+
+    {% if events %}
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="border-b border-gray-200 text-left text-xs text-gray-500 uppercase tracking-wide">
+                <th class="pb-2 pr-4">ID</th>
+                <th class="pb-2 pr-4">Failure Reason</th>
+                <th class="pb-2 pr-4">Attempts</th>
+                <th class="pb-2 pr-4">Created</th>
+                <th class="pb-2">Actions</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+            {% for evt in events %}
+            <tr class="hover:bg-gray-50">
+                <td class="py-2 pr-4 font-mono text-xs">{{ evt.id[:8] }}...</td>
+                <td class="py-2 pr-4 text-red-600">{{ evt.failure_reason }}</td>
+                <td class="py-2 pr-4 text-center">{{ evt.attempt_count }}</td>
+                <td class="py-2 pr-4 text-gray-500 text-xs">{{ evt.created_at }}</td>
+                <td class="py-2">
+                    <button class="text-xs text-blue-600 hover:underline mr-2"
+                            hx-get="/admin/ui/partials/dead-letter/{{ evt.id }}"
+                            hx-target="#dl-detail" hx-swap="innerHTML">
+                        View
+                    </button>
+                    <button class="text-xs text-red-600 hover:underline"
+                            hx-delete="/admin/ui/partials/dead-letter/{{ evt.id }}"
+                            hx-target="closest tr" hx-swap="outerHTML"
+                            hx-confirm="Delete this dead-letter event?">
+                        Delete
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="text-center py-12 text-gray-400 text-sm">No dead-letter events.</div>
+    {% endif %}
+
+    <!-- Detail panel -->
+    <div id="dl-detail" class="mt-4"></div>
+</div>

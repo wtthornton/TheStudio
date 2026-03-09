@@ -20,11 +20,11 @@ from fastapi.templating import Jinja2Templates
 from src.admin.audit import AuditEventType, AuditLogFilter, get_audit_service
 from src.admin.compliance_scorecard import get_scorecard_service
 from src.admin.experts import get_expert_service
+from src.admin.merge_mode import MergeMode, get_merge_mode, set_merge_mode
 from src.admin.metrics import get_metrics_service
 from src.admin.model_gateway import get_model_router
+from src.admin.model_spend import get_spend_report
 from src.admin.operational_targets import get_targets_service
-from src.admin.success_gate import get_success_gate_service
-from src.admin.tool_catalog import DEFAULT_PROFILES, get_tool_catalog
 from src.admin.rbac import ROLE_PERMISSIONS, Permission, Role, get_rbac_service
 from src.admin.router import (
     get_health_service,
@@ -32,7 +32,14 @@ from src.admin.router import (
     get_workflow_console_service,
     get_workflow_metrics_service,
 )
+from src.admin.success_gate import get_success_gate_service
+from src.admin.tool_catalog import DEFAULT_PROFILES, get_tool_catalog
+from src.compliance.plane_registry import PlaneStatus, get_plane_registry
+from src.compliance.promotion import get_transitions
 from src.db.connection import get_async_session
+from src.outcome.dead_letter import get_dead_letter_store
+from src.outcome.models import QuarantineReason
+from src.outcome.quarantine import get_quarantine_store
 
 logger = logging.getLogger(__name__)
 
@@ -665,6 +672,17 @@ async def models_partial(request: Request) -> Response:
     return templates.TemplateResponse(request, "partials/models_content.html", ctx)
 
 
+@ui_router.get("/partials/model-spend", response_class=HTMLResponse)
+async def model_spend_partial(
+    request: Request,
+    window: int = Query(24, ge=1, le=720),
+) -> Response:
+    """Render model spend dashboard partial."""
+    report = get_spend_report(window_hours=window)
+    ctx = {"request": request, "report": report.to_dict()}
+    return templates.TemplateResponse(request, "partials/model_spend_content.html", ctx)
+
+
 # --- Compliance Scorecard Routes (Story 7.12) ---
 
 
@@ -716,3 +734,313 @@ async def targets_partial(
         "reopen_target": reopen_target,
     }
     return templates.TemplateResponse(request, "partials/targets_content.html", ctx)
+
+
+# --- Quarantine Operations Routes (Epic 10, AC1) ---
+
+
+@ui_router.get("/quarantine", response_class=HTMLResponse)
+async def quarantine_page(request: Request) -> Response:
+    """Render Quarantine Operations page."""
+    user_id = request.headers.get("X-User-ID")
+    role = await _resolve_role(user_id)
+    ctx = _base_context(request, role)
+    ctx["active_page"] = "quarantine"
+    return templates.TemplateResponse(request, "quarantine.html", ctx)
+
+
+@ui_router.get("/partials/quarantine", response_class=HTMLResponse)
+async def quarantine_partial(
+    request: Request,
+    reason: str | None = Query(None),
+    repo: str | None = Query(None),
+) -> Response:
+    """Render quarantine list partial."""
+    store = get_quarantine_store()
+
+    q_reason = None
+    if reason:
+        try:
+            q_reason = QuarantineReason(reason)
+        except ValueError:
+            pass
+
+    events = store.list_quarantined(
+        repo_id=repo if repo else None,
+        reason=q_reason,
+        include_replayed=True,
+    )
+
+    ctx = {
+        "request": request,
+        "events": [e.to_dict() for e in events],
+        "reasons": [r.value for r in QuarantineReason],
+        "reason_filter": reason or "",
+        "repo_filter": repo or "",
+    }
+    return templates.TemplateResponse(request, "partials/quarantine_content.html", ctx)
+
+
+@ui_router.get("/partials/quarantine/{quarantine_id}", response_class=HTMLResponse)
+async def quarantine_detail_partial(request: Request, quarantine_id: str) -> Response:
+    """Render quarantine event detail partial."""
+    store = get_quarantine_store()
+    event = store.get_quarantined(UUID(quarantine_id))
+
+    if event is None:
+        return HTMLResponse('<div class="text-red-500 text-sm p-4">Event not found.</div>')
+
+    ctx = {"request": request, "evt": event.to_dict()}
+    return templates.TemplateResponse(request, "partials/quarantine_detail.html", ctx)
+
+
+@ui_router.post("/partials/quarantine/{quarantine_id}/replay", response_class=HTMLResponse)
+async def quarantine_replay(request: Request, quarantine_id: str) -> Response:
+    """Mark quarantined event as replayed."""
+    store = get_quarantine_store()
+    store.mark_replayed(UUID(quarantine_id))
+
+    event = store.get_quarantined(UUID(quarantine_id))
+    if event is None:
+        return HTMLResponse('<div class="text-red-500 text-sm p-4">Event not found.</div>')
+
+    ctx = {"request": request, "evt": event.to_dict()}
+    return templates.TemplateResponse(request, "partials/quarantine_detail.html", ctx)
+
+
+@ui_router.delete("/partials/quarantine/{quarantine_id}", response_class=HTMLResponse)
+async def quarantine_delete(request: Request, quarantine_id: str) -> Response:
+    """Delete quarantined event."""
+    store = get_quarantine_store()
+    store.delete(UUID(quarantine_id))
+    return HTMLResponse('<div class="text-green-600 text-sm p-4">Event deleted.</div>')
+
+
+# --- Dead-Letter Operations Routes (Epic 10, AC2) ---
+
+
+@ui_router.get("/dead-letters", response_class=HTMLResponse)
+async def dead_letters_page(request: Request) -> Response:
+    """Render Dead-Letter Queue page."""
+    user_id = request.headers.get("X-User-ID")
+    role = await _resolve_role(user_id)
+    ctx = _base_context(request, role)
+    ctx["active_page"] = "dead-letters"
+    return templates.TemplateResponse(request, "dead_letters.html", ctx)
+
+
+@ui_router.get("/partials/dead-letters", response_class=HTMLResponse)
+async def dead_letters_partial(request: Request) -> Response:
+    """Render dead-letter list partial."""
+    store = get_dead_letter_store()
+    events = store.list_dead_letters()
+
+    ctx = {
+        "request": request,
+        "events": [e.to_dict() for e in events],
+    }
+    return templates.TemplateResponse(request, "partials/dead_letters_content.html", ctx)
+
+
+@ui_router.get("/partials/dead-letter/{event_id}", response_class=HTMLResponse)
+async def dead_letter_detail_partial(request: Request, event_id: str) -> Response:
+    """Render dead-letter event detail partial."""
+    store = get_dead_letter_store()
+    event = store.get_dead_letter(UUID(event_id))
+
+    if event is None:
+        return HTMLResponse('<div class="text-red-500 text-sm p-4">Event not found.</div>')
+
+    ctx = {"request": request, "evt": event.to_dict()}
+    return templates.TemplateResponse(request, "partials/dead_letter_detail.html", ctx)
+
+
+@ui_router.delete("/partials/dead-letter/{event_id}", response_class=HTMLResponse)
+async def dead_letter_delete(request: Request, event_id: str) -> Response:
+    """Delete dead-letter event."""
+    store = get_dead_letter_store()
+    store.delete(UUID(event_id))
+    return HTMLResponse('<div class="text-green-600 text-sm p-4">Event deleted.</div>')
+
+
+# --- Merge Mode Routes (Epic 10, AC3) ---
+
+
+@ui_router.get("/partials/merge-mode/{repo_id}", response_class=HTMLResponse)
+async def merge_mode_partial(request: Request, repo_id: str) -> Response:
+    """Render merge mode control for a repo."""
+    mode = get_merge_mode(repo_id)
+    modes = [m.value for m in MergeMode]
+    mode_labels = {
+        MergeMode.DRAFT_ONLY.value: "Draft Only",
+        MergeMode.REQUIRE_REVIEW.value: "Require Review",
+        MergeMode.AUTO_MERGE.value: "Auto Merge",
+    }
+    return HTMLResponse(
+        f'<div class="flex items-center gap-2">'
+        f'<label class="text-xs font-medium text-gray-500">Merge Mode:</label>'
+        f'<select hx-post="/admin/ui/partials/merge-mode/{repo_id}" '
+        f'hx-target="closest div" hx-swap="outerHTML" name="mode" '
+        f'class="border border-gray-300 rounded px-2 py-1 text-sm">'
+        + "".join(
+            f'<option value="{m}" {"selected" if m == mode.value else ""}>'
+            f'{mode_labels[m]}</option>'
+            for m in modes
+        )
+        + f'</select>'
+        f'<span class="text-xs text-gray-400">({mode.value})</span>'
+        f'</div>'
+    )
+
+
+@ui_router.post("/partials/merge-mode/{repo_id}", response_class=HTMLResponse)
+async def merge_mode_update(request: Request, repo_id: str) -> Response:
+    """Update merge mode for a repo."""
+    form = await request.form()
+    mode_str = str(form.get("mode", MergeMode.DRAFT_ONLY.value))
+    try:
+        mode = MergeMode(mode_str)
+    except ValueError:
+        mode = MergeMode.DRAFT_ONLY
+    set_merge_mode(repo_id, mode)
+
+    # Re-render the control with updated value
+    modes = [m.value for m in MergeMode]
+    mode_labels = {
+        MergeMode.DRAFT_ONLY.value: "Draft Only",
+        MergeMode.REQUIRE_REVIEW.value: "Require Review",
+        MergeMode.AUTO_MERGE.value: "Auto Merge",
+    }
+    return HTMLResponse(
+        f'<div class="flex items-center gap-2">'
+        f'<label class="text-xs font-medium text-gray-500">Merge Mode:</label>'
+        f'<select hx-post="/admin/ui/partials/merge-mode/{repo_id}" '
+        f'hx-target="closest div" hx-swap="outerHTML" name="mode" '
+        f'class="border border-gray-300 rounded px-2 py-1 text-sm">'
+        + "".join(
+            f'<option value="{m}" {"selected" if m == mode.value else ""}>'
+            f'{mode_labels[m]}</option>'
+            for m in modes
+        )
+        + '</select>'
+        '<span class="text-xs text-green-600 text-xs">Updated</span>'
+        '</div>'
+    )
+
+
+# --- Execution Plane Routes (Epic 10, AC6) ---
+
+
+@ui_router.get("/planes", response_class=HTMLResponse)
+async def planes_page(request: Request) -> Response:
+    """Render Execution Planes page."""
+    user_id = request.headers.get("X-User-ID")
+    role = await _resolve_role(user_id)
+    ctx = _base_context(request, role)
+    ctx["active_page"] = "planes"
+    return templates.TemplateResponse(request, "planes.html", ctx)
+
+
+@ui_router.get("/partials/planes", response_class=HTMLResponse)
+async def planes_partial(request: Request) -> Response:
+    """Render execution planes partial."""
+    registry = get_plane_registry()
+    planes = registry.list_planes()
+    health = registry.get_health_summary()
+
+    ctx = {
+        "request": request,
+        "planes": [p.to_dict() for p in planes],
+        "health": [h.to_dict() for h in health],
+        "total_repos": registry.total_repo_count(),
+    }
+    return templates.TemplateResponse(request, "partials/planes_content.html", ctx)
+
+
+@ui_router.post("/partials/planes/register", response_class=HTMLResponse)
+async def plane_register(request: Request) -> Response:
+    """Register a new execution plane."""
+    form = await request.form()
+    name = str(form.get("name", ""))
+    region = str(form.get("region", "default"))
+
+    if name:
+        registry = get_plane_registry()
+        registry.register(name=name, region=region)
+
+    return await _render_planes_list(request)
+
+
+@ui_router.post("/partials/planes/{plane_id}/pause", response_class=HTMLResponse)
+async def plane_pause(request: Request, plane_id: str) -> Response:
+    """Pause an execution plane."""
+    registry = get_plane_registry()
+    registry.set_status(UUID(plane_id), PlaneStatus.PAUSED)
+    return await _render_planes_list(request)
+
+
+@ui_router.post("/partials/planes/{plane_id}/resume", response_class=HTMLResponse)
+async def plane_resume(request: Request, plane_id: str) -> Response:
+    """Resume a paused execution plane."""
+    registry = get_plane_registry()
+    registry.set_status(UUID(plane_id), PlaneStatus.ACTIVE)
+    return await _render_planes_list(request)
+
+
+async def _render_planes_list(request: Request) -> Response:
+    """Helper to re-render planes list after mutation."""
+    registry = get_plane_registry()
+    planes = registry.list_planes()
+    health = registry.get_health_summary()
+    ctx = {
+        "request": request,
+        "planes": [p.to_dict() for p in planes],
+        "health": [h.to_dict() for h in health],
+        "total_repos": registry.total_repo_count(),
+    }
+    return templates.TemplateResponse(request, "partials/planes_content.html", ctx)
+
+
+# --- Promotion History Route (Epic 10, AC7) ---
+
+
+@ui_router.get("/partials/promotion-history/{repo_id}", response_class=HTMLResponse)
+async def promotion_history_partial(request: Request, repo_id: str) -> Response:
+    """Render promotion history for a repo."""
+    transitions = get_transitions(UUID(repo_id))
+    items = [t.to_dict() for t in transitions]
+
+    if not items:
+        return HTMLResponse(
+            '<div class="text-gray-400 text-sm py-2">No promotion history.</div>'
+        )
+
+    rows = []
+    for t in items:
+        score_str = f'{t["compliance_score"]:.0f}' if t.get("compliance_score") is not None else "-"
+        remediation_count = len(t.get("remediation_items", []))
+        rows.append(
+            f'<tr class="hover:bg-gray-50">'
+            f'<td class="py-2 pr-4 text-xs">{t["transitioned_at"][:19]}</td>'
+            f'<td class="py-2 pr-4">{t["from_tier"]} &rarr; {t["to_tier"]}</td>'
+            f'<td class="py-2 pr-4">{t["triggered_by"]}</td>'
+            f'<td class="py-2 pr-4">{score_str}</td>'
+            f'<td class="py-2 pr-4 text-gray-500">{t["reason"]}</td>'
+            f'<td class="py-2">{remediation_count} item(s)</td>'
+            f'</tr>'
+        )
+
+    return HTMLResponse(
+        '<table class="w-full text-sm">'
+        '<thead><tr class="border-b border-gray-200 text-left'
+        ' text-xs text-gray-500 uppercase tracking-wide">'
+        '<th class="pb-2 pr-4">Date</th>'
+        '<th class="pb-2 pr-4">Transition</th>'
+        '<th class="pb-2 pr-4">Triggered By</th>'
+        '<th class="pb-2 pr-4">Score</th>'
+        '<th class="pb-2 pr-4">Reason</th>'
+        '<th class="pb-2">Remediation</th>'
+        '</tr></thead>'
+        f'<tbody class="divide-y divide-gray-100">{"".join(rows)}</tbody>'
+        '</table>'
+    )

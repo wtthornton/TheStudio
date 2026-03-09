@@ -1,0 +1,81 @@
+<!-- Quarantine list partial — loaded via HTMX -->
+<div class="space-y-4 fade-in">
+    <!-- Filters -->
+    <div class="flex gap-4 items-end">
+        <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1">Reason</label>
+            <select id="q-reason" class="border border-gray-300 rounded px-3 py-1.5 text-sm"
+                    hx-get="/admin/ui/partials/quarantine" hx-target="#quarantine-table" hx-swap="innerHTML"
+                    hx-include="#q-reason, #q-repo" name="reason">
+                <option value="">All reasons</option>
+                {% for r in reasons %}
+                <option value="{{ r }}" {% if reason_filter == r %}selected{% endif %}>{{ r }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1">Repo</label>
+            <input id="q-repo" name="repo" type="text" placeholder="Filter by repo..."
+                   value="{{ repo_filter or '' }}"
+                   class="border border-gray-300 rounded px-3 py-1.5 text-sm w-48">
+        </div>
+        <div class="text-sm text-gray-500">
+            {{ events | length }} event(s)
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div id="quarantine-table">
+        {% if events %}
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-200 text-left text-xs text-gray-500 uppercase tracking-wide">
+                    <th class="pb-2 pr-4">ID</th>
+                    <th class="pb-2 pr-4">Reason</th>
+                    <th class="pb-2 pr-4">Repo</th>
+                    <th class="pb-2 pr-4">Category</th>
+                    <th class="pb-2 pr-4">Created</th>
+                    <th class="pb-2 pr-4">Status</th>
+                    <th class="pb-2">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for evt in events %}
+                <tr class="hover:bg-gray-50">
+                    <td class="py-2 pr-4 font-mono text-xs">{{ evt.quarantine_id[:8] }}...</td>
+                    <td class="py-2 pr-4">
+                        <span class="inline-block px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
+                            {{ evt.reason }}
+                        </span>
+                    </td>
+                    <td class="py-2 pr-4 text-gray-600">{{ evt.repo_id or '-' }}</td>
+                    <td class="py-2 pr-4 text-gray-600">{{ evt.category or '-' }}</td>
+                    <td class="py-2 pr-4 text-gray-500 text-xs">{{ evt.created_at }}</td>
+                    <td class="py-2 pr-4">
+                        {% if evt.replayed_at %}
+                        <span class="inline-block px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">Replayed</span>
+                        {% elif evt.corrected_at %}
+                        <span class="inline-block px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-700">Corrected</span>
+                        {% else %}
+                        <span class="inline-block px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">Pending</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-2">
+                        <button class="text-xs text-blue-600 hover:underline mr-2"
+                                hx-get="/admin/ui/partials/quarantine/{{ evt.quarantine_id }}"
+                                hx-target="#quarantine-detail" hx-swap="innerHTML">
+                            View
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="text-center py-12 text-gray-400 text-sm">No quarantined events found.</div>
+        {% endif %}
+    </div>
+
+    <!-- Detail panel -->
+    <div id="quarantine-detail" class="mt-4"></div>
+</div>

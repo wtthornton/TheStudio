@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Dead Letters{% endblock %}
+{% block page_title %}Dead-Letter Queue{% endblock %}
+{% block header_right %}
+<span class="htmx-indicator text-gray-400 text-xs">Loading...</span>
+{% endblock %}
+{% block content %}
+<div hx-get="/admin/ui/partials/dead-letters" hx-trigger="load" hx-swap="innerHTML" hx-indicator="closest div">
+    <div class="text-center py-12 text-gray-400 text-sm htmx-indicator">Loading dead-letter events...</div>
+</div>
+{% endblock %}
