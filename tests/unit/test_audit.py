@@ -58,8 +58,8 @@ class TestAuditEventTypeEnum:
         assert AuditEventType.WORKFLOW_ESCALATED.value == "workflow_escalated"
 
     def test_event_type_count(self) -> None:
-        """Nine audit event types are defined."""
-        assert len(AuditEventType) == 9
+        """Ten audit event types are defined (9 original + SETTINGS_CHANGED)."""
+        assert len(AuditEventType) == 10
 
 
 class TestAuditLogModels:

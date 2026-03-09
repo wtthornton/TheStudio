@@ -26,6 +26,7 @@ from src.admin.experts import get_expert_service
 from src.admin.health import HealthService
 from src.admin.metrics import get_metrics_service
 from src.admin.rbac import Permission, get_current_user_id, require_permission
+from src.admin.settings_service import get_settings_service
 from src.admin.success_gate import get_success_gate_service
 from src.admin.workflow_console import (
     UnsafeRerunError,
@@ -1668,3 +1669,156 @@ async def get_expert_drift(
     if drift is None:
         raise HTTPException(status_code=404, detail="Expert not found")
     return drift.to_dict()
+
+
+# --- Settings API (Epic 12) ---
+
+
+class SettingResponse(BaseModel):
+    """Response model for a single setting."""
+
+    key: str
+    value: str
+    source: str  # "db" or "env"
+    category: str
+    sensitive: bool
+    updated_at: str | None = None
+    updated_by: str | None = None
+
+
+class SettingUpdateRequest(BaseModel):
+    """Request model for updating a setting."""
+
+    value: str = Field(..., min_length=0)
+
+
+class SettingsListResponse(BaseModel):
+    """Response model for listing settings."""
+
+    settings: list[SettingResponse]
+    category: str | None = None
+
+
+@router.get(
+    "/settings",
+    response_model=SettingsListResponse,
+    dependencies=[Depends(require_permission(Permission.MANAGE_SETTINGS))],
+)
+async def list_settings(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    category: str | None = Query(default=None),
+) -> SettingsListResponse:
+    """List settings, optionally filtered by category."""
+    from src.admin.persistence.pg_settings import SettingCategory
+
+    svc = get_settings_service()
+
+    if category:
+        try:
+            cat = SettingCategory(category)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Invalid category: {category}. Valid: {[c.value for c in SettingCategory]}",
+            ) from exc
+        values = await svc.list_by_category(session, cat)
+    else:
+        # Return all settings across all categories
+        values = []
+        for cat in SettingCategory:
+            values.extend(await svc.list_by_category(session, cat))
+
+    return SettingsListResponse(
+        settings=[
+            SettingResponse(**sv.to_dict())
+            for sv in values
+        ],
+        category=category,
+    )
+
+
+@router.get(
+    "/settings/{key}",
+    response_model=SettingResponse,
+    dependencies=[Depends(require_permission(Permission.MANAGE_SETTINGS))],
+)
+async def get_setting(
+    key: str,
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> SettingResponse:
+    """Get a single setting by key with source indicator."""
+    svc = get_settings_service()
+    sv = await svc.get(session, key)
+    if sv is None:
+        raise HTTPException(status_code=404, detail=f"Setting not found: {key}")
+    return SettingResponse(**sv.to_dict())
+
+
+@router.put(
+    "/settings/{key}",
+    response_model=SettingResponse,
+    dependencies=[Depends(require_permission(Permission.MANAGE_SETTINGS))],
+)
+async def update_setting(
+    key: str,
+    body: SettingUpdateRequest,
+    session: Annotated[AsyncSession, Depends(get_session)],
+    user_id: Annotated[str, Depends(get_current_user_id)],
+) -> SettingResponse:
+    """Update a setting value. Validates input and logs to audit."""
+    svc = get_settings_service()
+    audit_svc = get_audit_service()
+
+    # Get old value for audit (masked if sensitive)
+    old_sv = await svc.get(session, key)
+    old_display = old_sv.display_value if old_sv else None
+
+    try:
+        sv = await svc.set(session, key, body.value, user_id)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+
+    # Audit log
+    await audit_svc.log_event(
+        session=session,
+        actor=user_id,
+        event_type=AuditEventType.SETTINGS_CHANGED,
+        target_id=key,
+        details={
+            "action": "update",
+            "old_value": old_display,
+            "new_value": sv.display_value,
+        },
+    )
+
+    await session.commit()
+    return SettingResponse(**sv.to_dict())
+
+
+@router.delete(
+    "/settings/{key}",
+    dependencies=[Depends(require_permission(Permission.MANAGE_SETTINGS))],
+)
+async def delete_setting(
+    key: str,
+    session: Annotated[AsyncSession, Depends(get_session)],
+    user_id: Annotated[str, Depends(get_current_user_id)],
+) -> dict[str, str]:
+    """Delete a DB override for a setting, reverting to env default."""
+    svc = get_settings_service()
+    audit_svc = get_audit_service()
+
+    deleted = await svc.delete(session, key)
+    if not deleted:
+        raise HTTPException(status_code=404, detail=f"No DB override for setting: {key}")
+
+    await audit_svc.log_event(
+        session=session,
+        actor=user_id,
+        event_type=AuditEventType.SETTINGS_CHANGED,
+        target_id=key,
+        details={"action": "delete"},
+    )
+
+    await session.commit()
+    return {"status": "deleted", "key": key}

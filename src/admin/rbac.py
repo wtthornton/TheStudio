@@ -75,6 +75,7 @@ class Permission(StrEnum):
     TOGGLE_WRITES = "toggle_writes"
     MANAGE_USERS = "manage_users"
     VIEW_AUDIT = "view_audit"
+    MANAGE_SETTINGS = "manage_settings"
 
 
 ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
@@ -114,6 +115,7 @@ ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
         Permission.TOGGLE_WRITES,
         Permission.MANAGE_USERS,
         Permission.VIEW_AUDIT,
+        Permission.MANAGE_SETTINGS,
     }),
 }
 

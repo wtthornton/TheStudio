@@ -1,0 +1,80 @@
+<div class="divide-y divide-gray-100" id="agent-config-card">
+    <div class="px-6 py-4">
+        <form hx-post="/admin/ui/partials/settings/agent-config"
+              hx-target="#agent-config-card"
+              hx-swap="outerHTML">
+            <div class="grid grid-cols-2 gap-4">
+                <!-- Model Selector -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Agent Model</label>
+                    <div class="flex items-center gap-2">
+                        <select name="agent_model"
+                                class="flex-1 text-sm border border-gray-300 rounded px-3 py-1.5 focus:ring-2 focus:ring-blue-500">
+                            {% for model in available_models %}
+                            <option value="{{ model }}" {% if current_values.agent_model == model %}selected{% endif %}>{{ model }}</option>
+                            {% endfor %}
+                        </select>
+                        <span class="inline-block px-1.5 py-0.5 rounded text-xs font-medium
+                            {% if sources.agent_model == 'db' %}bg-green-100 text-green-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+                            {{ sources.agent_model }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Max Turns -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Max Turns</label>
+                    <div class="flex items-center gap-2">
+                        <input type="number" name="agent_max_turns" value="{{ current_values.agent_max_turns }}"
+                               min="1" max="100" step="1"
+                               class="flex-1 text-sm border border-gray-300 rounded px-3 py-1.5 focus:ring-2 focus:ring-blue-500">
+                        <span class="inline-block px-1.5 py-0.5 rounded text-xs font-medium
+                            {% if sources.agent_max_turns == 'db' %}bg-green-100 text-green-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+                            {{ sources.agent_max_turns }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Budget -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Budget (USD)</label>
+                    <div class="flex items-center gap-2">
+                        <input type="number" name="agent_max_budget_usd" value="{{ current_values.agent_max_budget_usd }}"
+                               min="0.01" max="100" step="0.01"
+                               class="flex-1 text-sm border border-gray-300 rounded px-3 py-1.5 focus:ring-2 focus:ring-blue-500">
+                        <span class="inline-block px-1.5 py-0.5 rounded text-xs font-medium
+                            {% if sources.agent_max_budget_usd == 'db' %}bg-green-100 text-green-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+                            {{ sources.agent_max_budget_usd }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Max Loopbacks -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Max Loopbacks</label>
+                    <div class="flex items-center gap-2">
+                        <input type="number" name="agent_max_loopbacks" value="{{ current_values.agent_max_loopbacks }}"
+                               min="0" max="10" step="1"
+                               class="flex-1 text-sm border border-gray-300 rounded px-3 py-1.5 focus:ring-2 focus:ring-blue-500">
+                        <span class="inline-block px-1.5 py-0.5 rounded text-xs font-medium
+                            {% if sources.agent_max_loopbacks == 'db' %}bg-green-100 text-green-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+                            {{ sources.agent_max_loopbacks }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 flex justify-end">
+                <button type="submit" class="text-sm bg-blue-600 text-white rounded px-4 py-2 hover:bg-blue-700">
+                    Save Agent Config
+                </button>
+            </div>
+        </form>
+    </div>
+    {% if error %}
+    <div class="px-6 py-3 bg-red-50 text-red-700 text-sm border-t border-red-200 fade-in">{{ error }}</div>
+    {% endif %}
+    {% if flash %}
+    <div class="px-6 py-3 bg-green-50 text-green-700 text-sm border-t border-green-200 fade-in">{{ flash }}</div>
+    {% endif %}
+</div>

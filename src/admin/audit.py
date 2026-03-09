@@ -53,6 +53,9 @@ class AuditEventType(StrEnum):
     WORKFLOW_SENT_TO_AGENT = "workflow_sent_to_agent"
     WORKFLOW_ESCALATED = "workflow_escalated"
 
+    # Settings events (Epic 12)
+    SETTINGS_CHANGED = "settings_changed"
+
 
 class AuditLogRow(Base):
     """SQLAlchemy ORM model for the audit_log table.

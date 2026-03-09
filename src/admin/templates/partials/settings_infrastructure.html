@@ -1,0 +1,61 @@
+<div class="divide-y divide-gray-100" id="infrastructure-card">
+    {% if restart_required %}
+    <div class="px-6 py-3 bg-yellow-50 border-b border-yellow-200">
+        <p class="text-sm text-yellow-800 font-medium">
+            &#9888; Infrastructure settings have pending changes that require a restart to take effect.
+        </p>
+    </div>
+    {% endif %}
+    {% for setting in settings %}
+    <div class="px-6 py-4">
+        <div class="flex items-center justify-between">
+            <div class="flex-1">
+                <div class="flex items-center gap-2">
+                    <span class="text-sm font-medium text-gray-700">{{ setting.key }}</span>
+                    <span class="inline-block px-1.5 py-0.5 rounded text-xs font-medium
+                        {% if setting.source == 'db' %}bg-green-100 text-green-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+                        {{ setting.source }}
+                    </span>
+                    {% if setting.key in restart_required_keys %}
+                    <span class="inline-block px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-700">
+                        restart required
+                    </span>
+                    {% endif %}
+                </div>
+                <div class="mt-1" id="infra-display-{{ setting.key }}">
+                    <code class="text-sm text-gray-600 bg-gray-50 px-2 py-1 rounded">{{ setting.value }}</code>
+                </div>
+            </div>
+            <div class="ml-4">
+                <button class="text-xs text-gray-500 hover:text-gray-700 border border-gray-300 rounded px-2 py-1"
+                        onclick="document.getElementById('infra-edit-{{ setting.key }}').classList.toggle('hidden');
+                                 document.getElementById('infra-display-{{ setting.key }}').classList.toggle('hidden');">
+                    Edit
+                </button>
+            </div>
+        </div>
+        <div id="infra-edit-{{ setting.key }}" class="hidden mt-3">
+            <form hx-post="/admin/ui/partials/settings/infrastructure"
+                  hx-target="#infrastructure-card"
+                  hx-swap="outerHTML">
+                <input type="hidden" name="key" value="{{ setting.key }}">
+                <div class="flex items-center gap-2">
+                    <input type="text" name="value" value="{{ setting.value if not setting.sensitive else '' }}"
+                           placeholder="{{ 'Enter new value' if setting.sensitive else setting.value }}"
+                           class="flex-1 text-sm border border-gray-300 rounded px-3 py-1.5 focus:ring-2 focus:ring-blue-500">
+                    <button type="submit" class="text-xs bg-blue-600 text-white rounded px-3 py-1.5 hover:bg-blue-700">Save</button>
+                    <button type="button" class="text-xs text-gray-500 border border-gray-300 rounded px-3 py-1.5"
+                            onclick="document.getElementById('infra-edit-{{ setting.key }}').classList.add('hidden');
+                                     document.getElementById('infra-display-{{ setting.key }}').classList.remove('hidden');">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+    {% if error %}
+    <div class="px-6 py-3 bg-red-50 text-red-700 text-sm border-t border-red-200 fade-in">{{ error }}</div>
+    {% endif %}
+    {% if flash %}
+    <div class="px-6 py-3 bg-green-50 text-green-700 text-sm border-t border-green-200 fade-in">{{ flash }}</div>
+    {% endif %}
+</div>

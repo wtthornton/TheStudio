@@ -1,0 +1,52 @@
+<div class="divide-y divide-gray-100" id="feature-flags-card">
+    {% for setting in settings %}
+    <div class="px-6 py-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <span class="text-sm font-medium text-gray-700">{{ setting.key }}</span>
+                <span class="ml-2 inline-block px-1.5 py-0.5 rounded text-xs font-medium
+                    {% if setting.source == 'db' %}bg-green-100 text-green-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+                    {{ setting.source }}
+                </span>
+            </div>
+            <div class="flex items-center gap-3">
+                {% if setting.key == 'store_backend' %}
+                <!-- Dropdown for store_backend -->
+                <form hx-post="/admin/ui/partials/settings/feature-flags"
+                      hx-target="#feature-flags-card"
+                      hx-swap="outerHTML">
+                    <input type="hidden" name="key" value="{{ setting.key }}">
+                    <select name="value"
+                            onchange="this.form.requestSubmit()"
+                            class="text-sm border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500">
+                        <option value="memory" {% if setting.value == 'memory' %}selected{% endif %}>memory</option>
+                        <option value="postgres" {% if setting.value == 'postgres' %}selected{% endif %}>postgres</option>
+                    </select>
+                </form>
+                {% else %}
+                <!-- Toggle switch for provider flags -->
+                {% set active_val = 'anthropic' if setting.key == 'llm_provider' else 'real' %}
+                {% set inactive_val = 'mock' %}
+                {% set is_active = setting.value == active_val %}
+                <form hx-post="/admin/ui/partials/settings/feature-flags"
+                      hx-target="#feature-flags-card"
+                      hx-swap="outerHTML">
+                    <input type="hidden" name="key" value="{{ setting.key }}">
+                    <input type="hidden" name="value" value="{{ inactive_val if is_active else active_val }}">
+                    <button type="submit"
+                            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors
+                                   {% if is_active %}bg-blue-600{% else %}bg-gray-300{% endif %}">
+                        <span class="inline-block h-4 w-4 rounded-full bg-white transition-transform
+                                     {% if is_active %}translate-x-6{% else %}translate-x-1{% endif %}"></span>
+                    </button>
+                </form>
+                <span class="text-sm text-gray-600 w-20">{{ setting.value }}</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% if flash %}
+    <div class="px-6 py-3 bg-green-50 text-green-700 text-sm border-t border-green-200 fade-in">{{ flash }}</div>
+    {% endif %}
+</div>

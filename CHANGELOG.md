@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Epic 12 — Admin Settings & Configuration UI:** Settings page with 5 sections (API Keys, Infrastructure, Feature Flags, Agent Config, Secrets), Fernet encryption at rest, RBAC enforcement, audit logging, hot reload, input validation, key rotation
 - **Post-roadmap hardening:** CI pipeline, security fixes, docs sync, quality debt cleanup (`e26ead1`)
 - **Epic 11 — Phase 4 Completion:** Gateway enforcement, compliance wiring, roadmap exit (`781def5`)
 - **Epic 10 — Phase 4 Maturity:** Quarantine UI, merge mode, model spend dashboard, execution planes, compliance hardening (`d386434`)

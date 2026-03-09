@@ -489,3 +489,25 @@ def get_model_audit_store() -> ModelAuditStoreProtocol:
     if _audit_store is None:
         _audit_store = InMemoryModelAuditStore()
     return _audit_store
+
+
+def wire_settings_reload() -> None:
+    """Subscribe ModelRouter to settings reload signals.
+
+    Story 12.7: Hot Reload & Settings Propagation.
+    Called at startup to connect SettingsService changes to ModelRouter.
+    """
+    from src.admin.settings_service import get_settings_service
+
+    svc = get_settings_service()
+
+    def on_setting_changed(key: str) -> None:
+        if key == "agent_model":
+            logger.info(
+                "Hot reload: agent_model changed, "
+                "ModelRouter will use new model on next call",
+            )
+        elif key.startswith("agent_"):
+            logger.info("Hot reload: agent config %s changed", key)
+
+    svc.subscribe_reload(on_setting_changed)

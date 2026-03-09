@@ -32,6 +32,10 @@ from src.admin.router import (
     get_workflow_console_service,
     get_workflow_metrics_service,
 )
+from src.admin.settings_service import (
+    RESTART_REQUIRED_KEYS,
+    get_settings_service,
+)
 from src.admin.success_gate import get_success_gate_service
 from src.admin.tool_catalog import DEFAULT_PROFILES, get_tool_catalog
 from src.compliance.plane_registry import PlaneStatus, get_plane_registry
@@ -1044,3 +1048,412 @@ async def promotion_history_partial(request: Request, repo_id: str) -> Response:
         f'<tbody class="divide-y divide-gray-100">{"".join(rows)}</tbody>'
         '</table>'
     )
+
+
+# --- Settings UI Routes (Epic 12) ---
+
+
+@ui_router.get("/settings", response_class=HTMLResponse)
+async def ui_settings(request: Request) -> Response:
+    """Render the Settings page (admin-only)."""
+    user_id = request.headers.get("X-User-ID")
+    role = await _resolve_role(user_id)
+    if role != Role.ADMIN:
+        return RedirectResponse(url="/admin/ui/dashboard", status_code=302)
+    ctx = _base_context(request, role)
+    ctx["active_page"] = "settings"
+    return templates.TemplateResponse(request, "settings.html", ctx)
+
+
+@ui_router.get("/partials/settings", response_class=HTMLResponse)
+async def partial_settings(request: Request) -> Response:
+    """Render the settings content partial with 5 card containers."""
+    ctx = {"request": request}
+    return templates.TemplateResponse(request, "partials/settings_content.html", ctx)
+
+
+@ui_router.get("/partials/settings/api-keys", response_class=HTMLResponse)
+async def partial_settings_api_keys(request: Request) -> Response:
+    """Render the API Keys card partial."""
+    from src.admin.persistence.pg_settings import SettingCategory
+
+    svc = get_settings_service()
+    async with get_async_session() as session:
+        values = await svc.list_by_category(session, SettingCategory.API_KEYS)
+
+    ctx = {
+        "request": request,
+        "settings": [v.to_dict() for v in values],
+    }
+    return templates.TemplateResponse(request, "partials/settings_api_keys.html", ctx)
+
+
+@ui_router.post("/partials/settings/api-keys", response_class=HTMLResponse)
+async def partial_settings_api_keys_update(request: Request) -> Response:
+    """Update an API key and re-render the card."""
+    from src.admin.audit import AuditEventType, get_audit_service
+    from src.admin.persistence.pg_settings import SettingCategory
+
+    form = await request.form()
+    key = str(form.get("key", ""))
+    value = str(form.get("value", ""))
+    user_id = request.headers.get("X-User-ID", "unknown")
+
+    svc = get_settings_service()
+    audit_svc = get_audit_service()
+    flash = None
+
+    async with get_async_session() as session:
+        try:
+            old_sv = await svc.get(session, key)
+            old_display = old_sv.display_value if old_sv else None
+            sv = await svc.set(session, key, value, user_id)
+            await audit_svc.log_event(
+                session, user_id, AuditEventType.SETTINGS_CHANGED, key,
+                {"action": "update", "old_value": old_display, "new_value": sv.display_value},
+            )
+            await session.commit()
+            flash = f"Updated {key} successfully"
+        except ValueError as e:
+            flash = str(e)
+
+        values = await svc.list_by_category(session, SettingCategory.API_KEYS)
+
+    ctx = {
+        "request": request,
+        "settings": [v.to_dict() for v in values],
+        "flash": flash,
+    }
+    return templates.TemplateResponse(request, "partials/settings_api_keys.html", ctx)
+
+
+@ui_router.get("/partials/settings/api-keys/reveal/{key}", response_class=HTMLResponse)
+async def partial_settings_api_keys_reveal(request: Request, key: str) -> Response:
+    """Reveal an unmasked API key value (admin only, logged)."""
+    user_id = request.headers.get("X-User-ID")
+    role = await _resolve_role(user_id)
+    if role != Role.ADMIN:
+        denied = '<span class="text-red-500 text-sm">Access denied</span>'
+        return HTMLResponse(denied, status_code=403)
+
+    svc = get_settings_service()
+    async with get_async_session() as session:
+        sv = await svc.get(session, key, unmask=True)
+
+    if sv is None:
+        return HTMLResponse('<span class="text-gray-400 text-sm">Not configured</span>')
+
+    logger.info("Settings reveal: user=%s key=%s", user_id, key)
+    return HTMLResponse(
+        f'<code class="text-sm text-gray-600 bg-gray-50 px-2 py-1 rounded">{sv.value}</code>'
+    )
+
+
+@ui_router.get("/partials/settings/infrastructure", response_class=HTMLResponse)
+async def partial_settings_infrastructure(request: Request) -> Response:
+    """Render the Infrastructure card partial."""
+    from src.admin.persistence.pg_settings import SettingCategory
+
+    svc = get_settings_service()
+    async with get_async_session() as session:
+        values = await svc.list_by_category(session, SettingCategory.INFRASTRUCTURE)
+
+    # Check if any infra settings have DB overrides (restart-required)
+    restart_required = any(
+        v.source == "db" and v.key in RESTART_REQUIRED_KEYS for v in values
+    )
+
+    ctx = {
+        "request": request,
+        "settings": [v.to_dict() for v in values],
+        "restart_required": restart_required,
+        "restart_required_keys": RESTART_REQUIRED_KEYS,
+    }
+    return templates.TemplateResponse(request, "partials/settings_infrastructure.html", ctx)
+
+
+@ui_router.post("/partials/settings/infrastructure", response_class=HTMLResponse)
+async def partial_settings_infrastructure_update(request: Request) -> Response:
+    """Update an infrastructure setting and re-render."""
+    from src.admin.audit import AuditEventType, get_audit_service
+    from src.admin.persistence.pg_settings import SettingCategory
+
+    form = await request.form()
+    key = str(form.get("key", ""))
+    value = str(form.get("value", ""))
+    user_id = request.headers.get("X-User-ID", "unknown")
+
+    svc = get_settings_service()
+    audit_svc = get_audit_service()
+    flash = None
+    error = None
+
+    async with get_async_session() as session:
+        try:
+            old_sv = await svc.get(session, key)
+            old_display = old_sv.display_value if old_sv else None
+            sv = await svc.set(session, key, value, user_id)
+            await audit_svc.log_event(
+                session, user_id, AuditEventType.SETTINGS_CHANGED, key,
+                {"action": "update", "old_value": old_display, "new_value": sv.display_value},
+            )
+            await session.commit()
+            flash = f"Updated {key} successfully"
+        except ValueError as e:
+            error = str(e)
+
+        values = await svc.list_by_category(session, SettingCategory.INFRASTRUCTURE)
+
+    restart_required = any(
+        v.source == "db" and v.key in RESTART_REQUIRED_KEYS for v in values
+    )
+
+    ctx = {
+        "request": request,
+        "settings": [v.to_dict() for v in values],
+        "restart_required": restart_required,
+        "restart_required_keys": RESTART_REQUIRED_KEYS,
+        "flash": flash,
+        "error": error,
+    }
+    return templates.TemplateResponse(request, "partials/settings_infrastructure.html", ctx)
+
+
+@ui_router.get("/partials/settings/feature-flags", response_class=HTMLResponse)
+async def partial_settings_feature_flags(request: Request) -> Response:
+    """Render the Feature Flags card partial."""
+    from src.admin.persistence.pg_settings import SettingCategory
+
+    svc = get_settings_service()
+    async with get_async_session() as session:
+        values = await svc.list_by_category(session, SettingCategory.FEATURE_FLAGS)
+
+    ctx = {
+        "request": request,
+        "settings": [v.to_dict() for v in values],
+    }
+    return templates.TemplateResponse(request, "partials/settings_feature_flags.html", ctx)
+
+
+@ui_router.post("/partials/settings/feature-flags", response_class=HTMLResponse)
+async def partial_settings_feature_flags_update(request: Request) -> Response:
+    """Toggle a feature flag and re-render."""
+    from src.admin.audit import AuditEventType, get_audit_service
+    from src.admin.persistence.pg_settings import SettingCategory
+
+    form = await request.form()
+    key = str(form.get("key", ""))
+    value = str(form.get("value", ""))
+    user_id = request.headers.get("X-User-ID", "unknown")
+
+    svc = get_settings_service()
+    audit_svc = get_audit_service()
+    flash = None
+
+    async with get_async_session() as session:
+        try:
+            old_sv = await svc.get(session, key)
+            old_display = old_sv.display_value if old_sv else None
+            sv = await svc.set(session, key, value, user_id)
+            await audit_svc.log_event(
+                session, user_id, AuditEventType.SETTINGS_CHANGED, key,
+                {"action": "update", "old_value": old_display, "new_value": sv.display_value},
+            )
+            await session.commit()
+            flash = f"Updated {key} to {value}"
+        except ValueError as e:
+            flash = str(e)
+
+        values = await svc.list_by_category(session, SettingCategory.FEATURE_FLAGS)
+
+    ctx = {
+        "request": request,
+        "settings": [v.to_dict() for v in values],
+        "flash": flash,
+    }
+    return templates.TemplateResponse(request, "partials/settings_feature_flags.html", ctx)
+
+
+@ui_router.get("/partials/settings/agent-config", response_class=HTMLResponse)
+async def partial_settings_agent_config(request: Request) -> Response:
+    """Render the Agent Config card partial."""
+    from src.admin.persistence.pg_settings import SettingCategory
+
+    svc = get_settings_service()
+    model_router = get_model_router()
+
+    async with get_async_session() as session:
+        values = await svc.list_by_category(session, SettingCategory.AGENT_CONFIG)
+
+    current_values = {v.key: v.value for v in values}
+    sources = {v.key: v.source for v in values}
+
+    # Get available model IDs from ModelRouter
+    available_models = sorted({p.model_id for p in model_router.providers})
+    if not available_models:
+        available_models = ["claude-haiku-3-5", "claude-sonnet-4-5", "claude-opus-4-6"]
+
+    ctx = {
+        "request": request,
+        "current_values": current_values,
+        "sources": sources,
+        "available_models": available_models,
+    }
+    return templates.TemplateResponse(request, "partials/settings_agent_config.html", ctx)
+
+
+@ui_router.post("/partials/settings/agent-config", response_class=HTMLResponse)
+async def partial_settings_agent_config_update(request: Request) -> Response:
+    """Update agent config settings and re-render."""
+    from src.admin.audit import AuditEventType, get_audit_service
+    from src.admin.persistence.pg_settings import SettingCategory
+
+    form = await request.form()
+    user_id = request.headers.get("X-User-ID", "unknown")
+
+    svc = get_settings_service()
+    audit_svc = get_audit_service()
+    flash = None
+    error = None
+
+    agent_keys = ["agent_model", "agent_max_turns", "agent_max_budget_usd", "agent_max_loopbacks"]
+
+    async with get_async_session() as session:
+        for key in agent_keys:
+            value = form.get(key)
+            if value is None:
+                continue
+            value = str(value)
+            try:
+                old_sv = await svc.get(session, key)
+                old_display = old_sv.display_value if old_sv else None
+                sv = await svc.set(session, key, value, user_id)
+                await audit_svc.log_event(
+                    session, user_id, AuditEventType.SETTINGS_CHANGED, key,
+                    {"action": "update", "old_value": old_display, "new_value": sv.display_value},
+                )
+            except ValueError as e:
+                error = str(e)
+                break
+
+        if not error:
+            await session.commit()
+            flash = "Agent configuration updated"
+
+        values = await svc.list_by_category(session, SettingCategory.AGENT_CONFIG)
+
+    current_values = {v.key: v.value for v in values}
+    sources = {v.key: v.source for v in values}
+
+    model_router = get_model_router()
+    available_models = sorted({p.model_id for p in model_router.providers})
+    if not available_models:
+        available_models = ["claude-haiku-3-5", "claude-sonnet-4-5", "claude-opus-4-6"]
+
+    ctx = {
+        "request": request,
+        "current_values": current_values,
+        "sources": sources,
+        "available_models": available_models,
+        "flash": flash,
+        "error": error,
+    }
+    return templates.TemplateResponse(request, "partials/settings_agent_config.html", ctx)
+
+
+@ui_router.get("/partials/settings/secrets", response_class=HTMLResponse)
+async def partial_settings_secrets(request: Request) -> Response:
+    """Render the Secrets card partial."""
+    svc = get_settings_service()
+
+    async with get_async_session() as session:
+        enc_sv = await svc.get(session, "encryption_key")
+        wh_sv = await svc.get(session, "webhook_secret")
+
+    ctx = {
+        "request": request,
+        "encryption_key_set": enc_sv is not None and bool(enc_sv.value),
+        "webhook_secret_set": wh_sv is not None and bool(wh_sv.value),
+    }
+    return templates.TemplateResponse(request, "partials/settings_secrets.html", ctx)
+
+
+@ui_router.post("/partials/settings/secrets/rotate-key", response_class=HTMLResponse)
+async def partial_settings_secrets_rotate_key(request: Request) -> Response:
+    """Rotate the encryption key (requires typing ROTATE to confirm)."""
+    from src.admin.audit import AuditEventType, get_audit_service
+    from src.admin.settings_crypto import generate_fernet_key
+
+    form = await request.form()
+    confirmation = str(form.get("confirmation", ""))
+    user_id = request.headers.get("X-User-ID", "unknown")
+
+    error = None
+    flash = None
+
+    if confirmation != "ROTATE":
+        error = 'Type "ROTATE" to confirm key rotation'
+    else:
+        svc = get_settings_service()
+        audit_svc = get_audit_service()
+        new_key = generate_fernet_key()
+
+        async with get_async_session() as session:
+            try:
+                count = await svc.rotate_encryption_key(session, new_key, user_id)
+                # Store the new key
+                await svc.set(session, "encryption_key", new_key, user_id)
+                await audit_svc.log_event(
+                    session, user_id, AuditEventType.SETTINGS_CHANGED,
+                    "encryption_key",
+                    {"action": "rotate", "secrets_reencrypted": count},
+                )
+                await session.commit()
+                flash = f"Encryption key rotated. {count} secrets re-encrypted."
+            except Exception as e:
+                logger.exception("Key rotation failed")
+                error = f"Key rotation failed: {e}"
+
+    svc = get_settings_service()
+    async with get_async_session() as session:
+        enc_sv = await svc.get(session, "encryption_key")
+        wh_sv = await svc.get(session, "webhook_secret")
+
+    ctx = {
+        "request": request,
+        "encryption_key_set": enc_sv is not None and bool(enc_sv.value),
+        "webhook_secret_set": wh_sv is not None and bool(wh_sv.value),
+        "flash": flash,
+        "error": error,
+    }
+    return templates.TemplateResponse(request, "partials/settings_secrets.html", ctx)
+
+
+@ui_router.post("/partials/settings/secrets/regenerate-webhook", response_class=HTMLResponse)
+async def partial_settings_secrets_regenerate_webhook(request: Request) -> Response:
+    """Regenerate the webhook secret."""
+    from src.admin.audit import AuditEventType, get_audit_service
+
+    user_id = request.headers.get("X-User-ID", "unknown")
+    svc = get_settings_service()
+    audit_svc = get_audit_service()
+
+    async with get_async_session() as session:
+        new_secret = await svc.regenerate_webhook_secret(session, user_id)
+        await audit_svc.log_event(
+            session, user_id, AuditEventType.SETTINGS_CHANGED,
+            "webhook_secret",
+            {"action": "regenerate"},
+        )
+        await session.commit()
+
+        enc_sv = await svc.get(session, "encryption_key")
+
+    ctx = {
+        "request": request,
+        "encryption_key_set": enc_sv is not None and bool(enc_sv.value),
+        "webhook_secret_set": True,
+        "new_webhook_secret": new_secret,
+        "flash": "Webhook secret regenerated",
+    }
+    return templates.TemplateResponse(request, "partials/settings_secrets.html", ctx)
