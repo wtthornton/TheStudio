@@ -421,6 +421,7 @@ _reputation_engine: InMemoryReputationEngine | None = None
 
 
 def get_reputation_engine() -> ReputationEngineProtocol:
+    """Return the module-level ReputationEngine singleton."""
     global _reputation_engine
     if _reputation_engine is None:
         _reputation_engine = InMemoryReputationEngine()

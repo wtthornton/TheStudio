@@ -189,6 +189,8 @@ class ToolProfile:
 
 # Agent roles for tool access (maps to thestudioarc/08-agent-roles.md)
 class AgentRole(StrEnum):
+    """Enumeration of agent roles for tool access control."""
+
     DEVELOPER = "developer"
     ARCHITECT = "architect"
     PLANNER = "planner"
@@ -196,6 +198,8 @@ class AgentRole(StrEnum):
 
 # Overlays that restrict tool access
 class ToolOverlay(StrEnum):
+    """Enumeration of overlays that modify tool access permissions."""
+
     SECURITY = "security"
     COMPLIANCE = "compliance"
     HOTFIX = "hotfix"
@@ -395,6 +399,7 @@ _policy_engine: ToolPolicyEngine | None = None
 
 
 def get_tool_catalog() -> ToolCatalogProtocol:
+    """Return the module-level ToolCatalog singleton."""
     global _catalog
     if _catalog is None:
         _catalog = InMemoryToolCatalog()
@@ -403,6 +408,7 @@ def get_tool_catalog() -> ToolCatalogProtocol:
 
 
 def get_tool_policy_engine() -> ToolPolicyEngine:
+    """Return the module-level ToolPolicyEngine singleton."""
     global _policy_engine
     if _policy_engine is None:
         _policy_engine = ToolPolicyEngine(get_tool_catalog())

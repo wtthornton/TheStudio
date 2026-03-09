@@ -468,6 +468,7 @@ _audit_store: InMemoryModelAuditStore | None = None
 
 
 def get_model_router() -> ModelRouter:
+    """Return the module-level ModelRouter singleton."""
     global _router
     if _router is None:
         _router = ModelRouter()
@@ -475,6 +476,7 @@ def get_model_router() -> ModelRouter:
 
 
 def get_budget_enforcer() -> BudgetEnforcerProtocol:
+    """Return the module-level BudgetEnforcer singleton."""
     global _budget_enforcer
     if _budget_enforcer is None:
         _budget_enforcer = InMemoryBudgetEnforcer()
@@ -482,6 +484,7 @@ def get_budget_enforcer() -> BudgetEnforcerProtocol:
 
 
 def get_model_audit_store() -> ModelAuditStoreProtocol:
+    """Return the module-level ModelAuditStore singleton."""
     global _audit_store
     if _audit_store is None:
         _audit_store = InMemoryModelAuditStore()

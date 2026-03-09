@@ -1,0 +1,30 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+## [Unreleased]
+
+### Added
+
+- **Post-roadmap hardening:** CI pipeline, security fixes, docs sync, quality debt cleanup (`e26ead1`)
+- **Epic 11 — Phase 4 Completion:** Gateway enforcement, compliance wiring, roadmap exit (`781def5`)
+- **Epic 10 — Phase 4 Maturity:** Quarantine UI, merge mode, model spend dashboard, execution planes, compliance hardening (`d386434`)
+- **Epic 9 — Prove the Pipe:** Integration tests, healthz endpoint, docker-compose (`734d898`)
+- **Epic 8 Sprint 2:** Real GitHub/LLM adapters, PostgreSQL persistence layer, deployment config (`5b8d849`)
+- **Epic 8 Sprint 1:** Test health improvements, e2e smoke test, coverage baseline (`b14856f`)
+- **Epic 7 Sprint 2:** Admin UI for Tool Hub, Model Gateway, Compliance, Targets (`7a663f4`)
+- **Epic 7 Sprint 1:** Tool Hub catalog, Model Gateway routing, Compliance Scorecard, Operational Targets (`6ac682c`)
+- **Epic 6 Sprint 1:** Context packs, expert expansion, success gate — Phase 3 complete (`7570ae4`)
+- **Epic 5 Sprint 1:** Eval suite, metrics APIs, admin UI extensions (`8250241`)
+- **Epic 4 Sprint 2:** Admin UI frontend — dashboard, repos, workflows, audit views (`cb0c932`)
+- **Epic 4 Sprint 1:** Workflow metrics, RBAC, audit log, admin console (`c384355`)
+- **Epic 3:** Compliance checker, multi-repo registration, tier promotion gate
+- **Epic 2:** Outcome Ingestor hardening, reputation drift/decay, trust tiers, complexity index
+- **Epic 1:** Full-flow expert pipeline — recruiter, templates, expert library, router, assembler
+- **Epic 0 — Foundation:** Ingress, TaskPacket, Context Manager, Intent Builder, Primary Agent, Verification Gate, Publisher, Repo Profile, Observability
+
+### Fixed
+
+- Update 26 pre-existing tests for schema drift (`841a6fa`)

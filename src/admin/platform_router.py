@@ -105,6 +105,8 @@ async def list_tool_profiles(
 
 
 class CheckAccessRequest(BaseModel):
+    """Request body for checking tool access by role and overlays."""
+
     role: str
     overlays: list[str] = Field(default_factory=list)
     repo_tier: str = "suggest"
@@ -138,6 +140,8 @@ async def check_tool_access(
 
 
 class RouteRequest(BaseModel):
+    """Request body for simulating a model routing decision."""
+
     step: str
     role: str = ""
     overlays: list[str] = Field(default_factory=list)
@@ -228,6 +232,8 @@ async def query_model_audit(
 
 
 class SetBudgetRequest(BaseModel):
+    """Request body for setting model spend budget on a repo."""
+
     per_task_max_spend: float = Field(1.0, gt=0)
     per_step_token_cap: int = Field(50_000, gt=0)
     conservative_mode: bool = False

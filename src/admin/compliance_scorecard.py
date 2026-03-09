@@ -256,6 +256,7 @@ _scorecard_service: InMemoryComplianceScorecardService | None = None
 
 
 def get_scorecard_service() -> ComplianceScorecardProtocol:
+    """Return the module-level ComplianceScorecardService singleton."""
     global _scorecard_service
     if _scorecard_service is None:
         _scorecard_service = InMemoryComplianceScorecardService()

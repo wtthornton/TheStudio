@@ -18,12 +18,16 @@ from src.db.base import Base
 
 
 class RepoTier(enum.StrEnum):
+    """Enumeration of repository maturity tiers."""
+
     OBSERVE = "observe"
     SUGGEST = "suggest"
     EXECUTE = "execute"
 
 
 class RepoStatus(enum.StrEnum):
+    """Enumeration of repository lifecycle states."""
+
     ACTIVE = "active"
     PAUSED = "paused"
     DISABLED = "disabled"

@@ -275,6 +275,7 @@ _targets_service: OperationalTargetsService | None = None
 
 
 def get_targets_service() -> OperationalTargetsService:
+    """Return the module-level OperationalTargetsService singleton."""
     global _targets_service
     if _targets_service is None:
         _targets_service = OperationalTargetsService()

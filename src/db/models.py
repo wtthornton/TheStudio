@@ -15,6 +15,8 @@ from src.db.base import Base
 
 
 class ToolSuiteRow(Base):
+    """Persistence row for a tool suite registration."""
+
     __tablename__ = "tool_suites"
 
     name: Mapped[str] = mapped_column(String(255), primary_key=True)
@@ -25,6 +27,8 @@ class ToolSuiteRow(Base):
 
 
 class ToolEntryRow(Base):
+    """Persistence row for a single tool within a suite."""
+
     __tablename__ = "tool_entries"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -38,6 +42,8 @@ class ToolEntryRow(Base):
 
 
 class ToolProfileRow(Base):
+    """Persistence row for a repo-to-suite mapping profile."""
+
     __tablename__ = "tool_profiles"
 
     profile_id: Mapped[str] = mapped_column(String(255), primary_key=True)
@@ -47,6 +53,8 @@ class ToolProfileRow(Base):
 
 
 class ModelCallAuditRow(Base):
+    """Persistence row for a model call audit record."""
+
     __tablename__ = "model_call_audit"
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)

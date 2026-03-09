@@ -38,6 +38,7 @@ SQL_DOWN = [
 
 
 async def migrate_up() -> None:
+    """Apply migration 001."""
     engine = create_async_engine(settings.database_url)
     async with engine.begin() as conn:
         for stmt in SQL_UP:
@@ -46,6 +47,7 @@ async def migrate_up() -> None:
 
 
 async def migrate_down() -> None:
+    """Reverse migration 001."""
     engine = create_async_engine(settings.database_url)
     async with engine.begin() as conn:
         for stmt in SQL_DOWN:
