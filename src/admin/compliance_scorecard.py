@@ -8,7 +8,7 @@ Architecture reference: thestudioarc/23-admin-control-ui.md
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any, Protocol, runtime_checkable
 
 
@@ -121,43 +121,57 @@ class InMemoryComplianceScorecardService:
                 name="branch_protection",
                 description="Branch protection rulesets enabled",
                 passed=data.branch_protection_enabled,
-                details="Enabled" if data.branch_protection_enabled else "Branch protection not configured",
+                details="Enabled"
+                if data.branch_protection_enabled
+                else "Branch protection not configured",
             ),
             ScorecardCheck(
                 name="required_reviewers",
                 description="Required reviewers configured for sensitive paths",
                 passed=data.required_reviewers_configured,
-                details="Configured" if data.required_reviewers_configured else "No required reviewers for sensitive paths",
+                details="Configured"
+                if data.required_reviewers_configured
+                else "No required reviewers for sensitive paths",
             ),
             ScorecardCheck(
                 name="standard_labels",
                 description="Standard platform labels present",
                 passed=data.standard_labels_present,
-                details="All standard labels present" if data.standard_labels_present else "Missing standard labels (agent:run, tier:*, type:*, risk:*)",
+                details="All standard labels present"
+                if data.standard_labels_present
+                else "Missing standard labels (agent:run, tier:*, type:*, risk:*)",
             ),
             ScorecardCheck(
                 name="projects_v2",
                 description="Projects v2 fields configured",
                 passed=data.projects_v2_configured,
-                details="Configured" if data.projects_v2_configured else "Projects v2 fields not configured (Status, Tier, Priority, Owner)",
+                details="Configured"
+                if data.projects_v2_configured
+                else "Projects v2 fields not configured (Status, Tier, Priority, Owner)",
             ),
             ScorecardCheck(
                 name="evidence_format",
                 description="Evidence comment format validated on last 3 PRs",
                 passed=data.evidence_format_valid,
-                details="Valid" if data.evidence_format_valid else "Evidence comments missing or malformed on recent PRs",
+                details="Valid"
+                if data.evidence_format_valid
+                else "Evidence comments missing or malformed on recent PRs",
             ),
             ScorecardCheck(
                 name="idempotency_guard",
                 description="Idempotency guard active",
                 passed=data.idempotency_guard_active,
-                details="Active" if data.idempotency_guard_active else "Idempotency guard not active — risk of duplicate PRs",
+                details="Active"
+                if data.idempotency_guard_active
+                else "Idempotency guard not active — risk of duplicate PRs",
             ),
             ScorecardCheck(
                 name="execution_plane_health",
                 description="Execution plane health = healthy",
                 passed=data.execution_plane_healthy,
-                details="Healthy" if data.execution_plane_healthy else "Execution plane not healthy — check workers and verification runner",
+                details="Healthy"
+                if data.execution_plane_healthy
+                else "Execution plane not healthy — check workers and verification runner",
             ),
         ]
 
@@ -178,12 +192,59 @@ class InMemoryComplianceScorecardService:
         self._cache.pop(repo_id, None)
 
     def _fetch_compliance_data(self, repo_id: str) -> RepoComplianceData:
-        """Fetch compliance data for a repo.
+        """Fetch compliance data from the compliance data store and plane health.
 
-        In production, this would call GitHub API, check repo profile,
-        and query execution plane health. For now, returns defaults (all False).
+        Checks the in-memory compliance data store for repo configuration flags
+        and the execution plane registry for plane health status.
+        Falls back to False for any field that cannot be determined.
         """
-        return RepoComplianceData()
+        from src.compliance.plane_registry import get_plane_registry
+
+        stored = get_compliance_data(repo_id)
+        if stored is not None:
+            data = RepoComplianceData(
+                branch_protection_enabled=stored.branch_protection_enabled,
+                required_reviewers_configured=stored.required_reviewers_configured,
+                standard_labels_present=stored.standard_labels_present,
+                projects_v2_configured=stored.projects_v2_configured,
+                evidence_format_valid=stored.evidence_format_valid,
+                idempotency_guard_active=stored.idempotency_guard_active,
+            )
+        else:
+            data = RepoComplianceData()
+
+        # --- Execution plane health ---
+        plane_registry = get_plane_registry()
+        summaries = plane_registry.get_health_summary()
+        for summary in summaries:
+            if summary.healthy:
+                plane = plane_registry.get_plane(summary.plane_id)
+                if plane and repo_id in plane.repo_ids:
+                    data.execution_plane_healthy = True
+                    break
+
+        return data
+
+
+# --- In-memory compliance data store ---
+# Populated by admin API or integration hooks; consumed by _fetch_compliance_data.
+
+_compliance_data_store: dict[str, RepoComplianceData] = {}
+
+
+def set_compliance_data(repo_id: str, data: RepoComplianceData) -> None:
+    """Register compliance data for a repo."""
+    _compliance_data_store[repo_id] = data
+
+
+def get_compliance_data(repo_id: str) -> RepoComplianceData | None:
+    """Retrieve stored compliance data for a repo."""
+    return _compliance_data_store.get(repo_id)
+
+
+def clear_compliance_data() -> None:
+    """Clear all stored compliance data (for testing)."""
+    _compliance_data_store.clear()
 
 
 # Backwards-compatible alias

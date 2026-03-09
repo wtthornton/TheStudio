@@ -11,7 +11,16 @@ from src.admin.operational_targets import (
     OperationalTargetsService,
     ReopenTargetMetrics,
     _compute_percentiles,
+    clear_timing_events,
 )
+
+
+@pytest.fixture(autouse=True)
+def _reset_timing():
+    """Ensure no timing events leak from other tests."""
+    clear_timing_events()
+    yield
+    clear_timing_events()
 
 
 class TestPercentiles:

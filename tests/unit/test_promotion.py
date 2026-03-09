@@ -288,9 +288,12 @@ class TestPromotionExecution:
             assert result.success is False
             assert result.block_reason == PromotionBlockReason.COMPLIANCE_FAILED
 
-            # Check no transition was recorded
+            # Epic 10: blocked promotions now store a transition with remediation items
             transitions = get_transitions(repo_id)
-            assert len(transitions) == 0
+            assert len(transitions) == 1
+            blocked = transitions[0]
+            assert "Blocked" in blocked.reason
+            assert len(blocked.remediation_items) > 0
 
     @pytest.mark.asyncio
     async def test_promotion_emits_tier_changed_signal(self) -> None:

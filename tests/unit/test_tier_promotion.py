@@ -243,6 +243,7 @@ class TestPublishWithTier:
     @pytest.mark.asyncio
     async def test_suggest_tier_marks_ready(self) -> None:
         """Suggest tier: PR marked ready-for-review when V+QA passed."""
+        from src.admin.merge_mode import MergeMode, clear as clear_merge, set_merge_mode
         from src.agent.evidence import EvidenceBundle
         from src.intent.intent_spec import IntentSpecRead
         from src.publisher.publisher import publish
@@ -251,6 +252,8 @@ class TestPublishWithTier:
 
         tp_id = uuid4()
         tp = _make_taskpacket(id=tp_id)
+        # Publisher now checks merge_mode — set REQUIRE_REVIEW for this repo
+        set_merge_mode(tp.repo, MergeMode.REQUIRE_REVIEW)
         intent = IntentSpecRead(
             id=uuid4(), taskpacket_id=tp_id, version=1,
             goal="Test goal", constraints=[], acceptance_criteria=["test"],
@@ -284,6 +287,7 @@ class TestPublishWithTier:
 
         assert result.marked_ready is True
         mock_github.mark_ready_for_review.assert_called_once()
+        clear_merge()
 
     @pytest.mark.asyncio
     async def test_suggest_tier_stays_draft_without_qa(self) -> None:

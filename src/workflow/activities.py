@@ -243,9 +243,32 @@ async def intake_activity(params: IntakeInput) -> IntakeOutput:
 async def context_activity(params: ContextInput) -> ContextOutput:
     """Step 2: Context enrichment (scope, risk, complexity).
 
-    In production, delegates to context_manager.enrich_taskpacket() with a
-    real database session. This stub returns sensible defaults.
+    Routes LLM calls through Model Gateway; checks Tool Hub access for
+    context-retrieval tools. In production, delegates to
+    context_manager.enrich_taskpacket() with a real database session.
     """
+    from src.admin.model_gateway import ModelCallAudit, get_model_audit_store, get_model_router
+    from src.admin.tool_catalog import get_tool_policy_engine
+
+    router = get_model_router()
+    audit_store = get_model_audit_store()
+    policy = get_tool_policy_engine()
+
+    # Select model via gateway (no direct provider calls)
+    provider = router.select_model(step="context")
+    audit_store.record(
+        ModelCallAudit(step="context", provider=provider.provider, model=provider.model_id)
+    )
+
+    # Verify tool access for context-retrieval suite
+    policy.check_access(
+        role="developer",
+        overlays=[],
+        repo_tier="observe",
+        suite_name="context-retrieval",
+        tool_name="pack-lookup",
+    )
+
     return ContextOutput(
         scope={"type": "feature", "components": ""},
         risk_flags={},
@@ -258,9 +281,23 @@ async def context_activity(params: ContextInput) -> ContextOutput:
 async def intent_activity(params: IntentInput) -> IntentOutput:
     """Step 3: Build intent specification.
 
-    In production, delegates to intent_builder.build_intent() with a real
-    database session. This stub extracts goal from input.
+    Routes LLM calls through Model Gateway. In production, delegates to
+    intent_builder.build_intent() with a real database session.
     """
+    from src.admin.model_gateway import ModelCallAudit, get_model_audit_store, get_model_router
+
+    router = get_model_router()
+    audit_store = get_model_audit_store()
+
+    # All LLM calls go through gateway — no direct provider access
+    overlays = [k for k, v in params.risk_flags.items() if v]
+    provider = router.select_model(step="intent", overlays=overlays)
+    audit_store.record(
+        ModelCallAudit(
+            step="intent", provider=provider.provider, model=provider.model_id, overlays=overlays
+        )
+    )
+
     return IntentOutput(
         intent_spec_id="",
         version=1,
@@ -321,8 +358,32 @@ async def assembler_activity(params: AssemblerInput) -> AssemblerOutput:
 async def implement_activity(params: ImplementInput) -> ImplementOutput:
     """Step 6: Primary Agent implements changes.
 
-    In production, delegates to primary_agent.implement() or handle_loopback().
+    Routes LLM calls through Model Gateway; checks Tool Hub access for
+    code-quality tools. In production, delegates to
+    primary_agent.implement() or handle_loopback().
     """
+    from src.admin.model_gateway import ModelCallAudit, get_model_audit_store, get_model_router
+    from src.admin.tool_catalog import get_tool_policy_engine
+
+    router = get_model_router()
+    audit_store = get_model_audit_store()
+    policy = get_tool_policy_engine()
+
+    # All LLM calls through gateway
+    provider = router.select_model(step="primary_agent")
+    audit_store.record(
+        ModelCallAudit(step="primary_agent", provider=provider.provider, model=provider.model_id)
+    )
+
+    # Verify tool access for code-quality suite
+    policy.check_access(
+        role="developer",
+        overlays=[],
+        repo_tier="observe",
+        suite_name="code-quality",
+        tool_name="ruff",
+    )
+
     return ImplementOutput(
         taskpacket_id=params.taskpacket_id,
         intent_version=1,
@@ -335,8 +396,22 @@ async def implement_activity(params: ImplementInput) -> ImplementOutput:
 async def verify_activity(params: VerifyInput) -> VerifyOutput:
     """Step 7: Verification gate checks.
 
+    Checks Tool Hub access for code-quality tools used during verification.
     In production, delegates to verification.gate.verify().
     """
+    from src.admin.tool_catalog import get_tool_policy_engine
+
+    policy = get_tool_policy_engine()
+
+    # Verify tool access for code-quality suite (ruff, mypy)
+    policy.check_access(
+        role="developer",
+        overlays=[],
+        repo_tier="observe",
+        suite_name="code-quality",
+        tool_name="ruff",
+    )
+
     return VerifyOutput(passed=True, checks=[])
 
 
@@ -344,8 +419,20 @@ async def verify_activity(params: VerifyInput) -> VerifyOutput:
 async def qa_activity(params: QAInput) -> QAOutput:
     """Step 8: QA validation against intent.
 
-    In production, delegates to qa.qa_agent.validate().
+    Routes LLM calls through Model Gateway. In production, delegates to
+    qa.qa_agent.validate().
     """
+    from src.admin.model_gateway import ModelCallAudit, get_model_audit_store, get_model_router
+
+    router = get_model_router()
+    audit_store = get_model_audit_store()
+
+    # All LLM calls through gateway
+    provider = router.select_model(step="qa_eval")
+    audit_store.record(
+        ModelCallAudit(step="qa_eval", provider=provider.provider, model=provider.model_id)
+    )
+
     return QAOutput(passed=True)
 
 
@@ -354,7 +441,26 @@ async def publish_activity(params: PublishInput) -> PublishOutput:
     """Step 9: Publish PR to GitHub.
 
     In production, delegates to publisher.publisher.publish().
+    Records a TimingEvent on completion for lead/cycle time tracking.
     """
+    from datetime import UTC, datetime
+
+    from src.admin.operational_targets import TimingEvent, record_timing
+
+    now = datetime.now(UTC)
+
+    # Record timing event for operational targets tracking.
+    # In production, intake_created_at comes from the TaskPacket; here we
+    # use 'now' as a placeholder since the stub has no DB access.
+    record_timing(
+        TimingEvent(
+            repo_id=params.taskpacket_id,
+            intake_created_at=now,
+            pr_opened_at=now,
+            merge_ready_at=now if params.qa_passed else None,
+        )
+    )
+
     return PublishOutput(
         pr_number=0,
         pr_url="",

@@ -12,6 +12,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.admin.merge_mode import MergeMode, get_merge_mode
 from src.agent.evidence import EvidenceBundle
 from src.intent.intent_crud import get_latest_for_taskpacket
 from src.intent.intent_spec import IntentSpecRead
@@ -148,6 +149,7 @@ async def publish(
 
         owner, repo_name = taskpacket.repo.split("/", 1)
         branch = _branch_name(taskpacket_id, intent.version)
+        merge_mode = get_merge_mode(taskpacket.repo)
 
         # Idempotency check — look for existing PR with same branch
         existing_pr = await github.find_pr_by_head(owner, repo_name, branch)
@@ -165,7 +167,7 @@ async def publish(
             logger.info("Updated existing PR #%d for TaskPacket %s", pr_number, taskpacket_id)
 
             # Suggest tier: mark ready-for-review if V+QA passed
-            if _should_mark_ready(repo_tier, verification.passed, qa_passed):
+            if _should_mark_ready(repo_tier, verification.passed, qa_passed, merge_mode):
                 await github.mark_ready_for_review(owner, repo_name, pr_number)
                 marked_ready = True
 
@@ -213,7 +215,7 @@ async def publish(
         await _reconcile_tier_labels(github, owner, repo_name, pr_number, repo_tier)
 
         # Suggest tier: mark ready-for-review if V+QA passed
-        if _should_mark_ready(repo_tier, verification.passed, qa_passed):
+        if _should_mark_ready(repo_tier, verification.passed, qa_passed, merge_mode):
             await github.mark_ready_for_review(owner, repo_name, pr_number)
             marked_ready = True
 
@@ -241,13 +243,23 @@ async def publish(
 
 
 def _should_mark_ready(
-    repo_tier: RepoTier, verification_passed: bool, qa_passed: bool
+    repo_tier: RepoTier,
+    verification_passed: bool,
+    qa_passed: bool,
+    merge_mode: MergeMode | None = None,
 ) -> bool:
     """Determine if a PR should be marked ready-for-review.
 
-    Only in Suggest tier, and only when both verification and QA have passed.
-    Observe tier always stays as draft. Execute tier is Phase 2.
+    When merge_mode is provided, it overrides tier-based behavior:
+    - DRAFT_ONLY: never mark ready (always stays draft)
+    - REQUIRE_REVIEW: mark ready when V+QA pass in Suggest tier
+    - AUTO_MERGE: mark ready when V+QA pass in Suggest tier (auto-merge is Phase 2)
+
+    When merge_mode is None (legacy callers), uses tier-only logic.
+    Observe tier always stays as draft regardless of merge mode.
     """
+    if merge_mode == MergeMode.DRAFT_ONLY:
+        return False
     return (
         repo_tier == RepoTier.SUGGEST
         and verification_passed
