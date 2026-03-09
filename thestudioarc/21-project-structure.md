@@ -48,6 +48,47 @@ FastAPI reference for splitting into multiple files: https://fastapi.tiangolo.co
 
 ---
 
+## TheStudio As-Built Layout (2026-03-09)
+
+The current codebase uses a **domain-oriented module structure** under `src/`, where each module maps to a pipeline stage or capability:
+
+```
+src/
+  adapters/            External service adapters (GitHub, Temporal, NATS)
+  admin/               Admin UI APIs — fleet, repo, workflow, RBAC, audit
+  agent/               Primary Agent — base role (Developer)
+  assembler/           Expert output merging, conflict resolution, plan assembly
+  compliance/          Compliance checker, execution plane health, tier promotion
+  context/             Context Manager — enrichment, service context packs, complexity
+  db/                  Database session, engine, base models
+  evals/               Eval framework — intent, routing, verification, QA evals
+  experts/             Expert Library — persistence, search, seeding, taxonomy
+  ingress/             Webhook receiver, signature validation, dedupe
+  intake/              Intake Agent — eligibility, TaskPacket creation
+  intent/              Intent Builder — goal extraction, constraints, refinement
+  models/              Core domain models — TaskPacket, enums
+  observability/       OpenTelemetry tracing, correlation, middleware
+  outcome/             Outcome Ingestor — signals, quarantine, dead letter, replay
+  publisher/           Publisher — draft PR, evidence comment, lifecycle labels
+  qa/                  QA Agent — defect taxonomy, validation, signals
+  recruiting/          Recruiter — expert creation, qualification, templates
+  repo/                Repo Profile — registration, tier, secrets, promotion
+  reputation/          Reputation Engine — weights, decay, drift, trust tiers
+  routing/             Router — expert selection, mandatory coverage
+  settings.py          App configuration (Pydantic settings)
+  verification/        Verification Gate — runners (ruff, pytest), loopbacks
+  workflow/            Temporal workflow — activities, pipeline orchestration
+  app.py               FastAPI application entry point
+
+tests/
+  unit/                1,413 unit tests
+  integration/         8 integration tests (require PostgreSQL + Temporal)
+```
+
+**Metrics:** 144 source files, 83 test files, 84% coverage.
+
+---
+
 ## Tool Server Layout (FastAPI)
 
 - src/

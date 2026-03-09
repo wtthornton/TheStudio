@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     github_app_id: str = ""
     github_private_key_path: str = ""
 
+    # Webhook (Admin)
+    webhook_secret: str = ""
+
     # Feature flags (Epic 8 Sprint 2)
     llm_provider: str = "mock"  # "mock" or "anthropic"
     github_provider: str = "mock"  # "mock" or "real"

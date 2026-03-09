@@ -25,8 +25,8 @@ from src.admin.audit import (
 from src.admin.experts import get_expert_service
 from src.admin.health import HealthService
 from src.admin.metrics import get_metrics_service
-from src.admin.success_gate import get_success_gate_service
 from src.admin.rbac import Permission, get_current_user_id, require_permission
+from src.admin.success_gate import get_success_gate_service
 from src.admin.workflow_console import (
     UnsafeRerunError,
     WorkflowConsoleService,
@@ -42,11 +42,10 @@ from src.repo.repo_profile import (
     RepoTier,
 )
 from src.repo.repository import RepoDuplicateError, RepoNotFoundError, RepoRepository
+from src.settings import settings as _settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin", tags=["admin"])
-
-WEBHOOK_SECRET_PLACEHOLDER = "WEBHOOK_SECRET_PENDING_GITHUB_APP_SETUP"  # noqa: S105
 
 # Service instances (lazy initialization)
 _health_service: HealthService | None = None
@@ -700,7 +699,7 @@ async def register_repo(
         repo_name=request.repo,
         installation_id=request.installation_id,
         default_branch=request.default_branch,
-        webhook_secret=WEBHOOK_SECRET_PLACEHOLDER,
+        webhook_secret=_settings.webhook_secret,
         tier=RepoTier.OBSERVE,
     )
 

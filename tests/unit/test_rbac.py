@@ -12,11 +12,11 @@ import pytest
 from fastapi import HTTPException, status
 
 from src.admin.rbac import (
+    ROLE_PERMISSIONS,
     Permission,
     PermissionDeniedError,
     RBACService,
     Role,
-    ROLE_PERMISSIONS,
     UserRoleCreate,
     UserRoleDuplicateError,
     UserRoleNotFoundError,
@@ -171,7 +171,9 @@ class TestRBACService:
     @pytest.fixture
     def mock_session(self) -> AsyncMock:
         """Create mock database session."""
-        return AsyncMock()
+        session = AsyncMock()
+        session.add = MagicMock()  # session.add is synchronous
+        return session
 
     def test_has_permission_admin(self, service: RBACService) -> None:
         """Admin role has all permissions."""

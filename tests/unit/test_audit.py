@@ -7,7 +7,7 @@ Tests the audit module including:
 - GET /admin/audit endpoint
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
@@ -25,9 +25,9 @@ from src.admin.audit import (
     set_audit_service,
 )
 from src.admin.rbac import (
+    ROLE_PERMISSIONS,
     Permission,
     Role,
-    ROLE_PERMISSIONS,
 )
 from src.admin.router import (
     AuditLogEntryResponse,
@@ -123,7 +123,9 @@ class TestAuditService:
     @pytest.fixture
     def mock_session(self) -> AsyncMock:
         """Create mock database session."""
-        return AsyncMock()
+        session = AsyncMock()
+        session.add = MagicMock()  # session.add is synchronous
+        return session
 
     @pytest.mark.asyncio
     async def test_log_event_creates_row(
@@ -198,7 +200,7 @@ class TestAuditService:
         """query returns audit log entries."""
         mock_row = MagicMock(spec=AuditLogRow)
         mock_row.id = uuid4()
-        mock_row.timestamp = datetime.now(tz=timezone.utc)
+        mock_row.timestamp = datetime.now(tz=UTC)
         mock_row.actor = "admin@example.com"
         mock_row.event_type = AuditEventType.REPO_REGISTERED
         mock_row.target_id = "repo-123"
@@ -380,7 +382,7 @@ class TestListAuditLogEndpoint:
             entries=[
                 AuditLogRead(
                     id=entry_id,
-                    timestamp=datetime.now(tz=timezone.utc),
+                    timestamp=datetime.now(tz=UTC),
                     actor="admin@example.com",
                     event_type=AuditEventType.REPO_REGISTERED,
                     target_id="repo-123",
@@ -483,7 +485,7 @@ class TestAuditLogResponseModels:
         """AuditLogEntryResponse holds entry data."""
         entry = AuditLogEntryResponse(
             id=uuid4(),
-            timestamp=datetime.now(tz=timezone.utc),
+            timestamp=datetime.now(tz=UTC),
             actor="admin@example.com",
             event_type="repo_registered",
             target_id="repo-123",
@@ -498,7 +500,7 @@ class TestAuditLogResponseModels:
             entries=[
                 AuditLogEntryResponse(
                     id=uuid4(),
-                    timestamp=datetime.now(tz=timezone.utc),
+                    timestamp=datetime.now(tz=UTC),
                     actor="admin@example.com",
                     event_type="repo_paused",
                     target_id="repo-456",

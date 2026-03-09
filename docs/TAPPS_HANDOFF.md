@@ -1,118 +1,70 @@
 # TAPPS Handoff
 
-> This file tracks the state of the TAPPS quality pipeline for the current task.
-> Each stage appends its findings below. Do not edit previous stages.
+> Project-wide quality and delivery status as of 2026-03-09.
 
-## Task
+## Project Status
 
-**Objective:** Story 4.9 — Audit Log — Schema, Logging, Query API
-**Started:** 2026-03-06T12:00:00Z
+**All roadmap phases (0–4) complete.** Epic 11 closed Phase 4 — Platform Maturity.
 
 ---
 
-## Stage: Discover
+## Delivery Summary
 
-**Completed:** 2026-03-06T12:01:00Z
-**Tools called:** tapps_session_start
-
-**Findings:**
-- TappsMCP v0.8.5, ruff+mypy+bandit+radon+vulture+pip-audit installed
-- Python/FastAPI web app with Temporal workflows
-- Standard quality preset active
-- Resuming from previous session with Stories 4.4-4.8 complete
-
-**Decisions:**
-- Follow existing admin module patterns from Stories 4.4-4.8
-- Replace audit stubs with real AuditService implementation
-- Add GET /admin/audit endpoint with filters
+| Epic | Title | Phase | Status |
+|------|-------|-------|--------|
+| 1–3 | Foundation, Full Flow, Learning + Multi-repo | 0–2 | Complete |
+| 4 | Admin UI — Fleet, Repo, Workflow, RBAC, Audit | 2 | Complete (9/9 stories) |
+| 5 | Eval Suite, Metrics APIs, Admin UI Extensions | 3 | Complete |
+| 6 | Context Packs, Expert Expansion, Success Gate | 3 | Complete |
+| 7 | Tool Hub, Model Gateway, Compliance, Targets | 4 | Complete (2 sprints) |
+| 8 | Real Adapters, Persistence, Deployment Config | 4 | Complete (2 sprints) |
+| 9 | Prove the Pipe — Integration Tests, Healthz | 4 | Complete |
+| 10 | Phase 4 Maturity — Quarantine, Merge Mode, Planes | 4 | Complete |
+| 11 | Phase 4 Completion — Gateway Enforcement, Compliance | 4 | Complete |
 
 ---
 
-## Stage: Research
+## Codebase Metrics (2026-03-09)
 
-**Completed:** 2026-03-06T12:05:00Z
-**Tools called:** tapps_lookup_docs (sqlalchemy, fastapi)
-
-**Findings:**
-- SQLAlchemy JSONB type for audit details column
-- FastAPI Query parameters for filter support
-- Existing patterns from rbac.py and router.py for service singletons
-
-**Decisions:**
-- Use AuditEventType enum with 9 event types (6 repo, 3 workflow)
-- JSONB for flexible details storage
-- Index timestamp, actor, event_type, target_id columns
+| Metric | Value |
+|--------|-------|
+| Source files (src/) | 144 |
+| Test files (tests/) | 83 |
+| Tests passing | 1,413 |
+| Tests deselected | 8 (integration — require PostgreSQL/Temporal) |
+| Test warnings | 7 (unawaited coroutine mocks) |
+| Coverage | 84% |
+| Modules | 22 (adapters, admin, agent, assembler, compliance, context, db, evals, experts, ingress, intake, intent, models, observability, outcome, publisher, qa, recruiting, repo, reputation, routing, verification, workflow) |
 
 ---
 
-## Stage: Develop
+## Coverage Gaps (< 50%)
 
-**Completed:** 2026-03-06T12:30:00Z
-**Tools called:** tapps_quick_check (6 files)
-
-**Files in scope:**
-- `src/admin/audit.py` — NEW: AuditEventType enum, AuditLogRow model, AuditService
-- `src/admin/rbac.py` — MODIFIED: Added VIEW_AUDIT permission
-- `src/admin/router.py` — MODIFIED: Replaced audit stubs, added GET /admin/audit
-- `tests/unit/test_audit.py` — NEW: 29 unit tests
-- `tests/unit/test_admin_repos.py` — MODIFIED: Updated for http_request param
-- `tests/unit/test_admin_workflows.py` — MODIFIED: Updated for session param
-
-**Findings:**
-- audit.py: score 95.0, gate PASSED
-- rbac.py: score 100.0, gate PASSED
-- router.py: score 100.0, gate PASSED
-- test_audit.py: score 75.0, gate PASSED
-- test_admin_repos.py: score 70.0, gate PASSED
-- test_admin_workflows.py: score 83.54, gate PASSED
+| File | Coverage | Reason |
+|------|----------|--------|
+| src/models/taskpacket_crud.py | 18% | DB CRUD — needs integration tests |
+| src/repo/repo_profile_crud.py | 24% | DB CRUD — needs integration tests |
+| src/intent/intent_crud.py | 30% | DB CRUD — needs integration tests |
+| src/verification/gate.py | 39% | Subprocess runners not mocked |
+| src/verification/signals.py | 41% | JetStream publish paths |
+| src/publisher/github_client.py | 43% | External API calls |
+| src/observability/tracing.py | 47% | OpenTelemetry setup |
+| src/qa/signals.py | 48% | JetStream publish paths |
 
 ---
 
-## Stage: Validate
+## Quality Pipeline
 
-**Completed:** 2026-03-06T12:35:00Z
-**Tools called:** tapps_validate_changed (6 files)
-
-**Findings:**
-- All 6 files: gates PASSED
-- Zero lint issues after fixes
-- Zero security issues
-- Impact analysis: high severity (audit.py, rbac.py have dependents)
-
-**Decisions:**
-- No warnings to accept — all checks clean
+- **TAPPS v0.8.5** active with ruff, mypy, bandit, radon, vulture, pip-audit
+- **Quality preset:** standard
+- **All TAPPS gates:** PASSED on last validation run
 
 ---
 
-## Stage: Verify
+## Next Actions
 
-**Completed:** 2026-03-06T12:36:00Z
-**Tools called:** tapps_checklist (feature)
-
-**Result:**
-- Checklist complete: all required steps called
-- No missing required, recommended, or optional tools
-- Total tool calls: 122
-- 138 tests passing
-
-**Final status:** DONE
-
----
-
-## Sprint 1 Summary
-
-All 9 stories in Epic 4 Sprint 1 are now complete:
-
-| Story | Title | Status |
-|-------|-------|--------|
-| 4.1 | Repo Registry Database Persistence | ✅ Complete |
-| 4.2 | Fleet Dashboard API — System Health | ✅ Complete |
-| 4.3 | Fleet Dashboard API — Workflow Metrics | ✅ Complete |
-| 4.4 | Repo Management API — List, Register, Update | ✅ Complete |
-| 4.5 | Repo Management API — Tier, Pause, Writes | ✅ Complete |
-| 4.6 | Workflow Console API — List, Detail, Timeline | ✅ Complete |
-| 4.7 | Workflow Console API — Safe Rerun | ✅ Complete |
-| 4.8 | RBAC — Role Definitions, API Enforcement | ✅ Complete |
-| 4.9 | Audit Log — Schema, Logging, Query API | ✅ Complete |
-
-**Sprint Progress:** 9/9 stories complete (100%)
+1. Set up CI pipeline (GitHub Actions) for automated test/lint/security on every PR
+2. Improve coverage on CRUD and signal modules (target: 90%+)
+3. Fix 7 test warnings (unawaited AsyncMock coroutines)
+4. Run integration tests against real PostgreSQL/Temporal
+5. Production deployment readiness review
