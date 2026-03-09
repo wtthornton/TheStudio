@@ -55,10 +55,10 @@ class ContextInput:
 class ContextOutput:
     """Output of context enrichment."""
 
-    scope: dict[str, object] = field(default_factory=dict)
+    scope: dict[str, str] = field(default_factory=dict)
     risk_flags: dict[str, bool] = field(default_factory=dict)
     complexity_index: str = "low"
-    context_packs: list[dict[str, object]] = field(default_factory=list)
+    context_packs: list[dict[str, str]] = field(default_factory=list)
 
 
 @dataclass
@@ -94,8 +94,8 @@ class RouterInput:
 class RouterOutput:
     """Output of expert routing."""
 
-    selections: list[dict[str, object]] = field(default_factory=list)
-    recruiter_requests: list[dict[str, object]] = field(default_factory=list)
+    selections: list[dict[str, str]] = field(default_factory=list)
+    recruiter_requests: list[dict[str, str]] = field(default_factory=list)
     rationale: str = ""
 
 
@@ -104,7 +104,7 @@ class AssemblerInput:
     """Input for the assembler activity."""
 
     taskpacket_id: str
-    expert_outputs: list[dict[str, object]] = field(default_factory=list)
+    expert_outputs: list[dict[str, str]] = field(default_factory=list)
     intent_goal: str = ""
     intent_constraints: list[str] = field(default_factory=list)
     acceptance_criteria: list[str] = field(default_factory=list)
@@ -115,9 +115,9 @@ class AssemblerOutput:
     """Output of the assembler."""
 
     plan_steps: list[str] = field(default_factory=list)
-    conflicts: list[dict[str, object]] = field(default_factory=list)
-    qa_handoff: list[dict[str, object]] = field(default_factory=list)
-    provenance: dict[str, object] = field(default_factory=dict)
+    conflicts: list[dict[str, str]] = field(default_factory=list)
+    qa_handoff: list[dict[str, str]] = field(default_factory=list)
+    provenance: dict[str, str] = field(default_factory=dict)
     needs_intent_refinement: bool = False
 
 
@@ -156,7 +156,7 @@ class VerifyOutput:
     passed: bool = False
     loopback_triggered: bool = False
     exhausted: bool = False
-    checks: list[dict[str, object]] = field(default_factory=list)
+    checks: list[dict[str, str]] = field(default_factory=list)
 
 
 @dataclass
@@ -165,8 +165,8 @@ class QAInput:
 
     taskpacket_id: str
     acceptance_criteria: list[str] = field(default_factory=list)
-    qa_handoff: list[dict[str, object]] = field(default_factory=list)
-    evidence: dict[str, object] = field(default_factory=dict)
+    qa_handoff: list[dict[str, str]] = field(default_factory=list)
+    evidence: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -247,7 +247,7 @@ async def context_activity(params: ContextInput) -> ContextOutput:
     real database session. This stub returns sensible defaults.
     """
     return ContextOutput(
-        scope={"type": "feature", "components": []},
+        scope={"type": "feature", "components": ""},
         risk_flags={},
         complexity_index="low",
         context_packs=[],
@@ -295,7 +295,7 @@ async def router_activity(params: RouterInput) -> RouterOutput:
         recruiter_requests=[
             {
                 "expert_class": r.expert_class.value,
-                "capability_tags": r.capability_tags,
+                "capability_tags": ",".join(r.capability_tags),
                 "reason": r.reason,
             }
             for r in plan.recruiter_requests

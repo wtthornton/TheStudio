@@ -315,7 +315,7 @@ class TheStudioPipelineWorkflow:
                     taskpacket_id=params.taskpacket_id,
                     acceptance_criteria=intent_result.acceptance_criteria,
                     qa_handoff=assembler_result.qa_handoff,
-                    evidence={"files_changed": impl_result.files_changed},
+                    evidence={"files_changed": ",".join(impl_result.files_changed)},
                 ),
                 start_to_close_timeout=qa_policy.timeout,
                 retry_policy=qa_policy.to_retry_policy(),

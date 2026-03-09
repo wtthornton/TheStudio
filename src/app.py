@@ -29,3 +29,9 @@ app.include_router(compliance_router)
 app.include_router(admin_router)
 app.include_router(platform_router)
 app.include_router(ui_router)
+
+
+@app.get("/healthz")
+async def healthz() -> dict[str, str]:
+    """Unauthenticated liveness probe for load balancers and Docker health checks."""
+    return {"status": "ok"}
