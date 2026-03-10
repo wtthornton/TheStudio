@@ -341,7 +341,9 @@ class TestUIFoundation:
         assert resp.headers["location"] == "/admin/ui/dashboard"
 
     def test_root_requires_auth(self, client):
-        resp = client.get("/admin/ui/", follow_redirects=False)
+        with patch("src.settings.settings") as mock_settings:
+            mock_settings.llm_provider = "anthropic"
+            resp = client.get("/admin/ui/", follow_redirects=False)
         assert resp.status_code == 401
 
     def test_dashboard_page_renders(self, client):

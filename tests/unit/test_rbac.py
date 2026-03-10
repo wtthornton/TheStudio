@@ -6,7 +6,7 @@ Tests the RBAC module including:
 - FastAPI dependencies for role enforcement
 """
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import HTTPException, status
@@ -376,12 +376,14 @@ class TestGetCurrentUserId:
         mock_request.headers.get.assert_called_once_with("X-User-ID")
 
     def test_raises_401_when_no_header(self) -> None:
-        """get_current_user_id raises 401 when header missing."""
+        """get_current_user_id raises 401 when header missing (non-dev mode)."""
         mock_request = MagicMock()
         mock_request.headers.get.return_value = None
 
-        with pytest.raises(HTTPException) as exc_info:
-            get_current_user_id(mock_request)
+        with patch("src.settings.settings") as mock_settings:
+            mock_settings.llm_provider = "anthropic"
+            with pytest.raises(HTTPException) as exc_info:
+                get_current_user_id(mock_request)
 
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
 

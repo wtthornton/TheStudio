@@ -84,7 +84,10 @@ class TestRepoRepository:
             webhook_secret="secret123",
         )
 
-        with patch.object(repository, "get_by_full_name", return_value=None):
+        with (
+            patch.object(repository, "get_by_full_name", return_value=None),
+            patch("src.repo.repository.encrypt_secret", return_value="encrypted-stub"),
+        ):
             row = await repository.create(mock_session, create_data)
 
         assert row.owner == "test-org"
