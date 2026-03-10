@@ -37,6 +37,8 @@ dev = [
     "pip-audit>=2.7.0",
     "respx>=0.22.0",
     "bandit>=1.8.0",
+    "playwright>=1.49.0",
+    "pytest-playwright>=0.6.0",
 ]
 
 [build-system]
@@ -69,6 +71,7 @@ addopts = "-m 'not integration and not docker'"
 markers = [
     "integration: marks tests requiring external services (PostgreSQL, Temporal, etc.)",
     "docker: marks tests requiring the full Docker Compose stack (opt-in locally, mandatory in CI)",
+    "playwright: marks browser tests requiring Playwright and a running app (e.g. Docker stack)",
 ]
 filterwarnings = [
     "error::RuntimeWarning",

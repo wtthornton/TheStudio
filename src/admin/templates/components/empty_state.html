@@ -1,5 +1,5 @@
-{# Empty state: shown when a table or list has no data #}
-{% macro empty_state(message, icon="&#9744;") %}
+{# Empty state: shown when a table or list has no data. Use Unicode symbol (not HTML entity) to avoid double-escaping. #}
+{% macro empty_state(message, icon="☐") %}
 <div class="text-center py-12 text-gray-400">
     <p class="text-4xl mb-3">{{ icon }}</p>
     <p class="text-sm">{{ message }}</p>

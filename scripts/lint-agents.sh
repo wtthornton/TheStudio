@@ -38,6 +38,12 @@ lint_file() {
     local first_line
     first_line=$(head -n 1 "$file")
     if [[ "$first_line" != "---" ]]; then
+        # Canonical persona files (thestudioarc/personas/) are reference docs
+        # without YAML frontmatter — warn instead of error
+        if [[ "$file" == *"thestudioarc/personas/"* ]]; then
+            add_warn "$basename" "No YAML frontmatter (canonical persona — reference doc)"
+            return
+        fi
         add_error "$basename" "No YAML frontmatter (file must start with ---)"
         return
     fi

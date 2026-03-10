@@ -14,6 +14,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
+from markupsafe import escape
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
@@ -898,19 +899,21 @@ async def merge_mode_partial(request: Request, repo_id: str) -> Response:
         MergeMode.REQUIRE_REVIEW.value: "Require Review",
         MergeMode.AUTO_MERGE.value: "Auto Merge",
     }
+    safe_repo_id = escape(repo_id)
+    safe_mode_value = escape(mode.value)
     return HTMLResponse(
         f'<div class="flex items-center gap-2">'
         f'<label class="text-xs font-medium text-gray-500">Merge Mode:</label>'
-        f'<select hx-post="/admin/ui/partials/merge-mode/{repo_id}" '
+        f'<select hx-post="/admin/ui/partials/merge-mode/{safe_repo_id}" '
         f'hx-target="closest div" hx-swap="outerHTML" name="mode" '
         f'class="border border-gray-300 rounded px-2 py-1 text-sm">'
         + "".join(
-            f'<option value="{m}" {"selected" if m == mode.value else ""}>'
-            f'{mode_labels[m]}</option>'
+            f'<option value="{escape(m)}" {"selected" if m == mode.value else ""}>'
+            f'{escape(mode_labels[m])}</option>'
             for m in modes
         )
         + f'</select>'
-        f'<span class="text-xs text-gray-400">({mode.value})</span>'
+        f'<span class="text-xs text-gray-400">({safe_mode_value})</span>'
         f'</div>'
     )
 
@@ -933,15 +936,16 @@ async def merge_mode_update(request: Request, repo_id: str) -> Response:
         MergeMode.REQUIRE_REVIEW.value: "Require Review",
         MergeMode.AUTO_MERGE.value: "Auto Merge",
     }
+    safe_repo_id = escape(repo_id)
     return HTMLResponse(
         f'<div class="flex items-center gap-2">'
         f'<label class="text-xs font-medium text-gray-500">Merge Mode:</label>'
-        f'<select hx-post="/admin/ui/partials/merge-mode/{repo_id}" '
+        f'<select hx-post="/admin/ui/partials/merge-mode/{safe_repo_id}" '
         f'hx-target="closest div" hx-swap="outerHTML" name="mode" '
         f'class="border border-gray-300 rounded px-2 py-1 text-sm">'
         + "".join(
-            f'<option value="{m}" {"selected" if m == mode.value else ""}>'
-            f'{mode_labels[m]}</option>'
+            f'<option value="{escape(m)}" {"selected" if m == mode.value else ""}>'
+            f'{escape(mode_labels[m])}</option>'
             for m in modes
         )
         + '</select>'
@@ -1039,13 +1043,18 @@ async def promotion_history_partial(request: Request, repo_id: str) -> Response:
     for t in items:
         score_str = f'{t["compliance_score"]:.0f}' if t.get("compliance_score") is not None else "-"
         remediation_count = len(t.get("remediation_items", []))
+        from_tier = escape(str(t.get("from_tier", "")))
+        to_tier = escape(str(t.get("to_tier", "")))
+        triggered_by = escape(str(t.get("triggered_by", "")))
+        reason = escape(str(t.get("reason", "")))
+        transitioned_at = escape(str(t.get("transitioned_at") or "")[:19])
         rows.append(
             f'<tr class="hover:bg-gray-50">'
-            f'<td class="py-2 pr-4 text-xs">{t["transitioned_at"][:19]}</td>'
-            f'<td class="py-2 pr-4">{t["from_tier"]} &rarr; {t["to_tier"]}</td>'
-            f'<td class="py-2 pr-4">{t["triggered_by"]}</td>'
+            f'<td class="py-2 pr-4 text-xs">{transitioned_at}</td>'
+            f'<td class="py-2 pr-4">{from_tier} &rarr; {to_tier}</td>'
+            f'<td class="py-2 pr-4">{triggered_by}</td>'
             f'<td class="py-2 pr-4">{score_str}</td>'
-            f'<td class="py-2 pr-4 text-gray-500">{t["reason"]}</td>'
+            f'<td class="py-2 pr-4 text-gray-500">{reason}</td>'
             f'<td class="py-2">{remediation_count} item(s)</td>'
             f'</tr>'
         )
@@ -1159,7 +1168,7 @@ async def partial_settings_api_keys_reveal(request: Request, key: str) -> Respon
 
     logger.info("Settings reveal: user=%s key=%s", request.state.user_id, key)
     return HTMLResponse(
-        f'<code class="text-sm text-gray-600 bg-gray-50 px-2 py-1 rounded">{sv.value}</code>'
+        f'<code class="text-sm text-gray-600 bg-gray-50 px-2 py-1 rounded">{escape(sv.value)}</code>'
     )
 
 
