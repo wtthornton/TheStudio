@@ -1,0 +1,14 @@
+# CLAUDE.local.md — Personal Overrides (do not commit)
+
+## Local Environment
+- Python: /path/to/your/venv
+- Database: localhost:5432
+- Temporal: localhost:7233
+
+## Personal Preferences
+- Preferred test runner flags: --verbose --tb=short
+- Preferred ruff flags: --fix
+
+## Notes
+- Copy this file to `CLAUDE.local.md` and customize for your environment
+- `CLAUDE.local.md` is gitignored — your overrides won't affect others
