@@ -14,6 +14,24 @@
       "command": "npx",
       "args": ["-y", "@upstash/context7-mcp"],
       "instructions": "Look up library documentation with version-specific context. Use before writing code that calls external library APIs."
+    },
+    "docker-mcp": {
+      "command": "docker",
+      "args": [
+        "mcp",
+        "gateway",
+        "run"
+      ]
+    },
+    "docs-mcp": {
+      "command": "C:\\cursor\\TappMCP\\dist\\docsmcp.exe",
+      "args": [
+        "serve"
+      ],
+      "env": {
+        "DOCS_MCP_PROJECT_ROOT": "."
+      },
+      "instructions": "Documentation audit and generation. 14 tools: project scan, drift/completeness/freshness checks, and generators for README, CHANGELOG, API docs, CONTRIBUTING, onboarding, epics, stories, PRDs, ADRs, and diagrams."
     }
   }
 }
