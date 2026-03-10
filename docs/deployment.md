@@ -183,6 +183,13 @@ OK:   No known insecure defaults found in .env
 All checks passed. Ready to deploy.
 ```
 
+### Run Temporal schema setup (first time only)
+```bash
+bash temporal-schema-setup.sh
+```
+
+This creates the Temporal database and applies schema migrations. It's idempotent — safe to run again if you're unsure whether it's been done. On subsequent deploys, the `temporal-migrations` init container handles this automatically during `docker compose up`.
+
 ### Start the stack
 ```bash
 docker compose -f docker-compose.prod.yml up -d
@@ -336,8 +343,13 @@ docker compose -f docker-compose.prod.yml logs app --tail=50
 
 ### Temporal schema errors
 ```bash
-# Re-run migrations
+# Re-run migrations (option A: via compose)
 docker compose -f docker-compose.prod.yml run --rm temporal-migrations
+
+# Re-run migrations (option B: via helper script)
+bash temporal-schema-setup.sh
+
+# Check logs
 docker compose -f docker-compose.prod.yml logs temporal --tail=50
 ```
 

@@ -60,8 +60,8 @@ if [ -z "${THESTUDIO_ENCRYPTION_KEY:-}" ]; then
     fail "THESTUDIO_ENCRYPTION_KEY is not set"
 elif [ "${THESTUDIO_ENCRYPTION_KEY}" = "hWaGRA3AtIn5jP9TYc3Vu56PS9JQHkFpcekh9PWg7Ac=" ]; then
     fail "THESTUDIO_ENCRYPTION_KEY is set to the insecure dev default"
-elif ! echo "${THESTUDIO_ENCRYPTION_KEY}" | base64 -d > /dev/null 2>&1; then
-    fail "THESTUDIO_ENCRYPTION_KEY is not valid base64"
+elif ! echo "${THESTUDIO_ENCRYPTION_KEY}" | tr '_-' '/+' | base64 -d > /dev/null 2>&1; then
+    fail "THESTUDIO_ENCRYPTION_KEY is not valid base64 (Fernet uses URL-safe base64)"
 else
     pass "THESTUDIO_ENCRYPTION_KEY is set and valid base64"
 fi

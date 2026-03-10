@@ -80,7 +80,7 @@ services:
       - thestudio-net
 
   temporal-migrations:
-    image: temporalio/admin-tools:1.24.3
+    image: temporalio/admin-tools:1.26.2
     depends_on:
       postgres:
         condition: service_healthy
@@ -95,32 +95,35 @@ services:
       - -c
       - |
         set -e
+        TOOL="temporal-sql-tool --plugin postgres12 --ep postgres --port 5432 --user thestudio --password $$POSTGRES_PWD"
+
         echo "Creating temporal database (if not exists)..."
-        temporal-sql-tool \
-          --plugin postgres \
-          --ep postgres --port 5432 \
-          --user thestudio --password "$$POSTGRES_PWD" \
-          create-db --db-name temporal || true
-        echo "Setting up / migrating schema..."
-        temporal-sql-tool \
-          --plugin postgres \
-          --ep postgres --port 5432 \
-          --user thestudio --password "$$POSTGRES_PWD" \
-          --db temporal \
-          setup-schema -v 0.0
-        temporal-sql-tool \
-          --plugin postgres \
-          --ep postgres --port 5432 \
-          --user thestudio --password "$$POSTGRES_PWD" \
-          --db temporal \
-          update-schema -d /etc/temporal/schema/postgresql/v12/temporal/versioned
+        $$TOOL --database temporal create-database --defaultdb thestudio || true
+
+        echo "Setting up temporal schema..."
+        $$TOOL --database temporal setup-schema -v 0.0 || true
+
+        echo "Migrating temporal schema..."
+        $$TOOL --database temporal update-schema \
+          -d /etc/temporal/schema/postgresql/v12/temporal/versioned
+
+        echo "Creating temporal_visibility database (if not exists)..."
+        $$TOOL --database temporal_visibility create-database --defaultdb thestudio || true
+
+        echo "Setting up visibility schema..."
+        $$TOOL --database temporal_visibility setup-schema -v 0.0 || true
+
+        echo "Migrating visibility schema..."
+        $$TOOL --database temporal_visibility update-schema \
+          -d /etc/temporal/schema/postgresql/v12/visibility/versioned
+
         echo "Temporal schema ready."
     restart: "no"
     networks:
       - thestudio-net
 
   temporal:
-    image: temporalio/server:1.24.3
+    image: temporalio/server:1.26.2
     environment:
       - DB=postgres12
       - DB_PORT=5432
@@ -128,6 +131,7 @@ services:
       - POSTGRES_PWD=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
       - POSTGRES_SEEDS=postgres
       - DBNAME=temporal
+      - VISIBILITY_DBNAME=temporal_visibility
     depends_on:
       postgres:
         condition: service_healthy
