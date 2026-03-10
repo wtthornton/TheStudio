@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "tapps-mcp": {
-      "command": "C:\\Users\\tappt\\.local\\bin\\tapps-mcp.exe",
+      "command": "tapps-mcp",
       "args": [
         "serve"
       ],
@@ -9,6 +9,11 @@
         "TAPPS_MCP_PROJECT_ROOT": "."
       },
       "instructions": "Code quality scoring (0-100 across 7 categories), security scanning (Bandit + secret detection), quality gates (pass/fail against configurable presets), documentation lookup, domain expert consultation, and project profiling for Python projects."
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"],
+      "instructions": "Look up library documentation with version-specific context. Use before writing code that calls external library APIs."
     }
   }
 }

@@ -16,7 +16,7 @@ build/
 .tapps-mcp/.validation-progress.json
 
 # IDE local
-.claude/settings.json
+.claude/settings.local.json
 
 # Environment
 .env
@@ -28,3 +28,6 @@ infra/backups/
 # Coverage
 .coverage
 htmlcov/
+
+# Claude Code local overrides
+CLAUDE.local.md

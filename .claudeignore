@@ -1,0 +1,63 @@
+# Dependencies & virtual environments
+node_modules/
+.venv/
+venv/
+vendor/
+__pycache__/
+*.pyc
+*.pyo
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+.eggs/
+
+# Lock files
+*.lock
+poetry.lock
+package-lock.json
+pnpm-lock.yaml
+
+# IDE & editor
+.cursor/
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test & quality caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+coverage/
+htmlcov/
+.coverage
+
+# Logs & temp
+*.log
+tmp/
+.tmp/
+
+# Sensitive files
+.env
+.env.*
+**/credentials*
+**/secrets*
+
+# Assets Claude doesn't need
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.ico
+*.woff
+*.woff2
+
+# TappsMCP internal state
+.tapps-mcp/
