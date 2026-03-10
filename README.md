@@ -50,11 +50,31 @@ pip install -e '.[dev]'
 # Run tests
 pytest
 
-# Start the server
+# Start the server (local dev)
 uvicorn src.app:app --reload
+```
 
-# Run with Docker
-docker-compose up
+### Docker Deployment
+
+```bash
+cd infra
+cp .env.example .env
+# Edit .env — set THESTUDIO_ENCRYPTION_KEY (required), POSTGRES_PASSWORD, etc.
+
+# Development (mock providers)
+docker compose up -d
+
+# Production (real providers, resource limits)
+docker compose -f docker-compose.prod.yml up -d
+```
+
+**Services:** app (`:8000`), postgres (`:5434`), temporal (`:7233`), temporal-ui (`:8088`), nats (`:4222`)
+
+**Health checks:** `/healthz` (liveness), `/readyz` (DB connectivity)
+
+**Database backup:**
+```bash
+./backup-db.sh  # saves to infra/backups/, rotates last 30
 ```
 
 ## Project Structure

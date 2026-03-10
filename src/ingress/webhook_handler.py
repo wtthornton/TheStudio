@@ -8,8 +8,6 @@ from slowapi.util import get_remote_address
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.connection import get_session
-
-_limiter = Limiter(key_func=get_remote_address)
 from src.ingress.dedupe import is_duplicate
 from src.ingress.signature import validate_signature
 from src.ingress.workflow_trigger import start_workflow
@@ -28,6 +26,7 @@ from src.repo.repo_profile_crud import get_webhook_secret
 logger = logging.getLogger(__name__)
 router = APIRouter()
 tracer = get_tracer("thestudio.ingress")
+_limiter = Limiter(key_func=get_remote_address)
 
 
 @router.post("/webhook/github")

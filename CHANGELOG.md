@@ -8,6 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Production deployment hardening:** Docker entrypoint with auto-migration, unified migration runner (15 migrations), user_roles migration (015), readiness probe (`/readyz`), graceful shutdown (30s), production docker-compose with resource limits
+- **Security:** UI auth enforcement on all Admin routes, encryption key validation (rejects placeholder in postgres mode), rate limiting (60/min global, 30/min webhook via slowapi), Tailwind CSS CDN fix
+- **CI:** Integration test job with PostgreSQL service container, Python version aligned to 3.12
+- **Test coverage:** 7 low-coverage files brought to 100% (+155 tests, 1,395 → 1,550 total, 80% → 83% coverage)
+- **Ops:** Database backup script with 30-backup rotation, production .env template
+
 - **Epic 12 — Admin Settings & Configuration UI:** Settings page with 5 sections (API Keys, Infrastructure, Feature Flags, Agent Config, Secrets), Fernet encryption at rest, RBAC enforcement, audit logging, hot reload, input validation, key rotation
 - **Post-roadmap hardening:** CI pipeline, security fixes, docs sync, quality debt cleanup (`e26ead1`)
 - **Epic 11 — Phase 4 Completion:** Gateway enforcement, compliance wiring, roadmap exit (`781def5`)
