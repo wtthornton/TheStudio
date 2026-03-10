@@ -38,6 +38,7 @@ MIGRATIONS = [
     "src.db.migrations.013_model_audit",
     "src.db.migrations.014_settings",
     "src.db.migrations.015_user_roles",
+    "src.db.migrations.016_audit_log",
 ]
 
 

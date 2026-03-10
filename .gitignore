@@ -17,6 +17,11 @@ build/
 
 # IDE local
 .claude/settings.local.json
+.claude/agent-memory/
+
+# TAPPS cache
+.tapps-mcp-cache/
+.tapps-mcp/.report-progress.json
 
 # Environment
 .env

@@ -21,6 +21,7 @@ from src.repo.repo_profile import (
     RepoStatus,
     RepoTier,
 )
+from src.repo.secrets import encrypt_secret
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +81,7 @@ class RepoRepository:
             tier=data.tier,
             required_checks=data.required_checks,
             tool_allowlist=data.tool_allowlist,
-            webhook_secret_encrypted=data.webhook_secret,
+            webhook_secret_encrypted=encrypt_secret(data.webhook_secret),
             status=RepoStatus.ACTIVE,
             writes_enabled=True,
         )

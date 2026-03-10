@@ -44,7 +44,12 @@ class RepoProfileRow(Base):
     installation_id: Mapped[int] = mapped_column(nullable=False)
     default_branch: Mapped[str] = mapped_column(String(255), nullable=False, default="main")
     tier: Mapped[RepoTier] = mapped_column(
-        Enum(RepoTier, name="repo_tier", create_constraint=True),
+        Enum(
+            RepoTier,
+            name="repo_tier",
+            create_constraint=True,
+            values_callable=lambda e: [m.value for m in e],
+        ),
         nullable=False,
         default=RepoTier.OBSERVE,
     )
@@ -52,7 +57,12 @@ class RepoProfileRow(Base):
     tool_allowlist: Mapped[list[str]] = mapped_column(JSON, nullable=False)
     webhook_secret_encrypted: Mapped[str] = mapped_column(String(512), nullable=False)
     status: Mapped[RepoStatus] = mapped_column(
-        Enum(RepoStatus, name="repo_status", create_constraint=True),
+        Enum(
+            RepoStatus,
+            name="repo_status",
+            create_constraint=True,
+            values_callable=lambda e: [m.value for m in e],
+        ),
         nullable=False,
         default=RepoStatus.ACTIVE,
     )

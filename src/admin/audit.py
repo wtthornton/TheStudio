@@ -74,7 +74,12 @@ class AuditLogRow(Base):
     )
     actor: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     event_type: Mapped[AuditEventType] = mapped_column(
-        Enum(AuditEventType, name="audit_event_type", create_constraint=True),
+        Enum(
+            AuditEventType,
+            name="audit_event_type",
+            create_constraint=True,
+            values_callable=lambda e: [m.value for m in e],
+        ),
         nullable=False,
         index=True,
     )

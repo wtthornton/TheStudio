@@ -42,7 +42,12 @@ class SettingRow(Base):
     value: Mapped[str] = mapped_column(Text, nullable=False)
     encrypted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     category: Mapped[SettingCategory] = mapped_column(
-        Enum(SettingCategory, name="setting_category", create_constraint=True),
+        Enum(
+            SettingCategory,
+            name="setting_category",
+            create_constraint=True,
+            values_callable=lambda e: [m.value for m in e],
+        ),
         nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(

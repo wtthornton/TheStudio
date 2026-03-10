@@ -62,7 +62,12 @@ class TaskPacketRow(Base):
     delivery_id: Mapped[str] = mapped_column(String(255), nullable=False)
     correlation_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     status: Mapped[TaskPacketStatus] = mapped_column(
-        Enum(TaskPacketStatus, name="taskpacket_status", create_constraint=True),
+        Enum(
+            TaskPacketStatus,
+            name="taskpacket_status",
+            create_constraint=True,
+            values_callable=lambda e: [m.value for m in e],
+        ),
         nullable=False,
         default=TaskPacketStatus.RECEIVED,
     )

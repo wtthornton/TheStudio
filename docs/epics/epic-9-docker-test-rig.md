@@ -2,7 +2,7 @@
 
 **Author:** Saga
 **Date:** 2026-03-10
-**Status:** Approved -- Meridian review passed (Round 2)
+**Status:** Updated -- Meridian Round 3 fixes applied
 
 ---
 
@@ -37,16 +37,16 @@ The scope is narrow on purpose. This epic does not rewrite existing tests or add
 A single script or test module confirms all four Docker Compose services (PostgreSQL, Temporal, NATS, app) are healthy and accepting connections. The script exits 0 on success, non-zero with diagnostic output on failure. Timeout is configurable with a default of 120 seconds.
 
 **AC-2: API smoke tests pass against the running stack.**
-A test suite issues real HTTP requests to the deployed app container (port 8000) and verifies: `/healthz` returns 200 with `{"status": "ok"}`, at least one admin endpoint responds with a valid status code, and a POST to the webhook intake endpoint with a well-formed payload returns 200/202 (not a connection error or 500).
+A test suite issues real HTTP requests to the deployed app container (port 8000) and verifies: `/healthz` returns 200 with `{"status": "ok"}`, at least one admin endpoint responds with a valid status code, and a POST to the webhook intake endpoint with a well-formed payload returns 200 or 201 (not a connection error or 500).
 
 **AC-3: Full pipeline smoke proves end-to-end data flow.**
-A test sends a webhook payload (with valid HMAC signature) through the deployed HTTP layer and then verifies -- via admin API query -- that a TaskPacket was created. (The dev stack uses `STORE_BACKEND=memory`, so verification is via API, not direct database query.) This proves the intake path works through the real network, not just in-process TestClient wiring.
+A test sends a webhook payload (with valid HMAC signature) through the deployed HTTP layer and then verifies -- via admin API query -- that a TaskPacket was created. (The dev stack uses `THESTUDIO_STORE_BACKEND=memory`, so verification is via API, not direct database query.) This proves the intake path works through the real network, not just in-process TestClient wiring.
 
 **AC-4: Docker build and startup are validated before merge.**
 A CI job (GitHub Actions) builds the Docker image from the Dockerfile, starts the full Compose stack, runs the smoke tests from AC-1 and AC-2, and tears down. This job runs on every PR and on pushes to master. Failure blocks merge.
 
 **AC-5: Container lifecycle resilience is tested.**
-Tests verify: (a) the app container shuts down gracefully on SIGTERM without data corruption, (b) the app recovers and passes health checks after a restart, and (c) the app behaves predictably (returns appropriate error responses or retries) when a dependency container (e.g., PostgreSQL) is temporarily stopped and restarted.
+Tests verify: (a) the app container shuts down gracefully on SIGTERM without data corruption, (b) the app recovers and passes health checks after a restart, and (c) the app behaves predictably (returns appropriate error responses or retries) when a dependency container (Temporal) is temporarily stopped and restarted. Note: the dev stack uses `THESTUDIO_STORE_BACKEND=memory`, so PostgreSQL is not exercised by most app endpoints — Temporal is the more meaningful dependency to test for resilience.
 
 **AC-6: All stack tests are isolated from unit/integration test runs.**
 Stack tests are marked (e.g., `@pytest.mark.docker`) or placed in a separate directory (e.g., `tests/docker/`) so that `pytest` without markers continues to run only unit and integration tests. The Docker test rig is opt-in locally, mandatory in CI.
@@ -91,9 +91,9 @@ Stack tests are marked (e.g., `@pytest.mark.docker`) or placed in a separate dir
 |--------|--------|-------------|
 | **Stack smoke pass rate in CI** | 100% on green builds (no flakes in 20 consecutive runs) | CI job history |
 | **Time from PR open to stack test result** | Under 10 minutes (build + startup + test + teardown) | CI job duration |
-| **Deployment bugs caught before merge** | At least 1 real issue caught in first 30 days | Issue tracker, PR comments |
-| **Docker-related bug escapes** | Zero Docker build/startup regressions reaching manual testing after rig is in place | Issue tracker labels (`docker`, `deployment`) |
-| **CI reliability** | Stack test job flake rate below 5% over rolling 4-week window | CI analytics |
+| **Smoke test coverage** | All 4 services health-checked, 3+ API paths tested, 1 end-to-end pipeline path proven | Test file inspection |
+| **Docker-related bug escapes** | Zero Docker build/startup regressions reaching manual testing after rig is in place | Issue tracker labels (`docker`, `deployment`) — team must label Docker-related issues consistently |
+| **CI reliability** | Stack test job flake rate below 5% over rolling 4-week window | GitHub Actions job re-run history (manual review monthly) or `gh run list --workflow` script |
 
 ## 8. Context & Assumptions
 
@@ -102,8 +102,10 @@ Stack tests are marked (e.g., `@pytest.mark.docker`) or placed in a separate dir
 - The Dockerfile at the repo root builds a working image. If it does not, fixing the Dockerfile is in scope for Story 9.4.
 - The app exposes `/healthz` as an unauthenticated liveness endpoint (confirmed in existing code).
 - The webhook intake endpoint requires valid `X-GitHub-Delivery` and `X-Hub-Signature-256` headers, plus a registered repo profile with a stored webhook secret. Tests must seed a repo profile with a known webhook secret and compute valid HMAC-SHA256 signatures for test payloads. This is a setup step, not a code change — the existing `src/ingress/signature.py` validation stays as-is.
+- **Admin API authentication in dev mode:** When `THESTUDIO_LLM_PROVIDER=mock` (set in `docker-compose.dev.yml`), the RBAC middleware (`src/admin/rbac.py`) auto-authenticates requests without an `X-User-ID` header as `dev-admin@localhost` with ADMIN role. This means bare `httpx` calls to admin endpoints (e.g., `POST /admin/repos`, `GET /admin/workflows`) work without any auth setup. Tests should NOT send `X-User-ID` headers — rely on the dev-mode auto-auth.
+- **Webhook secret is pinned in `docker-compose.dev.yml`.** The `THESTUDIO_WEBHOOK_SECRET=test-webhook-secret` env var must be added to the app service environment in `docker-compose.dev.yml` (not in a separate override file). All tests compute HMAC signatures using this known value.
 - GitHub Actions `ubuntu-latest` runners have Docker and Docker Compose available.
-- `httpx` is available in the dev dependency set for making HTTP requests from test code.
+- `httpx` is available as a main dependency for making HTTP requests from test code.
 
 ### Dependencies
 - **Epic 8 deliverables (Status: Sprint 2 complete, all stories delivered):** Docker Compose file, Dockerfile, health checks are functional. Owner: Backend Engineer. No blockers.
@@ -154,7 +156,7 @@ Stories are ordered as vertical slices. Each story delivers testable value indep
 - Test cases:
   - `GET /healthz` returns 200 with `{"status": "ok"}`.
   - `GET /admin/health` returns 200 (or appropriate admin endpoint).
-  - `POST /webhook/github` with a valid payload, `X-GitHub-Delivery` header, and valid `X-Hub-Signature-256` (computed with a known test webhook secret from a seeded repo profile) returns 200 or 202 (not 500, not connection refused). See Story 9.3 for full webhook setup details.
+  - `POST /webhook/github` with a valid payload, `X-GitHub-Delivery` header, and valid `X-Hub-Signature-256` (computed with a known test webhook secret from a seeded repo profile) returns 200 or 201 (not 500, not connection refused). See Story 9.3 for full webhook setup details.
   - `GET /docs` (OpenAPI) returns 200.
 - All tests depend on the readiness fixture from Story 9.1.
 
@@ -171,9 +173,9 @@ Stories are ordered as vertical slices. Each story delivers testable value indep
 
 **Details:**
 - Create `tests/docker/test_pipeline_smoke.py` marked with `@pytest.mark.docker`.
-- Create a `tests/docker/conftest.py` fixture that registers a test repo via `POST /admin/repos`. The app container must have `THESTUDIO_WEBHOOK_SECRET=test-webhook-secret` set in its environment (add to `docker-compose.dev.yml` or a test override). Registered repos inherit this secret. Provide a helper that computes valid `X-Hub-Signature-256` headers using `hmac.new(secret, body, sha256)`.
+- Create a `tests/docker/conftest.py` fixture that registers a test repo via `POST /admin/repos` (no auth headers needed — dev-mode auto-auth grants ADMIN when `THESTUDIO_LLM_PROVIDER=mock`; see Assumptions). The app container has `THESTUDIO_WEBHOOK_SECRET=test-webhook-secret` set in `docker-compose.dev.yml`. Registered repos inherit this secret. Provide a helper that computes valid `X-Hub-Signature-256` headers using `hmac.new(secret, body, sha256)`.
 - Send a well-formed GitHub webhook payload via `httpx.post()` to the deployed app, including required headers (`X-GitHub-Delivery`, `X-GitHub-Event`, `X-Hub-Signature-256`).
-- After the POST, verify the TaskPacket was created by querying the admin API endpoint (`GET /admin/workflows` — confirmed at `src/admin/router.py`). Note: `docker-compose.dev.yml` sets `THESTUDIO_STORE_BACKEND=memory`, so TaskPackets are stored in-memory, not PostgreSQL. Do NOT attempt direct database queries for verification — use only HTTP API responses.
+- After the POST, verify the TaskPacket was created by querying the admin API endpoint (`GET /admin/workflows` — confirmed at `src/admin/router.py`; no auth headers needed in dev mode). Note: `docker-compose.dev.yml` sets `THESTUDIO_STORE_BACKEND=memory`, so TaskPackets are stored in-memory, not PostgreSQL. Do NOT attempt direct database queries for verification — use only HTTP API responses.
 - Assert: TaskPacket exists in the API response, has expected repo/issue fields, status is not "error".
 
 **Acceptance Criteria:**
@@ -212,13 +214,13 @@ Stories are ordered as vertical slices. Each story delivers testable value indep
 - Test cases:
   - **Graceful shutdown:** Send SIGTERM to the app container, verify it exits with code 0 within 10 seconds.
   - **Restart recovery:** Restart the app container (`docker compose restart app`), wait for health check, verify `/healthz` returns 200.
-  - **Dependency failure:** Stop the PostgreSQL container, verify the app returns 503 or appropriate error on a database-dependent endpoint (not a crash/hang), then restart PostgreSQL and verify the app recovers.
+  - **Dependency failure:** Stop the Temporal container, send a webhook payload that would trigger a workflow, verify the app returns an error response or logs the failure (not a crash/hang), then restart Temporal and verify the app recovers and passes health checks. Note: Temporal is the correct dependency to test here because `THESTUDIO_STORE_BACKEND=memory` means most endpoints do not use PostgreSQL.
 - Tests use `subprocess` or `docker` Python SDK to control containers.
 
 **Acceptance Criteria:**
 - Graceful shutdown test confirms exit code 0 after SIGTERM.
 - Restart recovery test confirms healthy status within 60 seconds of restart.
-- Dependency failure test confirms the app does not crash when PostgreSQL is unavailable.
+- Dependency failure test confirms the app does not crash when Temporal is unavailable.
 - All lifecycle tests are idempotent and leave the stack in a running state for subsequent tests.
 
 ### Story 9.6: CI Integration & Documentation
@@ -260,3 +262,15 @@ All 7 questions passed. Two should-fix items addressed inline:
 - Pinned webhook secret seeding to `THESTUDIO_WEBHOOK_SECRET` env var + `POST /admin/repos`
 - Removed stale "optional DB query" reference from Story 9.3
 - Pinned endpoint name to `GET /admin/workflows` (confirmed in source)
+
+### Round 3: FAIL -- Fixable (3 must-fix, 4 should-fix)
+
+| # | Type | Issue | Resolution |
+|---|------|-------|------------|
+| 1 | Must-fix | AC-2 said "200/202" but webhook handler returns 200/201, never 202 | Fixed to "200 or 201" (matches `src/ingress/webhook_handler.py`) |
+| 2 | Must-fix | Admin API auth not addressed — `POST /admin/repos` and `GET /admin/workflows` require RBAC | Documented dev-mode auto-auth: when `THESTUDIO_LLM_PROVIDER=mock`, RBAC auto-authenticates bare requests as `dev-admin@localhost` with ADMIN role (`src/admin/rbac.py:412`). No auth headers needed in tests. Added to Assumptions and Story 9.3 details. |
+| 3 | Must-fix | AC-5 dependency failure test untestable with `THESTUDIO_STORE_BACKEND=memory` — stopping PostgreSQL has no observable effect | Changed dependency-failure target from PostgreSQL to Temporal (the meaningful runtime dependency under memory store) in AC-5 and Story 9.5 |
+| 4 | Should-fix | `THESTUDIO_WEBHOOK_SECRET` location left ambiguous ("docker-compose.dev.yml or test override") | Pinned to `docker-compose.dev.yml` only — no override file |
+| 5 | Should-fix | "At least 1 real issue caught in 30 days" is a hope, not a controllable metric | Replaced with "All 4 services health-checked, 3+ API paths tested, 1 end-to-end pipeline path proven" |
+| 6 | Should-fix | Flake rate metric needs instrumentation plan | Added measurement method: `gh run list --workflow` script or manual monthly review of re-run history |
+| 7 | Should-fix | AC-3 used `STORE_BACKEND=memory` (no prefix) inconsistently with actual env var | Standardized to `THESTUDIO_STORE_BACKEND` throughout |

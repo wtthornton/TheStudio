@@ -60,7 +60,12 @@ class ExpertRow(Base):
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
     name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     expert_class: Mapped[ExpertClass] = mapped_column(
-        Enum(ExpertClass, name="expert_class", create_constraint=True),
+        Enum(
+            ExpertClass,
+            name="expert_class",
+            create_constraint=True,
+            values_callable=lambda e: [m.value for m in e],
+        ),
         nullable=False,
     )
     capability_tags: Mapped[list[str]] = mapped_column(
@@ -69,12 +74,22 @@ class ExpertRow(Base):
     scope_description: Mapped[str] = mapped_column(String(2000), nullable=False)
     tool_policy: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     trust_tier: Mapped[TrustTier] = mapped_column(
-        Enum(TrustTier, name="trust_tier", create_constraint=True),
+        Enum(
+            TrustTier,
+            name="trust_tier",
+            create_constraint=True,
+            values_callable=lambda e: [m.value for m in e],
+        ),
         nullable=False,
         default=TrustTier.SHADOW,
     )
     lifecycle_state: Mapped[LifecycleState] = mapped_column(
-        Enum(LifecycleState, name="lifecycle_state", create_constraint=True),
+        Enum(
+            LifecycleState,
+            name="lifecycle_state",
+            create_constraint=True,
+            values_callable=lambda e: [m.value for m in e],
+        ),
         nullable=False,
         default=LifecycleState.ACTIVE,
     )

@@ -130,7 +130,12 @@ class UserRoleRow(Base):
     )
     user_id: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     role: Mapped[Role] = mapped_column(
-        Enum(Role, name="user_role", create_constraint=True),
+        Enum(
+            Role,
+            name="user_role",
+            create_constraint=True,
+            values_callable=lambda e: [m.value for m in e],
+        ),
         nullable=False,
         default=Role.VIEWER,
     )

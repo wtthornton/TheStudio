@@ -64,6 +64,8 @@ services:
       THESTUDIO_STORE_BACKEND: "memory"
       THESTUDIO_LLM_PROVIDER: "mock"
       THESTUDIO_GITHUB_PROVIDER: "mock"
+      THESTUDIO_WEBHOOK_SECRET: "test-webhook-secret"
+      THESTUDIO_ENCRYPTION_KEY: "hWaGRA3AtIn5jP9TYc3Vu56PS9JQHkFpcekh9PWg7Ac="
       THESTUDIO_OTEL_EXPORTER: "console"
     depends_on:
       postgres:
