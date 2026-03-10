@@ -386,11 +386,15 @@ def set_rbac_service(service: RBACService | None) -> None:
     _rbac_service = service
 
 
+DEV_MODE_USER_ID = "dev-admin@localhost"
+
+
 def get_current_user_id(request: Request) -> str:
     """Extract current user ID from request.
 
     In production, this would extract from JWT token or OAuth session.
     For now, uses X-User-ID header for testing.
+    In dev mode (llm_provider=mock), auto-authenticates as a local admin.
 
     Args:
         request: FastAPI request.
@@ -399,10 +403,14 @@ def get_current_user_id(request: Request) -> str:
         User ID string.
 
     Raises:
-        HTTPException 401: If no user ID found.
+        HTTPException 401: If no user ID found (production only).
     """
     user_id = request.headers.get("X-User-ID")
     if not user_id:
+        from src.settings import settings
+
+        if settings.llm_provider == "mock":
+            return DEV_MODE_USER_ID
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication required",
@@ -416,6 +424,8 @@ async def get_current_user_role(
 ) -> Role | None:
     """Get current user's role from database.
 
+    In dev mode, auto-provisions the dev admin user with ADMIN role.
+
     Args:
         user_id: Current user ID.
         session: Database session.
@@ -424,7 +434,22 @@ async def get_current_user_role(
         User's role or None if no role assigned.
     """
     service = get_rbac_service()
-    return await service.get_user_role(session, user_id)
+    role = await service.get_user_role(session, user_id)
+
+    if role is None and user_id == DEV_MODE_USER_ID:
+        from src.settings import settings
+
+        if settings.llm_provider == "mock":
+            logger.info("Dev mode: auto-provisioning admin role for %s", user_id)
+            await service.create_user_role(
+                session,
+                UserRoleCreate(user_id=user_id, role=Role.ADMIN),
+                created_by="dev-mode-auto",
+            )
+            await session.commit()
+            return Role.ADMIN
+
+    return role
 
 
 def require_permission(permission: Permission):

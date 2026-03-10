@@ -55,13 +55,21 @@ async def _require_ui_auth(request: Request) -> None:
 
     Reads X-User-ID header, resolves role from DB, and stores both in
     request.state for downstream use by _base_context.
+    In dev mode (llm_provider=mock), auto-authenticates as local admin.
     """
+    from src.admin.rbac import DEV_MODE_USER_ID
+
     user_id = request.headers.get("X-User-ID")
     if not user_id:
-        raise HTTPException(
-            status_code=401,
-            detail="Authentication required",
-        )
+        from src.settings import settings
+
+        if settings.llm_provider == "mock":
+            user_id = DEV_MODE_USER_ID
+        else:
+            raise HTTPException(
+                status_code=401,
+                detail="Authentication required",
+            )
     request.state.user_id = user_id
     request.state.user_role = await _resolve_role(user_id)
 
@@ -82,15 +90,33 @@ class FlashMessage:
 
 
 async def _resolve_role(user_id: str | None) -> Role | None:
-    """Resolve user role from database."""
+    """Resolve user role from database.
+
+    In dev mode, auto-provisions the dev admin user with ADMIN role.
+    """
     if not user_id:
         return None
     try:
+        from src.admin.rbac import DEV_MODE_USER_ID, UserRoleCreate
+
         service = get_rbac_service()
         async with get_async_session() as session:
-            return await service.get_user_role(session, user_id)
+            role = await service.get_user_role(session, user_id)
+            if role is None and user_id == DEV_MODE_USER_ID:
+                from src.settings import settings
+
+                if settings.llm_provider == "mock":
+                    logger.info("Dev mode: auto-provisioning admin role for %s", user_id)
+                    await service.create_user_role(
+                        session,
+                        UserRoleCreate(user_id=user_id, role=Role.ADMIN),
+                        created_by="dev-mode-auto",
+                    )
+                    await session.commit()
+                    return Role.ADMIN
+            return role
     except Exception:
-        logger.debug("Could not resolve role for %s", user_id)
+        logger.debug("Could not resolve role for %s", user_id, exc_info=True)
         return None
 
 
