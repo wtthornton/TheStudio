@@ -21,3 +21,10 @@ build/
 # Environment
 .env
 *.local
+
+# Database backups
+infra/backups/
+
+# Coverage
+.coverage
+htmlcov/

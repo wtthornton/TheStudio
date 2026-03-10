@@ -1,0 +1,104 @@
+name: thestudio
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      THESTUDIO_DATABASE_URL: "postgresql+asyncpg://thestudio:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/thestudio"
+      THESTUDIO_STORE_BACKEND: "postgres"
+      THESTUDIO_TEMPORAL_HOST: "temporal:7233"
+      THESTUDIO_NATS_URL: "nats://nats:4222"
+      THESTUDIO_ENCRYPTION_KEY: "${THESTUDIO_ENCRYPTION_KEY:?Set THESTUDIO_ENCRYPTION_KEY in .env}"
+      THESTUDIO_LLM_PROVIDER: "${THESTUDIO_LLM_PROVIDER:-anthropic}"
+      THESTUDIO_GITHUB_PROVIDER: "${THESTUDIO_GITHUB_PROVIDER:-real}"
+      THESTUDIO_ANTHROPIC_API_KEY: "${THESTUDIO_ANTHROPIC_API_KEY:?Set THESTUDIO_ANTHROPIC_API_KEY}"
+      THESTUDIO_GITHUB_APP_ID: "${THESTUDIO_GITHUB_APP_ID:-}"
+      THESTUDIO_GITHUB_PRIVATE_KEY_PATH: "${THESTUDIO_GITHUB_PRIVATE_KEY_PATH:-}"
+      THESTUDIO_WEBHOOK_SECRET: "${THESTUDIO_WEBHOOK_SECRET:-}"
+      THESTUDIO_OTEL_EXPORTER: "${THESTUDIO_OTEL_EXPORTER:-console}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+      nats:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: thestudio
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}"
+      POSTGRES_DB: thestudio
+    ports:
+      - "5434:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init-temporal-db.sql:/docker-entrypoint-initdb.d/init-temporal-db.sql
+      - ./backups:/backups
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U thestudio"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  temporal:
+    image: temporalio/auto-setup:1.25
+    ports:
+      - "7233:7233"
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=thestudio
+      - POSTGRES_PWD=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      - POSTGRES_SEEDS=postgres
+      - DBNAME=temporal
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  temporal-ui:
+    image: temporalio/ui:latest
+    ports:
+      - "8088:8080"
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+    depends_on:
+      - temporal
+    restart: unless-stopped
+
+  nats:
+    image: nats:2.10-alpine
+    command: ["--jetstream", "--store_dir", "/data"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    volumes:
+      - natsdata:/data
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  natsdata:

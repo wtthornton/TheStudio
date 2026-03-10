@@ -21,8 +21,8 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v4
 
-      - name: Set up Python 3.13
-        run: uv python install 3.13
+      - name: Set up Python 3.12
+        run: uv python install 3.12
 
       - name: Install dependencies
         run: uv sync --dev
@@ -37,7 +37,7 @@ jobs:
         run: uv run bandit -r src/
 
   test:
-    name: Test
+    name: Unit Tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -48,8 +48,8 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v4
 
-      - name: Set up Python 3.13
-        run: uv python install 3.13
+      - name: Set up Python 3.12
+        run: uv python install 3.12
 
       - name: Install dependencies
         run: uv sync --dev
@@ -61,3 +61,51 @@ jobs:
             --cov-report=term-missing \
             --cov-fail-under=80 \
             -x -q
+
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: thestudio
+          POSTGRES_PASSWORD: thestudio_dev
+          POSTGRES_DB: thestudio
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd "pg_isready -U thestudio"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Set up Python 3.12
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Run migrations
+        env:
+          THESTUDIO_DATABASE_URL: "postgresql+asyncpg://thestudio:thestudio_dev@localhost:5434/thestudio"
+          THESTUDIO_STORE_BACKEND: postgres
+        run: uv run python -m src.db.run_migrations
+
+      - name: Run integration tests
+        env:
+          THESTUDIO_DATABASE_URL: "postgresql+asyncpg://thestudio:thestudio_dev@localhost:5434/thestudio"
+          THESTUDIO_STORE_BACKEND: postgres
+        run: |
+          uv run python -m pytest tests/integration/ \
+            -m integration \
+            -x -q --timeout=60
