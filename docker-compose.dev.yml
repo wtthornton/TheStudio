@@ -22,7 +22,7 @@ services:
   temporal:
     image: temporalio/auto-setup:latest
     environment:
-      DB: postgresql
+      DB: postgres12
       DB_PORT: "5432"
       POSTGRES_USER: thestudio
       POSTGRES_PWD: thestudio_dev
@@ -41,11 +41,11 @@ services:
 
   nats:
     image: nats:2-alpine
-    command: ["--jetstream"]
+    command: ["--jetstream", "-m", "8222"]
     ports:
       - "4222:4222"
     healthcheck:
-      test: ["CMD", "nats-server", "--signal", "ldm"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:8222/healthz"]
       interval: 5s
       timeout: 3s
       retries: 5
