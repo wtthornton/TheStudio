@@ -1,12 +1,26 @@
 name: thestudio
 
 services:
+  caddy:
+    image: caddy:2.9-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - thestudio-net
+
   app:
     build:
       context: ..
       dockerfile: Dockerfile
-    ports:
-      - "8000:8000"
     environment:
       THESTUDIO_DATABASE_URL: "postgresql+asyncpg://thestudio:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/thestudio"
       THESTUDIO_STORE_BACKEND: "postgres"
@@ -39,6 +53,8 @@ services:
         limits:
           memory: 1G
           cpus: "1.0"
+    networks:
+      - thestudio-net
 
   postgres:
     image: postgres:16-alpine
@@ -46,8 +62,6 @@ services:
       POSTGRES_USER: thestudio
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}"
       POSTGRES_DB: thestudio
-    ports:
-      - "5434:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./init-temporal-db.sql:/docker-entrypoint-initdb.d/init-temporal-db.sql
@@ -62,11 +76,51 @@ services:
       resources:
         limits:
           memory: 512M
+    networks:
+      - thestudio-net
+
+  temporal-migrations:
+    image: temporalio/admin-tools:1.24.3
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DB=postgres
+      - DB_PORT=5432
+      - POSTGRES_USER=thestudio
+      - POSTGRES_PWD=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      - POSTGRES_SEEDS=postgres
+    entrypoint:
+      - sh
+      - -c
+      - |
+        set -e
+        echo "Creating temporal database (if not exists)..."
+        temporal-sql-tool \
+          --plugin postgres \
+          --ep postgres --port 5432 \
+          --user thestudio --password "$$POSTGRES_PWD" \
+          create-db --db-name temporal || true
+        echo "Setting up / migrating schema..."
+        temporal-sql-tool \
+          --plugin postgres \
+          --ep postgres --port 5432 \
+          --user thestudio --password "$$POSTGRES_PWD" \
+          --db temporal \
+          setup-schema -v 0.0
+        temporal-sql-tool \
+          --plugin postgres \
+          --ep postgres --port 5432 \
+          --user thestudio --password "$$POSTGRES_PWD" \
+          --db temporal \
+          update-schema -d /etc/temporal/schema/postgresql/v12/temporal/versioned
+        echo "Temporal schema ready."
+    restart: "no"
+    networks:
+      - thestudio-net
 
   temporal:
-    image: temporalio/auto-setup:1.25
-    ports:
-      - "7233:7233"
+    image: temporalio/server:1.24.3
     environment:
       - DB=postgres12
       - DB_PORT=5432
@@ -77,28 +131,56 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      temporal-migrations:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "tctl", "--address", "temporal:7233", "cluster", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     restart: unless-stopped
+    networks:
+      - thestudio-net
 
-  temporal-ui:
-    image: temporalio/ui:latest
-    ports:
-      - "8088:8080"
+  backup:
+    image: postgres:16-alpine
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        echo "Backup sidecar starting — daily at 02:00 UTC"
+        # Install crond schedule
+        echo "0 2 * * * /scripts/backup-db.sh --sidecar >> /proc/1/fd/1 2>&1" | crontab -
+        # Run crond in foreground
+        crond -f -l 2
     environment:
-      - TEMPORAL_ADDRESS=temporal:7233
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}"
+    volumes:
+      - ./backup-db.sh:/scripts/backup-db.sh:ro
+      - ./backups:/scripts/backups
     depends_on:
-      - temporal
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
+    networks:
+      - thestudio-net
 
   nats:
     image: nats:2.10-alpine
     command: ["--jetstream", "--store_dir", "/data"]
-    ports:
-      - "4222:4222"
-      - "8222:8222"
     volumes:
       - natsdata:/data
     restart: unless-stopped
+    networks:
+      - thestudio-net
+
+networks:
+  thestudio-net:
+    driver: bridge
 
 volumes:
   pgdata:
   natsdata:
+  caddy_data:
+  caddy_config:

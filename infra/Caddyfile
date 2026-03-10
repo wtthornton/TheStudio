@@ -1,0 +1,27 @@
+# TheStudio Production — Caddy Reverse Proxy
+#
+# Default: self-signed TLS (tls internal).
+# For Let's Encrypt: replace the site address with your domain
+# and change "tls internal" to "tls you@example.com".
+#
+# Examples:
+#   Self-signed (default):  :443
+#   Let's Encrypt:          studio.example.com
+
+:443 {
+	tls internal
+
+	reverse_proxy app:8000 {
+		health_uri /healthz
+		health_interval 10s
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}
+
+:80 {
+	redir https://{host}{uri} permanent
+}

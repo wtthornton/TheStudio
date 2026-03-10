@@ -1,24 +1,36 @@
-#!/bin/bash
-# Database backup script for TheStudio production
-# Usage: ./backup-db.sh [container_name]
-# Backups are stored in ./backups/ with timestamp
+#!/usr/bin/env bash
+# Database backup script for TheStudio production.
+# Can be run manually or by the backup sidecar container.
+#
+# Usage:
+#   Host:      ./backup-db.sh [container_name]
+#   Sidecar:   ./backup-db.sh --sidecar  (connects via hostname instead of docker exec)
 
 set -euo pipefail
 
-CONTAINER="${1:-thestudio-postgres-1}"
 BACKUP_DIR="$(dirname "$0")/backups"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUP_FILE="$BACKUP_DIR/thestudio_${TIMESTAMP}.sql.gz"
+RETENTION_DAYS=30
 
 mkdir -p "$BACKUP_DIR"
 
-echo "Backing up TheStudio database..."
-docker exec "$CONTAINER" pg_dump -U thestudio thestudio | gzip > "$BACKUP_FILE"
+echo "[$(date -Iseconds)] Starting backup..."
 
-echo "Backup saved to: $BACKUP_FILE"
-echo "Size: $(du -h "$BACKUP_FILE" | cut -f1)"
+if [ "${1:-}" = "--sidecar" ]; then
+    # Running inside Docker network — connect via hostname
+    PGPASSWORD="${POSTGRES_PASSWORD:?POSTGRES_PASSWORD not set}" \
+        pg_dump -h postgres -U thestudio thestudio | gzip > "$BACKUP_FILE"
+else
+    # Running from host — use docker exec
+    CONTAINER="${1:-thestudio-postgres-1}"
+    docker exec "$CONTAINER" pg_dump -U thestudio thestudio | gzip > "$BACKUP_FILE"
+fi
 
-# Keep only last 30 backups
-cd "$BACKUP_DIR"
-ls -1t thestudio_*.sql.gz 2>/dev/null | tail -n +31 | xargs -r rm
-echo "Cleanup complete (kept last 30 backups)."
+SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
+echo "[$(date -Iseconds)] Backup saved: $BACKUP_FILE ($SIZE)"
+
+# Remove backups older than retention period
+find "$BACKUP_DIR" -name "thestudio_*.sql.gz" -mtime +${RETENTION_DAYS} -delete
+REMAINING=$(find "$BACKUP_DIR" -name "thestudio_*.sql.gz" | wc -l)
+echo "[$(date -Iseconds)] Retention: removed backups older than ${RETENTION_DAYS} days. ${REMAINING} backups on disk."

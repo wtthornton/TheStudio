@@ -22,6 +22,11 @@ build/
 .env
 *.local
 
+# TLS certificates and private keys
+infra/*.pem
+infra/*.key
+infra/*.crt
+
 # Database backups
 infra/backups/
 
