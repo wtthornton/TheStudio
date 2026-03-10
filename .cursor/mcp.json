@@ -34,6 +34,14 @@
         "-y",
         "@playwright/mcp@latest"
       ]
+    },
+    "docker-mcp": {
+      "command": "docker",
+      "args": [
+        "mcp",
+        "gateway",
+        "run"
+      ]
     }
   }
 }
