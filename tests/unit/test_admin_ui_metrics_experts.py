@@ -86,14 +86,14 @@ class TestMetricsDashboardUI:
 
     async def test_metrics_page_renders(self, mock_ui_services):
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://test", headers={"X-User-ID": "test@studio"}) as client:
             resp = await client.get("/admin/ui/metrics")
             assert resp.status_code == 200
             assert "Metrics" in resp.text
 
     async def test_metrics_partial_renders(self, mock_ui_services):
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://test", headers={"X-User-ID": "test@studio"}) as client:
             resp = await client.get("/admin/ui/partials/metrics")
             assert resp.status_code == 200
             assert "single-pass-card" in resp.text
@@ -102,34 +102,34 @@ class TestMetricsDashboardUI:
 
     async def test_metrics_partial_single_pass_values(self, mock_ui_services):
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://test", headers={"X-User-ID": "test@studio"}) as client:
             resp = await client.get("/admin/ui/partials/metrics")
             assert "75.0%" in resp.text
             assert "15/20" in resp.text
 
     async def test_metrics_partial_loopback_categories(self, mock_ui_services):
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://test", headers={"X-User-ID": "test@studio"}) as client:
             resp = await client.get("/admin/ui/partials/metrics")
             assert "lint" in resp.text.lower()
             assert "test" in resp.text.lower()
 
     async def test_metrics_partial_reopen(self, mock_ui_services):
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://test", headers={"X-User-ID": "test@studio"}) as client:
             resp = await client.get("/admin/ui/partials/metrics")
             assert "Reopen Rate" in resp.text
             assert "intent gap" in resp.text.lower() or "intent_gap" in resp.text
 
     async def test_metrics_page_has_nav_link(self, mock_ui_services):
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://test", headers={"X-User-ID": "test@studio"}) as client:
             resp = await client.get("/admin/ui/metrics")
             assert "/admin/ui/metrics" in resp.text
 
     async def test_metrics_partial_with_repo_filter(self, mock_ui_services):
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://test", headers={"X-User-ID": "test@studio"}) as client:
             resp = await client.get("/admin/ui/partials/metrics?repo=repo-1")
             assert resp.status_code == 200
 
@@ -140,14 +140,14 @@ class TestExpertConsoleUI:
 
     async def test_experts_page_renders(self, mock_ui_services):
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://test", headers={"X-User-ID": "test@studio"}) as client:
             resp = await client.get("/admin/ui/experts")
             assert resp.status_code == 200
             assert "Expert" in resp.text
 
     async def test_experts_partial_renders(self, mock_ui_services):
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://test", headers={"X-User-ID": "test@studio"}) as client:
             resp = await client.get("/admin/ui/partials/experts")
             assert resp.status_code == 200
             assert "experts-table" in resp.text
@@ -155,26 +155,26 @@ class TestExpertConsoleUI:
 
     async def test_experts_partial_tier_badge(self, mock_ui_services):
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://test", headers={"X-User-ID": "test@studio"}) as client:
             resp = await client.get("/admin/ui/partials/experts")
             assert "SHADOW" in resp.text
 
     async def test_experts_partial_drift_indicator(self, mock_ui_services):
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://test", headers={"X-User-ID": "test@studio"}) as client:
             resp = await client.get("/admin/ui/partials/experts")
             assert "stable" in resp.text.lower()
 
     async def test_expert_detail_page(self, mock_ui_services):
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://test", headers={"X-User-ID": "test@studio"}) as client:
             resp = await client.get("/admin/ui/experts/aaaa-1111")
             assert resp.status_code == 200
             assert "Expert Detail" in resp.text
 
     async def test_expert_detail_partial(self, mock_ui_services):
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://test", headers={"X-User-ID": "test@studio"}) as client:
             resp = await client.get("/admin/ui/partials/expert/aaaa-1111")
             assert resp.status_code == 200
             assert "repo-1" in resp.text
@@ -182,20 +182,20 @@ class TestExpertConsoleUI:
 
     async def test_expert_detail_not_found(self, mock_ui_services):
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://test", headers={"X-User-ID": "test@studio"}) as client:
             resp = await client.get("/admin/ui/experts/nonexistent")
             assert resp.status_code == 200
             assert "not found" in resp.text.lower()
 
     async def test_experts_page_has_nav_link(self, mock_ui_services):
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://test", headers={"X-User-ID": "test@studio"}) as client:
             resp = await client.get("/admin/ui/experts")
             assert "/admin/ui/experts" in resp.text
 
     async def test_experts_partial_with_filters(self, mock_ui_services):
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://test", headers={"X-User-ID": "test@studio"}) as client:
             resp = await client.get(
                 "/admin/ui/partials/experts?repo=repo-1&tier=shadow"
             )

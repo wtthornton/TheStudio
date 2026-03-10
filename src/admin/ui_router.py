@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
@@ -50,7 +50,27 @@ logger = logging.getLogger(__name__)
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
-ui_router = APIRouter(prefix="/admin/ui", tags=["admin-ui"])
+async def _require_ui_auth(request: Request) -> None:
+    """Router-level dependency that enforces authentication on all UI routes.
+
+    Reads X-User-ID header, resolves role from DB, and stores both in
+    request.state for downstream use by _base_context.
+    """
+    user_id = request.headers.get("X-User-ID")
+    if not user_id:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required",
+        )
+    request.state.user_id = user_id
+    request.state.user_role = await _resolve_role(user_id)
+
+
+ui_router = APIRouter(
+    prefix="/admin/ui",
+    tags=["admin-ui"],
+    dependencies=[Depends(_require_ui_auth)],
+)
 
 
 @dataclass
@@ -83,11 +103,12 @@ def _has_permission(role: Role | None, permission: Permission) -> bool:
 
 def _base_context(request: Request, role: Role | None = None) -> dict[str, Any]:
     """Build base template context with user info and navigation state."""
-    user_id = request.headers.get("X-User-ID")
+    user_id = getattr(request.state, "user_id", request.headers.get("X-User-ID"))
+    user_role = role or getattr(request.state, "user_role", None)
     return {
         "request": request,
         "current_user_id": user_id,
-        "current_user_role": role,
+        "current_user_role": user_role,
         "flash_messages": [],
         "active_page": "",
     }

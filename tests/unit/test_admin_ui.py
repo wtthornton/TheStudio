@@ -336,9 +336,13 @@ class TestUIFoundation:
     """Story 4.10: Layout, navigation, redirects."""
 
     def test_root_redirects_to_dashboard(self, client):
-        resp = client.get("/admin/ui/", follow_redirects=False)
+        resp = client.get("/admin/ui/", headers=ADMIN_HEADERS, follow_redirects=False)
         assert resp.status_code == 302
         assert resp.headers["location"] == "/admin/ui/dashboard"
+
+    def test_root_requires_auth(self, client):
+        resp = client.get("/admin/ui/", follow_redirects=False)
+        assert resp.status_code == 401
 
     def test_dashboard_page_renders(self, client):
         resp = client.get("/admin/ui/dashboard", headers=ADMIN_HEADERS)

@@ -1,3 +1,5 @@
+name: thestudio
+
 services:
   app:
     build:
@@ -10,15 +12,26 @@ services:
       THESTUDIO_STORE_BACKEND: "postgres"
       THESTUDIO_TEMPORAL_HOST: "temporal:7233"
       THESTUDIO_NATS_URL: "nats://nats:4222"
+      THESTUDIO_ENCRYPTION_KEY: "${THESTUDIO_ENCRYPTION_KEY:-generate-a-real-fernet-key-for-production}"
+      THESTUDIO_LLM_PROVIDER: "${THESTUDIO_LLM_PROVIDER:-mock}"
+      THESTUDIO_GITHUB_PROVIDER: "${THESTUDIO_GITHUB_PROVIDER:-mock}"
+      THESTUDIO_ANTHROPIC_API_KEY: "${THESTUDIO_ANTHROPIC_API_KEY:-}"
+      THESTUDIO_GITHUB_APP_ID: "${THESTUDIO_GITHUB_APP_ID:-}"
+      THESTUDIO_GITHUB_PRIVATE_KEY_PATH: "${THESTUDIO_GITHUB_PRIVATE_KEY_PATH:-}"
+      THESTUDIO_OTEL_EXPORTER: "${THESTUDIO_OTEL_EXPORTER:-console}"
     depends_on:
       postgres:
         condition: service_healthy
+      temporal:
+        condition: service_started
+      nats:
+        condition: service_started
     healthcheck:
-      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health')"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
       interval: 10s
       timeout: 5s
-      retries: 3
-      start_period: 10s
+      retries: 5
+      start_period: 30s
 
   postgres:
     image: postgres:16-alpine
@@ -30,6 +43,7 @@ services:
       - "5434:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./init-temporal-db.sql:/docker-entrypoint-initdb.d/init-temporal-db.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U thestudio"]
       interval: 5s
@@ -46,6 +60,7 @@ services:
       - POSTGRES_USER=thestudio
       - POSTGRES_PWD=thestudio_dev
       - POSTGRES_SEEDS=postgres
+      - DBNAME=temporal
     depends_on:
       postgres:
         condition: service_healthy

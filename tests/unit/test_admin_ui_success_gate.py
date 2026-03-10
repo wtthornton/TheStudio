@@ -64,7 +64,7 @@ class TestSuccessGateUI:
         ):
             transport = ASGITransport(app=app)
             async with AsyncClient(transport=transport, base_url="http://test") as client:
-                resp = await client.get("/admin/ui/partials/metrics")
+                resp = await client.get("/admin/ui/partials/metrics", headers={"X-User-ID": "test@studio"})
             assert resp.status_code == 200
             assert "success-gate-card" in resp.text
             assert "PASSING" in resp.text
@@ -83,7 +83,7 @@ class TestSuccessGateUI:
         ):
             transport = ASGITransport(app=app)
             async with AsyncClient(transport=transport, base_url="http://test") as client:
-                resp = await client.get("/admin/ui/partials/metrics")
+                resp = await client.get("/admin/ui/partials/metrics", headers={"X-User-ID": "test@studio"})
             assert resp.status_code == 200
             assert "FAILING" in resp.text
 
@@ -101,7 +101,7 @@ class TestSuccessGateUI:
         ):
             transport = ASGITransport(app=app)
             async with AsyncClient(transport=transport, base_url="http://test") as client:
-                resp = await client.get("/admin/ui/partials/metrics")
+                resp = await client.get("/admin/ui/partials/metrics", headers={"X-User-ID": "test@studio"})
             assert resp.status_code == 200
             assert "Insufficient Data" in resp.text
             assert "Not enough data" in resp.text
@@ -120,7 +120,7 @@ class TestSuccessGateUI:
         ):
             transport = ASGITransport(app=app)
             async with AsyncClient(transport=transport, base_url="http://test") as client:
-                resp = await client.get("/admin/ui/partials/metrics")
+                resp = await client.get("/admin/ui/partials/metrics", headers={"X-User-ID": "test@studio"})
             assert resp.status_code == 200
             assert "75.0%" in resp.text
             assert "60%" in resp.text
@@ -139,5 +139,5 @@ class TestSuccessGateUI:
         ):
             transport = ASGITransport(app=app)
             async with AsyncClient(transport=transport, base_url="http://test") as client:
-                resp = await client.get("/admin/ui/partials/metrics")
+                resp = await client.get("/admin/ui/partials/metrics", headers={"X-User-ID": "test@studio"})
             assert "42" in resp.text

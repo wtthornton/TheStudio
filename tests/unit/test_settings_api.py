@@ -13,9 +13,14 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
 from src.admin.persistence.pg_settings import SettingCategory
-from src.admin.rbac import Role
+from src.admin.rbac import (
+    Role,
+    get_current_user_id,
+    get_current_user_role,
+)
 from src.admin.router import router
 from src.admin.settings_service import SettingValue, SettingsService
+from src.db.connection import get_session
 
 app = FastAPI()
 app.include_router(router)
@@ -37,19 +42,22 @@ def mock_settings_service():
 
 @pytest.fixture
 def mock_rbac_admin():
-    """Mock RBAC to always return admin role."""
-    with (
-        patch("src.admin.rbac.get_current_user_role", return_value=Role.ADMIN),
-        patch("src.admin.router.get_session", return_value=_mock_session()),
-    ):
-        yield
+    """Override FastAPI dependencies to always return admin role."""
+    app.dependency_overrides[get_current_user_id] = lambda: "admin@test.com"
+    app.dependency_overrides[get_current_user_role] = lambda: Role.ADMIN
+    app.dependency_overrides[get_session] = _mock_session
+    yield
+    app.dependency_overrides.clear()
 
 
 @pytest.fixture
 def mock_rbac_viewer():
-    """Mock RBAC to return viewer role (should be denied)."""
-    with patch("src.admin.rbac.get_current_user_role", return_value=Role.VIEWER):
-        yield
+    """Override FastAPI dependencies to return viewer role (should be denied)."""
+    app.dependency_overrides[get_current_user_id] = lambda: "viewer@test.com"
+    app.dependency_overrides[get_current_user_role] = lambda: Role.VIEWER
+    app.dependency_overrides[get_session] = _mock_session
+    yield
+    app.dependency_overrides.clear()
 
 
 class TestListSettings:
