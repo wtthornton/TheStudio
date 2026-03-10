@@ -41,6 +41,7 @@ def _wait_for_healthy(url: str = f"{BASE_URL}/healthz", timeout: int = 60) -> bo
     return False
 
 
+@pytest.mark.order(1)
 class TestGracefulShutdown:
     """Verify the app container shuts down cleanly on SIGTERM."""
 
@@ -74,6 +75,7 @@ class TestGracefulShutdown:
         assert _wait_for_healthy(), "App did not recover after restart"
 
 
+@pytest.mark.order(2)
 class TestRestartRecovery:
     """Verify the app recovers after a restart."""
 
@@ -86,6 +88,7 @@ class TestRestartRecovery:
         assert r.status_code == 200
 
 
+@pytest.mark.order(3)
 class TestDependencyFailure:
     """Verify app handles Temporal being unavailable."""
 

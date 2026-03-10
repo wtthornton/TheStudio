@@ -3,6 +3,7 @@
 **Persona:** Saga (Epic Creator)
 **Date:** 2026-03-06
 **Phase:** 2 (per `thestudioarc/MERIDIAN-ROADMAP-AGGRESSIVE.md`)
+**Status:** Complete — Compliance checker, promotion API, tier transitions implemented
 **Predecessor:** Epic 2 — Learning + Multi-Repo (complete: learning loop closed — Complexity Index, Outcome Ingestor full, Reputation Engine with tiers/decay/drift, Router uses weights; 98 new tests)
 **Timebox:** 4–6 weeks (focused)
 

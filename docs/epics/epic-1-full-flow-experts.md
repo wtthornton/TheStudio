@@ -2,6 +2,7 @@
 
 **Persona:** Saga (Epic Creator)
 **Date:** 2026-03-06
+**Status:** Complete — Router, QA Agent, Assembler, Outcome Ingestor, EffectiveRolePolicy all implemented
 **Phase:** 1 (per `thestudioarc/MERIDIAN-ROADMAP-AGGRESSIVE.md`)
 **Predecessor:** Epic 0 — Foundation (complete: issue → TaskPacket → Context → Intent → Primary Agent → Verification → Publisher → draft PR with evidence)
 **Timebox:** 10–12 weeks (aggressive)

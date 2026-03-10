@@ -8,6 +8,7 @@ and repo registration via the admin API.
 import hashlib
 import hmac
 import os
+import pathlib
 import subprocess
 import uuid
 
@@ -47,10 +48,14 @@ def compute_signature(body: bytes, secret: str = WEBHOOK_SECRET) -> str:
     return f"sha256={mac}"
 
 
-def build_webhook_headers(body: bytes, event: str = "issues") -> dict[str, str]:
+def build_webhook_headers(
+    body: bytes,
+    event: str = "issues",
+    delivery_id: str | None = None,
+) -> dict[str, str]:
     """Build the full set of GitHub webhook headers for a payload."""
     return {
-        "X-GitHub-Delivery": str(uuid.uuid4()),
+        "X-GitHub-Delivery": delivery_id or str(uuid.uuid4()),
         "X-GitHub-Event": event,
         "X-Hub-Signature-256": compute_signature(body),
         "Content-Type": "application/json",
@@ -107,11 +112,16 @@ def registered_repo(http_client: httpx.Client) -> dict:
 COMPOSE_PROJECT = os.environ.get("COMPOSE_PROJECT_NAME", "")
 
 
+REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
+
+
 def docker_compose_cmd(*args: str) -> subprocess.CompletedProcess[str]:
     """Run a docker compose command against the dev stack.
 
     Uses COMPOSE_PROJECT_NAME env var if set (CI sets 'thestudio-smoke'),
     otherwise uses the default project name derived from the directory.
+    Always runs from the repository root so docker-compose.dev.yml is found
+    regardless of the caller's working directory.
     """
     cmd = ["docker", "compose", "-f", "docker-compose.dev.yml"]
     if COMPOSE_PROJECT:
@@ -122,4 +132,5 @@ def docker_compose_cmd(*args: str) -> subprocess.CompletedProcess[str]:
         capture_output=True,
         text=True,
         timeout=60,
+        cwd=str(REPO_ROOT),
     )

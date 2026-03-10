@@ -2,7 +2,7 @@
 
 **Author:** Saga
 **Date:** 2026-03-10
-**Status:** Meridian PASS (Round 2) — Approved for sprint commitment
+**Status:** Complete — YAML frontmatter, linter, converter, drift detection all delivered
 
 ---
 

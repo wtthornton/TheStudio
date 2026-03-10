@@ -6,6 +6,7 @@ creates a TaskPacket. Pure HTTP — no in-process imports of application code.
 
 import json
 import time
+import uuid
 
 import httpx
 import pytest
@@ -53,7 +54,11 @@ class TestPipelineSmoke:
         """Sending the same delivery ID twice should be deduplicated."""
         payload = make_issue_payload(issue_number=88888)
         body = json.dumps(payload).encode()
-        headers = build_webhook_headers(body, event="issues")
+        # Pin the delivery ID so both requests share the same one
+        shared_delivery_id = str(uuid.uuid4())
+        headers = build_webhook_headers(
+            body, event="issues", delivery_id=shared_delivery_id
+        )
 
         # First request — should create
         r1 = http_client.post("/webhook/github", content=body, headers=headers)

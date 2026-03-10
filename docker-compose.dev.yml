@@ -70,8 +70,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      temporal:
+        condition: service_healthy
       nats:
-        condition: service_started
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import httpx; r = httpx.get('http://localhost:8000/healthz'); assert r.status_code == 200"]
       interval: 10s

@@ -3,6 +3,7 @@
 **Persona:** Saga (Epic Creator)
 **Date:** 2026-03-06
 **Phase:** 2 (per `thestudioarc/MERIDIAN-ROADMAP-AGGRESSIVE.md`)
+**Status:** Complete — Complexity Index, Outcome Ingestor, Reputation Engine with tiers/decay/drift, Router uses weights
 **Predecessor:** Epic 1 — Full Flow + Experts (complete: 9-step pipeline wired with Router, Assembler, QA Agent, Outcome Ingestor stub, EffectiveRolePolicy, tier promotion to Suggest)
 **Timebox:** 10–12 weeks (aggressive)
 
