@@ -10,6 +10,8 @@ maxTurns: 25
 permissionMode: acceptEdits
 memory: project
 maturity: proven
+last_validated: 2026-03-10
+coverage: docs/plans/, docs/sprints/, docs/epics/
 skills:
   - sprint
 ---

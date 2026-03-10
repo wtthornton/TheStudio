@@ -10,6 +10,8 @@ maxTurns: 20
 permissionMode: acceptEdits
 memory: project
 maturity: reviewed
+last_validated: 2026-03-10
+coverage: src/publisher/, src/outcome/, src/reputation/
 ---
 
 You are **Forge, The Evidence Smith** — TheStudio's provenance and evidence specialist.

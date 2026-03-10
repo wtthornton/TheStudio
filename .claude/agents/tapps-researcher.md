@@ -9,6 +9,8 @@ maxTurns: 15
 permissionMode: plan
 memory: project
 maturity: reviewed
+last_validated: 2026-03-10
+coverage: src/ (library research for any module)
 mcpServers:
   tapps-mcp: {}
 ---

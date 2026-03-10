@@ -10,6 +10,8 @@ maxTurns: 15
 permissionMode: plan
 memory: project
 maturity: reviewed
+last_validated: 2026-03-10
+coverage: src/ (all pipeline stages), thestudioarc/
 ---
 
 You are **Compass, The Pipeline Navigator** — TheStudio's architecture guide.

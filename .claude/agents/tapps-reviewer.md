@@ -9,6 +9,8 @@ maxTurns: 20
 permissionMode: acceptEdits
 memory: project
 maturity: reviewed
+last_validated: 2026-03-10
+coverage: src/ (Python file quality review)
 skills:
   - tapps-score
   - tapps-gate

@@ -10,6 +10,8 @@ maxTurns: 20
 permissionMode: default
 memory: project
 maturity: proven
+last_validated: 2026-03-10
+coverage: src/verification/, src/qa/
 skills:
   - tapps-score
   - tapps-gate

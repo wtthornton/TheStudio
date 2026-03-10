@@ -9,6 +9,8 @@ maxTurns: 10
 permissionMode: plan
 memory: project
 maturity: reviewed
+last_validated: 2026-03-10
+coverage: src/ (pre-completion validation)
 mcpServers:
   tapps-mcp: {}
 ---

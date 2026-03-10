@@ -11,6 +11,8 @@ maxTurns: 20
 permissionMode: plan
 memory: project
 maturity: proven
+last_validated: 2026-03-10
+coverage: docs/epics/, docs/plans/, docs/sprints/
 skills:
   - review
 ---

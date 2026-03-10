@@ -10,6 +10,8 @@ maxTurns: 25
 permissionMode: acceptEdits
 memory: project
 maturity: reviewed
+last_validated: 2026-03-10
+coverage: src/ (parallel review-fix pipelines)
 isolation: worktree
 skills:
   - tapps-score

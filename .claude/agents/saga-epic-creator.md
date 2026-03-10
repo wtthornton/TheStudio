@@ -11,6 +11,8 @@ maxTurns: 30
 permissionMode: acceptEdits
 memory: project
 maturity: proven
+last_validated: 2026-03-10
+coverage: docs/epics/, thestudioarc/personas/
 skills:
   - epic
 ---

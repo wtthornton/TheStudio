@@ -45,6 +45,8 @@ PERSONAS: list[dict[str, Any]] = [
                 "permissionMode": "acceptEdits",
                 "memory": "project",
                 "maturity": "proven",
+                "last_validated": "2026-03-10",
+                "coverage": "docs/epics/, thestudioarc/personas/",
                 "skills": ["epic"],
             },
             "body": textwrap.dedent("""\
@@ -146,6 +148,8 @@ PERSONAS: list[dict[str, Any]] = [
                 "permissionMode": "plan",
                 "memory": "project",
                 "maturity": "proven",
+                "last_validated": "2026-03-10",
+                "coverage": "docs/epics/, docs/plans/, docs/sprints/",
                 "skills": ["review"],
             },
             "body": textwrap.dedent("""\
@@ -269,6 +273,8 @@ PERSONAS: list[dict[str, Any]] = [
                 "permissionMode": "acceptEdits",
                 "memory": "project",
                 "maturity": "proven",
+                "last_validated": "2026-03-10",
+                "coverage": "docs/plans/, docs/sprints/, docs/epics/",
                 "skills": ["sprint"],
             },
             "body": textwrap.dedent("""\
