@@ -10,6 +10,7 @@ model: opus
 maxTurns: 20
 permissionMode: plan
 memory: project
+maturity: proven
 skills:
   - review
 ---

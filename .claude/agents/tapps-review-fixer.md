@@ -9,6 +9,7 @@ model: sonnet
 maxTurns: 25
 permissionMode: acceptEdits
 memory: project
+maturity: reviewed
 isolation: worktree
 skills:
   - tapps-score

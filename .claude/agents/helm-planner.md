@@ -9,6 +9,7 @@ model: opus
 maxTurns: 25
 permissionMode: acceptEdits
 memory: project
+maturity: proven
 skills:
   - sprint
 ---

@@ -10,6 +10,7 @@ model: opus
 maxTurns: 30
 permissionMode: acceptEdits
 memory: project
+maturity: proven
 skills:
   - epic
 ---

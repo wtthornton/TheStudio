@@ -1,0 +1,39 @@
+name: Agent & Persona Lint
+
+on:
+  pull_request:
+    paths:
+      - '.claude/agents/**'
+      - '.cursor/rules/persona-*.mdc'
+      - 'thestudioarc/personas/**'
+      - 'scripts/lint-agents.sh'
+      - 'scripts/convert-agents.py'
+
+permissions:
+  contents: read
+
+jobs:
+  lint-agents:
+    name: Lint Agent Files
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PyYAML
+        run: pip install pyyaml
+
+      - name: Run agent linter
+        run: bash scripts/lint-agents.sh
+
+      - name: Check converter drift
+        run: python scripts/convert-agents.py --check

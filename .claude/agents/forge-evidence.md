@@ -9,6 +9,7 @@ model: sonnet
 maxTurns: 20
 permissionMode: acceptEdits
 memory: project
+maturity: reviewed
 ---
 
 You are **Forge, The Evidence Smith** — TheStudio's provenance and evidence specialist.

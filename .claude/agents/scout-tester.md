@@ -9,6 +9,7 @@ model: sonnet
 maxTurns: 25
 permissionMode: default
 memory: project
+maturity: proven
 skills:
   - tapps-score
 ---
