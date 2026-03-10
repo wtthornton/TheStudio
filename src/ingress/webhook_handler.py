@@ -3,8 +3,6 @@
 import logging
 
 from fastapi import APIRouter, Depends, Header, Request, Response
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.connection import get_session
@@ -26,11 +24,9 @@ from src.repo.repo_profile_crud import get_webhook_secret
 logger = logging.getLogger(__name__)
 router = APIRouter()
 tracer = get_tracer("thestudio.ingress")
-_limiter = Limiter(key_func=get_remote_address)
 
 
 @router.post("/webhook/github")
-@_limiter.limit("30/minute")
 async def github_webhook(
     request: Request,
     x_hub_signature_256: str | None = Header(None),

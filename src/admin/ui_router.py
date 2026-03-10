@@ -101,14 +101,15 @@ def _has_permission(role: Role | None, permission: Permission) -> bool:
     return permission in ROLE_PERMISSIONS.get(role, frozenset())
 
 
-def _base_context(request: Request, role: Role | None = None) -> dict[str, Any]:
-    """Build base template context with user info and navigation state."""
-    user_id = getattr(request.state, "user_id", request.headers.get("X-User-ID"))
-    user_role = role or getattr(request.state, "user_role", None)
+def _base_context(request: Request) -> dict[str, Any]:
+    """Build base template context with user info and navigation state.
+
+    Uses request.state populated by _require_ui_auth dependency.
+    """
     return {
         "request": request,
-        "current_user_id": user_id,
-        "current_user_role": user_role,
+        "current_user_id": request.state.user_id,
+        "current_user_role": request.state.user_role,
         "flash_messages": [],
         "active_page": "",
     }
@@ -126,9 +127,7 @@ async def ui_root() -> RedirectResponse:
 @ui_router.get("/dashboard", response_class=HTMLResponse)
 async def ui_dashboard(request: Request) -> Response:
     """Render the Fleet Dashboard page."""
-    user_id = request.headers.get("X-User-ID")
-    role = await _resolve_role(user_id)
-    ctx = _base_context(request, role)
+    ctx = _base_context(request)
     ctx["active_page"] = "dashboard"
     return templates.TemplateResponse(request, "dashboard.html", ctx)
 
@@ -136,9 +135,7 @@ async def ui_dashboard(request: Request) -> Response:
 @ui_router.get("/repos", response_class=HTMLResponse)
 async def ui_repos(request: Request) -> Response:
     """Render the Repo Management list page."""
-    user_id = request.headers.get("X-User-ID")
-    role = await _resolve_role(user_id)
-    ctx = _base_context(request, role)
+    ctx = _base_context(request)
     ctx["active_page"] = "repos"
     return templates.TemplateResponse(request, "repos.html", ctx)
 
@@ -146,9 +143,7 @@ async def ui_repos(request: Request) -> Response:
 @ui_router.get("/repos/{repo_id}", response_class=HTMLResponse)
 async def ui_repo_detail(request: Request, repo_id: str) -> Response:
     """Render the Repo Detail page."""
-    user_id = request.headers.get("X-User-ID")
-    role = await _resolve_role(user_id)
-    ctx = _base_context(request, role)
+    ctx = _base_context(request)
     ctx["active_page"] = "repos"
     ctx["repo_id"] = repo_id
     return templates.TemplateResponse(request, "repo_detail.html", ctx)
@@ -157,9 +152,7 @@ async def ui_repo_detail(request: Request, repo_id: str) -> Response:
 @ui_router.get("/workflows", response_class=HTMLResponse)
 async def ui_workflows(request: Request) -> Response:
     """Render the Workflow Console list page."""
-    user_id = request.headers.get("X-User-ID")
-    role = await _resolve_role(user_id)
-    ctx = _base_context(request, role)
+    ctx = _base_context(request)
     ctx["active_page"] = "workflows"
     return templates.TemplateResponse(request, "workflows.html", ctx)
 
@@ -167,9 +160,7 @@ async def ui_workflows(request: Request) -> Response:
 @ui_router.get("/workflows/{workflow_id}", response_class=HTMLResponse)
 async def ui_workflow_detail(request: Request, workflow_id: str) -> Response:
     """Render the Workflow Detail page."""
-    user_id = request.headers.get("X-User-ID")
-    role = await _resolve_role(user_id)
-    ctx = _base_context(request, role)
+    ctx = _base_context(request)
     ctx["active_page"] = "workflows"
     ctx["workflow_id"] = workflow_id
     return templates.TemplateResponse(request, "workflow_detail.html", ctx)
@@ -178,9 +169,7 @@ async def ui_workflow_detail(request: Request, workflow_id: str) -> Response:
 @ui_router.get("/audit", response_class=HTMLResponse)
 async def ui_audit(request: Request) -> Response:
     """Render the Audit Log page."""
-    user_id = request.headers.get("X-User-ID")
-    role = await _resolve_role(user_id)
-    ctx = _base_context(request, role)
+    ctx = _base_context(request)
     ctx["active_page"] = "audit"
     return templates.TemplateResponse(request, "audit.html", ctx)
 
@@ -293,8 +282,7 @@ async def partial_repos(request: Request) -> Response:
 async def partial_repo_detail(request: Request, repo_id: str) -> Response:
     """Render repo detail partial."""
     repo_repo = get_repo_repository()
-    user_id = request.headers.get("X-User-ID")
-    role = await _resolve_role(user_id)
+    role = request.state.user_role
 
     try:
         async with get_async_session() as session:
@@ -335,7 +323,7 @@ async def partial_repo_detail(request: Request, repo_id: str) -> Response:
     ctx = {
         "request": request,
         "repo": repo_data,
-        "current_user_id": user_id,
+        "current_user_id": request.state.user_id,
         "can_update_profile": _has_permission(role, Permission.UPDATE_REPO_PROFILE),
         "can_change_tier": _has_permission(role, Permission.CHANGE_REPO_TIER),
         "can_pause": _has_permission(role, Permission.PAUSE_REPO),
@@ -397,8 +385,7 @@ async def partial_workflows(
 async def partial_workflow_detail(request: Request, workflow_id: str) -> Response:
     """Render workflow detail partial."""
     console_svc = get_workflow_console_service()
-    user_id = request.headers.get("X-User-ID")
-    role = await _resolve_role(user_id)
+    role = request.state.user_role
 
     try:
         wf = await console_svc.get_workflow_detail(workflow_id)
@@ -465,7 +452,7 @@ async def partial_workflow_detail(request: Request, workflow_id: str) -> Respons
     ctx = {
         "request": request,
         "workflow": workflow_data,
-        "current_user_id": user_id,
+        "current_user_id": request.state.user_id,
         "can_rerun": _has_permission(role, Permission.RERUN_VERIFICATION),
         "can_send_to_agent": _has_permission(role, Permission.SEND_TO_AGENT),
         "can_escalate": _has_permission(role, Permission.ESCALATE_WORKFLOW),
@@ -543,9 +530,7 @@ async def partial_audit(
 @ui_router.get("/metrics", response_class=HTMLResponse)
 async def metrics_page(request: Request) -> Response:
     """Render Metrics & Trends page."""
-    user_id = request.headers.get("X-User-ID")
-    role = await _resolve_role(user_id)
-    ctx = _base_context(request, role)
+    ctx = _base_context(request)
     ctx["active_page"] = "metrics"
     return templates.TemplateResponse(request, "metrics.html", ctx)
 
@@ -582,9 +567,7 @@ async def metrics_partial(
 @ui_router.get("/experts", response_class=HTMLResponse)
 async def experts_page(request: Request) -> Response:
     """Render Expert Performance page."""
-    user_id = request.headers.get("X-User-ID")
-    role = await _resolve_role(user_id)
-    ctx = _base_context(request, role)
+    ctx = _base_context(request)
     ctx["active_page"] = "experts"
     return templates.TemplateResponse(request, "experts.html", ctx)
 
@@ -611,18 +594,16 @@ async def experts_partial(
 @ui_router.get("/experts/{expert_id}", response_class=HTMLResponse)
 async def expert_detail_page(request: Request, expert_id: str) -> Response:
     """Render expert detail page."""
-    user_id = request.headers.get("X-User-ID")
-    role = await _resolve_role(user_id)
     svc = get_expert_service()
     detail = svc.get_expert(expert_id)
 
     if detail is None:
-        ctx = _base_context(request, role)
+        ctx = _base_context(request)
         ctx["active_page"] = "experts"
         ctx["detail"] = "Expert not found"
         return templates.TemplateResponse(request, "error.html", ctx)
 
-    ctx = _base_context(request, role)
+    ctx = _base_context(request)
     ctx["active_page"] = "experts"
     ctx["expert"] = detail.to_dict()
     return templates.TemplateResponse(request, "expert_detail.html", ctx)
@@ -650,9 +631,7 @@ async def expert_detail_partial(request: Request, expert_id: str) -> Response:
 @ui_router.get("/tools", response_class=HTMLResponse)
 async def tools_page(request: Request) -> Response:
     """Render Tool Hub page."""
-    user_id = request.headers.get("X-User-ID")
-    role = await _resolve_role(user_id)
-    ctx = _base_context(request, role)
+    ctx = _base_context(request)
     ctx["active_page"] = "tools"
     return templates.TemplateResponse(request, "tools.html", ctx)
 
@@ -677,9 +656,7 @@ async def tools_partial(request: Request) -> Response:
 @ui_router.get("/models", response_class=HTMLResponse)
 async def models_page(request: Request) -> Response:
     """Render Model Gateway page."""
-    user_id = request.headers.get("X-User-ID")
-    role = await _resolve_role(user_id)
-    ctx = _base_context(request, role)
+    ctx = _base_context(request)
     ctx["active_page"] = "models"
     return templates.TemplateResponse(request, "models.html", ctx)
 
@@ -714,9 +691,7 @@ async def model_spend_partial(
 @ui_router.get("/compliance", response_class=HTMLResponse)
 async def compliance_page(request: Request) -> Response:
     """Render Compliance Scorecard page."""
-    user_id = request.headers.get("X-User-ID")
-    role = await _resolve_role(user_id)
-    ctx = _base_context(request, role)
+    ctx = _base_context(request)
     ctx["active_page"] = "compliance"
     return templates.TemplateResponse(request, "compliance.html", ctx)
 
@@ -767,9 +742,7 @@ async def targets_partial(
 @ui_router.get("/quarantine", response_class=HTMLResponse)
 async def quarantine_page(request: Request) -> Response:
     """Render Quarantine Operations page."""
-    user_id = request.headers.get("X-User-ID")
-    role = await _resolve_role(user_id)
-    ctx = _base_context(request, role)
+    ctx = _base_context(request)
     ctx["active_page"] = "quarantine"
     return templates.TemplateResponse(request, "quarantine.html", ctx)
 
@@ -847,9 +820,7 @@ async def quarantine_delete(request: Request, quarantine_id: str) -> Response:
 @ui_router.get("/dead-letters", response_class=HTMLResponse)
 async def dead_letters_page(request: Request) -> Response:
     """Render Dead-Letter Queue page."""
-    user_id = request.headers.get("X-User-ID")
-    role = await _resolve_role(user_id)
-    ctx = _base_context(request, role)
+    ctx = _base_context(request)
     ctx["active_page"] = "dead-letters"
     return templates.TemplateResponse(request, "dead_letters.html", ctx)
 
@@ -959,9 +930,7 @@ async def merge_mode_update(request: Request, repo_id: str) -> Response:
 @ui_router.get("/planes", response_class=HTMLResponse)
 async def planes_page(request: Request) -> Response:
     """Render Execution Planes page."""
-    user_id = request.headers.get("X-User-ID")
-    role = await _resolve_role(user_id)
-    ctx = _base_context(request, role)
+    ctx = _base_context(request)
     ctx["active_page"] = "planes"
     return templates.TemplateResponse(request, "planes.html", ctx)
 
@@ -1077,11 +1046,10 @@ async def promotion_history_partial(request: Request, repo_id: str) -> Response:
 @ui_router.get("/settings", response_class=HTMLResponse)
 async def ui_settings(request: Request) -> Response:
     """Render the Settings page (admin-only)."""
-    user_id = request.headers.get("X-User-ID")
-    role = await _resolve_role(user_id)
+    role = request.state.user_role
     if role != Role.ADMIN:
         return RedirectResponse(url="/admin/ui/dashboard", status_code=302)
-    ctx = _base_context(request, role)
+    ctx = _base_context(request)
     ctx["active_page"] = "settings"
     return templates.TemplateResponse(request, "settings.html", ctx)
 
@@ -1118,7 +1086,7 @@ async def partial_settings_api_keys_update(request: Request) -> Response:
     form = await request.form()
     key = str(form.get("key", ""))
     value = str(form.get("value", ""))
-    user_id = request.headers.get("X-User-ID", "unknown")
+    user_id = request.state.user_id
 
     svc = get_settings_service()
     audit_svc = get_audit_service()
@@ -1151,8 +1119,7 @@ async def partial_settings_api_keys_update(request: Request) -> Response:
 @ui_router.get("/partials/settings/api-keys/reveal/{key}", response_class=HTMLResponse)
 async def partial_settings_api_keys_reveal(request: Request, key: str) -> Response:
     """Reveal an unmasked API key value (admin only, logged)."""
-    user_id = request.headers.get("X-User-ID")
-    role = await _resolve_role(user_id)
+    role = request.state.user_role
     if role != Role.ADMIN:
         denied = '<span class="text-red-500 text-sm">Access denied</span>'
         return HTMLResponse(denied, status_code=403)
@@ -1164,7 +1131,7 @@ async def partial_settings_api_keys_reveal(request: Request, key: str) -> Respon
     if sv is None:
         return HTMLResponse('<span class="text-gray-400 text-sm">Not configured</span>')
 
-    logger.info("Settings reveal: user=%s key=%s", user_id, key)
+    logger.info("Settings reveal: user=%s key=%s", request.state.user_id, key)
     return HTMLResponse(
         f'<code class="text-sm text-gray-600 bg-gray-50 px-2 py-1 rounded">{sv.value}</code>'
     )
@@ -1202,7 +1169,7 @@ async def partial_settings_infrastructure_update(request: Request) -> Response:
     form = await request.form()
     key = str(form.get("key", ""))
     value = str(form.get("value", ""))
-    user_id = request.headers.get("X-User-ID", "unknown")
+    user_id = request.state.user_id
 
     svc = get_settings_service()
     audit_svc = get_audit_service()
@@ -1265,7 +1232,7 @@ async def partial_settings_feature_flags_update(request: Request) -> Response:
     form = await request.form()
     key = str(form.get("key", ""))
     value = str(form.get("value", ""))
-    user_id = request.headers.get("X-User-ID", "unknown")
+    user_id = request.state.user_id
 
     svc = get_settings_service()
     audit_svc = get_audit_service()
@@ -1330,7 +1297,7 @@ async def partial_settings_agent_config_update(request: Request) -> Response:
     from src.admin.persistence.pg_settings import SettingCategory
 
     form = await request.form()
-    user_id = request.headers.get("X-User-ID", "unknown")
+    user_id = request.state.user_id
 
     svc = get_settings_service()
     audit_svc = get_audit_service()
@@ -1407,7 +1374,7 @@ async def partial_settings_secrets_rotate_key(request: Request) -> Response:
 
     form = await request.form()
     confirmation = str(form.get("confirmation", ""))
-    user_id = request.headers.get("X-User-ID", "unknown")
+    user_id = request.state.user_id
 
     error = None
     flash = None
@@ -1455,7 +1422,7 @@ async def partial_settings_secrets_regenerate_webhook(request: Request) -> Respo
     """Regenerate the webhook secret."""
     from src.admin.audit import AuditEventType, get_audit_service
 
-    user_id = request.headers.get("X-User-ID", "unknown")
+    user_id = request.state.user_id
     svc = get_settings_service()
     audit_svc = get_audit_service()
 

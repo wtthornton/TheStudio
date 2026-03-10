@@ -99,12 +99,14 @@ jobs:
         env:
           THESTUDIO_DATABASE_URL: "postgresql+asyncpg://thestudio:thestudio_dev@localhost:5434/thestudio"
           THESTUDIO_STORE_BACKEND: postgres
+          THESTUDIO_ENCRYPTION_KEY: "hWaGRA3AtIn5jP9TYc3Vu56PS9JQHkFpcekh9PWg7Ac="
         run: uv run python -m src.db.run_migrations
 
       - name: Run integration tests
         env:
           THESTUDIO_DATABASE_URL: "postgresql+asyncpg://thestudio:thestudio_dev@localhost:5434/thestudio"
           THESTUDIO_STORE_BACKEND: postgres
+          THESTUDIO_ENCRYPTION_KEY: "hWaGRA3AtIn5jP9TYc3Vu56PS9JQHkFpcekh9PWg7Ac="
         run: |
           uv run python -m pytest tests/integration/ \
             -m integration \
