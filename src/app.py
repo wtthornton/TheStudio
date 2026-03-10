@@ -3,7 +3,11 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 from src.admin.platform_router import platform_router
 from src.admin.router import router as admin_router
@@ -12,6 +16,8 @@ from src.compliance.router import router as compliance_router
 from src.ingress.webhook_handler import router as ingress_router
 from src.observability.middleware import CorrelationMiddleware
 from src.observability.tracing import init_tracing
+
+limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
 
 
 @asynccontextmanager
@@ -23,6 +29,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 app = FastAPI(title="TheStudio", version="0.1.0", lifespan=lifespan)
+app.state.limiter = limiter
+
+
+@app.exception_handler(RateLimitExceeded)
+async def _rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    return JSONResponse(status_code=429, content={"detail": "Rate limit exceeded"})
+
+
 app.add_middleware(CorrelationMiddleware)
 app.include_router(ingress_router)
 app.include_router(compliance_router)
@@ -35,3 +49,18 @@ app.include_router(ui_router)
 async def healthz() -> dict[str, str]:
     """Unauthenticated liveness probe for load balancers and Docker health checks."""
     return {"status": "ok"}
+
+
+@app.get("/readyz")
+async def readyz() -> JSONResponse:
+    """Readiness probe — checks database connectivity."""
+    from sqlalchemy import text
+
+    from src.db.connection import engine
+
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        return JSONResponse(content={"status": "ready"})
+    except Exception as exc:
+        return JSONResponse(status_code=503, content={"status": "not ready", "detail": str(exc)})

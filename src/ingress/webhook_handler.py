@@ -3,9 +3,13 @@
 import logging
 
 from fastapi import APIRouter, Depends, Header, Request, Response
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.connection import get_session
+
+_limiter = Limiter(key_func=get_remote_address)
 from src.ingress.dedupe import is_duplicate
 from src.ingress.signature import validate_signature
 from src.ingress.workflow_trigger import start_workflow
@@ -27,6 +31,7 @@ tracer = get_tracer("thestudio.ingress")
 
 
 @router.post("/webhook/github")
+@_limiter.limit("30/minute")
 async def github_webhook(
     request: Request,
     x_hub_signature_256: str | None = Header(None),
