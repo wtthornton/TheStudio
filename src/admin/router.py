@@ -268,6 +268,30 @@ class RepoRegisterRequest(BaseModel):
     default_branch: str = "main"
 
 
+async def _parse_repo_register_request(http_request: Request) -> RepoRegisterRequest:
+    """Parse POST body as JSON or form so both API clients and the HTMX form work."""
+    content_type = (http_request.headers.get("content-type") or "").split(";")[0].strip()
+    if content_type == "application/json":
+        body = await http_request.json()
+        return RepoRegisterRequest.model_validate(body)
+    if content_type in (
+        "application/x-www-form-urlencoded",
+        "multipart/form-data",
+    ):
+        form = await http_request.form()
+        raw = dict(form)
+        return RepoRegisterRequest(
+            owner=str(raw.get("owner", "")).strip(),
+            repo=str(raw.get("repo", "")).strip(),
+            installation_id=int(raw.get("installation_id", 0)),
+            default_branch=str(raw.get("default_branch", "main")).strip() or "main",
+        )
+    raise HTTPException(
+        status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+        detail="Use application/json or application/x-www-form-urlencoded",
+    )
+
+
 class RepoRegisterResponse(BaseModel):
     """Response from POST /admin/repos."""
 
@@ -292,6 +316,8 @@ class RepoProfileResponse(BaseModel):
     required_checks: list[str]
     tool_allowlist: list[str]
     writes_enabled: bool
+    poll_enabled: bool = False
+    poll_interval_minutes: int | None = None
     created_at: datetime
     updated_at: datetime
     health: str = "unknown"
@@ -303,6 +329,8 @@ class RepoProfileUpdateRequest(BaseModel):
     default_branch: str | None = None
     required_checks: list[str] | None = None
     tool_allowlist: list[str] | None = None
+    poll_enabled: bool | None = None
+    poll_interval_minutes: int | None = None
 
 
 class RepoProfileUpdateResponse(BaseModel):
@@ -313,6 +341,14 @@ class RepoProfileUpdateResponse(BaseModel):
     repo: str
     updated_fields: list[str]
     message: str
+
+
+class PollRunResponse(BaseModel):
+    """Response from POST /admin/poll/run."""
+
+    repos_polled: int
+    issues_created: int
+    rate_limit_hit: bool
 
 
 # --- Repo Management Models (Story 4.5) ---
@@ -674,7 +710,7 @@ async def list_repos(
     dependencies=[Depends(require_permission(Permission.REGISTER_REPO))],
 )
 async def register_repo(
-    request: RepoRegisterRequest,
+    request: Annotated[RepoRegisterRequest, Depends(_parse_repo_register_request)],
     http_request: Request,
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> RepoRegisterResponse:
@@ -777,6 +813,8 @@ async def get_repo_detail(
         required_checks=repo.required_checks,
         tool_allowlist=repo.tool_allowlist,
         writes_enabled=repo.writes_enabled,
+        poll_enabled=repo.poll_enabled,
+        poll_interval_minutes=repo.poll_interval_minutes,
         created_at=repo.created_at,
         updated_at=repo.updated_at,
         health="ok" if repo.status == RepoStatus.ACTIVE else "degraded",
@@ -817,6 +855,8 @@ async def update_repo_profile(
         default_branch=request.default_branch,
         required_checks=request.required_checks,
         tool_allowlist=request.tool_allowlist,
+        poll_enabled=request.poll_enabled,
+        poll_interval_minutes=request.poll_interval_minutes,
     )
 
     updated_fields: list[str] = []
@@ -826,6 +866,10 @@ async def update_repo_profile(
         updated_fields.append("required_checks")
     if request.tool_allowlist is not None:
         updated_fields.append("tool_allowlist")
+    if request.poll_enabled is not None:
+        updated_fields.append("poll_enabled")
+    if request.poll_interval_minutes is not None:
+        updated_fields.append("poll_interval_minutes")
 
     try:
         repo = await repo_repository.update_profile(session, repo_id, update_data)
@@ -855,6 +899,26 @@ async def update_repo_profile(
         repo=repo.repo_name,
         updated_fields=updated_fields,
         message=f"Updated profile for {repo.full_name}",
+    )
+
+
+@router.post(
+    "/poll/run",
+    response_model=PollRunResponse,
+    dependencies=[Depends(require_permission(Permission.UPDATE_REPO_PROFILE))],
+)
+async def run_poll_cycle_endpoint() -> PollRunResponse:
+    """Trigger one poll cycle for repos with poll_enabled (testing / manual run).
+
+    Requires THESTUDIO_INTAKE_POLL_ENABLED=true and THESTUDIO_INTAKE_POLL_TOKEN.
+    """
+    from src.ingress.poll.scheduler import run_poll_cycle
+
+    repos_polled, issues_created, rate_limit_hit = await run_poll_cycle()
+    return PollRunResponse(
+        repos_polled=repos_polled,
+        issues_created=issues_created,
+        rate_limit_hit=rate_limit_hit,
     )
 
 

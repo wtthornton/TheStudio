@@ -39,6 +39,8 @@ MIGRATIONS = [
     "src.db.migrations.014_settings",
     "src.db.migrations.015_user_roles",
     "src.db.migrations.016_audit_log",
+    "src.db.migrations.017_repo_profile_poll",
+    "src.db.migrations.018_audit_event_repo_profile_updated",
 ]
 
 

@@ -44,6 +44,9 @@ SETTING_DEFINITIONS: dict[str, dict[str, Any]] = {
     "otel_exporter": {"category": SettingCategory.INFRASTRUCTURE, "sensitive": False},
     "otel_otlp_endpoint": {"category": SettingCategory.INFRASTRUCTURE, "sensitive": False},
     # Feature Flags
+    "intake_poll_enabled": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
+    "intake_poll_interval_minutes": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
+    "intake_poll_token": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": True},
     "llm_provider": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
     "github_provider": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
     "store_backend": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},

@@ -1,0 +1,44 @@
+# Run production/staging smoke tests against a deployed TheStudio instance.
+# Requires repository secrets: THESTUDIO_BASE_URL, WEBHOOK_SECRET.
+# Optional: THESTUDIO_INSECURE_TLS=1 (e.g. self-signed cert), THESTUDIO_ADMIN_USER.
+#
+# When this folder is used as a subfolder of TheStudio, this workflow is not run
+# (no .github at repo root). After extracting to a separate repo, copy this file
+# to .github/workflows/ at the new repo root and add the secrets.
+
+name: Production smoke
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    name: Smoke tests (deployed instance)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Skip if secrets are not configured (e.g. fresh fork).
+    if: ${{ vars.THESTUDIO_SKIP_SMOKE != 'true' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Run smoke tests
+        env:
+          THESTUDIO_BASE_URL: ${{ secrets.THESTUDIO_BASE_URL }}
+          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+          THESTUDIO_INSECURE_TLS: ${{ vars.THESTUDIO_INSECURE_TLS || '1' }}
+          THESTUDIO_ADMIN_USER: ${{ vars.THESTUDIO_ADMIN_USER || 'dev-admin@localhost' }}
+        run: pytest -v

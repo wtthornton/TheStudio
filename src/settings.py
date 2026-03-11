@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     # Webhook (Admin)
     webhook_secret: str = ""
 
+    # Poll intake (Epic 17 — Poll for Issues as Backup to Webhooks)
+    intake_poll_enabled: bool = False
+    intake_poll_interval_minutes: int = 10
+    intake_poll_token: str = ""  # PAT or installation token for GitHub API
+
     # Feature flags (Epic 8 Sprint 2)
     llm_provider: str = "mock"  # "mock" or "anthropic"
     github_provider: str = "mock"  # "mock" or "real"

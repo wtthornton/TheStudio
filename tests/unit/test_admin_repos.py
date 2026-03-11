@@ -115,6 +115,8 @@ class MockRepoProfileRow:
         self.required_checks = ["ruff", "pytest"]
         self.tool_allowlist: list[str] = []
         self.writes_enabled = True
+        self.poll_enabled = False
+        self.poll_interval_minutes = 15
         self.created_at = datetime.now(UTC)
         self.updated_at = datetime.now(UTC)
 

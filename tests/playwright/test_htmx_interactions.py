@@ -6,6 +6,8 @@ Tests critical HTMX flows:
 3. Dashboard partials load via HTMX without full page reload
 """
 
+import uuid
+
 import pytest
 
 from tests.playwright.conftest import navigate
@@ -63,24 +65,35 @@ def test_repos_page_empty_state_renders(page, base_url: str) -> None:
 def test_register_repo_flow(page, base_url: str, console_errors: list) -> None:
     """Register a repo via the UI form and verify it appears in the list.
 
-    This test creates a test repo and verifies the HTMX-driven form submission works.
+    The register form is hidden by default; we open it with "Register Repo", then fill
+    and submit. Verifies the HTMX-driven form submission works.
     """
     navigate(page, f"{base_url}/admin/ui/repos")
 
-    # Look for owner/repo input fields
+    # Open the register form (it is hidden by default; button toggles visibility)
+    register_btn = page.get_by_role("button", name="Register Repo")
+    register_btn.click()
+    # Wait for the form container to be visible so inputs are interactable
+    form_container = page.locator("#register-form")
+    form_container.wait_for(state="visible", timeout=5000)
+
     owner_input = page.locator('input[name="owner"]')
     repo_input = page.locator('input[name="repo"]')
+    installation_input = page.locator('input[name="installation_id"]')
 
     if owner_input.count() == 0 or repo_input.count() == 0:
         pytest.skip("Repo registration form fields not found")
 
     test_owner = "playwright-test"
-    test_repo = "test-repo-cleanup"
+    test_repo = f"test-repo-{uuid.uuid4().hex[:8]}"
+    test_installation_id = 12345
 
     owner_input.fill(test_owner)
     repo_input.fill(test_repo)
+    if installation_input.count() > 0:
+        installation_input.fill(str(test_installation_id))
 
-    submit_btn = page.locator('button[type="submit"]')
+    submit_btn = page.locator('#register-form button[type="submit"]')
     if submit_btn.count() > 0:
         submit_btn.first.click()
     else:
@@ -88,9 +101,19 @@ def test_register_repo_flow(page, base_url: str, console_errors: list) -> None:
 
     page.wait_for_load_state("networkidle")
 
-    body_text = page.locator("body").inner_text()
-    assert test_owner in body_text or test_repo in body_text, (
-        f"Expected test repo '{test_owner}/{test_repo}' to appear after registration"
+    # API returns JSON into #register-result. Unique repo per run so we get 201.
+    register_result = page.locator("#register-result")
+    page.wait_for_function(
+        f"""() => {{
+            const el = document.getElementById("register-result");
+            const t = el && el.innerText ? el.innerText : "";
+            return t.includes("{test_owner}") || t.includes("{test_repo}");
+        }}""",
+        timeout=10000,
+    )
+    result_text = register_result.inner_text()
+    assert test_owner in result_text or test_repo in result_text, (
+        f"Expected result to contain '{test_owner}' or '{test_repo}', got: {result_text[:200]}"
     )
 
     assert len(console_errors) == 0, (

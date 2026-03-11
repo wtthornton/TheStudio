@@ -243,6 +243,10 @@ class RepoRepository:
             repo.required_checks = data.required_checks
         if data.tool_allowlist is not None:
             repo.tool_allowlist = data.tool_allowlist
+        if data.poll_enabled is not None:
+            repo.poll_enabled = data.poll_enabled
+        if data.poll_interval_minutes is not None:
+            repo.poll_interval_minutes = data.poll_interval_minutes
 
         await session.flush()
 

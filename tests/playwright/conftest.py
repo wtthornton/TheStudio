@@ -8,7 +8,7 @@ import os
 import httpx
 import pytest
 
-DEFAULT_BASE_URL = "http://localhost:8000"
+DEFAULT_BASE_URL = "http://localhost:8000"  # matches docker-compose.dev.yml app port
 
 
 def _stack_is_running(base_url: str = DEFAULT_BASE_URL) -> bool:
@@ -33,7 +33,7 @@ def _require_playwright_stack(base_url: str) -> None:
         pytest.skip(
             "App stack is not running (healthz unreachable). "
             "Start the stack (e.g. docker compose -f docker-compose.dev.yml up -d) "
-            "and ensure port 8000 is available."
+            "and ensure port 8000 is available (or set PLAYWRIGHT_BASE_URL)."
         )
 
 

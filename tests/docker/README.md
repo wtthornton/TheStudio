@@ -9,7 +9,7 @@ Automated tests that verify the full Docker Compose stack builds, starts, connec
 
 ## Running locally
 
-1. **Start the stack:**
+1. **Start the stack:** (app at `http://localhost:8000`; see [docs/URLs.md](../../docs/URLs.md) for all URLs)
 
    ```bash
    docker compose -f docker-compose.dev.yml up -d --build

@@ -64,6 +64,21 @@
                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                        {% if not can_update_profile %}disabled{% endif %}>
             </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Issue Polling (backup when webhooks unavailable)</label>
+                <select name="poll_enabled" class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                        {% if not can_update_profile %}disabled{% endif %}>
+                    <option value="true" {% if repo.profile.poll_enabled %}selected{% endif %}>Enabled</option>
+                    <option value="false" {% if not repo.profile.poll_enabled %}selected{% endif %}>Disabled</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Poll Interval (minutes)</label>
+                <input type="number" name="poll_interval_minutes" min="5" max="60"
+                       value="{{ repo.profile.poll_interval_minutes | default(10) }}"
+                       class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                       {% if not can_update_profile %}disabled{% endif %}>
+            </div>
         </div>
         {% if can_update_profile %}
         <div class="mt-4">

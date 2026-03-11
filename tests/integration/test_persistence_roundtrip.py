@@ -40,6 +40,11 @@ class TestStoreFactorySwitching:
     def test_is_postgres_backend_true_when_postgres(self, monkeypatch):
         """store_backend='postgres' returns True."""
         monkeypatch.setenv("THESTUDIO_STORE_BACKEND", "postgres")
+        # Settings validator requires a non-placeholder encryption key when store_backend=postgres
+        monkeypatch.setenv(
+            "THESTUDIO_ENCRYPTION_KEY",
+            "xYz1234567890123456789012345678901234567890=",
+        )
         from src.settings import Settings
 
         monkeypatch.setattr("src.admin.store_factory.settings", Settings())

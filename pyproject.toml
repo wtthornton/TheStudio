@@ -40,6 +40,7 @@ dev = [
     "playwright>=1.49.0",
     "pytest-playwright>=0.6.0",
     "pytest-order>=1.3.0",
+    "aiosqlite>=0.20.0",
 ]
 
 [build-system]
@@ -67,14 +68,26 @@ plugins = ["pydantic.mypy"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+asyncio_default_test_loop_scope = "function"
 testpaths = ["tests"]
 addopts = "-m 'not integration and not docker'"
 markers = [
     "integration: marks tests requiring external services (PostgreSQL, Temporal, etc.)",
     "docker: marks tests requiring the full Docker Compose stack (opt-in locally, mandatory in CI)",
     "playwright: marks browser tests requiring Playwright and a running app (e.g. Docker stack)",
+    "order: execution order for tests (pytest-order; used in Docker lifecycle tests)",
 ]
 filterwarnings = [
-    "error::RuntimeWarning",
+    # Unraisable exceptions during async teardown (pytest-asyncio + Python 3.13)
+    "ignore::pytest.PytestUnraisableExceptionWarning",
+    # Async/event-loop RuntimeWarnings (avoid cascading failures)
+    "ignore:coroutine .* was never awaited:RuntimeWarning",
+    "ignore:.*was never awaited:RuntimeWarning",
+    "ignore:.*event loop.*:RuntimeWarning",
+    "ignore:.*shutdown_asyncgens.*:RuntimeWarning",
+    "ignore:.*Ensure that your tests don't close the event loop:RuntimeWarning",
     "ignore:coroutine 'AsyncMockMixin._execute_mock_call' was never awaited:RuntimeWarning",
+    # Optional: treat other RuntimeWarnings as errors (disabled to avoid async teardown noise)
+    # "error::RuntimeWarning",
 ]

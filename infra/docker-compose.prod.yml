@@ -1,11 +1,14 @@
-name: thestudio
+# Project name isolates this stack from other production systems on the same host.
+name: thestudio-prod
 
 services:
   caddy:
     image: caddy:2.9-alpine
+    # Host ports 9080/9443 so this stack can run alongside other systems using 80/443.
+    # To use 80/443 exclusively, change to "80:80" and "443:443".
     ports:
-      - "80:80"
-      - "443:443"
+      - "9080:80"
+      - "9443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -33,12 +36,15 @@ services:
       THESTUDIO_GITHUB_APP_ID: "${THESTUDIO_GITHUB_APP_ID:-}"
       THESTUDIO_GITHUB_PRIVATE_KEY_PATH: "${THESTUDIO_GITHUB_PRIVATE_KEY_PATH:-}"
       THESTUDIO_WEBHOOK_SECRET: "${THESTUDIO_WEBHOOK_SECRET:-}"
+      THESTUDIO_INTAKE_POLL_ENABLED: "${THESTUDIO_INTAKE_POLL_ENABLED:-false}"
+      THESTUDIO_INTAKE_POLL_INTERVAL_MINUTES: "${THESTUDIO_INTAKE_POLL_INTERVAL_MINUTES:-10}"
+      THESTUDIO_INTAKE_POLL_TOKEN: "${THESTUDIO_INTAKE_POLL_TOKEN:-}"
       THESTUDIO_OTEL_EXPORTER: "${THESTUDIO_OTEL_EXPORTER:-console}"
     depends_on:
       postgres:
         condition: service_healthy
       temporal:
-        condition: service_started
+        condition: service_healthy
       nats:
         condition: service_started
     healthcheck:

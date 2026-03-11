@@ -69,9 +69,9 @@ def _eligible_input(**overrides) -> PipelineInput:
     return PipelineInput(**defaults)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 async def temporal_env():
-    """Shared Temporal test environment for all pipeline tests (module-scoped)."""
+    """Temporal test environment (function-scoped for pytest-asyncio loop scope)."""
     env = await WorkflowEnvironment.start_local()
     yield env
     await env.shutdown()

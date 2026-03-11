@@ -64,6 +64,7 @@ src/outcome/       Signal ingestor, quarantine, replay
 
 ## Key References
 
+- **URLs (dev, prod, admin, API):** `docs/URLs.md`
 - Reset / canonical index: `thestudioarc/personas/TEAM.md`
 - Training: `thestudioarc/personas/TRAINING.md`
 - OKRs and team review: `thestudioarc/personas/MERIDIAN-TEAM-REVIEW-AND-OKRS.md`

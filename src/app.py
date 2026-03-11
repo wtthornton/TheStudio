@@ -22,10 +22,15 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Application lifespan: initialize tracing and register context packs on startup."""
+    """Application lifespan: initialize tracing, context packs, and poll scheduler on startup."""
     init_tracing()
     import src.context.packs  # noqa: F401 — registers production context packs
+    from src.ingress.poll.scheduler import start_poll_scheduler
+
+    poll_task = start_poll_scheduler()
     yield
+    if poll_task is not None:
+        poll_task.cancel()
 
 
 app = FastAPI(title="TheStudio", version="0.1.0", lifespan=lifespan)

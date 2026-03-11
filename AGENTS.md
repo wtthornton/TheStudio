@@ -243,9 +243,21 @@ DocsMCP is a separate MCP server. Install via `pip install docs-mcp` or `npx doc
 
 ---
 
+## TappsMCP and the production test rig
+
+The **production test rig** lives in `thestudio-production-test-rig/` (scaffold for a separate repo). When TappsMCP runs via **MCP_DOCKER** (container gateway), the container’s project root may not include that path, so tools like `tapps_quick_check` or `tapps_validate_changed` may not see test rig files.
+
+**Options:**
+
+1. **Run Tapps from the host** on explicit paths when you change the test rig: e.g. `tapps_validate_changed(file_paths="thestudio-production-test-rig/tests/test_production_smoke.py,thestudio-production-test-rig/tests/conftest.py")`. Use paths relative to the repo root; ensure `TAPPS_MCP_PROJECT_ROOT` (or host workspace) is the TheStudio repo root so that `thestudio-production-test-rig/...` resolves.
+2. **Run Ruff locally** for the test rig: from repo root, `ruff check thestudio-production-test-rig/` and `ruff format thestudio-production-test-rig/`.
+3. **If you use a container for Tapps:** Ensure the project root inside the container includes `thestudio-production-test-rig/` (e.g. mount the full workspace or set the container’s `TAPPS_MCP_PROJECT_ROOT` so the test rig path is visible). Then Tapps tools can be used with paths like `thestudio-production-test-rig/tests/test_production_smoke.py`.
+
+---
+
 ## Troubleshooting: MCP server not available
 
-For the full consumer requirements checklist, see [docs/TAPPS_MCP_REQUIREMENTS.md](docs/TAPPS_MCP_REQUIREMENTS.md).
+For the full consumer requirements checklist, see [docs/TAPPS_MCP_REQUIREMENTS.md](docs/TAPPS_MCP_REQUIREMENTS.md) (if present).
 
 TappsMCP tools (`tapps_session_start`, `tapps_init`, `tapps_quick_check`, etc.) are only callable when the tapps-mcp server is **listed as an available MCP server** in your host (Claude Code, Cursor, or VS Code). If the server is configured in MCP config files but not visible to the agent, tool calls will fail.
 

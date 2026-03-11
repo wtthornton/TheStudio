@@ -296,7 +296,7 @@ async def partial_repos(request: Request) -> Response:
             {
                 "id": str(row.id),
                 "owner": row.owner,
-                "repo": row.repo,
+                "repo": row.repo_name,
                 "tier": row.tier.value if hasattr(row.tier, "value") else str(row.tier),
                 "status": (
                     row.status.value
@@ -338,7 +338,7 @@ async def partial_repo_detail(request: Request, repo_id: str) -> Response:
     repo_data = {
         "id": str(row.id),
         "owner": row.owner,
-        "repo": row.repo,
+        "repo": row.repo_name,
         "tier": row.tier.value,
         "status": row.status.value,
         "health": health,
@@ -351,6 +351,8 @@ async def partial_repo_detail(request: Request, repo_id: str) -> Response:
             "build_commands": getattr(row, "build_commands", ""),
             "required_checks": ", ".join(getattr(row, "required_checks", []) or []),
             "risk_paths": ", ".join(getattr(row, "risk_paths", []) or []),
+            "poll_enabled": row.poll_enabled,
+            "poll_interval_minutes": row.poll_interval_minutes or 10,
         },
     }
 

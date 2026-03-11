@@ -17,7 +17,7 @@ pytest tests/ -m "not integration"
 uvicorn src.app:app --reload --port 8000
 
 # 5. Access Admin UI
-open http://localhost:8000/admin/
+open http://localhost:8000/admin/ui/
 ```
 
 ## Docker Compose (Full Stack)
@@ -27,6 +27,8 @@ cd infra && docker compose up -d
 ```
 
 This starts: FastAPI app (`:8000`), PostgreSQL (`:5434`), Temporal (`:7233`), Temporal UI (`:8088`), NATS (`:4222`).
+
+For **local dev** from the repo root, use `docker compose -f docker-compose.dev.yml up -d`. The app is exposed on port 8000. Health check: `curl http://localhost:8000/healthz`.
 
 ## Environment Variables
 
@@ -57,6 +59,16 @@ All flags default to safe/mock mode. Existing tests are unaffected regardless of
 | `THESTUDIO_AGENT_MAX_TURNS` | `30` | No | Max agent conversation turns |
 | `THESTUDIO_AGENT_MAX_BUDGET_USD` | `5.0` | No | Max spend per task (USD) |
 | `THESTUDIO_AGENT_MAX_LOOPBACKS` | `2` | No | Max QA loopbacks before escalation |
+
+### Poll Intake (Epic 17 — Backup when webhooks unavailable)
+
+| Variable | Default | Required | Description |
+|----------|---------|----------|-------------|
+| `THESTUDIO_INTAKE_POLL_ENABLED` | `false` | No | Enable issue polling (backup when no public URL) |
+| `THESTUDIO_INTAKE_POLL_INTERVAL_MINUTES` | `10` | No | Poll interval in minutes (5–60) |
+| `THESTUDIO_INTAKE_POLL_TOKEN` | `""` | When poll enabled | GitHub PAT or installation token for API calls |
+
+**When to use polling:** No public URL (local dev, air-gapped, NAT-only) or webhooks misconfigured. Prefer webhooks when a public URL exists.
 
 ### GitHub Integration
 
@@ -114,6 +126,10 @@ pytest tests/ -m integration
 
 Deploy TheStudio on a single Linux host with Docker Compose. This section covers the hardened production stack (`infra/docker-compose.prod.yml`).
 
+**Shared Docker host:** The stack uses Compose project name `thestudio-prod` and host ports **9080** (HTTP) and **9443** (HTTPS) by default so it can run alongside other production systems using 80/443. Admin UI: **https://localhost:9443/admin/ui/** — health: **https://localhost:9443/healthz**. To bind 80/443 exclusively, edit the `caddy` service ports in `docker-compose.prod.yml`. Full URL reference: **docs/URLs.md**.
+
+**Production test rig (multi-repo):** A dedicated repo runs tests against this deployment without starting Docker. See `docs/production-test-rig-contract.md` and the scaffold in `thestudio-production-test-rig/`.
+
 ## Prerequisites
 
 - Linux host (Ubuntu 22.04+, Debian 12+, or similar) with a public IP
@@ -128,13 +144,29 @@ docker --version        # Docker Engine 24+
 docker compose version  # Docker Compose v2.20+
 ```
 
-## Secret Generation
+## Quick start (first-time production)
 
-All secrets go in `infra/.env`. Start from the template:
+To bring the production stack up with **mock** LLM/GitHub (no real API keys):
 
 ```bash
 cd infra
-cp .env.example .env
+./setup-prod-env.sh --mock    # Creates .env with generated secrets and mock providers
+./check-env.sh                # Validate
+docker compose -f docker-compose.prod.yml up -d
+./wait-for-stack.sh           # Optional: wait until HTTPS /healthz is ready
+```
+
+Then open **https://localhost:9443/admin/ui/** (accept the self-signed cert). See **docs/URLs.md** for all URLs. The default compose binds Caddy to host ports **9080** (HTTP) and **9443** (HTTPS) so this stack can run alongside other systems using 80/443. To use **real** Anthropic and GitHub later, edit `infra/.env` with real keys and set `THESTUDIO_LLM_PROVIDER=anthropic`, `THESTUDIO_GITHUB_PROVIDER=real`, then `docker compose -f docker-compose.prod.yml up -d --force-recreate app`.
+
+## Secret Generation
+
+All secrets go in `infra/.env`. Either use the setup script (recommended for first-time) or the template:
+
+```bash
+cd infra
+./setup-prod-env.sh [--mock]   # Generates secrets and creates .env; use --mock for mock providers
+# OR
+cp .env.example .env           # Then fill in values manually
 ```
 
 Generate each required secret:
@@ -209,9 +241,10 @@ The startup order is:
 # Wait for all services
 bash wait-for-stack.sh
 
-# Check HTTPS endpoint
-curl -k https://localhost/healthz
+# Check HTTPS endpoint (shared-host ports: 9080 HTTP, 9443 HTTPS)
+curl -k https://localhost:9443/healthz
 # Expected: {"status":"ok"}
+# Full URL reference: docs/URLs.md
 
 # Check service status
 docker compose -f docker-compose.prod.yml ps

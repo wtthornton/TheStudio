@@ -67,6 +67,8 @@ class RepoProfileRow(Base):
         default=RepoStatus.ACTIVE,
     )
     writes_enabled: Mapped[bool] = mapped_column(nullable=False, default=True)
+    poll_enabled: Mapped[bool] = mapped_column(nullable=False, default=False)
+    poll_interval_minutes: Mapped[int | None] = mapped_column(nullable=True, default=None)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -120,6 +122,8 @@ class RepoProfileRead(BaseModel):
     tool_allowlist: list[str]
     status: RepoStatus
     writes_enabled: bool
+    poll_enabled: bool = False
+    poll_interval_minutes: int | None = None
     created_at: datetime
     updated_at: datetime
     deleted_at: datetime | None = None
@@ -136,3 +140,5 @@ class RepoProfileUpdate(BaseModel):
     default_branch: str | None = None
     required_checks: list[str] | None = None
     tool_allowlist: list[str] | None = None
+    poll_enabled: bool | None = None
+    poll_interval_minutes: int | None = None

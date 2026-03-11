@@ -70,7 +70,7 @@ docker compose -f docker-compose.prod.yml up -d
 
 **Services:** app (`:8000`), postgres (`:5434`), temporal (`:7233`), temporal-ui (`:8088`), nats (`:4222`)
 
-**Health checks:** `/healthz` (liveness), `/readyz` (DB connectivity)
+**Health checks:** `/healthz` (liveness), `/readyz` (DB connectivity). **URLs:** Dev app and admin UI at `http://localhost:8000` (admin: `http://localhost:8000/admin/ui/`). Production (prod compose) uses ports 9080 (HTTP) and 9443 (HTTPS). See [docs/URLs.md](docs/URLs.md) for the full URL reference.
 
 **Database backup:**
 ```bash

@@ -15,7 +15,7 @@ import uuid
 import httpx
 import pytest
 
-BASE_URL = "http://localhost:8000"
+BASE_URL = "http://localhost:8000"  # matches docker-compose.dev.yml app port
 WEBHOOK_SECRET = "test-webhook-secret"
 
 
