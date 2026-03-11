@@ -14,9 +14,9 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
-from markupsafe import escape
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from markupsafe import escape
 
 from src.admin.audit import AuditEventType, AuditLogFilter, get_audit_service
 from src.admin.compliance_scorecard import get_scorecard_service
@@ -50,6 +50,7 @@ logger = logging.getLogger(__name__)
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+
 
 async def _require_ui_auth(request: Request) -> None:
     """Router-level dependency that enforces authentication on all UI routes.
@@ -223,23 +224,27 @@ async def partial_dashboard(request: Request) -> Response:
 
     repos_list = []
     for repo_metric in metrics_data.repos:
-        repos_list.append({
-            "repo_id": str(repo_metric.repo_id),
-            "full_name": repo_metric.repo_name,
-            "tier": repo_metric.tier,
-            "health": "OK" if not repo_metric.has_elevated_failure_rate else "DEGRADED",
-            "queue_depth": repo_metric.queue_depth,
-            "running": repo_metric.counts.running,
-            "stuck": repo_metric.counts.stuck,
-            "pass_rate_24h": round(repo_metric.pass_rate_24h * 100, 1),
-        })
+        repos_list.append(
+            {
+                "repo_id": str(repo_metric.repo_id),
+                "full_name": repo_metric.repo_name,
+                "tier": repo_metric.tier,
+                "health": "OK" if not repo_metric.has_elevated_failure_rate else "DEGRADED",
+                "queue_depth": repo_metric.queue_depth,
+                "running": repo_metric.counts.running,
+                "stuck": repo_metric.counts.stuck,
+                "pass_rate_24h": round(repo_metric.pass_rate_24h * 100, 1),
+            }
+        )
 
     hot_alerts = []
     for alert in metrics_data.alerts:
-        hot_alerts.append({
-            "repo": alert.repo_name,
-            "message": alert.message,
-        })
+        hot_alerts.append(
+            {
+                "repo": alert.repo_name,
+                "message": alert.message,
+            }
+        )
 
     ctx = {
         "request": request,
@@ -287,19 +292,21 @@ async def partial_repos(request: Request) -> Response:
             health = "degraded"
         elif hasattr(row, "status") and row.status and row.status.value == "writes_disabled":
             health = "degraded"
-        repos.append({
-            "id": str(row.id),
-            "owner": row.owner,
-            "repo": row.repo,
-            "tier": row.tier.value if hasattr(row.tier, "value") else str(row.tier),
-            "status": (
-                row.status.value
-                if hasattr(row, "status") and row.status and hasattr(row.status, "value")
-                else "active"
-            ),
-            "health": health,
-            "installation_id": row.installation_id,
-        })
+        repos.append(
+            {
+                "id": str(row.id),
+                "owner": row.owner,
+                "repo": row.repo,
+                "tier": row.tier.value if hasattr(row.tier, "value") else str(row.tier),
+                "status": (
+                    row.status.value
+                    if hasattr(row, "status") and row.status and hasattr(row.status, "value")
+                    else "active"
+                ),
+                "health": health,
+                "installation_id": row.installation_id,
+            }
+        )
 
     ctx = {"request": request, "repos": repos}
     return templates.TemplateResponse(request, "partials/repos_list.html", ctx)
@@ -375,6 +382,7 @@ async def partial_workflows(
     if status:
         try:
             from src.admin.workflow_console import WorkflowStatus
+
             wf_status = WorkflowStatus(status)
         except ValueError:
             pass
@@ -395,14 +403,16 @@ async def partial_workflows(
 
     workflows = []
     for wf in workflows_data:
-        workflows.append({
-            "id": str(wf.workflow_id),
-            "repo_id": wf.repo_id,
-            "repo_name": getattr(wf, "repo_name", wf.repo_id),
-            "status": wf.status.value,
-            "current_step": getattr(wf, "current_step", None),
-            "attempt_count": getattr(wf, "attempt_count", 1),
-        })
+        workflows.append(
+            {
+                "id": str(wf.workflow_id),
+                "repo_id": wf.repo_id,
+                "repo_name": getattr(wf, "repo_name", wf.repo_id),
+                "status": wf.status.value,
+                "current_step": getattr(wf, "current_step", None),
+                "attempt_count": getattr(wf, "attempt_count", 1),
+            }
+        )
 
     ctx = {"request": request, "workflows": workflows}
     return templates.TemplateResponse(request, "partials/workflows_list.html", ctx)
@@ -428,23 +438,21 @@ async def partial_workflow_detail(request: Request, workflow_id: str) -> Respons
 
     timeline = []
     for step in getattr(wf, "timeline", []) or []:
-        step_status = (
-            step.status.value if hasattr(step.status, "value") else str(step.status)
-        )
+        step_status = step.status.value if hasattr(step.status, "value") else str(step.status)
         evidence_str = None
         if step.evidence:
             evidence_str = (
-                "\n".join(step.evidence)
-                if isinstance(step.evidence, list)
-                else str(step.evidence)
+                "\n".join(step.evidence) if isinstance(step.evidence, list) else str(step.evidence)
             )
-        timeline.append({
-            "name": step.step,
-            "status": step_status,
-            "timestamp": str(step.started_at or ""),
-            "failure_reason": step.failure_reason,
-            "evidence": evidence_str,
-        })
+        timeline.append(
+            {
+                "name": step.step,
+                "status": step_status,
+                "timestamp": str(step.started_at or ""),
+                "failure_reason": step.failure_reason,
+                "evidence": evidence_str,
+            }
+        )
 
     retry_info = None
     if wf.retry_info:
@@ -529,17 +537,19 @@ async def partial_audit(
 
     entries = []
     for row in entries_to_show:
-        entries.append({
-            "timestamp": str(row.timestamp),
-            "actor": row.actor,
-            "event_type": (
-                row.event_type.value
-                if hasattr(row.event_type, "value")
-                else str(row.event_type)
-            ),
-            "target_id": str(row.target_id) if row.target_id else None,
-            "details": row.details,
-        })
+        entries.append(
+            {
+                "timestamp": str(row.timestamp),
+                "actor": row.actor,
+                "event_type": (
+                    row.event_type.value
+                    if hasattr(row.event_type, "value")
+                    else str(row.event_type)
+                ),
+                "target_id": str(row.target_id) if row.target_id else None,
+                "details": row.details,
+            }
+        )
 
     ctx = {
         "request": request,
@@ -909,12 +919,12 @@ async def merge_mode_partial(request: Request, repo_id: str) -> Response:
         f'class="border border-gray-300 rounded px-2 py-1 text-sm">'
         + "".join(
             f'<option value="{escape(m)}" {"selected" if m == mode.value else ""}>'
-            f'{escape(mode_labels[m])}</option>'
+            f"{escape(mode_labels[m])}</option>"
             for m in modes
         )
-        + f'</select>'
+        + f"</select>"
         f'<span class="text-xs text-gray-400">({safe_mode_value})</span>'
-        f'</div>'
+        f"</div>"
     )
 
 
@@ -945,12 +955,12 @@ async def merge_mode_update(request: Request, repo_id: str) -> Response:
         f'class="border border-gray-300 rounded px-2 py-1 text-sm">'
         + "".join(
             f'<option value="{escape(m)}" {"selected" if m == mode.value else ""}>'
-            f'{escape(mode_labels[m])}</option>'
+            f"{escape(mode_labels[m])}</option>"
             for m in modes
         )
-        + '</select>'
+        + "</select>"
         '<span class="text-xs text-green-600 text-xs">Updated</span>'
-        '</div>'
+        "</div>"
     )
 
 
@@ -1035,13 +1045,11 @@ async def promotion_history_partial(request: Request, repo_id: str) -> Response:
     items = [t.to_dict() for t in transitions]
 
     if not items:
-        return HTMLResponse(
-            '<div class="text-gray-400 text-sm py-2">No promotion history.</div>'
-        )
+        return HTMLResponse('<div class="text-gray-400 text-sm py-2">No promotion history.</div>')
 
     rows = []
     for t in items:
-        score_str = f'{t["compliance_score"]:.0f}' if t.get("compliance_score") is not None else "-"
+        score_str = f"{t['compliance_score']:.0f}" if t.get("compliance_score") is not None else "-"
         remediation_count = len(t.get("remediation_items", []))
         from_tier = escape(str(t.get("from_tier", "")))
         to_tier = escape(str(t.get("to_tier", "")))
@@ -1056,7 +1064,7 @@ async def promotion_history_partial(request: Request, repo_id: str) -> Response:
             f'<td class="py-2 pr-4">{score_str}</td>'
             f'<td class="py-2 pr-4 text-gray-500">{reason}</td>'
             f'<td class="py-2">{remediation_count} item(s)</td>'
-            f'</tr>'
+            f"</tr>"
         )
 
     return HTMLResponse(
@@ -1069,9 +1077,9 @@ async def promotion_history_partial(request: Request, repo_id: str) -> Response:
         '<th class="pb-2 pr-4">Score</th>'
         '<th class="pb-2 pr-4">Reason</th>'
         '<th class="pb-2">Remediation</th>'
-        '</tr></thead>'
+        "</tr></thead>"
         f'<tbody class="divide-y divide-gray-100">{"".join(rows)}</tbody>'
-        '</table>'
+        "</table>"
     )
 
 
@@ -1133,7 +1141,10 @@ async def partial_settings_api_keys_update(request: Request) -> Response:
             old_display = old_sv.display_value if old_sv else None
             sv = await svc.set(session, key, value, user_id)
             await audit_svc.log_event(
-                session, user_id, AuditEventType.SETTINGS_CHANGED, key,
+                session,
+                user_id,
+                AuditEventType.SETTINGS_CHANGED,
+                key,
                 {"action": "update", "old_value": old_display, "new_value": sv.display_value},
             )
             await session.commit()
@@ -1168,7 +1179,8 @@ async def partial_settings_api_keys_reveal(request: Request, key: str) -> Respon
 
     logger.info("Settings reveal: user=%s key=%s", request.state.user_id, key)
     return HTMLResponse(
-        f'<code class="text-sm text-gray-600 bg-gray-50 px-2 py-1 rounded">{escape(sv.value)}</code>'
+        f'<code class="text-sm text-gray-600 bg-gray-50 px-2 py-1 rounded">'
+        f'{escape(sv.value)}</code>'
     )
 
 
@@ -1182,9 +1194,7 @@ async def partial_settings_infrastructure(request: Request) -> Response:
         values = await svc.list_by_category(session, SettingCategory.INFRASTRUCTURE)
 
     # Check if any infra settings have DB overrides (restart-required)
-    restart_required = any(
-        v.source == "db" and v.key in RESTART_REQUIRED_KEYS for v in values
-    )
+    restart_required = any(v.source == "db" and v.key in RESTART_REQUIRED_KEYS for v in values)
 
     ctx = {
         "request": request,
@@ -1217,7 +1227,10 @@ async def partial_settings_infrastructure_update(request: Request) -> Response:
             old_display = old_sv.display_value if old_sv else None
             sv = await svc.set(session, key, value, user_id)
             await audit_svc.log_event(
-                session, user_id, AuditEventType.SETTINGS_CHANGED, key,
+                session,
+                user_id,
+                AuditEventType.SETTINGS_CHANGED,
+                key,
                 {"action": "update", "old_value": old_display, "new_value": sv.display_value},
             )
             await session.commit()
@@ -1227,9 +1240,7 @@ async def partial_settings_infrastructure_update(request: Request) -> Response:
 
         values = await svc.list_by_category(session, SettingCategory.INFRASTRUCTURE)
 
-    restart_required = any(
-        v.source == "db" and v.key in RESTART_REQUIRED_KEYS for v in values
-    )
+    restart_required = any(v.source == "db" and v.key in RESTART_REQUIRED_KEYS for v in values)
 
     ctx = {
         "request": request,
@@ -1279,7 +1290,10 @@ async def partial_settings_feature_flags_update(request: Request) -> Response:
             old_display = old_sv.display_value if old_sv else None
             sv = await svc.set(session, key, value, user_id)
             await audit_svc.log_event(
-                session, user_id, AuditEventType.SETTINGS_CHANGED, key,
+                session,
+                user_id,
+                AuditEventType.SETTINGS_CHANGED,
+                key,
                 {"action": "update", "old_value": old_display, "new_value": sv.display_value},
             )
             await session.commit()
@@ -1352,7 +1366,10 @@ async def partial_settings_agent_config_update(request: Request) -> Response:
                 old_display = old_sv.display_value if old_sv else None
                 sv = await svc.set(session, key, value, user_id)
                 await audit_svc.log_event(
-                    session, user_id, AuditEventType.SETTINGS_CHANGED, key,
+                    session,
+                    user_id,
+                    AuditEventType.SETTINGS_CHANGED,
+                    key,
                     {"action": "update", "old_value": old_display, "new_value": sv.display_value},
                 )
             except ValueError as e:
@@ -1427,7 +1444,9 @@ async def partial_settings_secrets_rotate_key(request: Request) -> Response:
                 # Store the new key
                 await svc.set(session, "encryption_key", new_key, user_id)
                 await audit_svc.log_event(
-                    session, user_id, AuditEventType.SETTINGS_CHANGED,
+                    session,
+                    user_id,
+                    AuditEventType.SETTINGS_CHANGED,
                     "encryption_key",
                     {"action": "rotate", "secrets_reencrypted": count},
                 )
@@ -1464,7 +1483,9 @@ async def partial_settings_secrets_regenerate_webhook(request: Request) -> Respo
     async with get_async_session() as session:
         new_secret = await svc.regenerate_webhook_secret(session, user_id)
         await audit_svc.log_event(
-            session, user_id, AuditEventType.SETTINGS_CHANGED,
+            session,
+            user_id,
+            AuditEventType.SETTINGS_CHANGED,
             "webhook_secret",
             {"action": "regenerate"},
         )

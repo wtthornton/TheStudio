@@ -2,7 +2,8 @@
 
 **Author:** Saga
 **Date:** 2026-03-10
-**Status:** Draft — Awaiting Meridian Review
+**Status:** Draft — Revised after Meridian Review Round 1
+**Target Sprint:** Sprint 16 (week of 2026-03-10)
 
 ---
 
@@ -12,15 +13,15 @@ Prove the Pipeline Works End-to-End — Build an in-process integration test har
 
 ## 2. Narrative
 
-TheStudio has 1,561 passing unit tests, a Temporal workflow definition that wires all 9 steps, activity stubs that call real pure functions (intake, router) and delegate the rest through Model Gateway and Tool Hub, Docker smoke tests that prove webhook-to-TaskPacket intake works, and Playwright browser tests that verify the Admin UI. Every individual pipeline stage has been tested in isolation. The Temporal workflow (`TheStudioPipelineWorkflow`) exists and compiles. The activity definitions in `src/workflow/activities.py` are wired with proper input/output dataclasses.
+TheStudio has 1,570 passing tests (1,561 unit + 9 integration), a Temporal workflow definition that wires all 9 steps, activity stubs that call real pure functions (intake, router) and delegate the rest through Model Gateway and Tool Hub, Docker smoke tests that prove webhook-to-TaskPacket intake works, and Playwright browser tests that verify the Admin UI. Every individual pipeline stage has been tested in isolation. The Temporal workflow (`TheStudioPipelineWorkflow`) exists and compiles. The activity definitions in `src/workflow/activities.py` are wired with proper input/output dataclasses.
 
-But no test has ever executed the full chain: webhook POST through intake through context through intent through router through assembler through implementation through verification through QA through publisher, producing a draft PR with a formatted evidence comment. The pipeline has never run end-to-end.
+**Existing end-to-end coverage:** `tests/integration/test_pipeline_workflow.py` already runs the full 9-step workflow through Temporal's `WorkflowEnvironment`, including happy path, verification loopback, QA loopback, and gate exhaustion tests (5 tests total, Epic 9). Additionally, `tests/integration/test_evidence_validation.py` validates the basic evidence comment format (9 tests, Epic 15 prep).
 
-This gap is not academic. The current activity implementations reveal it concretely: `context_activity` calls `get_model_router()` and `get_tool_policy_engine()` but returns hardcoded defaults. `intent_activity` calls the Model Gateway but returns `goal=params.issue_title` with empty acceptance criteria. `verify_activity` always returns `passed=True`. `publish_activity` returns `pr_number=0`. These stubs were necessary to ship the workflow definition, but they mean the pipeline has never produced a real output from real-shaped input.
+**The gap is not "no e2e test exists" — the gap is data fidelity.** The existing tests prove workflow wiring works, but the activity stubs return hardcoded/empty data: `context_activity` calls `get_model_router()` and `get_tool_policy_engine()` but returns hardcoded defaults. `intent_activity` calls the Model Gateway but returns `goal=params.issue_title` with empty acceptance criteria. `verify_activity` always returns `passed=True`. `publish_activity` returns `pr_number=0`. These stubs prove the workflow orchestrates correctly, but they cannot catch data-contract bugs between stages — if Context produces a field that Intent doesn't read, or if Assembler drops a field that Implement needs, the current tests pass silently.
 
 This matters now because every preceding epic built toward one goal: processing a real GitHub issue end-to-end with evidence-backed output. Epics 0-10 built the pipeline stages, the domain objects, and the infrastructure. Epics 11-12 hardened the deployment and tested the UI. Epics 13-14 built agent definitions and content enrichment. The only remaining gap is proving the chain works as a connected system and then pointing it at a real repository.
 
-This epic closes that gap in two ways. First, it builds an in-process integration test suite that chains all 9 stages together using mock providers (mock GitHub API, mock LLM responses, in-memory or SQLite database) so the full pipeline can run in CI without Docker, without API keys, and without external services. Second, it produces a step-by-step onboarding guide for registering a real GitHub repository at Observe tier, so the first real-repo run has a documented, repeatable procedure.
+This epic closes that gap in two ways. First, it enhances the existing integration test suite with realistic mock providers that return properly shaped data (valid UUIDs, populated acceptance criteria, non-empty file lists) so data-contract bugs between stages are caught. It extends `tests/integration/test_pipeline_workflow.py` rather than duplicating it. Second, it produces a step-by-step onboarding guide for registering a real GitHub repository at Observe tier, so the first real-repo run has a documented, repeatable procedure.
 
 **Roadmap linkage:** This epic is the bridge between "the platform is built" and "the platform processes real work." It directly advances the OKR: "TheStudio processes a real GitHub issue end-to-end with evidence-backed output." Without it, the first real-repo run is a manual, undocumented experiment. With it, the first real-repo run is a measured, repeatable operation with a known latency baseline.
 
@@ -35,6 +36,9 @@ This epic closes that gap in two ways. First, it builds an in-process integratio
 - Intake pure function: `src/intake/intake_agent.py` (`evaluate_eligibility`)
 - Router pure function: `src/routing/router.py` (`route`)
 - Verification gate: `src/verification/gate.py`
+- **Existing integration tests (extend, do not duplicate):**
+  - `tests/integration/test_pipeline_workflow.py` — 5 Temporal workflow tests (happy path, loopback, exhaustion)
+  - `tests/integration/test_evidence_validation.py` — 9 evidence comment format tests (basic `format_evidence_comment`)
 - Docker smoke tests (existing): `tests/docker/test_pipeline_smoke.py`, `tests/docker/conftest.py`
 - Pipeline stage mapping: `.claude/rules/pipeline-stages.md`
 - Architecture overview: `thestudioarc/00-overview.md`
@@ -101,10 +105,13 @@ Any bugs, missing wiring, or broken data contracts discovered during end-to-end 
 | Role | Who | Responsibility |
 |------|-----|---------------|
 | **Epic Owner** | Platform Lead | Scope decisions, priority calls, approve onboarding guide |
-| **Tech Lead** | Core Engineer | Integration test harness architecture, mock provider design, Temporal test setup |
+| **Tech Lead** | Core Engineer | Integration test harness architecture, mock provider design, Temporal test setup. **Pre-sprint: verify module import safety.** |
 | **QA** | Quality Engineer | Review test coverage, validate loopback test, confirm evidence comment assertions |
 | **DevOps** | Infrastructure Engineer | Validate CI integration, confirm tests run without special CI configuration |
 | **Documentation** | Tech Writer / Engineer | Review onboarding guide for completeness and followability |
+| **Onboarding Walkthrough** | Second developer (not author) | Follow onboarding guide end-to-end within 30 min; report gaps. **Scheduled: end of sprint, before epic closure.** |
+
+*Note: Role assignments are placeholders for a solo-developer project. All roles are fulfilled by the primary developer; the onboarding walkthrough is a self-review checkpoint.*
 
 ## 7. Success Metrics
 
@@ -131,7 +138,7 @@ Any bugs, missing wiring, or broken data contracts discovered during end-to-end 
 - `temporalio` Python SDK (already in dependencies)
 - `pytest-asyncio` for async test support (already in dependencies)
 - `httpx` for HTTP testing (already in dependencies)
-- All 9 pipeline stage modules must be importable without side effects (database connections, external service calls)
+- **[BLOCKING — verify before sprint start]** All 9 pipeline stage modules must be importable without side effects (database connections, external service calls). Activities that call `get_model_router()` and `get_tool_policy_engine()` at execution time are replaced by mock activities in tests, so module-level imports are the concern. **Owner: Tech Lead. Due: Sprint planning day.**
 - Epic 11 deployment guide (`docs/deployment.md`) for cross-referencing in onboarding guide
 
 **Systems Affected:**
@@ -184,10 +191,12 @@ Stories are ordered by vertical slice: end-to-end value first, edge cases and do
 - `pytest tests/integration/ -v` discovers and collects tests without import errors.
 - No fixture requires Docker, network access, or environment variables to initialize.
 
-**Files to create:**
-- `tests/integration/__init__.py`
-- `tests/integration/conftest.py`
-- `tests/integration/mock_providers.py`
+**Files to create/modify:**
+- `tests/integration/conftest.py` — NEW (shared fixtures for realistic mock providers)
+- `tests/integration/mock_providers.py` — NEW (mock activity implementations)
+- `tests/integration/__init__.py` — EXISTS (no changes needed)
+
+**Relationship to existing tests:** The existing `test_pipeline_workflow.py` uses inline mock activities defined per-test. This story extracts reusable mock providers into `mock_providers.py` so both existing and new tests can use them. Existing tests are not modified in this story.
 
 ---
 
@@ -214,6 +223,8 @@ Stories are ordered by vertical slice: end-to-end value first, edge cases and do
 
 **Files to create:**
 - `tests/integration/test_full_pipeline.py`
+
+**Pytest marker:** No marker. The existing integration tests in `tests/integration/` (e.g., `test_pipeline_workflow.py`, `test_evidence_validation.py`) do NOT use `@pytest.mark.integration` and run on every `pytest` invocation. New tests in this directory follow the same convention. The `@pytest.mark.integration` marker is reserved for tests that require external services (PostgreSQL, Temporal server); these mock-based tests do not. See `pyproject.toml` line 71: `addopts = "-m 'not integration and not docker'"`.
 
 ---
 
@@ -242,8 +253,12 @@ Stories are ordered by vertical slice: end-to-end value first, edge cases and do
 - Each test asserts the exact loopback count in `PipelineOutput`.
 - Tests confirm gates fail closed — exhausted retries produce `success=False`, never skip the gate.
 
-**Files to create:**
-- `tests/integration/test_loopback.py`
+**Files to modify:**
+- `tests/integration/test_pipeline_workflow.py` — EXTEND with realistic mock data tests
+
+**Relationship to existing tests:** `test_pipeline_workflow.py` already has `TestVerificationLoopback`, `TestQALoopback`, and `TestGateExhaustion` classes that prove loopback wiring works with stub activities. This story adds new test methods within those classes (or a new `TestRealisticLoopback` class) that use the mock providers from Story 15.1 to verify data flows correctly through loopback iterations — e.g., that the re-implementation receives the verification failure details, and that the evidence comment includes the correct loopback count. **Do not duplicate the existing tests.**
+
+**Pytest marker:** No marker (matching existing tests in `test_pipeline_workflow.py`, which run on every `pytest` invocation without `@pytest.mark.integration`).
 
 ---
 
@@ -254,7 +269,7 @@ Stories are ordered by vertical slice: end-to-end value first, edge cases and do
 **so that** I can validate correctness without reading the full diff.
 
 **Details:**
-- Create a test in `tests/integration/test_evidence_comment.py` that:
+- Add tests to `tests/integration/test_evidence_validation.py` that:
   1. Runs the full pipeline (reusing the harness from Story 15.1)
   2. Captures the inputs that `publish_activity` would pass to `format_full_evidence_comment`
   3. Calls `format_full_evidence_comment` with those inputs
@@ -273,45 +288,52 @@ Stories are ordered by vertical slice: end-to-end value first, edge cases and do
      - `### Loopback Summary` section
      - Footer: `Generated by TheStudio`
 - The test should fail if any required section is missing or contains only placeholder text.
+- **Input assembly:** Since the publish activity stub does not call `format_full_evidence_comment`, the test constructs the inputs by collecting outputs from each mock stage: `EvidenceBundle` from implement output, `IntentSpecRead` from intent output, `VerificationResult` from verify output, `correlation_id` from PipelineInput. The `ExpertCoverageSummary` and `LoopbackSummary` are constructed from the mock routing and pipeline state. The test validates that these optional sections render as "No experts consulted" / "No loopbacks" in the happy path, which is acceptable non-placeholder content.
 
 **Acceptance Criteria:**
 - Evidence comment test validates all 7 required sections from the architecture spec.
 - The test uses real-shaped data from the pipeline run (not manually constructed inputs).
 - Assertions use string matching, not exact equality (format may evolve, structure must not).
 - The test catches regressions: if `format_full_evidence_comment` signature changes, the test breaks with a clear error.
+- Optional sections rendering defaults ("No experts consulted", "No loopbacks") are acceptable and satisfy the non-empty requirement.
 
-**Files to create:**
-- `tests/integration/test_evidence_comment.py`
+**Files to modify:**
+- `tests/integration/test_evidence_validation.py` — EXTEND with `format_full_evidence_comment` tests (the existing 9 tests cover `format_evidence_comment`; this story adds tests for the full version with Correlation ID, Expert Coverage, and Loopback Summary sections)
+
+**Relationship to existing tests:** `test_evidence_validation.py` already tests the basic `format_evidence_comment` function. This story adds a new test class for `format_full_evidence_comment` in the same file. **Do not duplicate the existing 9 tests.**
 
 ---
 
-### Story 15.5: Temporal Workflow Integration Test
+### Story 15.5: Temporal Workflow Data-Fidelity Test
 
-**As a** developer verifying workflow orchestration,
-**I want** a test that runs `TheStudioPipelineWorkflow` through Temporal's test server,
-**so that** I can confirm the workflow definition, activity wiring, and retry policies work correctly.
+**As a** developer verifying workflow orchestration with realistic data,
+**I want** the existing Temporal workflow tests to use realistic mock providers instead of hardcoded stubs,
+**so that** data-contract bugs between pipeline stages are caught.
 
 **Details:**
-- Create `tests/integration/test_temporal_workflow.py` that:
-  1. Uses `temporalio.testing.WorkflowEnvironment.start_time_skipping()` to create a test environment
-  2. Registers `TheStudioPipelineWorkflow` and mock activity implementations
-  3. Starts the workflow with a valid `PipelineInput`
-  4. Awaits the workflow result and asserts `PipelineOutput.success=True`
-  5. Verifies the activity execution order matches the 9-step sequence
-- Create a second test that verifies loopback behavior through the Temporal test server:
-  1. Register a mock verify activity that fails once then passes
-  2. Assert the workflow completes with `verification_loopbacks=1`
+- **This story extends `tests/integration/test_pipeline_workflow.py`, not creates a new file.**
+- The existing file already has 5 tests using `WorkflowEnvironment.start_local()` with inline stub activities. This story adds a new test class `TestRealisticPipeline` that:
+  1. Uses the mock providers from Story 15.1 (`mock_providers.py`) instead of inline stubs
+  2. Asserts that each stage's output contains realistically shaped data (non-empty UUIDs, populated acceptance criteria, non-zero PR numbers)
+  3. Verifies the activity execution order matches the 9-step sequence by tracking call order in the mock providers
+  4. Asserts the final `PipelineOutput` contains a `pr_url` that is a valid URL string (not empty)
+- A second test in the same class verifies loopback with realistic data:
+  1. Uses the configurable mock verify provider set to fail-then-pass
+  2. Asserts the re-implementation mock receives verification failure details
+  3. Asserts `PipelineOutput.verification_loopbacks=1`
 - Tests must handle Temporal's async patterns correctly (`pytest-asyncio`).
-- If the `temporalio.testing` module is not available or has compatibility issues, document the issue and fall back to a direct `workflow.run()` call with mocked `workflow.execute_activity`.
 
 **Acceptance Criteria:**
-- At least one test executes `TheStudioPipelineWorkflow` through `WorkflowEnvironment`.
-- The test verifies the workflow completes and returns a valid `PipelineOutput`.
-- The test runs without a deployed Temporal server (fully in-process).
-- The test is marked with `@pytest.mark.integration` for selective CI execution.
+- New test class `TestRealisticPipeline` exists in `test_pipeline_workflow.py`.
+- Tests use mock providers from `mock_providers.py` (not inline stubs).
+- Tests assert data shape, not just pass/fail (e.g., `len(intent_output.acceptance_criteria) >= 1`).
+- All existing 5 tests continue to pass unchanged.
+- No `@pytest.mark.integration` marker (matching existing tests in the same file).
 
-**Files to create:**
-- `tests/integration/test_temporal_workflow.py`
+**Files to modify:**
+- `tests/integration/test_pipeline_workflow.py` — EXTEND with `TestRealisticPipeline` class
+
+**Relationship to existing tests:** The existing `TestPipelineHappyPath`, `TestVerificationLoopback`, `TestQALoopback`, and `TestGateExhaustion` classes remain unchanged. This story adds alongside them, not replaces them.
 
 ---
 
@@ -376,6 +398,7 @@ Stories are ordered by vertical slice: end-to-end value first, edge cases and do
   7. **Troubleshooting:** Webhook signature failures, repo not found, intake rejection reasons
 - Every API endpoint referenced must be verified against the actual router definitions.
 - Include expected responses and error messages so the operator knows what success and failure look like.
+- **Fix existing ONBOARDING.md Step 3:** Current Step 3 says TheStudio will "Create a draft PR with an evidence comment" without distinguishing by tier. Correct this to reflect Observe tier behavior (TaskPacket created, no PR written).
 
 **Acceptance Criteria:**
 - `docs/onboarding-real-repo.md` exists and covers all 7 sections.
@@ -384,20 +407,41 @@ Stories are ordered by vertical slice: end-to-end value first, edge cases and do
 - A developer who did not author the guide can follow it to register a repo via the Admin API.
 - The guide cross-references `docs/deployment.md` for infrastructure prerequisites.
 
-**Files to create:**
-- `docs/onboarding-real-repo.md`
+**Files to modify:**
+- `docs/ONBOARDING.md` — EXTEND (this file already exists with basic registration steps, webhook config, monitoring, troubleshooting, and environment variables; this story adds GitHub App setup, Admin UI registration, and tier explanation sections)
+
+**Relationship to existing docs:** `docs/ONBOARDING.md` was created during Epic 15 prep and covers the basics. This story enriches it with the 7 sections listed above, filling gaps in GitHub App setup and tier explanation.
 
 ---
 
 ## Meridian Review Status
 
-### Round 1: Pending
+### Round 1: Conditional Pass — 4 gaps addressed
 
-This epic requires Meridian review before implementation begins. The review should validate:
-1. Are the acceptance criteria testable at epic scale?
-2. Is the scope bounded (1 week, no real API keys, no production deployment)?
-3. Do the stories deliver end-to-end value in vertical slices?
-4. Are there missing dependencies or circular assumptions?
-5. Does the onboarding guide reference endpoints that actually exist?
-6. Is the latency baseline methodology reproducible?
-7. Are the mock providers realistic enough to catch real integration bugs?
+**Date:** 2026-03-10
+**Verdict:** Conditional Pass with 4 blocking gaps
+
+| # | Gap | Resolution |
+|---|-----|------------|
+| 1 | Narrative claimed "no e2e test exists" — false (`test_pipeline_workflow.py` has 5 tests) | Reframed narrative: gap is data fidelity, not wiring. Existing tests acknowledged in narrative and references. |
+| 2 | Stories 15.3 and 15.5 duplicated existing tests | Both now explicitly extend existing files. Story 15.5 renamed to "Data-Fidelity Test." Each story specifies relationship to existing tests. |
+| 3 | "Importable without side effects" dependency had no owner | Added blocking verification task assigned to Tech Lead, due sprint planning day. |
+| 4 | No target date, no named stakeholders | Added target sprint (Sprint 16). Added onboarding walkthrough role with schedule. |
+
+**Non-blocking recommendations addressed:**
+- AC-2 clarified: "No experts consulted" / "No loopbacks" are acceptable non-placeholder defaults
+- Pytest marker strategy specified: new tests skip `@pytest.mark.integration` to match existing tests in the same files (marker reserved for tests needing external services)
+- Story 15.4 specifies input assembly method for `format_full_evidence_comment`
+
+### Round 2: Conditional Pass — 2 issues fixed
+
+**Date:** 2026-03-10
+**Verdict:** Conditional Pass — all 7 questions pass, 2 issues found and fixed
+
+| # | Issue | Resolution |
+|---|-------|------------|
+| 1 | Story 15.4 filename inconsistency (`test_evidence_comment.py` vs `test_evidence_validation.py`) | Fixed: Details section now references `test_evidence_validation.py` |
+| 2 | Pytest marker contradiction: epic said use `@pytest.mark.integration` but existing tests don't use it | Fixed: all stories now specify no marker, matching existing test convention. `@pytest.mark.integration` reserved for external-service tests. |
+| 3 | (Non-blocking) ONBOARDING.md Step 3 incorrectly implies all repos get draft PRs | Added note to Story 15.7 to fix Step 3 for tier accuracy |
+
+**Status: Ready to commit.**
