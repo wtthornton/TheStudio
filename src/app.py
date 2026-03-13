@@ -23,11 +23,39 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Application lifespan: initialize tracing, packs, scheduler, and consumer."""
+    """Application lifespan: initialize tracing, packs, experts, scheduler, and consumer."""
+    import logging
+
     init_tracing()
     import src.context.packs  # noqa: F401 — registers production context packs
     from src.ingress.poll.scheduler import start_poll_scheduler
     from src.outcome.consumer import stop_signal_consumer
+
+    # Scan and sync file-based experts at startup
+    _logger = logging.getLogger(__name__)
+    try:
+        from src.db.connection import get_async_session
+        from src.experts.config import get_experts_base_path
+        from src.experts.registrar import sync_experts
+        from src.experts.scanner import scan_expert_directories
+
+        experts_path = get_experts_base_path()
+        if experts_path.is_dir():
+            scan_result = scan_expert_directories(experts_path)
+            for err in scan_result.errors:
+                _logger.warning(
+                    "Expert scan error",
+                    extra={"directory": str(err.directory), "error": err.error},
+                )
+            async with get_async_session() as session:
+                sync_result = await sync_experts(session, scan_result.experts)
+                _logger.info("Expert sync complete", extra={
+                    "created": len(sync_result.created),
+                    "updated": len(sync_result.updated),
+                    "unchanged": len(sync_result.unchanged),
+                })
+    except Exception:
+        _logger.warning("Failed to sync experts at startup", exc_info=True)
 
     poll_task = start_poll_scheduler()
 

@@ -1,6 +1,7 @@
-"""Seed the Expert Library with vetted templates.
+"""DEPRECATED: Seed experts are now defined as EXPERT.md files in the experts/ directory.
 
-Seeds 5 expert classes: Security, QA Validation, Technical, Compliance, Process Quality.
+This module is kept for reference only. See Epic 26 — File-Based Expert Packaging.
+The app lifespan now uses scan_expert_directories() + sync_experts() instead.
 """
 
 from sqlalchemy.ext.asyncio import AsyncSession

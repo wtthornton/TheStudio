@@ -368,3 +368,144 @@ async def get_reopen_target(
             result.sample_count,
         )
     return result.to_dict()
+
+
+# ============================================================
+# Expert Management API (Epic 26, Story 26.5)
+# ============================================================
+
+
+class ExpertSummary(BaseModel):
+    """Response model for expert list endpoint."""
+
+    id: str
+    name: str
+    expert_class: str
+    capability_tags: list[str]
+    trust_tier: str
+    lifecycle_state: str
+    current_version: int
+    source_path: str | None = None
+    version_hash: str | None = None
+    updated_at: str
+
+
+class ExpertReloadResponse(BaseModel):
+    """Response model for expert reload endpoint."""
+
+    created: list[str]
+    updated: list[str]
+    unchanged: list[str]
+    deactivated: list[str]
+    errors: list[str]
+    scan_errors: list[dict[str, str]]
+
+
+@platform_router.post(
+    "/experts/reload",
+    dependencies=[Depends(require_permission(Permission.CHANGE_REPO_TIER))],
+)
+async def reload_experts(
+    user_id: Annotated[str, Depends(get_current_user_id)],
+    deactivate_removed: bool = Query(False),
+) -> ExpertReloadResponse:
+    """Re-scan expert directories and sync changes to the database."""
+    from src.db.connection import get_async_session
+    from src.experts.config import get_experts_base_path
+    from src.experts.registrar import sync_experts
+    from src.experts.scanner import scan_expert_directories
+
+    experts_path = get_experts_base_path()
+    if not experts_path.is_dir():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Experts directory not found: {experts_path}",
+        )
+
+    scan_result = scan_expert_directories(experts_path)
+    scan_errors = [
+        {"directory": str(e.directory), "error": e.error}
+        for e in scan_result.errors
+    ]
+
+    async with get_async_session() as session:
+        sync_result = await sync_experts(
+            session, scan_result.experts, deactivate_removed
+        )
+
+    logger.info(
+        "Expert reload by %s: created=%d updated=%d unchanged=%d",
+        user_id,
+        len(sync_result.created),
+        len(sync_result.updated),
+        len(sync_result.unchanged),
+    )
+
+    return ExpertReloadResponse(
+        created=sync_result.created,
+        updated=sync_result.updated,
+        unchanged=sync_result.unchanged,
+        deactivated=sync_result.deactivated,
+        errors=sync_result.errors,
+        scan_errors=scan_errors,
+    )
+
+
+@platform_router.get(
+    "/experts/registry",
+    dependencies=[Depends(require_permission(Permission.VIEW_METRICS))],
+)
+async def list_experts_registry(
+    user_id: Annotated[str, Depends(get_current_user_id)],
+    expert_class: str | None = Query(None, alias="class"),
+) -> dict[str, Any]:
+    """List all registered experts with source and version metadata."""
+    from src.db.connection import get_async_session
+    from src.experts.expert import ExpertClass as ExpertClassEnum
+    from src.experts.expert_crud import get_expert_versions, search_experts
+
+    ec_filter = None
+    if expert_class:
+        try:
+            ec_filter = ExpertClassEnum(expert_class)
+        except ValueError as err:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid expert class: {expert_class}",
+            ) from err
+
+    async with get_async_session() as session:
+        experts = await search_experts(
+            session,
+            expert_class=ec_filter,
+            include_deprecated=True,
+        )
+        summaries = []
+        for expert in experts:
+            versions = await get_expert_versions(session, expert.id)
+            source_path = None
+            version_hash = None
+            if versions:
+                latest = max(versions, key=lambda v: v.version)
+                source_path = latest.definition.get("_source_path")
+                version_hash = latest.definition.get("_version_hash")
+
+            summaries.append(
+                ExpertSummary(
+                    id=str(expert.id),
+                    name=expert.name,
+                    expert_class=expert.expert_class.value,
+                    capability_tags=expert.capability_tags,
+                    trust_tier=expert.trust_tier.value,
+                    lifecycle_state=expert.lifecycle_state.value,
+                    current_version=expert.current_version,
+                    source_path=source_path,
+                    version_hash=version_hash,
+                    updated_at=expert.updated_at.isoformat(),
+                )
+            )
+
+    return {
+        "experts": [s.model_dump() for s in summaries],
+        "total": len(summaries),
+    }

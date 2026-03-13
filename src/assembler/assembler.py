@@ -372,6 +372,27 @@ def _build_qa_handoff(
     return mappings
 
 
+def format_expert_context(definition: dict[str, object]) -> str:
+    """Format expert context files for inclusion in the expert's prompt.
+
+    Reads ``definition["context_files"]`` (a dict of filename -> content)
+    and returns formatted text with clear delimiters. Returns empty string
+    if no context files are present.
+    """
+    context_files = definition.get("context_files", {})
+    if not context_files or not isinstance(context_files, dict):
+        return ""
+
+    sections: list[str] = []
+    for filename, content in context_files.items():
+        sections.append(
+            f"--- Expert Context: {filename} ---\n"
+            f"{content}\n"
+            f"--- End Expert Context ---"
+        )
+    return "\n\n".join(sections)
+
+
 def _has_keyword_overlap(text_a: str, text_b: str) -> bool:
     """Check if two texts share meaningful keywords."""
     # Extract words of 4+ chars as keywords

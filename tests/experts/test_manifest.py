@@ -267,11 +267,11 @@ class TestManifestToExpertCreate:
         assert ec.trust_tier == TrustTier.PROBATION
 
         # definition dict
-        assert ec.definition["version_hash"] == manifest.version_hash
+        assert ec.definition["_version_hash"] == manifest.version_hash
         assert ec.definition["scope_boundaries"] == manifest.constraints
         assert "security review expert" in ec.definition["system_prompt_template"]
         assert ec.definition["context_files"] == {}  # populated later by scanner
-        assert "source_path" in ec.definition
+        assert "_source_path" in ec.definition
 
     def test_minimal_manifest_mapping(self, tmp_minimal_dir: Path) -> None:
         manifest = parse_expert_manifest(tmp_minimal_dir / "EXPERT.md")

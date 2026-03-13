@@ -59,6 +59,24 @@ class ExpertManifest(BaseModel):
             raise ValueError("capability_tags must not be empty")
         return v
 
+    @field_validator("context_files")
+    @classmethod
+    def context_files_safe_paths(cls, v: list[str]) -> list[str]:
+        """Reject absolute paths and path traversal in context_files."""
+        from pathlib import PurePosixPath
+
+        for path_str in v:
+            p = PurePosixPath(path_str)
+            if p.is_absolute():
+                raise ValueError(
+                    f"context_files must use relative paths, got: {path_str}"
+                )
+            if ".." in p.parts:
+                raise ValueError(
+                    f"context_files must not use path traversal, got: {path_str}"
+                )
+        return v
+
 
 def _split_frontmatter(content: str) -> tuple[str, str]:
     """Split EXPERT.md content into YAML frontmatter and markdown body.
@@ -140,7 +158,7 @@ def manifest_to_expert_create(manifest: ExpertManifest) -> ExpertCreate:
             "scope_boundaries": manifest.constraints,
             "system_prompt_template": manifest.system_prompt_template,
             "context_files": {},  # populated by scanner when context file contents are loaded
-            "version_hash": manifest.version_hash,
-            "source_path": str(manifest.source_path),
+            "_version_hash": manifest.version_hash,
+            "_source_path": str(manifest.source_path),
         },
     )
