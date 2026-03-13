@@ -69,6 +69,7 @@ class RepoProfileRow(Base):
     writes_enabled: Mapped[bool] = mapped_column(nullable=False, default=True)
     poll_enabled: Mapped[bool] = mapped_column(nullable=False, default=False)
     poll_interval_minutes: Mapped[int | None] = mapped_column(nullable=True, default=None)
+    readiness_gate_enabled: Mapped[bool] = mapped_column(nullable=False, default=False)
     merge_method: Mapped[str] = mapped_column(
         String(20), nullable=False, default="squash",
         comment="Preferred merge method: squash, merge, or rebase",
@@ -129,6 +130,7 @@ class RepoProfileRead(BaseModel):
     writes_enabled: bool
     poll_enabled: bool = False
     poll_interval_minutes: int | None = None
+    readiness_gate_enabled: bool = False
     merge_method: str = "squash"
     created_at: datetime
     updated_at: datetime
@@ -148,4 +150,5 @@ class RepoProfileUpdate(BaseModel):
     tool_allowlist: list[str] | None = None
     poll_enabled: bool | None = None
     poll_interval_minutes: int | None = None
+    readiness_gate_enabled: bool | None = None
     merge_method: str | None = None

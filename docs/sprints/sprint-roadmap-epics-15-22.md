@@ -27,22 +27,21 @@ Epic 16 (Issue Readiness Gate) already has Sprint 17 plan committed. Work begins
 
 ---
 
-## Sprint 17 (2026-03-17 → 2026-03-28) — ALREADY PLANNED
+## Sprint 17 (2026-03-17 → 2026-03-28) — COMPLETE
 
 **Epic:** 16 — Issue Readiness Gate (Stories 16.1–16.4)
 **Plan:** `docs/epics/epic-16-sprint-17-plan.md`
 **Goal:** Deliver readiness scoring engine + pipeline integration + clarification comment output.
+**Completed:** 2026-03-13. All 4 stories delivered. 92 readiness tests + 1,689 total unit tests passing. DoD 17/17 items checked.
 
-| Story | Estimate | Confidence |
-|-------|----------|------------|
-| 16.1: Data model + config | 1 day | 90% |
-| 16.2: Scoring engine | 2 days | 80% |
-| 16.3: Pipeline integration | 2 days | 70% |
-| 16.4: Clarification comment | 1 day | 90% |
-| Buffer | 2 days | — |
-| **Total** | **8 days** | |
+| Story | Estimate | Actual | Status |
+|-------|----------|--------|--------|
+| 16.1: Data model + config | 1 day | < 1 day | Complete |
+| 16.2: Scoring engine | 2 days | < 1 day | Complete |
+| 16.3: Pipeline integration | 2 days | < 1 day | Complete |
+| 16.4: Clarification comment | 1 day | < 1 day | Complete |
 
-No changes to this plan. Proceed as documented.
+Stories 16.5-16.8 deferred to Sprint 18 as planned.
 
 **Sprint 17 → Sprint 18 relationship:** Sprint 18 is **independent of Sprint 17**. Epic 16 (readiness gate) inserts a new activity between Context and Intent in the Temporal workflow, guarded by a feature flag that defaults to off. Sprint 18's work (integration tests, security runner, reputation DB) does not touch the workflow insertion point or the readiness module. Sprint 19's Story 20.10, which modifies `src/ingress/webhook_handler.py`, must be rebased on any Sprint 17 changes to that file — but Sprint 17 does not modify `webhook_handler.py` (it adds `readiness_gate_enabled` to `PipelineInput`, resolved by the caller). No blocking dependency exists.
 

@@ -71,3 +71,21 @@
 [2026-03-06T12:48:00] [validate] tapps_validate_changed - 6 files, 5 passed, 1 failed (test_admin_workflows.py 65.0)
 [2026-03-06T12:49:00] [develop] modified tests/unit/test_admin_workflows.py - removed unused MagicMock import
 [2026-03-06T12:50:00] [verify] tapps_checklist (feature) - all required steps complete, 122 total calls
+
+### Sprint 17 — Epic 16 Issue Readiness Gate, Stories 16.1-16.4 (2026-03-13)
+
+[2026-03-13T00:01:00] [discover] tapps_session_start - v1.5.0, all checkers installed, standard preset
+[2026-03-13T00:02:00] [discover] read epic-16-issue-readiness-gate.md - full epic spec
+[2026-03-13T00:03:00] [discover] read epic-16-sprint-17-plan.md - Helm plan, Meridian-approved
+[2026-03-13T00:04:00] [discover] read existing src/readiness/ - all 5 source files already implemented
+[2026-03-13T00:05:00] [discover] read existing tests/unit/test_readiness/ - all 4 test files already implemented
+[2026-03-13T00:06:00] [discover] read pipeline.py, activities.py - pipeline integration already wired
+[2026-03-13T00:07:00] [discover] identified DoD gap - RepoProfileRow missing readiness_gate_enabled field
+[2026-03-13T00:08:00] [develop] modified src/repo/repo_profile.py - added readiness_gate_enabled to Row, Read, Update
+[2026-03-13T00:10:00] [validate] pytest tests/unit/test_readiness/ - 92 passed in 11.50s
+[2026-03-13T00:11:00] [validate] ruff check src/readiness/ src/workflow/ src/models/taskpacket.py src/repo/repo_profile.py - all passed
+[2026-03-13T00:12:00] [validate] mypy src/readiness/ - no issues found in 5 source files
+[2026-03-13T00:13:00] [validate] pytest tests/unit/test_repo_profile.py - 11 passed
+[2026-03-13T00:14:00] [validate] pytest tests/unit/ - 1,689 passed in 82.89s, 0 failures
+[2026-03-13T00:15:00] [verify] updated sprint plan DoD - all 17 items checked
+[2026-03-13T00:16:00] [verify] updated epic status, handoff doc, runlog

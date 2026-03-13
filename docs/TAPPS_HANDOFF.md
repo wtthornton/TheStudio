@@ -1,6 +1,6 @@
 # TAPPS Handoff
 
-> Project-wide quality and delivery status as of 2026-03-09.
+> Project-wide quality and delivery status as of 2026-03-13.
 
 ## Project Status
 
@@ -21,16 +21,23 @@
 | 9 | Prove the Pipe — Integration Tests, Healthz | 4 | Complete |
 | 10 | Phase 4 Maturity — Quarantine, Merge Mode, Planes | 4 | Complete |
 | 11 | Phase 4 Completion — Gateway Enforcement, Compliance | 4 | Complete |
+| 12–14 | Agent Content Enrichment, Expert Expansion, Context | 4 | Complete |
+| 15 | E2E Integration Testing | 5 | Complete |
+| 16 | Issue Readiness Gate | 5 | Sprint 17 complete (16.1-16.4), Sprint 18 pending (16.5-16.8) |
+| 17–18 | Poll for Issues, Production E2E | 5 | Draft |
+| 19–22 | Critical Gaps, Execute Tier | 5 | Complete |
+| 23–27 | Unified Agent, Chat, Container, Expert Pkg, Webhooks | 5 | Draft |
+| 26 | File-Based Expert Packaging | 5 | Complete |
 
 ---
 
-## Codebase Metrics (2026-03-09)
+## Codebase Metrics (2026-03-13)
 
 | Metric | Value |
 |--------|-------|
-| Source files (src/) | 144 |
-| Test files (tests/) | 83 |
-| Tests passing | 1,413 |
+| Source files (src/) | 149 |
+| Test files (tests/) | 87 |
+| Tests passing | 1,689 |
 | Tests deselected | 8 (integration — require PostgreSQL/Temporal) |
 | Test warnings | 7 (unawaited coroutine mocks) |
 | Coverage | 84% |
@@ -55,7 +62,7 @@
 
 ## Quality Pipeline
 
-- **TAPPS v0.8.5** active with ruff, mypy, bandit, radon, vulture, pip-audit
+- **TAPPS v1.5.0** active with ruff, mypy, bandit, radon, vulture, pip-audit
 - **Quality preset:** standard
 - **All TAPPS gates:** PASSED on last validation run
 

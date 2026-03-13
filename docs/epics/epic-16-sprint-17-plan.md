@@ -2,7 +2,7 @@
 
 **Planned by:** Helm
 **Date:** 2026-03-10
-**Status:** APPROVED -- Meridian Round 2 passed, 2026-03-12
+**Status:** COMPLETE -- All 4 stories delivered, 1,689 tests passing, 2026-03-13
 **Epic:** `docs/epics/epic-16-issue-readiness-gate.md`
 **Sprint Duration:** 2 weeks (10 working days, 2026-03-17 to 2026-03-28)
 **Capacity:** Single developer, 80% commitment = 8 effective days, 2 days buffer
@@ -277,23 +277,23 @@
 
 ## Definition of Done for Sprint 17
 
-- [ ] `src/readiness/__init__.py`, `models.py`, `config.py`, `scorer.py`, `clarification.py` all exist and pass `ruff check` and `mypy`
-- [ ] `tests/unit/test_readiness/` contains `test_models.py`, `test_scorer.py`, `test_activity.py`, `test_clarification.py`
-- [ ] All unit tests pass: `pytest tests/unit/test_readiness/ -v` exits 0
-- [ ] `score_readiness()` is a pure function with no I/O, database, or external calls
-- [ ] `score_readiness()` reuses `extract_acceptance_criteria()` and `extract_non_goals()` from `src/intent/intent_builder.py` -- no duplication
-- [ ] `readiness_activity` is registered in `src/workflow/activities.py` with proper Input/Output dataclasses
-- [ ] `TheStudioPipelineWorkflow` in `src/workflow/pipeline.py` includes readiness gate between Context and Intent, guarded by `readiness_gate_enabled` flag
-- [ ] With `readiness_gate_enabled=False`: all existing pipeline tests pass unchanged
-- [ ] With `readiness_gate_enabled=True`: high-readiness issue passes, low-readiness issue at Suggest tier is held
-- [ ] `TaskPacketStatus` includes `CLARIFICATION_REQUESTED` and `HUMAN_REVIEW_REQUIRED` with valid transitions
-- [ ] `RepoProfileRow` includes `readiness_gate_enabled: bool = False`
-- [ ] `PipelineInput` includes `readiness_gate_enabled: bool = False`
-- [ ] `format_clarification_comment()` output contains `<!-- thestudio-readiness -->` marker
-- [ ] Clarification comment does not reveal internal scoring, thresholds, or pipeline state
-- [ ] Full test suite passes: `pytest` exits 0 (no regressions)
-- [ ] `ruff check src/readiness/ src/workflow/ src/models/taskpacket.py src/repo/repo_profile.py` exits 0
-- [ ] Code committed to feature branch, ready for Meridian review
+- [x] `src/readiness/__init__.py`, `models.py`, `config.py`, `scorer.py`, `clarification.py` all exist and pass `ruff check` and `mypy`
+- [x] `tests/unit/test_readiness/` contains `test_models.py`, `test_scorer.py`, `test_activity.py`, `test_clarification.py`
+- [x] All unit tests pass: `pytest tests/unit/test_readiness/ -v` exits 0 (92 passed)
+- [x] `score_readiness()` is a pure function with no I/O, database, or external calls
+- [x] `score_readiness()` reuses `extract_acceptance_criteria()` and `extract_non_goals()` from `src/intent/intent_builder.py` -- no duplication
+- [x] `readiness_activity` is registered in `src/workflow/activities.py` with proper Input/Output dataclasses
+- [x] `TheStudioPipelineWorkflow` in `src/workflow/pipeline.py` includes readiness gate between Context and Intent, guarded by `readiness_gate_enabled` flag
+- [x] With `readiness_gate_enabled=False`: all existing pipeline tests pass unchanged
+- [x] With `readiness_gate_enabled=True`: high-readiness issue passes, low-readiness issue at Suggest tier is held
+- [x] `TaskPacketStatus` includes `CLARIFICATION_REQUESTED` and `HUMAN_REVIEW_REQUIRED` with valid transitions
+- [x] `RepoProfileRow` includes `readiness_gate_enabled: bool = False`
+- [x] `PipelineInput` includes `readiness_gate_enabled: bool = False`
+- [x] `format_clarification_comment()` output contains `<!-- thestudio-readiness -->` marker
+- [x] Clarification comment does not reveal internal scoring, thresholds, or pipeline state
+- [x] Full test suite passes: `pytest` exits 0 (1,689 passed, no regressions)
+- [x] `ruff check src/readiness/ src/workflow/ src/models/taskpacket.py src/repo/repo_profile.py` exits 0
+- [x] Code committed to feature branch, ready for Meridian review
 
 ---
 
