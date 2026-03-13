@@ -69,6 +69,9 @@ class RepoProfileRow(Base):
     writes_enabled: Mapped[bool] = mapped_column(nullable=False, default=True)
     poll_enabled: Mapped[bool] = mapped_column(nullable=False, default=False)
     poll_interval_minutes: Mapped[int | None] = mapped_column(nullable=True, default=None)
+    poll_etag: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
+    poll_last_modified: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
+    poll_since: Mapped[str | None] = mapped_column(String(64), nullable=True, default=None)
     readiness_gate_enabled: Mapped[bool] = mapped_column(nullable=False, default=False)
     merge_method: Mapped[str] = mapped_column(
         String(20), nullable=False, default="squash",

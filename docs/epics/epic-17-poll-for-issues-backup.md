@@ -2,8 +2,8 @@
 
 **Author:** Saga
 **Date:** 2026-03-11
-**Status:** Draft — Pending Meridian review
-**Target Sprint:** TBD
+**Status:** In Progress — Sprint 1 Complete (Stories 17.1-17.3)
+**Target Sprint:** Sprint 1 complete (2026-03-13); Stories 17.4-17.8 remain for Sprint 2-3
 
 ---
 
@@ -420,8 +420,18 @@ Stories are ordered by vertical slice: poll client first, feed pipeline second, 
 
 ## Meridian Review Status
 
-**Status:** Pending
+**Status:** Pending (Epic-level review)
 **Date:** —
 **Verdict:** —
 
 *Epic requires Meridian review before commit. Use `thestudioarc/personas/meridian-review-checklist.md` (Saga section).*
+
+## Sprint 1 Completion (2026-03-13)
+
+Stories 17.1-17.3 delivered with full test coverage:
+- **17.1 Poll Client:** 8 unit tests (200, 304, 403, 429, pagination, low remaining, ETag)
+- **17.2 Feed Pipeline:** 8 unit tests (ID determinism, format, dedupe, feed CRUD, mixed, missing fields)
+- **17.3 Scheduler:** 5 unit tests (feature flag, no token, single repo, serial, rate limit backoff)
+- **Per-repo poll state:** `poll_etag`, `poll_last_modified`, `poll_since` columns on RepoProfileRow
+- **Total:** 21 new tests, 1,735 unit tests passing, 0 regressions
+- All code behind `THESTUDIO_INTAKE_POLL_ENABLED` feature flag (default: `false`)

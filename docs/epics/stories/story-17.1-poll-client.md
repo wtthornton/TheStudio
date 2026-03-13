@@ -8,10 +8,11 @@
 
 **Intent:** Implement a GitHub API client that fetches issues with `since`, `sort=updated`, conditional headers (ETag/Last-Modified), PR filtering, and pagination. On 304, return empty issues (no rate limit spend). On 403/429, raise `RateLimitError` with `retry_after`. Requests are serial; rate limit headers are exposed to callers.
 
-**Points:** 5 | **Size:** M  
-**Epic:** 17 — Poll for Issues as Backup to Webhooks  
-**Sprint:** A (Stories 17.1–17.2)  
+**Points:** 5 | **Size:** M
+**Epic:** 17 — Poll for Issues as Backup to Webhooks
+**Sprint:** A (Stories 17.1–17.2)
 **Depends on:** None
+**Status:** COMPLETE (2026-03-13)
 
 ---
 
@@ -21,12 +22,12 @@ The poll client is the core module that fetches issues from the GitHub REST API 
 
 ## Tasks
 
-- [ ] Create `src/ingress/poll/__init__.py`
-- [ ] Create `src/ingress/poll/models.py`:
+- [x] Create `src/ingress/poll/__init__.py`
+- [x] Create `src/ingress/poll/models.py`:
   - `PollResult` dataclass: `issues: list[dict]`, `etag: str | None`, `last_modified: str | None`, `rate_limit_remaining: int`
   - `PollConfig` dataclass: `owner: str`, `repo: str`, `token: str`, `since: str | None`, `etag: str | None`, `last_modified: str | None`
   - `RateLimitError` exception: `retry_after: int | None`
-- [ ] Create `src/ingress/poll/client.py`:
+- [x] Create `src/ingress/poll/client.py`:
   - `fetch_issues(config: PollConfig) -> PollResult`
   - Call `GET /repos/{owner}/{repo}/issues?since=...&sort=updated&state=open`
   - Add `If-None-Match: {etag}` or `If-Modified-Since: {last_modified}` when provided
@@ -35,45 +36,48 @@ The poll client is the core module that fetches issues from the GitHub REST API 
   - Follow `Link` header for pagination (no manual URL construction)
   - Check `x-ratelimit-remaining`; if < 100, return early with fetched issues
   - On 403/429: raise `RateLimitError(retry_after=...)` using `retry-after` header if present
-- [ ] Write unit tests in `tests/unit/test_ingress/test_poll_client.py`:
+- [x] Write unit tests in `tests/unit/test_ingress/test_poll_client.py`:
   - 200 with issues
   - 200 with issues and PRs (PRs filtered out)
   - 304 (empty issues)
   - Pagination via Link
   - 403/429 with retry-after
   - rate_limit_remaining near 0 triggers early return
+  - ETag captured from response headers
 
 ## Acceptance Criteria
 
-- [ ] Client returns only issues (no PRs)
-- [ ] Conditional requests reduce API usage on 304
-- [ ] Pagination follows Link headers
-- [ ] Rate limit headers are captured and exposed
-- [ ] Unit tests cover 200, 304, 403, 429, pagination
+- [x] Client returns only issues (no PRs)
+- [x] Conditional requests reduce API usage on 304
+- [x] Pagination follows Link headers
+- [x] Rate limit headers are captured and exposed
+- [x] Unit tests cover 200, 304, 403, 429, pagination, ETag capture, low remaining early return
 
 ## Test Cases
 
-| # | Scenario | Input | Expected Output |
-|---|----------|-------|-----------------|
-| 1 | Valid 200 | Mock 200 with 2 issues | PollResult with 2 issues |
-| 2 | PR filtering | Mock 200 with 1 issue + 1 PR | PollResult with 1 issue |
-| 3 | 304 Not Modified | Mock 304 | PollResult with empty issues, etag preserved |
-| 4 | Pagination | Mock 200 + Link to next page | PollResult with all pages merged |
-| 5 | Rate limit | Mock 403 with retry-after: 60 | RateLimitError(retry_after=60) |
-| 6 | Low remaining | x-ratelimit-remaining: 50 | Early return after current page |
+| # | Scenario | Input | Expected Output | Status |
+|---|----------|-------|-----------------|--------|
+| 1 | Valid 200 | Mock 200 with 2 issues | PollResult with 2 issues | PASS |
+| 2 | PR filtering | Mock 200 with 1 issue + 1 PR | PollResult with 1 issue | PASS |
+| 3 | 304 Not Modified | Mock 304 | PollResult with empty issues, etag preserved | PASS |
+| 4 | Pagination | Mock 200 + Link to next page | PollResult with all pages merged | PASS |
+| 5 | Rate limit 403 | Mock 403 with retry-after: 60 | RateLimitError(retry_after=60) | PASS |
+| 6 | Rate limit 429 | Mock 429 with retry-after: 120 | RateLimitError(retry_after=120) | PASS |
+| 7 | Low remaining | x-ratelimit-remaining: 50 | Early return after current page | PASS |
+| 8 | ETag captured | Mock 200 with etag header | PollResult.etag populated | PASS |
 
 ## Files Affected
 
 | File | Action |
 |------|--------|
-| `src/ingress/poll/__init__.py` | Create |
-| `src/ingress/poll/models.py` | Create |
-| `src/ingress/poll/client.py` | Create |
-| `tests/unit/test_ingress/test_poll_client.py` | Create |
+| `src/ingress/poll/__init__.py` | Created |
+| `src/ingress/poll/models.py` | Created |
+| `src/ingress/poll/client.py` | Created |
+| `tests/unit/test_ingress/test_poll_client.py` | Created (8 tests) |
 
 ## Technical Notes
 
 - GitHub API: `GET /repos/{owner}/{repo}/issues` — supports `since` (ISO 8601), `sort=updated`, `state=open`
 - Conditional: `If-None-Match` (ETag), `If-Modified-Since` (Last-Modified); 304 does not count against rate limit
 - PRs have `pull_request` key in response; issues do not
-- Use `httpx` or `aiohttp` for async; ensure serial requests per GitHub best practices
+- Uses `httpx` async client with 30s timeout; serial requests per GitHub best practices

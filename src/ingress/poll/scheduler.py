@@ -53,12 +53,24 @@ async def run_poll_cycle() -> tuple[int, int, bool]:
                     owner=repo.owner,
                     repo=repo.repo_name,
                     token=token,
-                    since=None,  # TODO: store per-repo since/etag/last_modified for next run
-                    etag=None,
-                    last_modified=None,
+                    since=repo.poll_since,
+                    etag=repo.poll_etag,
+                    last_modified=repo.poll_last_modified,
                 )
                 result = await fetch_issues(config)
                 count = await feed_issues_to_pipeline(session, result.issues, repo.full_name)
+
+                # Persist poll state for next cycle
+                if result.etag:
+                    repo.poll_etag = result.etag
+                if result.last_modified:
+                    repo.poll_last_modified = result.last_modified
+                if result.issues:
+                    latest = max(i.get("updated_at", "") for i in result.issues)
+                    if latest:
+                        repo.poll_since = latest
+                await session.commit()
+
                 repos_polled += 1
                 issues_created += count
                 logger.info(

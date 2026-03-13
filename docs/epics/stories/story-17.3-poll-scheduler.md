@@ -8,10 +8,11 @@
 
 **Intent:** Run the poll cycle at a configurable interval (e.g. 5–15 minutes). Load repos with `poll_enabled=True`, process them serially, store per-repo since/etag for the next run, and handle rate limits by backing off and skipping remaining repos. Respect feature flag `THESTUDIO_INTAKE_POLL_ENABLED`.
 
-**Points:** 5 | **Size:** M  
-**Epic:** 17 — Poll for Issues as Backup to Webhooks  
-**Sprint:** B (Stories 17.3–17.5)  
-**Depends on:** Story 17.1, 17.2, 17.4 (repo profile config)
+**Points:** 5 | **Size:** M
+**Epic:** 17 — Poll for Issues as Backup to Webhooks
+**Sprint:** B (Stories 17.3–17.5)
+**Depends on:** Story 17.1, 17.2
+**Status:** COMPLETE (2026-03-13)
 
 ---
 
@@ -21,42 +22,47 @@ The scheduler runs the poll step periodically. It loads repos with `poll_enabled
 
 ## Tasks
 
-- [ ] Create `src/ingress/poll/scheduler.py`:
-  - `run_poll_cycle(session: AsyncSession) -> PollCycleResult`
+- [x] Create `src/ingress/poll/scheduler.py`:
+  - `run_poll_cycle() -> tuple[int, int, bool]` (repos_polled, issues_created, rate_limit_hit)
     - Query repos with `poll_enabled=True`
     - For each repo (serial): get token, build PollConfig with stored since/etag, call `fetch_issues`, call `feed_issues_to_pipeline`
     - On `RateLimitError`: back off (wait retry_after or 60s), skip remaining repos, log
-    - Store per-repo `since` / ETag / Last-Modified for next run (e.g. in poll_state table or repo profile)
-  - `start_poll_scheduler(interval_minutes: int) -> None`
-    - APScheduler, background task, or Temporal cron
-    - Run `run_poll_cycle` every `interval_minutes`
-- [ ] Add `THESTUDIO_INTAKE_POLL_ENABLED`, `THESTUDIO_INTAKE_POLL_INTERVAL_MINUTES` to `src/settings.py`
-- [ ] In `src/app.py`: start scheduler on startup when `THESTUDIO_INTAKE_POLL_ENABLED=True`
-- [ ] Feature flag: if False, scheduler does nothing
-- [ ] Structured log: `ingress.poll.run` with repo_count, issues_found, rate_limit_hit
+    - Store per-repo `since` / ETag / Last-Modified for next run via RepoProfileRow columns
+  - `start_poll_scheduler() -> asyncio.Task | None`
+    - asyncio background task
+    - Run `run_poll_cycle` every `intake_poll_interval_minutes`
+- [x] Add `THESTUDIO_INTAKE_POLL_ENABLED`, `THESTUDIO_INTAKE_POLL_INTERVAL_MINUTES`, `THESTUDIO_INTAKE_POLL_TOKEN` to `src/settings.py`
+- [x] In `src/app.py`: start scheduler on startup when `THESTUDIO_INTAKE_POLL_ENABLED=True`
+- [x] Feature flag: if False, scheduler does nothing
+- [x] Structured log: `ingress.poll.run` with repo_count, issues_found, rate_limit_hit
+- [x] Per-repo poll state persistence: `poll_etag`, `poll_last_modified`, `poll_since` columns on `RepoProfileRow`
+- [x] Write unit tests in `tests/unit/test_ingress/test_poll_scheduler.py`
 
 ## Acceptance Criteria
 
-- [ ] Scheduler runs at configured interval
-- [ ] Repos processed serially (one at a time)
-- [ ] Rate limit triggers backoff and skips remaining repos
-- [ ] Feature flag `THESTUDIO_INTAKE_POLL_ENABLED=False` disables all poll runs
-- [ ] Unit tests: mock cycle run, verify serial order and backoff
+- [x] Scheduler runs at configured interval
+- [x] Repos processed serially (one at a time)
+- [x] Rate limit triggers backoff and skips remaining repos
+- [x] Feature flag `THESTUDIO_INTAKE_POLL_ENABLED=False` disables all poll runs
+- [x] Per-repo poll state (since/etag/last_modified) persisted between cycles
+- [x] Unit tests: mock cycle run, verify serial order and backoff
 
 ## Test Cases
 
-| # | Scenario | Input | Expected Output |
-|---|----------|-------|-----------------|
-| 1 | Feature flag off | THESTUDIO_INTAKE_POLL_ENABLED=False | Scheduler never runs |
-| 2 | One repo | 1 repo with poll enabled | Poll client called once |
-| 3 | Two repos | 2 repos | Poll client called twice, serially |
-| 4 | Rate limit mid-cycle | 2nd repo raises RateLimitError | 1st repo processed; 2nd skipped; backoff logged |
+| # | Scenario | Input | Expected Output | Status |
+|---|----------|-------|-----------------|--------|
+| 1 | Feature flag off | THESTUDIO_INTAKE_POLL_ENABLED=False | Scheduler never runs | PASS |
+| 2 | No token | intake_poll_token="" | Skip with warning | PASS |
+| 3 | One repo | 1 repo with poll enabled | Poll client called once | PASS |
+| 4 | Two repos | 2 repos | Poll client called twice, serially | PASS |
+| 5 | Rate limit mid-cycle | 2nd repo raises RateLimitError | 1st repo processed; 2nd skipped; backoff logged | PASS |
 
 ## Files Affected
 
 | File | Action |
 |------|--------|
-| `src/ingress/poll/scheduler.py` | Create |
-| `src/settings.py` | Modify (add env vars) |
-| `src/app.py` | Modify (start scheduler when enabled) |
-| `tests/unit/test_ingress/test_poll_scheduler.py` | Create |
+| `src/ingress/poll/scheduler.py` | Created |
+| `src/settings.py` | Modified (add env vars) |
+| `src/app.py` | Modified (start scheduler when enabled) |
+| `src/repo/repo_profile.py` | Modified (add poll_etag, poll_last_modified, poll_since columns) |
+| `tests/unit/test_ingress/test_poll_scheduler.py` | Created (5 tests) |

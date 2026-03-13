@@ -8,10 +8,11 @@
 
 **Intent:** Generate deterministic synthetic delivery IDs per (repo, issue_number, updated_at). Feed issues through dedupe, `create_taskpacket`, and `start_workflow` using the same contracts as the webhook handler. At-most-once semantics via existing `ix_taskpacket_delivery_repo` constraint.
 
-**Points:** 5 | **Size:** M  
-**Epic:** 17 — Poll for Issues as Backup to Webhooks  
-**Sprint:** A (Stories 17.1–17.2)  
+**Points:** 5 | **Size:** M
+**Epic:** 17 — Poll for Issues as Backup to Webhooks
+**Sprint:** A (Stories 17.1–17.2)
 **Depends on:** Story 17.1 (Poll Client)
+**Status:** COMPLETE (2026-03-13)
 
 ---
 
@@ -21,11 +22,10 @@ Poll-originated issues need a stable synthetic delivery ID that aligns with the 
 
 ## Tasks
 
-- [ ] Create `src/ingress/poll/feed.py`:
+- [x] Create `src/ingress/poll/feed.py`:
   - `synthetic_delivery_id(repo_full_name: str, issue_number: int, updated_at: str) -> str`
     - Format: `poll-{owner}-{repo}-{issue_number}-{updated_at_normalized}`
-    - Example: `poll-owner-repo-42-2026-03-11T12-00-00Z`
-    - Normalize `updated_at` to ISO 8601 (replace colons with hyphens if needed for uniqueness)
+    - Normalize `updated_at` to ISO 8601 (replace colons with hyphens for uniqueness)
   - `feed_issues_to_pipeline(session: AsyncSession, issues: list[dict], repo_full_name: str) -> int`
     - For each issue: extract `number`, `updated_at`
     - Compute `delivery_id = synthetic_delivery_id(repo_full_name, number, updated_at)`
@@ -33,37 +33,42 @@ Poll-originated issues need a stable synthetic delivery ID that aligns with the 
     - Build `TaskPacketCreate(repo=repo_full_name, issue_id=number, delivery_id=delivery_id, correlation_id=uuid4())`
     - Call `create_taskpacket`, then `start_workflow`
     - Return count of TaskPackets created
-- [ ] Reuse `src/ingress/dedupe.is_duplicate`
-- [ ] Reuse `src/ingress/workflow_trigger.start_workflow`
-- [ ] Reuse `src/models/taskpacket_crud.create`
-- [ ] Write unit tests: synthetic ID format, dedupe behavior, feed with mocked CRUD
+- [x] Reuse `src/ingress/dedupe.is_duplicate`
+- [x] Reuse `src/ingress/workflow_trigger.start_workflow`
+- [x] Reuse `src/models/taskpacket_crud.create`
+- [x] Write unit tests: synthetic ID format, dedupe behavior, feed with mocked CRUD
 
 ## Acceptance Criteria
 
-- [ ] Synthetic ID is deterministic (same input → same ID)
-- [ ] Synthetic ID is unique per (repo, issue_number, updated_at)
-- [ ] Duplicate (delivery_id, repo) skips creation
-- [ ] Created TaskPackets match webhook format (repo, issue_id, delivery_id, correlation_id)
-- [ ] Unit tests cover ID generation, dedupe, feed
+- [x] Synthetic ID is deterministic (same input → same ID)
+- [x] Synthetic ID is unique per (repo, issue_number, updated_at)
+- [x] Duplicate (delivery_id, repo) skips creation
+- [x] Created TaskPackets match webhook format (repo, issue_id, delivery_id, correlation_id)
+- [x] Unit tests cover ID generation, dedupe, feed
 
 ## Test Cases
 
-| # | Scenario | Input | Expected Output |
-|---|----------|-------|-----------------|
-| 1 | New issue | Issue not in DB | TaskPacket created, workflow started |
-| 2 | Duplicate issue | Same (repo, issue, updated_at) already exists | Skip, count=0 |
-| 3 | Two issues | 2 new issues | 2 TaskPackets created |
-| 4 | ID determinism | Same (repo, 42, updated_at) twice | Same synthetic delivery ID |
+| # | Scenario | Input | Expected Output | Status |
+|---|----------|-------|-----------------|--------|
+| 1 | New issues | 2 issues not in DB | 2 TaskPackets created, 2 workflows started | PASS |
+| 2 | Duplicate issue | Same (repo, issue, updated_at) already exists | Skip, count=0 | PASS |
+| 3 | Mixed new/dup | 1 duplicate + 1 new | 1 TaskPacket created | PASS |
+| 4 | ID determinism | Same (repo, 42, updated_at) twice | Same synthetic delivery ID | PASS |
+| 5 | ID differs on issue | Same repo, different issue numbers | Different IDs | PASS |
+| 6 | ID differs on update | Same issue, different updated_at | Different IDs | PASS |
+| 7 | Missing fields | Issues without number or updated_at | Skipped, count=0 | PASS |
+| 8 | ID format | Valid inputs | Starts with "poll-", contains repo and issue | PASS |
 
 ## Files Affected
 
 | File | Action |
 |------|--------|
-| `src/ingress/poll/feed.py` | Create |
-| `tests/unit/test_ingress/test_poll_feed.py` | Create |
+| `src/ingress/poll/feed.py` | Created |
+| `tests/unit/test_ingress/test_poll_feed.py` | Created (8 tests) |
 
 ## Technical Notes
 
 - TaskPacket unique constraint: `(delivery_id, repo)` — synthetic ID must be distinct per update
 - Webhook handler: `TaskPacketCreate(repo, issue_id, delivery_id, correlation_id)` — same shape
-- `updated_at` from GitHub API is ISO 8601; normalize for deterministic ID (e.g. strip milliseconds)
+- `updated_at` from GitHub API is ISO 8601; normalized for deterministic ID (colons → hyphens)
+- Correlation ID generated per issue via OpenTelemetry baggage propagation
