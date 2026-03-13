@@ -18,6 +18,7 @@ from uuid import UUID
 
 from src.experts.expert import ExpertClass, ExpertRead, TrustTier
 from src.intake.effective_role import EffectiveRolePolicy
+from src.models.escalation import EscalationRequest
 from src.reputation.models import WeightQueryResult
 
 
@@ -51,6 +52,7 @@ class ConsultPlan:
     recruiter_requests: tuple[RecruiterRequest, ...]
     rationale: str
     budget_remaining: int
+    escalations: tuple[EscalationRequest, ...] = ()
 
 
 # Signals emitted by the Router
@@ -104,7 +106,9 @@ CLASS_DEFAULT_TAGS: dict[ExpertClass, list[str]] = {
     ExpertClass.PARTNER: ["partner_api", "integration", "contract"],
     ExpertClass.TECHNICAL: ["architecture", "infra", "performance"],
     ExpertClass.QA_VALIDATION: [
-        "intent_validation", "acceptance_criteria", "defect_classification",
+        "intent_validation",
+        "acceptance_criteria",
+        "defect_classification",
     ],
 }
 
@@ -149,12 +153,14 @@ def _score_and_rank_candidates(
     for expert in candidates:
         weight, confidence = _get_reputation_for_expert(expert, repo, reputation_lookup)
         score = _compute_selection_score(expert.trust_tier, weight, confidence)
-        scored.append(ScoredCandidate(
-            expert=expert,
-            reputation_weight=weight,
-            reputation_confidence=confidence,
-            selection_score=score,
-        ))
+        scored.append(
+            ScoredCandidate(
+                expert=expert,
+                reputation_weight=weight,
+                reputation_confidence=confidence,
+                selection_score=score,
+            )
+        )
 
     # Sort by selection_score descending
     scored.sort(key=lambda c: c.selection_score, reverse=True)
@@ -221,9 +227,7 @@ def route(
 
     for required_class in sorted(required_classes, key=lambda c: c.value):
         if budget <= 0:
-            rationale_parts.append(
-                f"Budget exhausted — skipped {required_class.value} coverage"
-            )
+            rationale_parts.append(f"Budget exhausted — skipped {required_class.value} coverage")
             break
 
         candidates = experts_by_class.get(required_class, [])
@@ -244,9 +248,7 @@ def route(
             continue
 
         # Score and rank candidates using reputation
-        scored_candidates = _score_and_rank_candidates(
-            candidates, repo, reputation_lookup
-        )
+        scored_candidates = _score_and_rank_candidates(candidates, repo, reputation_lookup)
         best = scored_candidates[0]
 
         # Build rationale with reputation info
@@ -278,9 +280,61 @@ def route(
 
     rationale = "; ".join(rationale_parts) if rationale_parts else "Empty consult plan"
 
+    # Detect escalation conditions
+    escalations: list[EscalationRequest] = []
+    high_risk_flags = {"risk_privileged_access", "risk_destructive"}
+    active_high_risk = (
+        {k for k, v in risk_flags.items() if v} & high_risk_flags if risk_flags else set()
+    )
+
+    if active_high_risk:
+        # Condition 1: Budget exhausted before all mandatory classes covered
+        covered_classes = {s.expert_class for s in selections}
+        uncovered = required_classes - covered_classes
+        if uncovered and budget <= 0:
+            escalations.append(
+                EscalationRequest(
+                    source="router",
+                    reason=(
+                        f"Budget exhausted with uncovered mandatory classes "
+                        f"({', '.join(c.value for c in uncovered)}) "
+                        f"and high-risk flags ({', '.join(sorted(active_high_risk))})"
+                    ),
+                    risk_domain=(
+                        "destructive" if "risk_destructive" in active_high_risk else "security"
+                    ),
+                    taskpacket_id=UUID(int=0),
+                    correlation_id=UUID(int=0),
+                    severity="critical",
+                )
+            )
+
+        # Condition 2: Low confidence on selected experts with high-risk flags
+        low_confidence_selections = [s for s in selections if s.reputation_confidence < 0.7]
+        if low_confidence_selections:
+            escalations.append(
+                EscalationRequest(
+                    source="router",
+                    reason=(
+                        "Low confidence experts selected for high-risk task: "
+                        + ", ".join(
+                            f"{s.expert_class.value} (conf={s.reputation_confidence:.2f})"
+                            for s in low_confidence_selections
+                        )
+                    ),
+                    risk_domain=(
+                        "destructive" if "risk_destructive" in active_high_risk else "security"
+                    ),
+                    taskpacket_id=UUID(int=0),
+                    correlation_id=UUID(int=0),
+                    severity="high",
+                )
+            )
+
     return ConsultPlan(
         selections=tuple(selections),
         recruiter_requests=tuple(recruiter_requests),
         rationale=rationale,
         budget_remaining=budget,
+        escalations=tuple(escalations),
     )

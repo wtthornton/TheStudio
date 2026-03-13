@@ -15,6 +15,8 @@ import logging
 from dataclasses import dataclass, field
 from uuid import UUID, uuid4
 
+from src.models.escalation import EscalationRequest
+
 logger = logging.getLogger(__name__)
 
 
@@ -110,6 +112,7 @@ class AssemblyPlan:
     qa_handoff: list[QAHandoffMapping] = field(default_factory=list)
     provenance: ProvenanceRecord | None = None
     intent_refinement: IntentRefinementRequest | None = None
+    escalations: list[EscalationRequest] = field(default_factory=list)
 
 
 def assemble(
@@ -164,12 +167,34 @@ def assemble(
     # Step 3: Detect and resolve conflicts
     plan.conflicts = _detect_conflicts(expert_outputs, intent_constraints)
 
+    # Step 3b: Check for high-risk unresolved conflicts requiring escalation
+    high_risk_terms = {"security", "compliance", "billing", "partner", "migration", "destructive"}
+    unresolved_conflicts = [c for c in plan.conflicts if c.resolved_by == "unresolved"]
+    for conflict in unresolved_conflicts:
+        # Check if conflict involves high-risk domains by inspecting expert names and description
+        conflict_text = (f"{conflict.expert_a} {conflict.expert_b} {conflict.description}").lower()
+        detected_domain: str | None = None
+        for term in high_risk_terms:
+            if term in conflict_text:
+                detected_domain = term
+                break
+        if detected_domain is not None:
+            plan.escalations.append(
+                EscalationRequest(
+                    source="assembler",
+                    reason=conflict.description,
+                    risk_domain=detected_domain,
+                    taskpacket_id=taskpacket_id,
+                    correlation_id=correlation_id,
+                    severity="high",
+                )
+            )
+
     # Step 4: Check for unresolved conflicts requiring intent refinement
     unresolved = [c for c in plan.conflicts if c.resolved_by == "unresolved"]
     if unresolved:
         questions = [
-            f"Conflict between {c.expert_a} and {c.expert_b}: {c.description}"
-            for c in unresolved
+            f"Conflict between {c.expert_a} and {c.expert_b}: {c.description}" for c in unresolved
         ]
         plan.intent_refinement = IntentRefinementRequest(
             questions=questions,
@@ -195,7 +220,8 @@ def assemble(
 
     # Step 6: Build QA handoff mapping (acceptance criteria → validations)
     plan.qa_handoff = _build_qa_handoff(
-        acceptance_criteria, expert_outputs,
+        acceptance_criteria,
+        expert_outputs,
     )
 
     # Step 7: Build provenance minimum record
@@ -247,7 +273,7 @@ def _detect_conflicts(
 
     # Compare each pair of experts for contradictions in assumptions
     for i, output_a in enumerate(expert_outputs):
-        for output_b in expert_outputs[i + 1:]:
+        for output_b in expert_outputs[i + 1 :]:
             # Check for contradictory assumptions
             common_assumptions = set(output_a.assumptions) & set(output_b.assumptions)
             if not common_assumptions:
@@ -261,7 +287,9 @@ def _detect_conflicts(
             if contradicting_a and contradicting_b:
                 # Attempt intent-based resolution
                 resolution, resolved_by = _resolve_with_intent(
-                    contradicting_a, contradicting_b, intent_constraints,
+                    contradicting_a,
+                    contradicting_b,
+                    intent_constraints,
                 )
                 conflicts.append(
                     Conflict(

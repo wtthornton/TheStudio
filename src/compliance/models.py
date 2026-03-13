@@ -39,6 +39,7 @@ class ComplianceCheck(enum.StrEnum):
     EXECUTION_PLANE_HEALTH = "execution_plane_health"
     PUBLISHER_IDEMPOTENCY = "publisher_idempotency"
     CREDENTIALS_SCOPED = "credentials_scoped"
+    ADVERSARIAL_CONTENT = "adversarial_content"
 
 
 class ComplianceCheckResult(BaseModel):
@@ -80,9 +81,7 @@ class ComplianceResultRow(Base):
     )
     triggered_by: Mapped[str] = mapped_column(String(255), nullable=False)
 
-    __table_args__ = (
-        {"comment": "Compliance check results — persisted for audit trail"},
-    )
+    __table_args__ = ({"comment": "Compliance check results — persisted for audit trail"},)
 
 
 REMEDIATION_HINTS: dict[ComplianceCheck, str] = {
@@ -122,6 +121,10 @@ REMEDIATION_HINTS: dict[ComplianceCheck, str] = {
         "Review GitHub token scope for this repo. Execute tier requires specific "
         "permissions (repo, workflow). Ensure the token is not over-permissioned "
         "and is scoped to this repository only."
+    ),
+    ComplianceCheck.ADVERSARIAL_CONTENT: (
+        "Review issue content for suspicious patterns such as prompt injection, "
+        "credential exposure, or tool manipulation commands."
     ),
 }
 

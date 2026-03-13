@@ -22,13 +22,30 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Application lifespan: initialize tracing, context packs, and poll scheduler on startup."""
+    """Application lifespan: initialize tracing, packs, scheduler, and consumer."""
     init_tracing()
     import src.context.packs  # noqa: F401 — registers production context packs
     from src.ingress.poll.scheduler import start_poll_scheduler
+    from src.outcome.consumer import stop_signal_consumer
 
     poll_task = start_poll_scheduler()
+
+    # Start JetStream signal consumer (non-blocking, logs on failure)
+    consumer_task = None
+    try:
+        from src.outcome.consumer import start_signal_consumer
+        from src.settings import settings
+
+        consumer_task = await start_signal_consumer(settings.nats_url)
+    except Exception:
+        import logging
+
+        logging.getLogger(__name__).warning("Failed to start signal consumer", exc_info=True)
+
     yield
+
+    if consumer_task is not None:
+        await stop_signal_consumer()
     if poll_task is not None:
         poll_task.cancel()
 

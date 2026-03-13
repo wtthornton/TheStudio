@@ -31,6 +31,7 @@ from src.repo.repo_profile_crud import get_by_repo
 from src.verification.runners.base import CheckResult
 from src.verification.runners.pytest_runner import run_pytest
 from src.verification.runners.ruff_runner import run_ruff
+from src.verification.runners.security_runner import run_security_scan
 from src.verification.signals import (
     emit_verification_exhausted,
     emit_verification_failed,
@@ -46,6 +47,7 @@ MAX_LOOPBACKS = 2
 _RUNNERS: dict[str, str] = {
     "ruff": "ruff",
     "pytest": "pytest",
+    "security": "security",
 }
 
 
@@ -72,6 +74,8 @@ async def _run_check(
             result = await run_ruff(changed_files, repo_path)
         elif check_name == "pytest":
             result = await run_pytest(repo_path)
+        elif check_name == "security":
+            result = await run_security_scan(changed_files, repo_path)
         else:
             result = CheckResult(
                 name=check_name, passed=False, details=f"Unknown check: {check_name}"
@@ -143,18 +147,10 @@ async def verify(
                 taskpacket_id, tp.correlation_id, current_count, results
             )
             span.set_attribute("thestudio.verification_outcome", "exhausted")
-            return VerificationResult(
-                passed=False, checks=results, exhausted=True
-            )
+            return VerificationResult(passed=False, checks=results, exhausted=True)
 
         # Loopback — mark as verification_failed for retry
-        await update_status(
-            session, taskpacket_id, TaskPacketStatus.VERIFICATION_FAILED
-        )
-        await emit_verification_failed(
-            taskpacket_id, tp.correlation_id, current_count, results
-        )
+        await update_status(session, taskpacket_id, TaskPacketStatus.VERIFICATION_FAILED)
+        await emit_verification_failed(taskpacket_id, tp.correlation_id, current_count, results)
         span.set_attribute("thestudio.verification_outcome", "failed_loopback")
-        return VerificationResult(
-            passed=False, checks=results, loopback_triggered=True
-        )
+        return VerificationResult(passed=False, checks=results, loopback_triggered=True)

@@ -1,47 +1,27 @@
 {
   "mcpServers": {
+    "MCP_DOCKER": {
+      "command": "docker",
+      "args": [
+        "mcp",
+        "gateway",
+        "run"
+      ],
+      "env": {
+        "LOCALAPPDATA": "C:\\Users\\tappt\\AppData\\Local",
+        "ProgramData": "C:\\ProgramData",
+        "ProgramFiles": "C:\\Program Files"
+      }
+    },
     "tapps-mcp": {
-      "command": "C:\\Users\\tappt\\.local\\bin\\tapps-mcp.exe",
+      "type": "stdio",
+      "command": "tapps-mcp",
       "args": [
         "serve"
       ],
       "env": {
         "TAPPS_MCP_PROJECT_ROOT": "${workspaceFolder}"
       }
-    },
-    "Context7": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@upstash/context7-mcp"
-      ],
-      "env": {
-        "CONTEXT7_API_KEY": "${env:CONTEXT7_API_KEY}"
-      }
-    },
-    "docs-mcp": {
-      "command": "C:\\cursor\\TappMCP\\dist\\docsmcp.exe",
-      "args": [
-        "serve"
-      ],
-      "env": {
-        "DOCS_MCP_PROJECT_ROOT": "${workspaceFolder}"
-      }
-    },
-    "playwright": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@playwright/mcp@latest"
-      ]
-    },
-    "docker-mcp": {
-      "command": "docker",
-      "args": [
-        "mcp",
-        "gateway",
-        "run"
-      ]
     }
   }
 }

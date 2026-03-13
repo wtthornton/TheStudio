@@ -10,11 +10,15 @@ The Reputation Engine:
 5. Exposes weights to Router queries
 """
 
+from __future__ import annotations
+
 import logging
 from datetime import UTC, datetime
 from math import exp, log
 from typing import Protocol, runtime_checkable
 from uuid import UUID
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.reputation.models import (
     CONFIDENCE_BASE,
@@ -43,11 +47,17 @@ class ReputationEngineProtocol(Protocol):
     def get_weight(self, expert_id: UUID, context_key: str) -> ExpertWeight | None: ...
     def get_all_weights(self) -> list[ExpertWeight]: ...
     def get_expert_weights_for_router(
-        self, expert_id: UUID, repo: str | None = None, min_confidence: float = 0.0,
+        self,
+        expert_id: UUID,
+        repo: str | None = None,
+        min_confidence: float = 0.0,
     ) -> list[WeightQueryResult]: ...
     def get_best_experts_for_context(
-        self, context_key: str, min_confidence: float = 0.0,
-        trust_tier: TrustTier | None = None, limit: int = 10,
+        self,
+        context_key: str,
+        min_confidence: float = 0.0,
+        trust_tier: TrustTier | None = None,
+        limit: int = 10,
     ) -> list[WeightQueryResult]: ...
     def clear(self) -> None: ...
 
@@ -99,6 +109,7 @@ def _compute_decay_factor(last_indicator_at: datetime | None, now: datetime) -> 
     if last_indicator_at.tzinfo is None:
         # Assume naive datetime is UTC
         from datetime import UTC
+
         last_indicator_at = last_indicator_at.replace(tzinfo=UTC)
 
     days_elapsed = (now - last_indicator_at).total_seconds() / 86400
@@ -204,10 +215,7 @@ def _compute_trust_tier(
     elif current_tier == TrustTier.TRUSTED:
         # Check for demotion to probation
         thresholds = TIER_THRESHOLDS["trusted_to_probation"]
-        if (
-            sample_count >= thresholds["min_samples"]
-            and weight <= thresholds["max_weight"]
-        ):
+        if sample_count >= thresholds["min_samples"] and weight <= thresholds["max_weight"]:
             logger.info("Expert demoted from TRUSTED to PROBATION")
             return TrustTier.PROBATION
 
@@ -244,17 +252,21 @@ def update_weight(update: WeightUpdate) -> ExpertWeight:
         )
         # Compute initial weight
         weight_record = weight_record.model_copy(
-            update={"weight": _compute_weight(
-                weight_record.raw_weight_sum,
-                weight_record.sample_count,
-                1.0,  # No decay for new records
-            )}
+            update={
+                "weight": _compute_weight(
+                    weight_record.raw_weight_sum,
+                    weight_record.sample_count,
+                    1.0,  # No decay for new records
+                )
+            }
         )
         _weights[key] = weight_record
         _weight_history[key] = [weight_record.weight]
         logger.info(
             "Created weight record for expert %s in context %s: weight=%.2f",
-            update.expert_id, update.context_key, weight_record.weight,
+            update.expert_id,
+            update.context_key,
+            weight_record.weight,
         )
         return weight_record
 
@@ -281,27 +293,36 @@ def update_weight(update: WeightUpdate) -> ExpertWeight:
 
     # Compute trust tier
     new_tier = _compute_trust_tier(
-        existing.trust_tier, new_weight, new_confidence, new_sample_count,
+        existing.trust_tier,
+        new_weight,
+        new_confidence,
+        new_sample_count,
     )
 
     # Create updated record
-    updated = existing.model_copy(update={
-        "expert_version": update.expert_version,
-        "weight": new_weight,
-        "raw_weight_sum": new_raw_sum,
-        "sample_count": new_sample_count,
-        "confidence": new_confidence,
-        "trust_tier": new_tier,
-        "drift_signal": new_drift,
-        "updated_at": now,
-        "last_indicator_at": update.timestamp,
-    })
+    updated = existing.model_copy(
+        update={
+            "expert_version": update.expert_version,
+            "weight": new_weight,
+            "raw_weight_sum": new_raw_sum,
+            "sample_count": new_sample_count,
+            "confidence": new_confidence,
+            "trust_tier": new_tier,
+            "drift_signal": new_drift,
+            "updated_at": now,
+            "last_indicator_at": update.timestamp,
+        }
+    )
 
     _weights[key] = updated
 
     logger.info(
         "Updated weight for expert %s in context %s: weight=%.2f, confidence=%.2f, tier=%s",
-        update.expert_id, update.context_key, new_weight, new_confidence, new_tier.value,
+        update.expert_id,
+        update.context_key,
+        new_weight,
+        new_confidence,
+        new_tier.value,
     )
 
     return updated
@@ -332,15 +353,17 @@ def query_weights(query: WeightQuery) -> list[WeightQueryResult]:
         if weight_record.confidence < query.min_confidence:
             continue
 
-        results.append(WeightQueryResult(
-            expert_id=weight_record.expert_id,
-            expert_version=weight_record.expert_version,
-            context_key=weight_record.context_key,
-            weight=weight_record.weight,
-            confidence=weight_record.confidence,
-            trust_tier=weight_record.trust_tier,
-            drift_signal=weight_record.drift_signal,
-        ))
+        results.append(
+            WeightQueryResult(
+                expert_id=weight_record.expert_id,
+                expert_version=weight_record.expert_version,
+                context_key=weight_record.context_key,
+                weight=weight_record.weight,
+                confidence=weight_record.confidence,
+                trust_tier=weight_record.trust_tier,
+                drift_signal=weight_record.drift_signal,
+            )
+        )
 
     # Sort by weight descending
     results.sort(key=lambda r: r.weight, reverse=True)
@@ -403,18 +426,198 @@ class InMemoryReputationEngine:
         return get_all_weights()
 
     def get_expert_weights_for_router(
-        self, expert_id: UUID, repo: str | None = None, min_confidence: float = 0.0,
+        self,
+        expert_id: UUID,
+        repo: str | None = None,
+        min_confidence: float = 0.0,
     ) -> list[WeightQueryResult]:
         return get_expert_weights_for_router(expert_id, repo, min_confidence)
 
     def get_best_experts_for_context(
-        self, context_key: str, min_confidence: float = 0.0,
-        trust_tier: TrustTier | None = None, limit: int = 10,
+        self,
+        context_key: str,
+        min_confidence: float = 0.0,
+        trust_tier: TrustTier | None = None,
+        limit: int = 10,
     ) -> list[WeightQueryResult]:
         return get_best_experts_for_context(context_key, min_confidence, trust_tier, limit)
 
     def clear(self) -> None:
         clear()
+
+
+class AsyncReputationEngine:
+    """Async wrapper for DB-backed reputation persistence.
+
+    Wraps InMemoryReputationEngine for cache operations, adds async
+    methods that write/read DB via AsyncSession. The sync
+    ReputationEngineProtocol and InMemoryReputationEngine are unchanged.
+    """
+
+    def __init__(
+        self,
+        sync_engine: InMemoryReputationEngine | None = None,
+    ) -> None:
+        self._sync = sync_engine or InMemoryReputationEngine()
+
+    async def update_weight_persistent(
+        self,
+        update: WeightUpdate,
+        session: AsyncSession,
+    ) -> ExpertWeight:
+        """Update weight: DB first, then cache."""
+        from src.reputation.db_models import ExpertReputationRow
+
+        # Compute via sync engine (updates in-memory cache)
+        result = self._sync.update_weight(update)
+
+        # Persist to DB
+        key = (update.expert_id, update.context_key)
+        history = _weight_history.get(key, [])
+
+        row = await session.get(
+            ExpertReputationRow,
+            (update.expert_id, update.context_key),
+        )
+        if row is None:
+            row = ExpertReputationRow(
+                expert_id=result.expert_id,
+                context_key=result.context_key,
+                expert_version=result.expert_version,
+                weight=result.weight,
+                raw_weight_sum=result.raw_weight_sum,
+                sample_count=result.sample_count,
+                confidence=result.confidence,
+                trust_tier=result.trust_tier.value,
+                drift_signal=result.drift_signal.value,
+                last_indicator_at=result.last_indicator_at,
+                weight_history=history,
+            )
+            session.add(row)
+        else:
+            row.expert_version = result.expert_version
+            row.weight = result.weight
+            row.raw_weight_sum = result.raw_weight_sum
+            row.sample_count = result.sample_count
+            row.confidence = result.confidence
+            row.trust_tier = result.trust_tier.value
+            row.drift_signal = result.drift_signal.value
+            row.last_indicator_at = result.last_indicator_at
+            row.weight_history = history
+            row.updated_at = result.updated_at
+
+        await session.flush()
+        return result
+
+    async def query_weights_persistent(
+        self,
+        query: WeightQuery,
+        session: AsyncSession,
+    ) -> list[WeightQueryResult]:
+        """Query weights: cache first, DB fallback."""
+        # Try cache first
+        cached = self._sync.query_weights(query)
+        if cached:
+            return cached
+
+        # Cache miss — query DB
+        from sqlalchemy import select
+
+        from src.reputation.db_models import ExpertReputationRow
+
+        stmt = select(ExpertReputationRow)
+        if query.expert_id is not None:
+            stmt = stmt.where(ExpertReputationRow.expert_id == query.expert_id)
+        if query.context_key is not None:
+            stmt = stmt.where(ExpertReputationRow.context_key == query.context_key)
+
+        result = await session.execute(stmt)
+        rows = result.scalars().all()
+
+        # Populate cache from DB results
+        results: list[WeightQueryResult] = []
+        for row in rows:
+            # Reconstruct ExpertWeight and populate cache
+            ew = ExpertWeight(
+                expert_id=row.expert_id,
+                expert_version=row.expert_version,
+                context_key=row.context_key,
+                weight=row.weight,
+                raw_weight_sum=row.raw_weight_sum,
+                sample_count=row.sample_count,
+                confidence=row.confidence,
+                trust_tier=TrustTier(row.trust_tier),
+                drift_signal=DriftSignal(row.drift_signal),
+                created_at=row.created_at,
+                updated_at=row.updated_at,
+                last_indicator_at=row.last_indicator_at,
+            )
+            _weights[(row.expert_id, row.context_key)] = ew
+            if row.weight_history:
+                _weight_history[(row.expert_id, row.context_key)] = row.weight_history
+
+            # Apply remaining filters
+            if query.repo is not None and not row.context_key.startswith(f"{query.repo}:"):
+                continue
+            if query.trust_tier is not None and TrustTier(row.trust_tier) != query.trust_tier:
+                continue
+            if row.confidence < query.min_confidence:
+                continue
+
+            results.append(
+                WeightQueryResult(
+                    expert_id=row.expert_id,
+                    expert_version=row.expert_version,
+                    context_key=row.context_key,
+                    weight=row.weight,
+                    confidence=row.confidence,
+                    trust_tier=TrustTier(row.trust_tier),
+                    drift_signal=DriftSignal(row.drift_signal),
+                )
+            )
+
+        results.sort(key=lambda r: r.weight, reverse=True)
+        return results
+
+    async def get_weight_persistent(
+        self,
+        expert_id: UUID,
+        context_key: str,
+        session: AsyncSession,
+    ) -> ExpertWeight | None:
+        """Get weight: cache first, DB fallback."""
+        cached = self._sync.get_weight(expert_id, context_key)
+        if cached is not None:
+            return cached
+
+        from src.reputation.db_models import ExpertReputationRow
+
+        row = await session.get(ExpertReputationRow, (expert_id, context_key))
+        if row is None:
+            return None
+
+        ew = ExpertWeight(
+            expert_id=row.expert_id,
+            expert_version=row.expert_version,
+            context_key=row.context_key,
+            weight=row.weight,
+            raw_weight_sum=row.raw_weight_sum,
+            sample_count=row.sample_count,
+            confidence=row.confidence,
+            trust_tier=TrustTier(row.trust_tier),
+            drift_signal=DriftSignal(row.drift_signal),
+            created_at=row.created_at,
+            updated_at=row.updated_at,
+            last_indicator_at=row.last_indicator_at,
+        )
+        _weights[(row.expert_id, row.context_key)] = ew
+        if row.weight_history:
+            _weight_history[(row.expert_id, row.context_key)] = row.weight_history
+        return ew
+
+    def clear(self) -> None:
+        """Clear both sync cache and async state."""
+        self._sync.clear()
 
 
 _reputation_engine: InMemoryReputationEngine | None = None

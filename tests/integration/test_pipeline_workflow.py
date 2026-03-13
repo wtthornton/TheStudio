@@ -13,13 +13,7 @@ from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
 
 from src.workflow.activities import (
-    AssemblerOutput,
-    ContextOutput,
-    ImplementOutput,
-    IntentOutput,
-    PublishOutput,
     QAOutput,
-    RouterOutput,
     VerifyOutput,
     assembler_activity,
     context_activity,
@@ -32,7 +26,10 @@ from src.workflow.activities import (
     verify_activity,
 )
 from src.workflow.pipeline import PipelineInput, PipelineOutput, TheStudioPipelineWorkflow
-
+from tests.integration.mock_providers import (
+    ALL_MOCK_ACTIVITIES,
+    activities_with_verify_loopback,
+)
 
 TASK_QUEUE = "test-pipeline"
 
@@ -277,3 +274,61 @@ class TestGateExhaustion:
             assert result.success is False
             assert result.qa_loopbacks >= 1
             assert result.step_reached == "qa"
+
+
+# --- Story 15.5: Temporal Data-Fidelity with Realistic Providers ---
+
+
+REALISTIC_QUEUE = "realistic-test"
+
+
+class TestRealisticPipeline:
+    """Data-fidelity tests using mock providers with realistic data."""
+
+    async def test_realistic_happy_path(self, temporal_env):
+        """Pipeline with mock providers produces valid, non-empty output."""
+        async with Worker(
+            temporal_env.client,
+            task_queue=REALISTIC_QUEUE,
+            workflows=[TheStudioPipelineWorkflow],
+            activities=ALL_MOCK_ACTIVITIES,
+        ):
+            result: PipelineOutput = (
+                await temporal_env.client.execute_workflow(
+                    TheStudioPipelineWorkflow.run,
+                    _eligible_input(),
+                    id=f"test-realistic-{uuid4()}",
+                    task_queue=REALISTIC_QUEUE,
+                )
+            )
+
+        assert result.success is True
+        assert result.step_reached == "publish"
+        assert result.pr_number == 42
+        assert result.pr_url != ""
+        assert result.verification_loopbacks == 0
+        assert result.qa_loopbacks == 0
+
+    async def test_realistic_loopback(self, temporal_env):
+        """Verify loopback with realistic data tracks count."""
+        loopback_activities = activities_with_verify_loopback(
+            fail_count=1,
+        )
+        async with Worker(
+            temporal_env.client,
+            task_queue=REALISTIC_QUEUE,
+            workflows=[TheStudioPipelineWorkflow],
+            activities=loopback_activities,
+        ):
+            result: PipelineOutput = (
+                await temporal_env.client.execute_workflow(
+                    TheStudioPipelineWorkflow.run,
+                    _eligible_input(),
+                    id=f"test-realistic-loop-{uuid4()}",
+                    task_queue=REALISTIC_QUEUE,
+                )
+            )
+
+        assert result.success is True
+        assert result.verification_loopbacks == 1
+        assert result.step_reached == "publish"

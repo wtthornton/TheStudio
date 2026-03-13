@@ -53,7 +53,7 @@ Create a test issue in your repo with the label `agent:run`. TheStudio will:
 
 | Tier | Behavior | Promotion Criteria |
 |------|----------|-------------------|
-| **Observe** (default) | Draft PRs only, human review required | Initial registration |
+| **Observe** (default) | Creates TaskPacket and draft PR; human review required before merge | Initial registration |
 | **Suggest** | PRs marked ready-for-review when V+QA pass | Compliance checker passes |
 | **Execute** | Auto-merge (future) | Full compliance + track record |
 

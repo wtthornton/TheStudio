@@ -14,9 +14,10 @@ Eligibility contract:
 - Reject: missing `agent:run`, unregistered repo, repo paused, issue already has active workflow
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
+from src.intake.adversarial import detect_suspicious_patterns
 from src.intake.effective_role import (
     RISK_LABEL_TO_OVERLAY,
     BaseRole,
@@ -52,6 +53,7 @@ class IntakeResult:
     accepted: bool
     rejection: IntakeRejection | None = None
     effective_role: EffectiveRolePolicy | None = None
+    risk_flags: dict[str, bool] = field(default_factory=dict)
 
 
 def evaluate_eligibility(
@@ -61,6 +63,8 @@ def evaluate_eligibility(
     repo_paused: bool,
     has_active_workflow: bool,
     event_id: str,
+    issue_title: str = "",
+    issue_body: str = "",
 ) -> IntakeResult:
     """Evaluate whether an issue event is eligible for automation.
 
@@ -74,8 +78,10 @@ def evaluate_eligibility(
         return IntakeResult(
             accepted=False,
             rejection=IntakeRejection(
-                event_id=event_id, repo=repo,
-                reason="Missing agent:run label", timestamp=now,
+                event_id=event_id,
+                repo=repo,
+                reason="Missing agent:run label",
+                timestamp=now,
             ),
         )
 
@@ -83,8 +89,10 @@ def evaluate_eligibility(
         return IntakeResult(
             accepted=False,
             rejection=IntakeRejection(
-                event_id=event_id, repo=repo,
-                reason="Repository not registered", timestamp=now,
+                event_id=event_id,
+                repo=repo,
+                reason="Repository not registered",
+                timestamp=now,
             ),
         )
 
@@ -92,8 +100,10 @@ def evaluate_eligibility(
         return IntakeResult(
             accepted=False,
             rejection=IntakeRejection(
-                event_id=event_id, repo=repo,
-                reason="Repository is paused", timestamp=now,
+                event_id=event_id,
+                repo=repo,
+                reason="Repository is paused",
+                timestamp=now,
             ),
         )
 
@@ -101,10 +111,34 @@ def evaluate_eligibility(
         return IntakeResult(
             accepted=False,
             rejection=IntakeRejection(
-                event_id=event_id, repo=repo,
-                reason="Issue already has active workflow", timestamp=now,
+                event_id=event_id,
+                repo=repo,
+                reason="Issue already has active workflow",
+                timestamp=now,
             ),
         )
+
+    # Check for adversarial input patterns
+    combined_text = f"{issue_title} {issue_body}" if issue_title or issue_body else ""
+    risk_flags: dict[str, bool] = {}
+    if combined_text.strip():
+        suspicious = detect_suspicious_patterns(combined_text)
+        blocking = [p for p in suspicious if p.severity == "block"]
+        warnings = [p for p in suspicious if p.severity == "warning"]
+
+        if blocking:
+            return IntakeResult(
+                accepted=False,
+                rejection=IntakeRejection(
+                    event_id=event_id,
+                    repo=repo,
+                    reason=f"Adversarial input detected: {blocking[0].pattern_name}",
+                    timestamp=now,
+                ),
+            )
+
+        if warnings:
+            risk_flags["risk_adversarial_input"] = True
 
     # Select base role from issue type labels
     base_role = _select_base_role(labels)
@@ -115,7 +149,7 @@ def evaluate_eligibility(
     # Compute EffectiveRolePolicy
     effective_role = EffectiveRolePolicy.compute(base_role, overlays)
 
-    return IntakeResult(accepted=True, effective_role=effective_role)
+    return IntakeResult(accepted=True, effective_role=effective_role, risk_flags=risk_flags)
 
 
 def _select_base_role(labels: list[str]) -> BaseRole:

@@ -82,9 +82,7 @@ class ComplianceChecker:
         self._publisher_idempotency_checker = (
             publisher_idempotency_checker or PublisherIdempotencyChecker()
         )
-        self._credential_scope_checker = (
-            credential_scope_checker or CredentialScopeChecker()
-        )
+        self._credential_scope_checker = credential_scope_checker or CredentialScopeChecker()
         self._check_results: list[ComplianceCheckResult] = []
 
     async def check_compliance(
@@ -171,11 +169,10 @@ class ComplianceChecker:
 
         # Check for rulesets with required status checks
         rulesets_with_checks = [
-            rs for rs in repo_info.rulesets
-            if rs.get("rules") and any(
-                r.get("type") == "required_status_checks"
-                for r in rs.get("rules", [])
-            )
+            rs
+            for rs in repo_info.rulesets
+            if rs.get("rules")
+            and any(r.get("type") == "required_status_checks" for r in rs.get("rules", []))
         ]
 
         if not rulesets_with_checks:
@@ -420,9 +417,7 @@ class ComplianceChecker:
         check = ComplianceCheck.CREDENTIALS_SCOPED
 
         try:
-            health = await self._credential_scope_checker.check_scopes(
-                repo_id, target_tier
-            )
+            health = await self._credential_scope_checker.check_scopes(repo_id, target_tier)
             if health.healthy:
                 self._add_pass(
                     check,
@@ -448,6 +443,38 @@ class ComplianceChecker:
                 f"Failed to check credential scopes: {e}",
                 details={"error": str(e)},
             )
+
+    def check_adversarial_content(self, text: str) -> ComplianceCheckResult:
+        """Check text for adversarial patterns (thin wrapper around intake detector).
+
+        Args:
+            text: The text to scan for adversarial patterns.
+
+        Returns:
+            ComplianceCheckResult with pass/fail and detected pattern details.
+        """
+        from src.intake.adversarial import detect_suspicious_patterns
+
+        patterns = detect_suspicious_patterns(text)
+        if patterns:
+            return ComplianceCheckResult(
+                check=ComplianceCheck.ADVERSARIAL_CONTENT,
+                passed=False,
+                failure_reason=(
+                    f"Adversarial patterns detected: {', '.join(p.pattern_name for p in patterns)}"
+                ),
+                remediation_hint="Review issue content for suspicious patterns",
+                details={
+                    "patterns": [{"name": p.pattern_name, "severity": p.severity} for p in patterns]
+                },
+            )
+        return ComplianceCheckResult(
+            check=ComplianceCheck.ADVERSARIAL_CONTENT,
+            passed=True,
+            failure_reason=None,
+            remediation_hint=None,
+            details=None,
+        )
 
     def _add_pass(
         self,

@@ -28,6 +28,8 @@ class IntakeInput:
     repo_paused: bool
     has_active_workflow: bool
     event_id: str
+    issue_title: str = ""
+    issue_body: str = ""
 
 
 @dataclass
@@ -245,6 +247,8 @@ async def intake_activity(params: IntakeInput) -> IntakeOutput:
         repo_paused=params.repo_paused,
         has_active_workflow=params.has_active_workflow,
         event_id=params.event_id,
+        issue_title=params.issue_title,
+        issue_body=params.issue_body,
     )
 
     if not result.accepted:

@@ -1,6 +1,20 @@
 {
   "mcpServers": {
+    "MCP_DOCKER": {
+      "command": "docker",
+      "args": [
+        "mcp",
+        "gateway",
+        "run"
+      ],
+      "env": {
+        "LOCALAPPDATA": "C:\\Users\\tappt\\AppData\\Local",
+        "ProgramData": "C:\\ProgramData",
+        "ProgramFiles": "C:\\Program Files"
+      }
+    },
     "tapps-mcp": {
+      "type": "stdio",
       "command": "tapps-mcp",
       "args": [
         "serve"
@@ -9,29 +23,6 @@
         "TAPPS_MCP_PROJECT_ROOT": "."
       },
       "instructions": "Code quality scoring (0-100 across 7 categories), security scanning (Bandit + secret detection), quality gates (pass/fail against configurable presets), documentation lookup, domain expert consultation, and project profiling for Python projects."
-    },
-    "context7": {
-      "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp"],
-      "instructions": "Look up library documentation with version-specific context. Use before writing code that calls external library APIs."
-    },
-    "docker-mcp": {
-      "command": "docker",
-      "args": [
-        "mcp",
-        "gateway",
-        "run"
-      ]
-    },
-    "docs-mcp": {
-      "command": "C:\\cursor\\TappMCP\\dist\\docsmcp.exe",
-      "args": [
-        "serve"
-      ],
-      "env": {
-        "DOCS_MCP_PROJECT_ROOT": "."
-      },
-      "instructions": "Documentation audit and generation. 14 tools: project scan, drift/completeness/freshness checks, and generators for README, CHANGELOG, API docs, CONTRIBUTING, onboarding, epics, stories, PRDs, ADRs, and diagrams."
     }
   }
 }

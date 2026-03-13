@@ -316,18 +316,19 @@ class TestRouterActivity:
 
 
 class TestWorkflowStep:
-    def test_all_nine_steps(self) -> None:
-        """Workflow has exactly 9 steps per the architecture."""
-        assert len(WorkflowStep) == 9
+    def test_all_steps(self) -> None:
+        """Workflow has 10 steps (9 core + readiness gate)."""
+        assert len(WorkflowStep) == 10
 
     def test_step_order(self) -> None:
         steps = list(WorkflowStep)
         assert steps[0] == WorkflowStep.INTAKE
         assert steps[1] == WorkflowStep.CONTEXT
-        assert steps[2] == WorkflowStep.INTENT
-        assert steps[3] == WorkflowStep.ROUTER
-        assert steps[4] == WorkflowStep.ASSEMBLER
-        assert steps[5] == WorkflowStep.IMPLEMENT
-        assert steps[6] == WorkflowStep.VERIFY
-        assert steps[7] == WorkflowStep.QA
-        assert steps[8] == WorkflowStep.PUBLISH
+        assert steps[2] == WorkflowStep.READINESS
+        assert steps[3] == WorkflowStep.INTENT
+        assert steps[4] == WorkflowStep.ROUTER
+        assert steps[5] == WorkflowStep.ASSEMBLER
+        assert steps[6] == WorkflowStep.IMPLEMENT
+        assert steps[7] == WorkflowStep.VERIFY
+        assert steps[8] == WorkflowStep.QA
+        assert steps[9] == WorkflowStep.PUBLISH

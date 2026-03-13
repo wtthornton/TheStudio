@@ -5,6 +5,7 @@ produce an evidence bundle, and support verification loopbacks.
 
 Architecture reference: thestudioarc/08-agent-roles.md
 Epic reference: Story 0.5 — Primary Agent
+Sprint 19 Stream A: Model Gateway integration (Stories A1-A6)
 """
 
 import logging
@@ -12,6 +13,15 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.admin.model_gateway import (
+    BudgetExceededError,
+    ModelCallAudit,
+    NoProviderAvailableError,
+    ProviderConfig,
+    get_budget_enforcer,
+    get_model_audit_store,
+    get_model_router,
+)
 from src.agent.developer_role import DeveloperRoleConfig, build_system_prompt
 from src.agent.evidence import EvidenceBundle
 from src.intent.intent_crud import get_latest_for_taskpacket
@@ -84,11 +94,89 @@ def _parse_changed_files(agent_summary: str) -> list[str]:
     return files
 
 
+def _resolve_provider(
+    overlays: list[str] | None,
+    repo_tier: str,
+    complexity: str,
+) -> ProviderConfig:
+    """Select a provider via the Model Gateway, with fallback on failure.
+
+    Tries ``select_model`` first; on ``NoProviderAvailableError`` falls back
+    to ``select_with_fallback`` and logs the chain.
+    """
+    router = get_model_router()
+    try:
+        return router.select_model(
+            step="primary_agent",
+            role="developer",
+            overlays=overlays,
+            repo_tier=repo_tier,
+            complexity=complexity,
+        )
+    except NoProviderAvailableError:
+        logger.warning(
+            "Primary provider unavailable, attempting fallback chain "
+            "(overlays=%s, repo_tier=%s, complexity=%s)",
+            overlays,
+            repo_tier,
+            complexity,
+        )
+        provider, chain = router.select_with_fallback(
+            step="primary_agent",
+            role="developer",
+            overlays=overlays,
+            repo_tier=repo_tier,
+            complexity=complexity,
+        )
+        logger.info("Fallback resolved to %s (chain: %s)", provider.model_id, chain)
+        return provider
+
+
+def _estimate_tokens(*texts: str) -> int:
+    """Rough token estimate: 1 token per 4 characters."""
+    return sum(len(t) // 4 for t in texts)
+
+
+def _record_audit_and_spend(
+    *,
+    taskpacket_correlation_id: UUID | None,
+    taskpacket_id: UUID,
+    provider: ProviderConfig,
+    prompt_tokens: int,
+    response_tokens: int,
+    estimated_cost: float,
+) -> None:
+    """Create an audit record and record spend after an agent call."""
+    audit = ModelCallAudit(
+        correlation_id=taskpacket_correlation_id,
+        task_id=taskpacket_id,
+        step="primary_agent",
+        role="developer",
+        provider=provider.provider,
+        model=provider.model_id,
+        tokens_in=prompt_tokens,
+        tokens_out=response_tokens,
+        cost=estimated_cost,
+    )
+    get_model_audit_store().record(audit)
+
+    get_budget_enforcer().record_spend(
+        task_id=str(taskpacket_id),
+        step="primary_agent",
+        cost=estimated_cost,
+        tokens=prompt_tokens + response_tokens,
+    )
+
+
 async def implement(
     session: AsyncSession,
     taskpacket_id: UUID,
     repo_path: str,
     role_config: DeveloperRoleConfig | None = None,
+    *,
+    overlays: list[str] | None = None,
+    repo_tier: str = "",
+    complexity: str = "",
 ) -> EvidenceBundle:
     """Run the Primary Agent to implement changes from an Intent Specification.
 
@@ -100,18 +188,37 @@ async def implement(
         taskpacket_id: TaskPacket to implement.
         repo_path: Local path to the target repository.
         role_config: Developer role configuration (uses defaults if None).
+            When *None*, the Model Gateway selects the provider.
+        overlays: Optional overlays for model routing (e.g. ``["security"]``).
+        repo_tier: Repository trust tier for routing rules.
+        complexity: Task complexity hint (``"high"`` escalates to STRONG).
 
     Returns:
         EvidenceBundle with files changed, test/lint results, and summary.
 
     Raises:
         ValueError: If TaskPacket or IntentSpec not found.
+        BudgetExceededError: If the task has exceeded its spend budget.
     """
+    # --- A1: Gateway-aware role config resolution ---
+    provider: ProviderConfig | None = None
     if role_config is None:
+        provider = _resolve_provider(overlays, repo_tier, complexity)
+        budget = get_budget_enforcer().get_budget(repo_tier)
         role_config = DeveloperRoleConfig(
-            model=settings.agent_model,
+            model=provider.model_id,
             max_turns=settings.agent_max_turns,
-            max_budget_usd=settings.agent_max_budget_usd,
+            max_budget_usd=budget.per_task_max_spend,
+        )
+
+    # --- A2: Budget check before agent call ---
+    if not get_budget_enforcer().check_budget(str(taskpacket_id)):
+        budget = get_budget_enforcer().get_budget(repo_tier)
+        current = get_budget_enforcer().get_task_spend(str(taskpacket_id))
+        raise BudgetExceededError(
+            str(taskpacket_id),
+            current,
+            budget.per_task_max_spend,
         )
 
     with tracer.start_as_current_span(SPAN_AGENT_IMPLEMENT) as span:
@@ -149,6 +256,20 @@ async def implement(
         )
         agent_summary = await _run_agent(system_prompt, user_prompt, repo_path, role_config)
 
+        # --- A3+A4: Record spend and audit after agent call ---
+        if provider is not None:
+            prompt_tokens = _estimate_tokens(system_prompt, user_prompt)
+            response_tokens = _estimate_tokens(agent_summary)
+            estimated_cost = (prompt_tokens + response_tokens) * provider.cost_per_1k_tokens / 1000
+            _record_audit_and_spend(
+                taskpacket_correlation_id=taskpacket.correlation_id,
+                taskpacket_id=taskpacket_id,
+                provider=provider,
+                prompt_tokens=prompt_tokens,
+                response_tokens=response_tokens,
+                estimated_cost=estimated_cost,
+            )
+
         # Build evidence bundle
         changed_files = _parse_changed_files(agent_summary)
         evidence = EvidenceBundle(
@@ -175,6 +296,10 @@ async def handle_loopback(
     repo_path: str,
     verification_result: VerificationResult,
     role_config: DeveloperRoleConfig | None = None,
+    *,
+    overlays: list[str] | None = None,
+    repo_tier: str = "",
+    complexity: str = "",
 ) -> EvidenceBundle:
     """Handle a verification failure loopback.
 
@@ -187,15 +312,36 @@ async def handle_loopback(
         repo_path: Local path to the target repository.
         verification_result: The failed verification result with check details.
         role_config: Developer role configuration.
+            When *None*, the Model Gateway selects the provider.
+        overlays: Optional overlays for model routing.
+        repo_tier: Repository trust tier for routing rules.
+        complexity: Task complexity hint.
 
     Returns:
         New EvidenceBundle from the retry attempt.
+
+    Raises:
+        BudgetExceededError: If the task has exceeded its spend budget.
     """
+    # --- A1: Gateway-aware role config resolution ---
+    provider: ProviderConfig | None = None
     if role_config is None:
+        provider = _resolve_provider(overlays, repo_tier, complexity)
+        budget = get_budget_enforcer().get_budget(repo_tier)
         role_config = DeveloperRoleConfig(
-            model=settings.agent_model,
+            model=provider.model_id,
             max_turns=settings.agent_max_turns,
-            max_budget_usd=settings.agent_max_budget_usd,
+            max_budget_usd=budget.per_task_max_spend,
+        )
+
+    # --- A2: Budget check before agent call ---
+    if not get_budget_enforcer().check_budget(str(taskpacket_id)):
+        budget = get_budget_enforcer().get_budget(repo_tier)
+        current = get_budget_enforcer().get_task_spend(str(taskpacket_id))
+        raise BudgetExceededError(
+            str(taskpacket_id),
+            current,
+            budget.per_task_max_spend,
         )
 
     with tracer.start_as_current_span(SPAN_AGENT_LOOPBACK) as span:
@@ -236,6 +382,20 @@ async def handle_loopback(
             taskpacket_id,
         )
         agent_summary = await _run_agent(system_prompt, user_prompt, repo_path, role_config)
+
+        # --- A3+A4: Record spend and audit after agent call ---
+        if provider is not None:
+            prompt_tokens = _estimate_tokens(system_prompt, user_prompt)
+            response_tokens = _estimate_tokens(agent_summary)
+            estimated_cost = (prompt_tokens + response_tokens) * provider.cost_per_1k_tokens / 1000
+            _record_audit_and_spend(
+                taskpacket_correlation_id=taskpacket.correlation_id,
+                taskpacket_id=taskpacket_id,
+                provider=provider,
+                prompt_tokens=prompt_tokens,
+                response_tokens=response_tokens,
+                estimated_cost=estimated_cost,
+            )
 
         changed_files = _parse_changed_files(agent_summary)
         evidence = EvidenceBundle(

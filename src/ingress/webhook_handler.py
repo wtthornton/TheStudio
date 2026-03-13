@@ -88,6 +88,14 @@ async def github_webhook(
 
         issue_data = payload.get("issue", {})
         issue_id = issue_data.get("number", 0)
+        issue_title = issue_data.get("title", "")
+        issue_body = issue_data.get("body", "")
+        logger.info(
+            "Webhook received issue #%d: %s",
+            issue_id,
+            issue_title,
+            extra={"issue_title": issue_title, "issue_body_length": len(issue_body)},
+        )
 
         task_data = TaskPacketCreate(
             repo=repo_full_name,
