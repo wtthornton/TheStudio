@@ -36,6 +36,20 @@ def clear_state() -> None:
     clear_transitions()
 
 
+@pytest.fixture(autouse=True)
+def _patch_merge_mode_auto():
+    """Patch merge mode to AUTO_MERGE for all tests (Execute tier compliance)."""
+    from unittest.mock import patch
+
+    from src.admin.merge_mode import MergeMode
+
+    with patch(
+        "src.compliance.checker.get_merge_mode",
+        return_value=MergeMode.AUTO_MERGE,
+    ):
+        yield
+
+
 def make_compliant_repo_info(
     owner: str = "test-org", repo: str = "test-repo"
 ) -> GitHubRepoInfo:
@@ -50,7 +64,7 @@ def make_compliant_repo_info(
         },
         labels=REQUIRED_LABELS.copy(),
         codeowners_exists=True,
-        codeowners_paths=[],
+        codeowners_paths=["auth/**", "billing/**", "exports/**", "infra/**"],
     )
 
 

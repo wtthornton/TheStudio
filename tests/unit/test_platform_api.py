@@ -152,7 +152,7 @@ class TestComplianceScorecardAPI:
         assert resp.status_code == 200
         data = resp.json()
         assert data["repo_id"] == "repo-1"
-        assert data["checks_total"] == 7
+        assert data["checks_total"] == 8
         assert data["overall_pass"] is False
 
     async def test_evaluate_compliance_all_pass(self):
@@ -166,11 +166,12 @@ class TestComplianceScorecardAPI:
                 "evidence_format_valid": True,
                 "idempotency_guard_active": True,
                 "execution_plane_healthy": True,
+                "execute_tier_policy_passed": True,
             })
         assert resp.status_code == 200
         data = resp.json()
         assert data["overall_pass"] is True
-        assert data["checks_passed"] == 7
+        assert data["checks_passed"] == 8
 
     async def test_evaluate_compliance_partial_fail(self):
         transport = ASGITransport(app=app)

@@ -12,6 +12,18 @@
                 {{ tier_badge(repo.tier) }}
                 {{ repo_status_badge(repo.status) }}
                 {{ health_badge(repo.health) }}
+                {% if repo.tier == 'execute' %}
+                    {% if repo.merge_mode == 'auto_merge' and repo.compliance_passed %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        Auto-Merge Active
+                    </span>
+                    {% else %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"
+                          title="{% if repo.merge_mode != 'auto_merge' %}Merge mode is {{ repo.merge_mode }}{% elif not repo.compliance_passed %}Compliance check failed{% endif %}">
+                        Auto-Merge Blocked
+                    </span>
+                    {% endif %}
+                {% endif %}
             </div>
         </div>
         <div class="grid grid-cols-3 gap-4 text-sm">

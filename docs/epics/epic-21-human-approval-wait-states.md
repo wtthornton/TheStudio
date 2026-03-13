@@ -2,8 +2,9 @@
 
 **Author:** Saga
 **Date:** 2026-03-12
-**Status:** Draft — Meridian Round 2: COMMITTABLE
+**Status:** IMPLEMENTED — All 9 stories complete (Stories 0-8), 1,689 unit tests pass
 **Target Sprint:** After Epic 19/20 spike completion; blocked by Story 0 spike
+**Completed:** 2026-03-13
 
 ---
 
@@ -352,3 +353,37 @@ All Round 1 fixes verified. Full 7-question checklist passes. No red flags.
 - Story 1 migration should follow existing numbering convention (check next available number)
 - Consider naming explicit timestamp fields (`wait_entered_at`, `approved_at`) in Story 2
 - Spike should verify workflow execution timeout is >= 7 days
+
+---
+
+## Implementation Record
+
+**Completed:** 2026-03-13
+**Architecture Gap:** C6 (Human approval wait states) — CLOSED
+
+### Stories Delivered
+| Story | Status | Key Implementation |
+|-------|--------|--------------------|
+| Story 0: Spike | DONE | `docs/spikes/spike-temporal-signals-and-timers.md` — documented signal, wait_condition, time-skipping patterns |
+| Story 1: TaskPacket status | DONE | `AWAITING_APPROVAL` + `AWAITING_APPROVAL_EXPIRED` statuses; `ALLOWED_TRANSITIONS` updated |
+| Story 2: Signal + wait condition | DONE | `@workflow.signal approve_publish`; `workflow.wait_condition(timeout=7d)` in `pipeline.py`; tier-based branching |
+| Story 3: Approval request activity | DONE | `post_approval_request_activity` in `activities.py`; `post_approval_request()` in `publisher.py` |
+| Story 4: Escalation activity | DONE | `escalate_timeout_activity`; `escalate_approval_timeout()` in `publisher.py`; idempotent label + comment |
+| Story 5: Approval API | DONE | `POST /api/tasks/{id}/approve` in `src/api/approval.py`; 200/404/409 responses |
+| Story 6: Time-skipping tests | DONE | `tests/workflow/test_approval_wait.py` — timeout, approval, observe-skip scenarios |
+| Story 7: Unit tests | DONE | `tests/api/test_approval.py`, `tests/models/test_taskpacket_approval.py` |
+| Story 8: Documentation | DONE | Architecture mapping C6 marked IMPLEMENTED |
+
+### Files Created
+- `docs/spikes/spike-temporal-signals-and-timers.md`
+- `src/api/approval.py`
+- `tests/api/test_approval.py`
+- `tests/models/test_taskpacket_approval.py`
+- `tests/workflow/test_approval_wait.py`
+
+### Files Modified
+- `src/workflow/pipeline.py` — signal handler, wait condition, tier-based branching
+- `src/workflow/activities.py` — `post_approval_request_activity`, `escalate_timeout_activity`
+- `src/models/taskpacket.py` — `AWAITING_APPROVAL`, `AWAITING_APPROVAL_EXPIRED` statuses + transitions
+- `src/publisher/publisher.py` — `post_approval_request()`, `escalate_approval_timeout()`
+- `src/app.py` — registered approval router

@@ -18,8 +18,10 @@ from __future__ import annotations
 from temporalio import activity
 
 from src.workflow.activities import (
+    ApprovalRequestOutput,
     AssemblerOutput,
     ContextOutput,
+    EscalateTimeoutOutput,
     ImplementOutput,
     IntentOutput,
     PublishOutput,
@@ -136,6 +138,18 @@ async def mock_publish_activity(params) -> PublishOutput:
     )
 
 
+@activity.defn(name="post_approval_request_activity")
+async def mock_post_approval_request_activity(params) -> ApprovalRequestOutput:
+    """Mock approval request — always succeeds."""
+    return ApprovalRequestOutput(comment_posted=True)
+
+
+@activity.defn(name="escalate_timeout_activity")
+async def mock_escalate_timeout_activity(params) -> EscalateTimeoutOutput:
+    """Mock timeout escalation — always succeeds."""
+    return EscalateTimeoutOutput(escalated=True, label_applied=True)
+
+
 # --- Loopback variants ---
 
 
@@ -210,6 +224,8 @@ ALL_MOCK_ACTIVITIES = [
     mock_verify_activity,
     mock_qa_activity,
     mock_publish_activity,
+    mock_post_approval_request_activity,
+    mock_escalate_timeout_activity,
 ]
 
 

@@ -11,6 +11,7 @@ import pytest
 
 from src.models.taskpacket import TaskPacketRead, TaskPacketStatus
 from src.publisher.publisher import (
+    LABEL_TIER_EXECUTE,
     LABEL_TIER_OBSERVE,
     LABEL_TIER_SUGGEST,
     _should_mark_ready,
@@ -172,8 +173,10 @@ class TestTierLabelReconciliation:
         mock_github = AsyncMock()
         await _reconcile_tier_labels(mock_github, "acme", "widgets", 1, RepoTier.SUGGEST)
 
-        # Should remove observe label and add suggest label
-        mock_github.remove_label.assert_called_once_with("acme", "widgets", 1, LABEL_TIER_OBSERVE)
+        # Should remove observe + execute labels and add suggest label
+        assert mock_github.remove_label.call_count == 2
+        mock_github.remove_label.assert_any_call("acme", "widgets", 1, LABEL_TIER_OBSERVE)
+        mock_github.remove_label.assert_any_call("acme", "widgets", 1, LABEL_TIER_EXECUTE)
         mock_github.add_labels.assert_called_once_with(
             "acme", "widgets", 1, [LABEL_TIER_SUGGEST]
         )
@@ -185,7 +188,9 @@ class TestTierLabelReconciliation:
         mock_github = AsyncMock()
         await _reconcile_tier_labels(mock_github, "acme", "widgets", 1, RepoTier.OBSERVE)
 
-        mock_github.remove_label.assert_called_once_with("acme", "widgets", 1, LABEL_TIER_SUGGEST)
+        assert mock_github.remove_label.call_count == 2
+        mock_github.remove_label.assert_any_call("acme", "widgets", 1, LABEL_TIER_SUGGEST)
+        mock_github.remove_label.assert_any_call("acme", "widgets", 1, LABEL_TIER_EXECUTE)
         mock_github.add_labels.assert_called_once_with(
             "acme", "widgets", 1, [LABEL_TIER_OBSERVE]
         )

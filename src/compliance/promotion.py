@@ -231,6 +231,7 @@ class PromotionService:
                     triggered_by="eligibility_check",
                     check_execution_plane=True,
                     target_tier=target_tier.value,
+                    repo_full_name=f"{repo_info.owner}/{repo_info.repo}",
                 )
 
                 if not compliance_result.overall_passed:

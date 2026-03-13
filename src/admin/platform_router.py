@@ -288,6 +288,7 @@ class EvaluateComplianceRequest(BaseModel):
     evidence_format_valid: bool = False
     idempotency_guard_active: bool = False
     execution_plane_healthy: bool = False
+    execute_tier_policy_passed: bool = False
 
 
 @platform_router.post(
@@ -309,6 +310,7 @@ async def evaluate_compliance(
         evidence_format_valid=request.evidence_format_valid,
         idempotency_guard_active=request.idempotency_guard_active,
         execution_plane_healthy=request.execution_plane_healthy,
+        execute_tier_policy_passed=request.execute_tier_policy_passed,
     )
     scorecard = service.evaluate(repo_id, data)
     return scorecard.to_dict()

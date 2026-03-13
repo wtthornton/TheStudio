@@ -412,23 +412,23 @@ Note: Context pack signal emission is classified as BETTER (line 40), not NEW �
 
 ### What Is Missing (52 items) — Triaged
 
-42 line items in the mapping tables are marked MISSING. After deduplication (some gaps span multiple tables), these consolidate into **31 distinct work items** across three priority tiers plus structural items. (Sprint 19 closed C1, C3, C4, C5, C7, C8 — 6 of 8 critical items.)
+42 line items in the mapping tables are marked MISSING. After deduplication (some gaps span multiple tables), these consolidate into **31 distinct work items** across three priority tiers plus structural items. All 8 CRITICAL items are now closed: C1+C4+C7 (Sprint 19), C3+C5+C8 (Epic 20), C6 (Epic 21), C2 (Epic 22).
 
 **Tier definitions:**
 - **CRITICAL** — System violates a POLICIES.md invariant, a documented gate contract, or loses data in its current state
 - **VALUABLE** — Improves quality, operability, or capability, but the system functions correctly without it
 - **DEFERRED** — Explicitly Phase 2+ by design, or optional integration not on the current roadmap
 
-#### CRITICAL — 2 remaining of 8 (C2, C6 open; C1, C3, C4, C5, C7, C8 closed)
+#### CRITICAL — 0 remaining of 8 (all CRITICAL gaps closed)
 
 | # | Gap | Size | Done means | MISSING entries | Dependency | Rationale |
 |---|-----|------|-----------|----------------|------------|-----------|
 | C1 | **Wire Model Gateway into Primary Agent** | M | All agent LLM calls route through `ModelRouter.select_model()`; budget enforcer active per task | Agent integration (line 314) + Model budget per role (line 96) | Standalone | **IMPLEMENTED** (Epic 19, Stream A, Stories A1-A6): `primary_agent.implement()` and `handle_loopback()` call `ModelRouter.select_model()`, budget check before `_run_agent()`, spend recording after, `ModelCallAudit` per invocation, fallback via `select_with_fallback()` |
-| C2 | **Execute tier (end-to-end)** | L | EXECUTE enum in RepoTier; Publisher handles Execute behavior; compliance gate enforces Execute policy | Publisher (line 134), Repo Registry (line 288), Policies (line 373) | Depends on C6 (human approval must exist before allowing auto-merge) | 3 entries, 1 gap. Third trust tier is the path to autonomous operation |
+| C2 | **Execute tier (end-to-end)** | L | EXECUTE enum in RepoTier; Publisher handles Execute behavior; compliance gate enforces Execute policy | Publisher (line 134), Repo Registry (line 288), Policies (line 373) | Depends on C6 (human approval must exist before allowing auto-merge) | **IMPLEMENTED** (Epic 22, Stories 22.1-22.18): Publisher `_should_enable_auto_merge()` five-gate safety (Execute tier + AUTO_MERGE mode + V passed + QA passed + approval received); `enable_auto_merge()` GraphQL mutation in github_client; `MergeMode` enum + per-repo config; `EXECUTE_TIER_POLICY` compliance check (AUTO_MERGE + CODEOWNERS coverage); `merge_method` on RepoProfileRow; scorecard 8th check; graceful degradation on GitHub rejection; OTel span attributes |
 | C3 | **JetStream consumption in outcome ingestor** | M | `ingest_signal()` subscribes to JetStream subjects; in-memory store removed as primary path | Outcome JetStream (line 177), Signal consumption (line 362) | JetStream emission already works | **IMPLEMENTED** (Epic 20, Story 20.3/20.9): `src/outcome/consumer.py` with durable subscriptions for verification + QA streams; wired into app lifespan |
 | C4 | **Security scan runner** | S | `runners/security_runner.py` exists; gate runs it alongside ruff + pytest | Verification (line 109) | Standalone | **IMPLEMENTED** (Epic 19, Stream B, Stories B1-B4): `src/verification/runners/security_runner.py` with bandit integration, wired into gate, fail-closed on errors/timeout |
 | C5 | **Escalation triggers** | L | Router and Assembler emit `EscalationRequest` for high-risk conflicts; handler logs + pauses workflow | Router (line 70), Assembler (line 83), Policies (line 374) | Standalone | **IMPLEMENTED** (Epic 20, Stories 20.1/20.4/20.5/20.7): `EscalationRequest` model, Router escalation on high-risk + low-confidence, Assembler escalation on unresolved high-risk conflicts, `handle_escalation()` handler |
-| C6 | **Human approval wait states** | L | Temporal workflow has a wait activity after QA; resumes on human signal or 7-day timeout | Workflow (line 235), Policies (line 375) | Standalone (risk: team has not built Temporal timer activities before) | 2 entries, 1 gap. Required by POLICIES for Suggest/Execute tiers |
+| C6 | **Human approval wait states** | L | Temporal workflow has a wait activity after QA; resumes on human signal or 7-day timeout | Workflow (line 235), Policies (line 375) | Standalone (risk: team has not built Temporal timer activities before) | **IMPLEMENTED** (Epic 21, Stories 0-8): `@workflow.signal approve_publish` + `workflow.wait_condition(timeout=7d)` in `pipeline.py`; `AWAITING_APPROVAL`/`AWAITING_APPROVAL_EXPIRED` statuses in TaskPacket; `post_approval_request_activity` + `escalate_timeout_activity`; `POST /api/tasks/{id}/approve` endpoint; time-skipping integration tests |
 | C7 | **Reputation PostgreSQL persistence** | M | Reputation weights survive restarts; migration adds weight tables; in-memory store becomes cache layer | Reputation (line 163) | Standalone | **IMPLEMENTED** (Epic 19, Stream C, Stories C1-C6): `src/reputation/db_models.py` ORM model, migration 019, DB-backed write-through cache, async session integration |
 | C8 | **Adversarial input detection** | M | Intake rejects or quarantines payloads matching suspicious patterns; compliance checker flags them | Compliance (line 278), Policies (line 377) | Standalone | **IMPLEMENTED** (Epic 20, Stories 20.2/20.6/20.8): `src/intake/adversarial.py` detector, intake integration with block/warn, `ComplianceChecker.check_adversarial_content()` wrapper |
 
@@ -436,7 +436,7 @@ Note: Context pack signal emission is classified as BETTER (line 40), not NEW �
 
 | Rank | # | Gap | MISSING entries | Rationale |
 |------|---|-----|----------------|-----------|
-| 1 | V1 | **Merge policy enforcement** | Policies (line 376) | No enforcement of human-merge-default; becomes critical once Execute tier (C2) ships |
+| 1 | V1 | **Merge policy enforcement** | Policies (line 376) | No enforcement of human-merge-default; C2 (Execute tier) is now shipped — this is the highest-priority VALUABLE item |
 | 2 | V2 | **Reminder cadence for human approval** | Publisher (line 136) | 24h/72h/7d reminders; operational nicety after C6 ships |
 | 3 | V3 | **Event sourcing via JetStream** | Signal system (line 363) | Architectural aspiration; replay already works via replay.py. Depends on C3 |
 | 4 | V4 | **Flake detection and rerun policy** | Verification (line 108) | Reduces false failures; max 2 reruns per step |

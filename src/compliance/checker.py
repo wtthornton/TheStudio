@@ -14,6 +14,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
+from src.admin.merge_mode import MergeMode, get_merge_mode
 from src.compliance.execution_plane import (
     CredentialScopeChecker,
     ExecutionPlaneChecker,
@@ -94,6 +95,7 @@ class ComplianceChecker:
         projects_v2_waived: bool = False,
         check_execution_plane: bool = True,
         target_tier: str = "execute",
+        repo_full_name: str | None = None,
     ) -> ComplianceResult:
         """Run full compliance check for a repository.
 
@@ -126,6 +128,13 @@ class ComplianceChecker:
                 await self._check_execution_plane_health(repo_id)
                 await self._check_publisher_idempotency(repo_id)
                 await self._check_credentials_scoped(repo_id, target_tier)
+
+            # Execute tier policy check (Epic 22, Story 22.10)
+            if target_tier == "execute":
+                self._check_execute_tier_policy(
+                    repo_info,
+                    repo_full_name=repo_full_name or f"{repo_info.owner}/{repo_info.repo}",
+                )
 
             # Calculate overall result
             passed_count = sum(1 for r in self._check_results if r.passed)
@@ -475,6 +484,64 @@ class ComplianceChecker:
             remediation_hint=None,
             details=None,
         )
+
+    def _check_execute_tier_policy(
+        self,
+        repo_info: GitHubRepoInfo,
+        *,
+        repo_full_name: str,
+    ) -> None:
+        """Validate Execute-tier-specific policy requirements.
+
+        Checks:
+        1. MergeMode.AUTO_MERGE is explicitly configured for the repo
+        2. Required reviewer rules are mandatory-fail for sensitive paths
+           (not just warn-and-pass — CODEOWNERS must cover all sensitive paths)
+        """
+        check = ComplianceCheck.EXECUTE_TIER_POLICY
+        failures: list[str] = []
+
+        # 1. Merge mode must be AUTO_MERGE
+        merge_mode = get_merge_mode(repo_full_name)
+        if merge_mode != MergeMode.AUTO_MERGE:
+            failures.append(
+                f"Merge mode is '{merge_mode.value}', must be 'auto_merge' for Execute tier"
+            )
+
+        # 2. Required reviewers must cover ALL sensitive paths (mandatory-fail, not warn-and-pass)
+        if repo_info.codeowners_exists:
+            covered_paths = set(repo_info.codeowners_paths)
+            uncovered = [p for p in SENSITIVE_PATHS if p not in covered_paths]
+            if uncovered:
+                failures.append(
+                    f"CODEOWNERS does not cover sensitive paths: {', '.join(uncovered)}. "
+                    "Execute tier requires mandatory coverage of all sensitive paths."
+                )
+        else:
+            failures.append(
+                "No CODEOWNERS file. Execute tier requires CODEOWNERS with "
+                "mandatory reviewer coverage for all sensitive paths."
+            )
+
+        if failures:
+            self._add_failure(
+                check,
+                "; ".join(failures),
+                details={
+                    "merge_mode": merge_mode.value,
+                    "codeowners_exists": repo_info.codeowners_exists,
+                    "failures": failures,
+                },
+            )
+        else:
+            self._add_pass(
+                check,
+                details={
+                    "merge_mode": merge_mode.value,
+                    "codeowners_exists": True,
+                    "sensitive_paths_covered": True,
+                },
+            )
 
     def _add_pass(
         self,

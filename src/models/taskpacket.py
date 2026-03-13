@@ -29,6 +29,8 @@ class TaskPacketStatus(enum.StrEnum):
     IN_PROGRESS = "in_progress"
     VERIFICATION_PASSED = "verification_passed"
     VERIFICATION_FAILED = "verification_failed"
+    AWAITING_APPROVAL = "awaiting_approval"
+    AWAITING_APPROVAL_EXPIRED = "awaiting_approval_expired"
     PUBLISHED = "published"
     FAILED = "failed"
 
@@ -56,7 +58,17 @@ ALLOWED_TRANSITIONS: dict[TaskPacketStatus, set[TaskPacketStatus]] = {
         TaskPacketStatus.VERIFICATION_FAILED,
         TaskPacketStatus.FAILED,
     },
-    TaskPacketStatus.VERIFICATION_PASSED: {TaskPacketStatus.PUBLISHED, TaskPacketStatus.FAILED},
+    TaskPacketStatus.VERIFICATION_PASSED: {
+        TaskPacketStatus.AWAITING_APPROVAL,
+        TaskPacketStatus.PUBLISHED,
+        TaskPacketStatus.FAILED,
+    },
+    TaskPacketStatus.AWAITING_APPROVAL: {
+        TaskPacketStatus.PUBLISHED,
+        TaskPacketStatus.AWAITING_APPROVAL_EXPIRED,
+        TaskPacketStatus.FAILED,
+    },
+    TaskPacketStatus.AWAITING_APPROVAL_EXPIRED: {TaskPacketStatus.FAILED},
     TaskPacketStatus.VERIFICATION_FAILED: {
         TaskPacketStatus.IN_PROGRESS,  # loopback
         TaskPacketStatus.FAILED,

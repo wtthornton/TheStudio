@@ -65,6 +65,7 @@ class RepoComplianceData:
     evidence_format_valid: bool = False
     idempotency_guard_active: bool = False
     execution_plane_healthy: bool = False
+    execute_tier_policy_passed: bool = False
 
 
 @runtime_checkable
@@ -173,6 +174,15 @@ class InMemoryComplianceScorecardService:
                 if data.execution_plane_healthy
                 else "Execution plane not healthy — check workers and verification runner",
             ),
+            ScorecardCheck(
+                name="execute_tier_policy",
+                description="Execute tier policy: auto-merge configured + CODEOWNERS coverage",
+                passed=data.execute_tier_policy_passed,
+                details="Auto-merge configured with full CODEOWNERS coverage"
+                if data.execute_tier_policy_passed
+                else "Execute tier requires AUTO_MERGE mode "
+                "and full CODEOWNERS sensitive path coverage",
+            ),
         ]
 
         overall = all(c.passed for c in checks)
@@ -209,6 +219,7 @@ class InMemoryComplianceScorecardService:
                 projects_v2_configured=stored.projects_v2_configured,
                 evidence_format_valid=stored.evidence_format_valid,
                 idempotency_guard_active=stored.idempotency_guard_active,
+                execute_tier_policy_passed=stored.execute_tier_policy_passed,
             )
         else:
             data = RepoComplianceData()

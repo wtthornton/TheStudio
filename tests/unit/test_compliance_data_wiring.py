@@ -88,6 +88,7 @@ class TestFetchComplianceData:
             projects_v2_configured=True,
             evidence_format_valid=True,
             idempotency_guard_active=True,
+            execute_tier_policy_passed=True,
         ))
 
         # Register a healthy plane with the repo assigned
@@ -98,7 +99,7 @@ class TestFetchComplianceData:
         svc = InMemoryComplianceScorecardService()
         scorecard = svc.evaluate("org/repo")
 
-        # All 7 checks pass
+        # All 8 checks pass
         assert scorecard.overall_pass is True
         plane_check = next(c for c in scorecard.checks if c.name == "execution_plane_health")
         assert plane_check.passed is True

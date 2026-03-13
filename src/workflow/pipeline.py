@@ -1,6 +1,8 @@
 """TheStudio Pipeline Workflow — Temporal workflow definition.
 
-Wires the full 9-step runtime flow from GitHub issue to ready-for-review PR.
+Wires the full 9-step runtime flow from GitHub issue to ready-for-review PR,
+with a durable human approval wait state between QA and Publish for
+Suggest/Execute tier repos.
 
 Architecture reference: thestudioarc/15-system-runtime-flow.md
 
@@ -13,6 +15,7 @@ Steps:
 6. Primary Agent — implement changes
 7. Verification Gate — run checks, loopback on failure
 8. QA Agent — validate against intent, loopback on failure
+8.5. Approval Wait — durable pause for human approval (Suggest/Execute tier)
 9. Publisher — create PR with evidence
 
 Retry/timeout policy per the architecture table in 15-system-runtime-flow.md.
@@ -27,10 +30,12 @@ from temporalio.common import RetryPolicy
 
 with workflow.unsafe.imports_passed_through():
     from src.workflow.activities import (
+        ApprovalRequestInput,
         AssemblerInput,
         AssemblerOutput,
         ContextInput,
         ContextOutput,
+        EscalateTimeoutInput,
         ImplementInput,
         ImplementOutput,
         IntakeInput,
@@ -48,15 +53,23 @@ with workflow.unsafe.imports_passed_through():
         VerifyOutput,
         assembler_activity,
         context_activity,
+        escalate_timeout_activity,
         implement_activity,
         intake_activity,
         intent_activity,
+        post_approval_request_activity,
         publish_activity,
         qa_activity,
         readiness_activity,
         router_activity,
         verify_activity,
     )
+
+# Tiers that require human approval before publish
+APPROVAL_REQUIRED_TIERS = frozenset({"suggest", "execute"})
+
+# Durable wait timeout — hard policy, not configurable
+APPROVAL_TIMEOUT = timedelta(days=7)
 
 
 class WorkflowStep(StrEnum):
@@ -71,6 +84,7 @@ class WorkflowStep(StrEnum):
     IMPLEMENT = "implement"
     VERIFY = "verify"
     QA = "qa"
+    AWAITING_APPROVAL = "awaiting_approval"
     PUBLISH = "publish"
 
 
@@ -125,6 +139,9 @@ STEP_POLICIES: dict[WorkflowStep, StepPolicy] = {
     WorkflowStep.QA: StepPolicy(
         timeout=timedelta(minutes=30), max_retries=2,
     ),
+    WorkflowStep.AWAITING_APPROVAL: StepPolicy(
+        timeout=timedelta(days=7), max_retries=0,  # managed by workflow.wait_condition
+    ),
     WorkflowStep.PUBLISH: StepPolicy(
         timeout=timedelta(minutes=5), max_retries=5,
         initial_interval=timedelta(seconds=0.5),  # fast retry
@@ -168,15 +185,37 @@ class PipelineOutput:
     marked_ready: bool = False
     verification_loopbacks: int = 0
     qa_loopbacks: int = 0
+    awaiting_approval: bool = False
+    approved_by: str | None = None
 
 
 @workflow.defn
 class TheStudioPipelineWorkflow:
-    """Full 9-step runtime flow from GitHub issue to ready-for-review PR.
+    """Full pipeline from GitHub issue to ready-for-review PR.
 
     Handles loopbacks for verification (max 2) and QA (max 2).
     Gates fail closed — exhaustion results in workflow failure.
+
+    For Suggest/Execute tier repos, a durable approval wait state is inserted
+    between QA pass and Publish. The workflow pauses for up to 7 days waiting
+    for an ``approve_publish`` signal. On timeout, the task is escalated and
+    the workflow returns failure.
     """
+
+    def __init__(self) -> None:
+        self._approved = False
+        self._approved_by: str | None = None
+        self._approval_source: str | None = None
+
+    @workflow.signal
+    async def approve_publish(self, approved_by: str, approval_source: str) -> None:
+        """Signal handler — sets approval flag and records approver.
+
+        Idempotent: calling twice is harmless (flag stays True).
+        """
+        self._approved = True
+        self._approved_by = approved_by
+        self._approval_source = approval_source
 
     @workflow.run
     async def run(self, params: PipelineInput) -> PipelineOutput:
@@ -291,7 +330,7 @@ class TheStudioPipelineWorkflow:
         )
         output.step_reached = WorkflowStep.ASSEMBLER
 
-        # Steps 6-8: Implementation → Verification → QA loop
+        # Steps 6-8: Implementation -> Verification -> QA loop
         verification_loopbacks = 0
         qa_loopbacks = 0
         qa_passed = False
@@ -327,12 +366,10 @@ class TheStudioPipelineWorkflow:
 
             if not verify_result.passed:
                 if verify_result.exhausted:
-                    # Gate fail closed — workflow fails
                     output.verification_loopbacks = verification_loopbacks
                     return output
 
                 if verification_loopbacks >= MAX_VERIFICATION_LOOPBACKS:
-                    # Cap reached — fail closed
                     output.verification_loopbacks = verification_loopbacks
                     return output
 
@@ -360,13 +397,55 @@ class TheStudioPipelineWorkflow:
                 break
 
             if qa_loopbacks >= MAX_QA_LOOPBACKS:
-                # QA cap reached — fail closed
                 output.qa_loopbacks = qa_loopbacks
                 return output
 
             qa_loopbacks += 1
             output.qa_loopbacks = qa_loopbacks
             # Loop back to implementation for QA rework
+
+        # Step 8.5: Approval Wait (Suggest/Execute tier only)
+        if params.repo_tier in APPROVAL_REQUIRED_TIERS:
+            # Post approval request comment before entering wait
+            await workflow.execute_activity(
+                post_approval_request_activity,
+                ApprovalRequestInput(
+                    taskpacket_id=params.taskpacket_id,
+                    repo_tier=params.repo_tier,
+                    intent_summary=intent_result.goal,
+                    qa_passed=qa_passed,
+                ),
+                start_to_close_timeout=timedelta(minutes=5),
+                retry_policy=RetryPolicy(maximum_attempts=3),
+            )
+
+            output.step_reached = WorkflowStep.AWAITING_APPROVAL
+            output.awaiting_approval = True
+
+            # Durable wait: block until approved or 7-day timeout
+            try:
+                await workflow.wait_condition(
+                    lambda: self._approved,
+                    timeout=APPROVAL_TIMEOUT,
+                )
+            except TimeoutError:
+                # 7-day timeout expired — escalate, do NOT publish
+                await workflow.execute_activity(
+                    escalate_timeout_activity,
+                    EscalateTimeoutInput(
+                        taskpacket_id=params.taskpacket_id,
+                        repo_tier=params.repo_tier,
+                    ),
+                    start_to_close_timeout=timedelta(minutes=5),
+                    retry_policy=RetryPolicy(maximum_attempts=3),
+                )
+                output.rejection_reason = "approval_timeout"
+                output.verification_loopbacks = verification_loopbacks
+                output.qa_loopbacks = qa_loopbacks
+                return output
+
+            # Approved — record approver
+            output.approved_by = self._approved_by
 
         # Step 9: Publish
         publish_policy = STEP_POLICIES[WorkflowStep.PUBLISH]

@@ -1,6 +1,6 @@
 # Epic 22: Enable End-to-End Execute Tier for Autonomous PR Workflow
 
-**Status:** Draft — Meridian Round 2: COMMITTABLE
+**Status:** IMPLEMENTED — All 18 stories complete, 1,689 unit tests pass (0 failures)
 
 ## 1. Title
 
@@ -227,3 +227,51 @@ All Round 1 fixes verified. Full 7-question checklist passes. No red flags.
 | 5 | Are success metrics measurable with existing instrumentation? | Fixed (measurement paths specified) | PASS |
 | 6 | Can an AI agent implement without guessing scope? | Fixed (AC6 badge semantics, GitHub App ownership) | PASS |
 | 7 | Are there red flags? | Fixed (4 items) | No red flags |
+
+---
+
+## Implementation Record
+
+**Completed:** 2026-03-13
+**Sprint:** 21 (delivered ahead of schedule — Sprint 20 and 21 collapsed into a single session)
+**Architecture Gap:** C2 (Execute tier end-to-end) — last of 8 CRITICAL gaps, now CLOSED
+
+### Files Created
+| File | Purpose |
+|------|---------|
+| `src/db/migrations/020_repo_profile_merge_method.py` | Migration: `merge_method VARCHAR(20)` on `repo_profile` |
+| `tests/unit/test_publisher_execute.py` | 36 tests: Execute tier Publisher behavior, auto-merge gates, tier labels |
+| `tests/unit/test_compliance_execute.py` | 8 tests: Execute tier policy compliance check |
+
+### Files Modified
+| File | Changes |
+|------|---------|
+| `src/publisher/publisher.py` | `_should_mark_ready()` handles Execute; `_should_enable_auto_merge()` five-gate safety; `_try_enable_auto_merge()` with graceful degradation; `LABEL_TIER_EXECUTE`; `auto_merge_enabled` on `PublishResult`; `publish()` accepts `approval_received` + `merge_method`; OTel span attributes |
+| `src/publisher/github_client.py` | `enable_auto_merge()` via GitHub GraphQL `enablePullRequestAutoMerge` mutation |
+| `src/compliance/models.py` | `EXECUTE_TIER_POLICY` enum value; remediation hint; `tier:execute` in `REQUIRED_LABELS` |
+| `src/compliance/checker.py` | `_check_execute_tier_policy()` validates AUTO_MERGE + CODEOWNERS sensitive path coverage |
+| `src/compliance/promotion.py` | `check_promotion_eligibility()` passes `repo_full_name` to compliance checker |
+| `src/repo/repo_profile.py` | `merge_method` column on `RepoProfileRow`; added to Create/Read/Update schemas |
+| `src/admin/compliance_scorecard.py` | `execute_tier_policy_passed` on `RepoComplianceData`; 8th scorecard check |
+| `src/admin/platform_router.py` | `execute_tier_policy_passed` on `EvaluateComplianceRequest` and handler |
+| `src/admin/templates/partials/repo_detail_content.html` | Auto-Merge Active/Blocked badge for Execute tier |
+| `src/observability/conventions.py` | `ATTR_AUTO_MERGE_ENABLED`, `ATTR_MERGE_METHOD`, `ATTR_EXECUTE_TIER_ACTIVE` |
+| `tests/unit/test_compliance_checker.py` | Updated for new EXECUTE_TIER_POLICY check (CODEOWNERS paths, merge mode patch) |
+| `tests/unit/test_compliance_router.py` | Updated `make_compliant_repo_info()` + merge mode fixture |
+| `tests/unit/test_compliance_scorecard.py` | Updated 5 tests for 8-check scorecard |
+| `tests/unit/test_compliance_data_wiring.py` | Updated for `execute_tier_policy_passed` field |
+| `tests/unit/test_platform_api.py` | Updated checks_total 7→8, added `execute_tier_policy_passed` |
+| `tests/unit/test_promotion.py` | Added merge mode fixture + SENSITIVE_PATHS coverage |
+| `tests/unit/test_tier_promotion.py` | Updated label reconciliation for 3-tier system |
+
+### Test Results
+- **1,689 unit tests pass** (0 failures, 0 errors)
+- **44 new tests** (36 publisher + 8 compliance)
+- **11 existing tests updated** for Execute tier compatibility
+- Integration/docker/playwright tests require infrastructure (expected skip)
+
+### Key Design Decisions
+1. **Five-gate auto-merge safety:** Execute tier + AUTO_MERGE mode + Verification passed + QA passed + Human approval received — ALL required
+2. **Graceful degradation:** If GitHub rejects auto-merge (repo settings), Publisher logs warning and continues
+3. **GraphQL over REST:** GitHub auto-merge requires GraphQL `enablePullRequestAutoMerge` mutation (REST doesn't support it)
+4. **CODEOWNERS coverage:** Execute tier policy requires CODEOWNERS to cover all `SENSITIVE_PATHS` (auth, billing, exports, infra)

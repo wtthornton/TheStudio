@@ -69,6 +69,10 @@ class RepoProfileRow(Base):
     writes_enabled: Mapped[bool] = mapped_column(nullable=False, default=True)
     poll_enabled: Mapped[bool] = mapped_column(nullable=False, default=False)
     poll_interval_minutes: Mapped[int | None] = mapped_column(nullable=True, default=None)
+    merge_method: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="squash",
+        comment="Preferred merge method: squash, merge, or rebase",
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -105,6 +109,7 @@ class RepoProfileCreate(BaseModel):
     tier: RepoTier = RepoTier.OBSERVE
     required_checks: list[str] = Field(default_factory=lambda: ["ruff", "pytest"])
     tool_allowlist: list[str] = Field(default_factory=list)
+    merge_method: str = "squash"
 
 
 class RepoProfileRead(BaseModel):
@@ -124,6 +129,7 @@ class RepoProfileRead(BaseModel):
     writes_enabled: bool
     poll_enabled: bool = False
     poll_interval_minutes: int | None = None
+    merge_method: str = "squash"
     created_at: datetime
     updated_at: datetime
     deleted_at: datetime | None = None
@@ -142,3 +148,4 @@ class RepoProfileUpdate(BaseModel):
     tool_allowlist: list[str] | None = None
     poll_enabled: bool | None = None
     poll_interval_minutes: int | None = None
+    merge_method: str | None = None

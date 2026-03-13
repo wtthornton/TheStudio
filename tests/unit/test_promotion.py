@@ -10,10 +10,12 @@ Validates:
 import tempfile
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
 
+from src.admin.merge_mode import MergeMode
 from src.compliance.checker import ComplianceChecker, GitHubRepoInfo
 from src.compliance.execution_plane import ExecutionPlaneChecker
 from src.compliance.models import REQUIRED_LABELS
@@ -37,6 +39,16 @@ def clear_state() -> None:
     clear()
 
 
+@pytest.fixture(autouse=True)
+def _patch_merge_mode_auto():
+    """Patch merge mode to AUTO_MERGE for Execute tier policy checks."""
+    with patch(
+        "src.compliance.checker.get_merge_mode",
+        return_value=MergeMode.AUTO_MERGE,
+    ):
+        yield
+
+
 def make_compliant_repo_info() -> GitHubRepoInfo:
     """Create GitHubRepoInfo that passes all compliance checks."""
     return GitHubRepoInfo(
@@ -49,7 +61,12 @@ def make_compliant_repo_info() -> GitHubRepoInfo:
         },
         labels=REQUIRED_LABELS.copy(),
         codeowners_exists=True,
-        codeowners_paths=[],
+        codeowners_paths=[
+            "auth/**",
+            "billing/**",
+            "exports/**",
+            "infra/**",
+        ],
     )
 
 

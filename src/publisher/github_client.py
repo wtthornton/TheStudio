@@ -171,3 +171,60 @@ class GitHubClient:
         logger.info(
             "Marked PR #%d as ready for review on %s/%s", pr_number, owner, repo
         )
+
+    async def enable_auto_merge(
+        self, owner: str, repo: str, pr_number: int, merge_method: str = "SQUASH"
+    ) -> None:
+        """Enable auto-merge on a PR using the GitHub GraphQL API.
+
+        Requires the repository to have "Allow auto-merge" enabled in settings
+        and the GitHub App to have ``contents: write`` permission.
+
+        Args:
+            owner: Repository owner.
+            repo: Repository name.
+            pr_number: Pull request number.
+            merge_method: One of MERGE, SQUASH, REBASE (GraphQL enum values).
+                         Also accepts lowercase; will be uppercased automatically.
+        """
+        # Get the PR node_id via REST
+        pr_data = await self._request("GET", f"/repos/{owner}/{repo}/pulls/{pr_number}")
+        node_id = pr_data["node_id"]
+
+        # Map common lowercase values to GraphQL enum
+        method_upper = merge_method.upper()
+
+        mutation = """
+            mutation($pullRequestId: ID!, $mergeMethod: PullRequestMergeMethod!) {
+                enablePullRequestAutoMerge(input: {
+                    pullRequestId: $pullRequestId,
+                    mergeMethod: $mergeMethod
+                }) {
+                    pullRequest { number autoMergeRequest { enabledAt } }
+                }
+            }
+        """
+        resp = await self._client.post(
+            "https://api.github.com/graphql",
+            json={
+                "query": mutation,
+                "variables": {
+                    "pullRequestId": node_id,
+                    "mergeMethod": method_upper,
+                },
+            },
+        )
+        resp.raise_for_status()
+
+        # Check for GraphQL-level errors
+        data = resp.json()
+        if "errors" in data:
+            error_msgs = [e.get("message", "") for e in data["errors"]]
+            raise RuntimeError(
+                f"GraphQL errors enabling auto-merge on PR #{pr_number}: {error_msgs}"
+            )
+
+        logger.info(
+            "Enabled auto-merge (%s) on PR #%d for %s/%s",
+            method_upper, pr_number, owner, repo,
+        )

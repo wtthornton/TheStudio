@@ -317,8 +317,8 @@ class TestRouterActivity:
 
 class TestWorkflowStep:
     def test_all_steps(self) -> None:
-        """Workflow has 10 steps (9 core + readiness gate)."""
-        assert len(WorkflowStep) == 10
+        """Workflow has 11 steps (9 core + readiness gate + approval wait)."""
+        assert len(WorkflowStep) == 11
 
     def test_step_order(self) -> None:
         steps = list(WorkflowStep)
@@ -331,4 +331,5 @@ class TestWorkflowStep:
         assert steps[6] == WorkflowStep.IMPLEMENT
         assert steps[7] == WorkflowStep.VERIFY
         assert steps[8] == WorkflowStep.QA
-        assert steps[9] == WorkflowStep.PUBLISH
+        assert steps[9] == WorkflowStep.AWAITING_APPROVAL
+        assert steps[10] == WorkflowStep.PUBLISH

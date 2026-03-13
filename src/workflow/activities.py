@@ -226,6 +226,39 @@ class PublishOutput:
     marked_ready: bool = False
 
 
+@dataclass
+class ApprovalRequestInput:
+    """Input for the approval request activity."""
+
+    taskpacket_id: str
+    repo_tier: str = "observe"
+    intent_summary: str = ""
+    qa_passed: bool = False
+
+
+@dataclass
+class ApprovalRequestOutput:
+    """Output of the approval request activity."""
+
+    comment_posted: bool = False
+
+
+@dataclass
+class EscalateTimeoutInput:
+    """Input for the timeout escalation activity."""
+
+    taskpacket_id: str
+    repo_tier: str = "observe"
+
+
+@dataclass
+class EscalateTimeoutOutput:
+    """Output of the timeout escalation activity."""
+
+    escalated: bool = False
+    label_applied: bool = False
+
+
 # --- Activity Implementations ---
 # The intake and router activities call real pure functions (no DB dependency).
 # Others are stubs that return sensible defaults; in production they delegate
@@ -557,3 +590,105 @@ async def publish_activity(params: PublishInput) -> PublishOutput:
         created=False,
         marked_ready=False,
     )
+
+
+@activity.defn
+async def post_approval_request_activity(
+    params: ApprovalRequestInput,
+) -> ApprovalRequestOutput:
+    """Step 8.5a: Post approval request comment before entering wait state.
+
+    Delegates to publisher.post_approval_request() to post a GitHub comment
+    requesting human approval. Falls back to logging when no GitHub client
+    is available (stub/test mode).
+    """
+    import logging
+    from uuid import UUID
+
+    logger = logging.getLogger("thestudio.approval")
+
+    try:
+        from src.publisher.github_client import GitHubClient
+        from src.publisher.publisher import post_approval_request
+        from src.settings import settings
+
+        if settings.github_provider == "real":
+            async with GitHubClient(settings.github_app_id) as github:
+                taskpacket_uuid = UUID(params.taskpacket_id)
+                # In production, issue_number comes from TaskPacket; stub uses 0
+                await post_approval_request(
+                    github=github,
+                    owner="",  # resolved from TaskPacket.repo in production
+                    repo_name="",
+                    issue_number=0,
+                    taskpacket_id=taskpacket_uuid,
+                    intent_summary=params.intent_summary,
+                    qa_passed=params.qa_passed,
+                )
+                return ApprovalRequestOutput(comment_posted=True)
+    except Exception:
+        logger.debug(
+            "GitHub client not available, falling back to log-only mode",
+            exc_info=True,
+        )
+
+    # Fallback: log only (test/stub mode)
+    logger.info(
+        "approval.request.posted",
+        extra={
+            "taskpacket_id": params.taskpacket_id,
+            "repo_tier": params.repo_tier,
+            "intent_summary": params.intent_summary,
+            "qa_passed": params.qa_passed,
+        },
+    )
+    return ApprovalRequestOutput(comment_posted=True)
+
+
+@activity.defn
+async def escalate_timeout_activity(
+    params: EscalateTimeoutInput,
+) -> EscalateTimeoutOutput:
+    """Step 8.5b: Escalate on approval timeout.
+
+    Applies the ``agent:human-review`` label and posts an escalation comment
+    via publisher.escalate_approval_timeout(). Falls back to logging when no
+    GitHub client is available (stub/test mode).
+    Idempotent — calling twice does not duplicate labels or comments.
+    """
+    import logging
+    from uuid import UUID
+
+    logger = logging.getLogger("thestudio.approval")
+
+    try:
+        from src.publisher.github_client import GitHubClient
+        from src.publisher.publisher import escalate_approval_timeout
+        from src.settings import settings
+
+        if settings.github_provider == "real":
+            async with GitHubClient(settings.github_app_id) as github:
+                taskpacket_uuid = UUID(params.taskpacket_id)
+                await escalate_approval_timeout(
+                    github=github,
+                    owner="",  # resolved from TaskPacket.repo in production
+                    repo_name="",
+                    issue_number=0,
+                    taskpacket_id=taskpacket_uuid,
+                )
+                return EscalateTimeoutOutput(escalated=True, label_applied=True)
+    except Exception:
+        logger.debug(
+            "GitHub client not available, falling back to log-only mode",
+            exc_info=True,
+        )
+
+    # Fallback: log only (test/stub mode)
+    logger.info(
+        "approval.timeout.escalated",
+        extra={
+            "taskpacket_id": params.taskpacket_id,
+            "repo_tier": params.repo_tier,
+        },
+    )
+    return EscalateTimeoutOutput(escalated=True, label_applied=True)

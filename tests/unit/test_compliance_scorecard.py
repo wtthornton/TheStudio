@@ -59,10 +59,11 @@ class TestComplianceScorecardService:
             evidence_format_valid=True,
             idempotency_guard_active=True,
             execution_plane_healthy=True,
+            execute_tier_policy_passed=True,
         )
         result = service.evaluate("repo-1", data)
         assert result.overall_pass is True
-        assert len(result.checks) == 7
+        assert len(result.checks) == 8
         assert all(c.passed for c in result.checks)
 
     def test_all_checks_fail(self, service):
@@ -80,6 +81,7 @@ class TestComplianceScorecardService:
             evidence_format_valid=True,
             idempotency_guard_active=True,
             execution_plane_healthy=False,  # One failure
+            execute_tier_policy_passed=True,
         )
         result = service.evaluate("repo-1", data)
         assert result.overall_pass is False
@@ -98,6 +100,7 @@ class TestComplianceScorecardService:
             "evidence_format",
             "idempotency_guard",
             "execution_plane_health",
+            "execute_tier_policy",
         }
         actual_names = {c.name for c in result.checks}
         assert actual_names == expected_names
@@ -124,6 +127,7 @@ class TestComplianceScorecardService:
             evidence_format_valid=True,
             idempotency_guard_active=True,
             execution_plane_healthy=True,
+            execute_tier_policy_passed=True,
         )
         service.evaluate("repo-1", data)
         service.invalidate_cache("repo-1")
@@ -144,6 +148,7 @@ class TestComplianceScorecardService:
             evidence_format_valid=True,
             idempotency_guard_active=True,
             execution_plane_healthy=True,
+            execute_tier_policy_passed=True,
         )
         data_fail = RepoComplianceData()
         r1 = service.evaluate("repo-pass", data_pass)

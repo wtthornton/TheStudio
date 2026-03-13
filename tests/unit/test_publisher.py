@@ -320,3 +320,150 @@ class TestPublish:
         assert any(LABEL_DONE in str(call) for call in label_calls)
         # remove_label called for agent:in-progress and for tier reconciliation
         assert mock_github.remove_label.call_count >= 1
+
+
+# --- Approval Request Tests (Epic 21, Story 3) ---
+
+
+class TestPostApprovalRequest:
+    """Tests for post_approval_request()."""
+
+    async def test_posts_comment_with_marker(self) -> None:
+        """Posts an approval request comment with the correct marker."""
+        from src.publisher.publisher import (
+            APPROVAL_COMMENT_MARKER,
+            post_approval_request,
+        )
+
+        mock_github = AsyncMock()
+        mock_github._client = AsyncMock()
+
+        # No existing comments — resp.json() is sync, but _client.get is async
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = []
+        mock_github._client.get = AsyncMock(return_value=mock_resp)
+
+        mock_github.add_comment.return_value = {"id": 99}
+
+        tp_id = uuid4()
+        comment_id = await post_approval_request(
+            github=mock_github,
+            owner="acme",
+            repo_name="widgets",
+            issue_number=42,
+            taskpacket_id=tp_id,
+            intent_summary="Fix the widget",
+            qa_passed=True,
+        )
+
+        assert comment_id == 99
+        mock_github.add_comment.assert_called_once()
+        body = mock_github.add_comment.call_args[0][3]
+        assert APPROVAL_COMMENT_MARKER in body
+        assert str(tp_id) in body
+        assert "Fix the widget" in body
+        assert "PASSED" in body
+
+    async def test_updates_existing_comment(self) -> None:
+        """Updates existing approval comment instead of creating duplicate."""
+        from src.publisher.publisher import (
+            APPROVAL_COMMENT_MARKER,
+            post_approval_request,
+        )
+
+        mock_github = AsyncMock()
+
+        # Existing comment with marker
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = [
+            {"id": 77, "body": f"{APPROVAL_COMMENT_MARKER}\nOld comment"},
+        ]
+        mock_github._client = MagicMock()
+        mock_github._client.get = AsyncMock(return_value=mock_resp)
+
+        tp_id = uuid4()
+        comment_id = await post_approval_request(
+            github=mock_github,
+            owner="acme",
+            repo_name="widgets",
+            issue_number=42,
+            taskpacket_id=tp_id,
+            intent_summary="Fix the widget",
+            qa_passed=False,
+        )
+
+        assert comment_id == 77
+        mock_github.update_comment.assert_called_once()
+        mock_github.add_comment.assert_not_called()
+
+
+# --- Escalation Tests (Epic 21, Story 4) ---
+
+
+class TestEscalateApprovalTimeout:
+    """Tests for escalate_approval_timeout()."""
+
+    async def test_applies_label_and_posts_comment(self) -> None:
+        """Applies human-review label and posts escalation comment."""
+        from src.publisher.publisher import (
+            ESCALATION_COMMENT_MARKER,
+            LABEL_HUMAN_REVIEW,
+            escalate_approval_timeout,
+        )
+
+        mock_github = AsyncMock()
+
+        # No existing comments
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = []
+        mock_github._client = MagicMock()
+        mock_github._client.get = AsyncMock(return_value=mock_resp)
+
+        tp_id = uuid4()
+        await escalate_approval_timeout(
+            github=mock_github,
+            owner="acme",
+            repo_name="widgets",
+            issue_number=42,
+            taskpacket_id=tp_id,
+        )
+
+        mock_github.add_labels.assert_called_once_with(
+            "acme", "widgets", 42, [LABEL_HUMAN_REVIEW],
+        )
+        mock_github.add_comment.assert_called_once()
+        body = mock_github.add_comment.call_args[0][3]
+        assert ESCALATION_COMMENT_MARKER in body
+        assert str(tp_id) in body
+
+    async def test_idempotent_updates_existing_comment(self) -> None:
+        """Updates existing escalation comment instead of duplicating."""
+        from src.publisher.publisher import (
+            ESCALATION_COMMENT_MARKER,
+            escalate_approval_timeout,
+        )
+
+        mock_github = AsyncMock()
+
+        # Existing escalation comment
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = [
+            {"id": 88, "body": f"{ESCALATION_COMMENT_MARKER}\nOld escalation"},
+        ]
+        mock_github._client = MagicMock()
+        mock_github._client.get = AsyncMock(return_value=mock_resp)
+
+        tp_id = uuid4()
+        await escalate_approval_timeout(
+            github=mock_github,
+            owner="acme",
+            repo_name="widgets",
+            issue_number=42,
+            taskpacket_id=tp_id,
+        )
+
+        # Label still applied (idempotent)
+        mock_github.add_labels.assert_called_once()
+        # Comment updated, not created
+        mock_github.update_comment.assert_called_once()
+        mock_github.add_comment.assert_not_called()

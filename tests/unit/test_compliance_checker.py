@@ -369,6 +369,10 @@ class TestOverallCompliance:
     @pytest.mark.asyncio
     async def test_all_checks_pass_overall_passes(self) -> None:
         """All checks pass -> overall compliance passes."""
+        from unittest.mock import patch as _patch
+
+        from src.admin.merge_mode import MergeMode
+
         checker = ComplianceChecker()
         repo_info = make_repo_info(
             rulesets=[
@@ -379,15 +383,21 @@ class TestOverallCompliance:
             },
             labels=REQUIRED_LABELS.copy(),
             codeowners_exists=True,
+            codeowners_paths=["auth/**", "billing/**", "exports/**", "infra/**"],
         )
 
-        result = await checker.check_compliance(
-            repo_id=uuid4(),
-            repo_info=repo_info,
-            triggered_by="test",
-            projects_v2_waived=True,
-            check_execution_plane=False,
-        )
+        with _patch(
+            "src.compliance.checker.get_merge_mode",
+            return_value=MergeMode.AUTO_MERGE,
+        ):
+            result = await checker.check_compliance(
+                repo_id=uuid4(),
+                repo_info=repo_info,
+                triggered_by="test",
+                projects_v2_waived=True,
+                check_execution_plane=False,
+                repo_full_name="acme/widgets",
+            )
 
         assert result.overall_passed is True
         assert result.score == 100.0
@@ -442,8 +452,8 @@ class TestOverallCompliance:
         )
 
         # 3 passed (branch_protection, required_reviewers, projects_v2)
-        # 2 failed (rulesets, labels)
-        assert result.score == 60.0  # 3/5 = 60%
+        # 3 failed (rulesets, labels, execute_tier_policy)
+        assert result.score == 50.0  # 3/6 = 50%
 
 
 class TestRemediationHints:

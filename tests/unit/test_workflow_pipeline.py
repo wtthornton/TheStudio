@@ -7,9 +7,8 @@ All Temporal activity calls are mocked — no Temporal server required.
 
 from unittest.mock import AsyncMock, patch
 
-import pytest
-
 from src.workflow.activities import (
+    ApprovalRequestOutput,
     AssemblerOutput,
     ContextOutput,
     ImplementOutput,
@@ -23,11 +22,9 @@ from src.workflow.pipeline import (
     MAX_QA_LOOPBACKS,
     MAX_VERIFICATION_LOOPBACKS,
     PipelineInput,
-    PipelineOutput,
     TheStudioPipelineWorkflow,
     WorkflowStep,
 )
-
 
 # --- Helpers ---
 
@@ -596,11 +593,20 @@ class TestActivityCallArguments:
             _impl_output(),
             _verify_passed(),
             _qa_passed(),
+            # approval request activity (triggered by execute tier)
+            ApprovalRequestOutput(comment_posted=True),
             _publish_output(),
         ]
         mock_exec = AsyncMock(side_effect=activity_returns)
 
-        with patch("temporalio.workflow.execute_activity", mock_exec):
+        async def mock_wait_condition(fn, *, timeout=None):
+            """Simulate immediate approval."""
+            pass
+
+        with (
+            patch("temporalio.workflow.execute_activity", mock_exec),
+            patch("temporalio.workflow.wait_condition", mock_wait_condition),
+        ):
             wf = TheStudioPipelineWorkflow()
             params = _default_params(repo_tier="execute")
             await wf.run(params)

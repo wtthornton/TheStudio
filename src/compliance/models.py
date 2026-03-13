@@ -40,6 +40,7 @@ class ComplianceCheck(enum.StrEnum):
     PUBLISHER_IDEMPOTENCY = "publisher_idempotency"
     CREDENTIALS_SCOPED = "credentials_scoped"
     ADVERSARIAL_CONTENT = "adversarial_content"
+    EXECUTE_TIER_POLICY = "execute_tier_policy"
 
 
 class ComplianceCheckResult(BaseModel):
@@ -126,6 +127,13 @@ REMEDIATION_HINTS: dict[ComplianceCheck, str] = {
         "Review issue content for suspicious patterns such as prompt injection, "
         "credential exposure, or tool manipulation commands."
     ),
+    ComplianceCheck.EXECUTE_TIER_POLICY: (
+        "Execute tier requires: (1) MergeMode.AUTO_MERGE explicitly configured in repo settings, "
+        "(2) human approval wait states operational (Epic 21), "
+        "(3) required reviewer rules must be mandatory-fail "
+        "(not warn-and-pass) for all sensitive paths. "
+        "Verify repo merge mode, Temporal workflow configuration, and CODEOWNERS coverage."
+    ),
 }
 
 
@@ -134,6 +142,7 @@ REQUIRED_LABELS = [
     "agent:queued",
     "agent:done",
     "agent:blocked",
+    "tier:execute",
 ]
 
 
