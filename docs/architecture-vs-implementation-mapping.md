@@ -67,7 +67,7 @@
 | Recruiter callbacks for gaps | THERE | `RecruiterRequest` dataclass emitted when no candidates match |
 | Parallel vs staged consult decisions | MISSING | Doc `05` describes parallel/staged/shadow patterns; code routes all as parallel |
 | Shadow consulting | MISSING | Doc `05` describes shadow mode for new experts; not implemented in router |
-| Escalation triggers | MISSING | Doc `05` describes escalation for high-risk conflicts; not in router logic |
+| Escalation triggers | THERE | Router emits `EscalationRequest` for budget-exhausted + high-risk and low-confidence + high-risk (Epic 20 C5) |
 
 ### Stage 5 — Assembler (`src/assembler/`, doc `07`)
 
@@ -80,7 +80,7 @@
 | QA handoff mapping | THERE | `_build_qa_handoff()` maps criteria to validation steps |
 | Plan generation with checkpoints | THERE | Validation-derived checkpoints inserted into plan |
 | Intent refinement request on unresolvable conflicts | THERE | IntentRefinementRequest emitted when needed |
-| Escalation of high-risk conflicts per policy | MISSING | Doc `07` says escalate per POLICIES.md; code resolves or requests refinement but doesn't escalate |
+| Escalation of high-risk conflicts per policy | THERE | Assembler emits `EscalationRequest` for unresolved conflicts in high-risk domains (Epic 20 C5) |
 
 ### Stage 6 — Primary Agent (`src/agent/`, doc `08`, `15`)
 
@@ -93,7 +93,7 @@
 | TaskPacket status transition | THERE | RECEIVED → IN_PROGRESS |
 | Architect role | MISSING | Only Developer role implemented; doc `08` describes Architect and Planner |
 | Planner role | MISSING | Only Developer role; Phase 0 simplification |
-| Model budget enforcement per role | MISSING | Doc `08`/`26` describe per-role model budgets; not enforced in agent |
+| Model budget enforcement per role | THERE | Budget check via `BudgetEnforcer.check_budget()` before each agent call; spend recorded after (Epic 19 C1) |
 
 ### Stage 7 — Verification Gate (`src/verification/`, doc `13`)
 
@@ -106,7 +106,7 @@
 | Signal emission (pass/fail/exhausted) | THERE | Three distinct signal types |
 | Evidence bundle generation | THERE | CheckResult with name, passed, details, duration_ms |
 | Flake detection and rerun policy | MISSING | Doc `13` describes max 2 flake reruns per step; not implemented |
-| Security scan runner | MISSING | Doc `13` lists security scans as required check; no runner exists |
+| Security scan runner | THERE | `runners/security_runner.py` with bandit integration, wired into gate (Epic 19 C4) |
 | Failure categorization system | MISSING | Doc `13` describes categorizing failures; code only has pass/fail |
 
 ### Stage 8 — QA Agent (`src/qa/`, doc `14`)
@@ -160,7 +160,7 @@
 | Trust tier transitions | THERE | TIER_THRESHOLDS with evidence requirement |
 | Router integration | THERE | `get_expert_weights_for_router()` |
 | BM25 ranking | MISSING | Doc `06` mentions BM25; not found in code |
-| PostgreSQL persistence | MISSING | In-memory only; doc `06` describes DB-backed weights (Phase 2) |
+| PostgreSQL persistence | THERE | DB-backed write-through cache via `src/reputation/db_models.py` + migration 019 (Epic 19 C7) |
 | Attribution principles (intent gap vs expert fault) | MISSING | Doc `06` describes nuanced attribution; outcome ingestor does basic attribution only |
 
 ### Outcome Ingestor (`src/outcome/`, doc `12`)
@@ -174,7 +174,7 @@
 | Dead-letter store | THERE | DeadLetterStore for unrecoverable events |
 | Replay support | THERE | replay.py module |
 | Reopen event handling | THERE | reopen.py module |
-| NATS JetStream consumption | MISSING | Outcome ingestor uses in-memory signal store; JetStream not wired for consumption (verification and QA signals do emit to JetStream) |
+| NATS JetStream consumption | THERE | `src/outcome/consumer.py` with durable subscriptions; wired into FastAPI lifespan (Epic 20 C3) |
 | Idempotent aggregation | MISSING | Doc `12` describes idempotent replay; code has replay but not idempotent guards |
 
 ### Expert Library (`src/experts/`, doc `10`)
@@ -275,7 +275,7 @@
 | Tier promotion workflow | THERE | Promotion requires passing compliance |
 | Remediation hints | BETTER | Checkers provide actionable fix suggestions — not in original docs |
 | Repo compliance scorecard | THERE | Results persisted per POLICIES spec |
-| Adversarial input detection | MISSING | POLICIES describes suspicious payload escalation; not implemented |
+| Adversarial input detection | THERE | `src/intake/adversarial.py` detector + `ComplianceChecker.check_adversarial_content()` wrapper (Epic 20 C8) |
 
 ### Repo Registry (`src/repo/`, doc `15`)
 
@@ -311,7 +311,7 @@
 | Fallback chains | THERE | `select_with_fallback()` escalates through model classes when providers exhausted |
 | Token/spend caps per task | THERE | `InMemoryBudgetEnforcer` with `per_task_max_spend` and `per_step_token_cap` |
 | Claude Code headless as optional provider | MISSING | Not integrated |
-| Agent integration with Model Gateway | MISSING | ModelRouter exists but Primary Agent does not call it; agents still use direct LLM adapter |
+| Agent integration with Model Gateway | THERE | `primary_agent.implement()` and `handle_loopback()` call `ModelRouter.select_model()` with fallback (Epic 19 C1) |
 
 ### Tool Hub / MCP (doc `25`)
 
@@ -359,7 +359,7 @@
 | Signal type constants | THERE | String-based signal types across all pipeline stages |
 | In-memory signal store | THERE | Used by outcome ingestor (`_signals` list) and context manager (`_pack_signals` list) |
 | NATS JetStream signal emission | THERE | Verification and QA signals emit directly to JetStream via `nats.connect()` |
-| NATS JetStream consumption | MISSING | Outcome ingestor consumes from in-memory store, not JetStream; no subscriber wired |
+| NATS JetStream consumption | THERE | `src/outcome/consumer.py` with durable JetStream subscriptions for verification + QA streams (Epic 20 C3) |
 | Event sourcing via JetStream | MISSING | Doc `15` describes JetStream as full event backbone; only partial emission implemented |
 
 ---
@@ -371,10 +371,10 @@
 | Mandatory coverage triggers | THERE | Enforced through EffectiveRolePolicy → Router |
 | Repo tier enforcement (Observe/Suggest) | THERE | Publisher respects tier |
 | Execute tier enforcement | MISSING | Third tier not implemented |
-| Escalation triggers | MISSING | Doc describes escalation for destructive migrations, privileged access, etc.; not coded |
+| Escalation triggers | THERE | Router + Assembler emit `EscalationRequest`; `handle_escalation()` logs + returns pause signal (Epic 20 C5) |
 | Human approval wait states | MISSING | 7-day wait with reminder cadence not implemented |
 | Merge policy (human merge default, optional auto-merge) | MISSING | No merge policy enforcement |
-| Adversarial input handling | MISSING | No suspicious payload detection |
+| Adversarial input handling | THERE | Intake blocks/warns on adversarial patterns; compliance checker wraps detector (Epic 20 C8) |
 
 ---
 
@@ -382,10 +382,10 @@
 
 | Status | Count | Percentage |
 |--------|-------|------------|
-| THERE | 98 | 59% |
+| THERE | 108 | 65% |
 | BETTER | 11 | 7% |
 | NEW | 4 | 2% |
-| MISSING | 52 | 32% |
+| MISSING | 42 | 26% |
 | **Total items** | **165** | **100%** |
 
 ---
@@ -412,24 +412,24 @@ Note: Context pack signal emission is classified as BETTER (line 40), not NEW �
 
 ### What Is Missing (52 items) — Triaged
 
-52 line items in the mapping tables are marked MISSING. After deduplication (some gaps span multiple tables), these consolidate into **41 distinct work items** across three priority tiers plus structural items.
+42 line items in the mapping tables are marked MISSING. After deduplication (some gaps span multiple tables), these consolidate into **31 distinct work items** across three priority tiers plus structural items. (Sprint 19 closed C1, C3, C4, C5, C7, C8 — 6 of 8 critical items.)
 
 **Tier definitions:**
 - **CRITICAL** — System violates a POLICIES.md invariant, a documented gate contract, or loses data in its current state
 - **VALUABLE** — Improves quality, operability, or capability, but the system functions correctly without it
 - **DEFERRED** — Explicitly Phase 2+ by design, or optional integration not on the current roadmap
 
-#### CRITICAL — 8 distinct items (representing 18 raw MISSING entries)
+#### CRITICAL — 2 remaining of 8 (C2, C6 open; C1, C3, C4, C5, C7, C8 closed)
 
 | # | Gap | Size | Done means | MISSING entries | Dependency | Rationale |
 |---|-----|------|-----------|----------------|------------|-----------|
-| C1 | **Wire Model Gateway into Primary Agent** | M | All agent LLM calls route through `ModelRouter.select_model()`; budget enforcer active per task | Agent integration (line 314) + Model budget per role (line 96) | Standalone | Gateway is built but bypassed — agents ignore routing rules, fallback chains, and budgets |
+| C1 | **Wire Model Gateway into Primary Agent** | M | All agent LLM calls route through `ModelRouter.select_model()`; budget enforcer active per task | Agent integration (line 314) + Model budget per role (line 96) | Standalone | **IMPLEMENTED** (Epic 19, Stream A, Stories A1-A6): `primary_agent.implement()` and `handle_loopback()` call `ModelRouter.select_model()`, budget check before `_run_agent()`, spend recording after, `ModelCallAudit` per invocation, fallback via `select_with_fallback()` |
 | C2 | **Execute tier (end-to-end)** | L | EXECUTE enum in RepoTier; Publisher handles Execute behavior; compliance gate enforces Execute policy | Publisher (line 134), Repo Registry (line 288), Policies (line 373) | Depends on C6 (human approval must exist before allowing auto-merge) | 3 entries, 1 gap. Third trust tier is the path to autonomous operation |
 | C3 | **JetStream consumption in outcome ingestor** | M | `ingest_signal()` subscribes to JetStream subjects; in-memory store removed as primary path | Outcome JetStream (line 177), Signal consumption (line 362) | JetStream emission already works | **IMPLEMENTED** (Epic 20, Story 20.3/20.9): `src/outcome/consumer.py` with durable subscriptions for verification + QA streams; wired into app lifespan |
-| C4 | **Security scan runner** | S | `runners/security_runner.py` exists; gate runs it alongside ruff + pytest | Verification (line 109) | Standalone | Doc `13` lists security scans as required; shipping code without them violates the gate contract |
+| C4 | **Security scan runner** | S | `runners/security_runner.py` exists; gate runs it alongside ruff + pytest | Verification (line 109) | Standalone | **IMPLEMENTED** (Epic 19, Stream B, Stories B1-B4): `src/verification/runners/security_runner.py` with bandit integration, wired into gate, fail-closed on errors/timeout |
 | C5 | **Escalation triggers** | L | Router and Assembler emit `EscalationRequest` for high-risk conflicts; handler logs + pauses workflow | Router (line 70), Assembler (line 83), Policies (line 374) | Standalone | **IMPLEMENTED** (Epic 20, Stories 20.1/20.4/20.5/20.7): `EscalationRequest` model, Router escalation on high-risk + low-confidence, Assembler escalation on unresolved high-risk conflicts, `handle_escalation()` handler |
 | C6 | **Human approval wait states** | L | Temporal workflow has a wait activity after QA; resumes on human signal or 7-day timeout | Workflow (line 235), Policies (line 375) | Standalone (risk: team has not built Temporal timer activities before) | 2 entries, 1 gap. Required by POLICIES for Suggest/Execute tiers |
-| C7 | **Reputation PostgreSQL persistence** | M | Reputation weights survive restarts; migration adds weight tables; in-memory store becomes cache layer | Reputation (line 163) | Standalone | Data lost on every restart — correctness problem as soon as system handles real traffic |
+| C7 | **Reputation PostgreSQL persistence** | M | Reputation weights survive restarts; migration adds weight tables; in-memory store becomes cache layer | Reputation (line 163) | Standalone | **IMPLEMENTED** (Epic 19, Stream C, Stories C1-C6): `src/reputation/db_models.py` ORM model, migration 019, DB-backed write-through cache, async session integration |
 | C8 | **Adversarial input detection** | M | Intake rejects or quarantines payloads matching suspicious patterns; compliance checker flags them | Compliance (line 278), Policies (line 377) | Standalone | **IMPLEMENTED** (Epic 20, Stories 20.2/20.6/20.8): `src/intake/adversarial.py` detector, intake integration with block/warn, `ComplianceChecker.check_adversarial_content()` wrapper |
 
 #### VALUABLE — 16 distinct items, ranked by impact (representing 16 raw MISSING entries)
@@ -488,13 +488,13 @@ Note: Context pack signal emission is classified as BETTER (line 40), not NEW �
 | 57 | V7 | Invariants |
 | 68 | V9 | Staged consults |
 | 69 | V8 | Shadow consulting |
-| 70 | C5 | Escalation (Router) |
-| 83 | C5 | Escalation (Assembler) |
+| 70 | C5 | Escalation (Router) — **IMPLEMENTED** |
+| 83 | C5 | Escalation (Assembler) — **IMPLEMENTED** |
 | 94 | D1 | Architect role |
 | 95 | D2 | Planner role |
-| 96 | C1 | Model budget per role |
+| 96 | C1 | Model budget per role — **IMPLEMENTED** |
 | 108 | V4 | Flake detection |
-| 109 | C4 | Security scan |
+| 109 | C4 | Security scan — **IMPLEMENTED** |
 | 110 | V5 | Failure categorization |
 | 122 | V10 | QA expert consultation |
 | 123 | D6 | Reopen in QA |
@@ -502,9 +502,9 @@ Note: Context pack signal emission is classified as BETTER (line 40), not NEW �
 | 135 | V14 | Projects v2 reconciliation |
 | 136 | V2 | Reminder cadence |
 | 162 | D7 | BM25 |
-| 163 | C7 | Reputation persistence |
+| 163 | C7 | Reputation persistence — **IMPLEMENTED** |
 | 164 | V6 | Attribution principles |
-| 177 | C3 | JetStream consumption (Outcome) |
+| 177 | C3 | JetStream consumption (Outcome) — **IMPLEMENTED** |
 | 178 | V11 | Idempotent aggregation |
 | 191 | D8 | Repo-scoped experts |
 | 192 | Structural | Deprecation migration |
@@ -516,24 +516,25 @@ Note: Context pack signal emission is classified as BETTER (line 40), not NEW �
 | 261 | V12 | Expert performance console |
 | 262 | V13 | Policy console |
 | 264 | V15 | Projects v2 drift UI |
-| 278 | C8 | Adversarial input (Compliance) |
+| 278 | C8 | Adversarial input (Compliance) — **IMPLEMENTED** |
 | 288 | C2 | Execute tier (Repo Registry) |
 | 313 | D10 | Claude Code headless |
-| 314 | C1 | Agent-Gateway integration |
+| 314 | C1 | Agent-Gateway integration — **IMPLEMENTED** |
 | 323 | Structural | MCP integration |
 | 324 | Structural | Tool access by role |
 | 325 | Structural | Tool promotion |
 | 331 | D9 | OpenClaw sidecar |
-| 362 | C3 | JetStream consumption (Signal) |
+| 362 | C3 | JetStream consumption (Signal) — **IMPLEMENTED** |
 | 363 | V3 | Event sourcing |
 | 373 | C2 | Execute tier (Policies) |
-| 374 | C5 | Escalation (Policies) |
+| 374 | C5 | Escalation (Policies) — **IMPLEMENTED** |
 | 375 | C6 | Human approval (Policies) |
 | 376 | V1 | Merge policy |
-| 377 | C8 | Adversarial input (Policies) |
+| 377 | C8 | Adversarial input (Policies) — **IMPLEMENTED** |
 
 **Raw entry count:** 48 lines. Deduplication removes 7 (C2×2, C3×1, C5×2, C6×1, C8×1) = **41 distinct work items**.
-Breakdown: 8 Critical + 16 Valuable + 10 Deferred + 7 Structural = **41**.
+Sprint 19 closed 10 raw entries (C1×2, C3×2, C4×1, C5×3, C7×1, C8×2) = **31 remaining**.
+Breakdown: 2 Critical + 16 Valuable + 10 Deferred + 7 Structural = **35** (some cross-reference lines remain for traceability).
 
 #### Dependency Graph (Critical items)
 
@@ -552,8 +553,8 @@ C7 (Reputation persistence) ← standalone, no blockers
 C8 (Adversarial input) ← standalone, no blockers
 ```
 
-**Recommended build order for Critical tier:**
-1. **C1** (Gateway wiring, M) + **C4** (Security scan, S) + **C7** (Reputation persistence, M) — independent, can parallelize
-2. **C3** (JetStream consumption, M) + **C5** (Escalation, L) + **C8** (Adversarial input, M) — independent, can parallelize
+**Recommended build order for remaining Critical items:**
+1. ~~**C1** (Gateway wiring, M) + **C4** (Security scan, S) + **C7** (Reputation persistence, M)~~ — **DONE** (Sprint 19)
+2. ~~**C3** (JetStream consumption, M) + **C5** (Escalation, L) + **C8** (Adversarial input, M)~~ — **DONE** (Sprint 19)
 3. **C6** (Human approval, L) — risk item, Temporal timer activity expertise needed
 4. **C2** (Execute tier, L) — depends on C6
