@@ -261,16 +261,26 @@ class TestPipelineReadinessGate:
         assert result.step_reached == WorkflowStep.PUBLISH
 
     async def test_flag_on_hold_stops_at_readiness(self) -> None:
-        """With readiness_gate_enabled=True and HOLD, pipeline stops."""
+        """With readiness_gate_enabled=True and HOLD, pipeline waits for signal.
+
+        When wait_condition times out, the pipeline returns with a timeout reason.
+        """
         returns = [
             _intake_accepted(),
             _context_output(),
             _readiness_hold(),
         ]
-        with patch(
-            "temporalio.workflow.execute_activity",
-            new_callable=AsyncMock,
-            side_effect=returns,
+        with (
+            patch(
+                "temporalio.workflow.execute_activity",
+                new_callable=AsyncMock,
+                side_effect=returns,
+            ),
+            patch(
+                "temporalio.workflow.wait_condition",
+                new_callable=AsyncMock,
+                side_effect=TimeoutError("readiness_reevaluation_timeout"),
+            ),
         ):
             wf = TheStudioPipelineWorkflow()
             result = await wf.run(
@@ -278,25 +288,31 @@ class TestPipelineReadinessGate:
             )
         assert result.success is False
         assert result.step_reached == WorkflowStep.READINESS
-        assert result.rejection_reason is not None
-        assert "Readiness score" in result.rejection_reason
+        assert result.rejection_reason == "readiness_reevaluation_timeout"
 
     async def test_flag_on_hold_includes_hold_reason(self) -> None:
-        """Hold reason from readiness activity is propagated to output."""
+        """Hold reason from readiness activity is propagated on timeout."""
         hold = _readiness_hold(
             hold_reason="Readiness score 0.25 below threshold; missing: goal_clarity"
         )
         returns = [_intake_accepted(), _context_output(), hold]
-        with patch(
-            "temporalio.workflow.execute_activity",
-            new_callable=AsyncMock,
-            side_effect=returns,
+        with (
+            patch(
+                "temporalio.workflow.execute_activity",
+                new_callable=AsyncMock,
+                side_effect=returns,
+            ),
+            patch(
+                "temporalio.workflow.wait_condition",
+                new_callable=AsyncMock,
+                side_effect=TimeoutError("timeout"),
+            ),
         ):
             wf = TheStudioPipelineWorkflow()
             result = await wf.run(
                 _default_params(readiness_gate_enabled=True)
             )
-        assert result.rejection_reason == hold.hold_reason
+        assert result.rejection_reason == "readiness_reevaluation_timeout"
 
     async def test_flag_off_activity_count_unchanged(self) -> None:
         """Feature flag off should result in exactly 9 activity calls."""
@@ -317,10 +333,17 @@ class TestPipelineReadinessGate:
         assert mock.call_count == 10
 
     async def test_flag_on_hold_activity_count_is_3(self) -> None:
-        """Feature flag on with HOLD should result in 3 activity calls."""
+        """Feature flag on with HOLD should result in 3 activity calls (then wait timeout)."""
         returns = [_intake_accepted(), _context_output(), _readiness_hold()]
         mock = AsyncMock(side_effect=returns)
-        with patch("temporalio.workflow.execute_activity", mock):
+        with (
+            patch("temporalio.workflow.execute_activity", mock),
+            patch(
+                "temporalio.workflow.wait_condition",
+                new_callable=AsyncMock,
+                side_effect=TimeoutError("timeout"),
+            ),
+        ):
             wf = TheStudioPipelineWorkflow()
             await wf.run(_default_params(readiness_gate_enabled=True))
         assert mock.call_count == 3

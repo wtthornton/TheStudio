@@ -89,3 +89,29 @@
 [2026-03-13T00:14:00] [validate] pytest tests/unit/ - 1,689 passed in 82.89s, 0 failures
 [2026-03-13T00:15:00] [verify] updated sprint plan DoD - all 17 items checked
 [2026-03-13T00:16:00] [verify] updated epic status, handoff doc, runlog
+
+### Sprint 18 — Epic 16 Issue Readiness Gate, Stories 16.5-16.8 (2026-03-13)
+
+[2026-03-13T12:00:00] [discover] tapps_session_start - v1.5.0, all checkers installed, standard preset
+[2026-03-13T12:01:00] [discover] /session-plan - Helm sprint plan for Stories 16.5-16.8, Meridian 7/7 PASS
+[2026-03-13T12:02:00] [discover] read sprint-epic16-s18.md - full sprint plan with ordered backlog
+[2026-03-13T12:03:00] [discover] read epic-16-issue-readiness-gate.md - epic spec for remaining stories
+[2026-03-13T12:04:00] [discover] read existing src/ files - webhook_handler, pipeline, taskpacket, activities, ingestor, clarification
+[2026-03-13T12:10:00] [develop] Story 16.5 - modified src/models/taskpacket.py - added readiness_evaluation_count, readiness_hold_comment_id, readiness_score, readiness_miss fields
+[2026-03-13T12:11:00] [develop] Story 16.5 - modified src/models/taskpacket_crud.py - added get_by_repo_and_issue, update_readiness_hold, increment_readiness_evaluation, mark_readiness_miss
+[2026-03-13T12:12:00] [develop] Story 16.5 - rewrote src/ingress/webhook_handler.py - accepts issue_comment + issues.edited, normalize_webhook_payload(), _handle_reevaluation() with readiness_cleared signal
+[2026-03-13T12:15:00] [develop] Story 16.5 - rewrote src/workflow/pipeline.py - readiness_cleared signal, re-evaluation loop (max 3), 7-day wait timeout, escalation, new output fields
+[2026-03-13T12:20:00] [develop] Story 16.6 - created src/readiness/calibrator.py - ReadinessCalibrator with record_readiness_miss() and calibrate(), +/-10% cap, min 20 samples
+[2026-03-13T12:21:00] [develop] Story 16.6 - modified src/outcome/ingestor.py - added _record_readiness_miss() hook on intent_gap detection
+[2026-03-13T12:25:00] [develop] Story 16.7 - created src/admin/readiness_routes.py - 4 endpoints: metrics, calibration, thresholds, calibrate trigger
+[2026-03-13T12:26:00] [develop] Story 16.7 - modified src/app.py - registered readiness_router
+[2026-03-13T12:30:00] [develop] Story 16.8 - created tests/integration/test_readiness_gate.py - 6 scenarios (happy, hold+reeval, escalation, observe, flag off, cap)
+[2026-03-13T12:31:00] [develop] Story 16.8 - modified tests/integration/mock_providers.py - added mock_readiness_activity
+[2026-03-13T12:32:00] [develop] created tests/unit/test_readiness/test_reevaluation.py - 11 unit tests
+[2026-03-13T12:33:00] [develop] created tests/unit/test_readiness/test_calibrator.py - 14 unit tests
+[2026-03-13T12:34:00] [develop] created tests/unit/test_admin/test_readiness_routes.py - 7 unit tests
+[2026-03-13T12:35:00] [develop] modified tests/unit/test_readiness/test_activity.py - updated 3 hold tests for re-evaluation wait behavior
+[2026-03-13T12:40:00] [validate] ruff check - all 13 modified/new files pass (6 auto-fixed import sort issues)
+[2026-03-13T12:41:00] [validate] pytest tests/unit/ - 1,721 passed in 88.55s, 0 failures, 0 regressions
+[2026-03-13T12:42:00] [verify] updated sprint plan DoD - all 17 items checked
+[2026-03-13T12:43:00] [verify] updated epic status to Complete, handoff doc, runlog

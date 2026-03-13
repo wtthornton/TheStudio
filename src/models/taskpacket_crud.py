@@ -175,6 +175,64 @@ async def update_intent_version(
     return TaskPacketRead.model_validate(row)
 
 
+async def get_by_repo_and_issue(
+    session: AsyncSession, repo: str, issue_id: int
+) -> TaskPacketRead | None:
+    """Get the most recent TaskPacket for a repo + issue number."""
+    stmt = (
+        select(TaskPacketRow)
+        .where(TaskPacketRow.repo == repo, TaskPacketRow.issue_id == issue_id)
+        .order_by(TaskPacketRow.created_at.desc())
+        .limit(1)
+    )
+    result = await session.execute(stmt)
+    row = result.scalar_one_or_none()
+    if row is None:
+        return None
+    return TaskPacketRead.model_validate(row)
+
+
+async def update_readiness_hold(
+    session: AsyncSession,
+    task_id: UUID,
+    comment_id: str,
+    readiness_score: float,
+    evaluation_count: int,
+) -> TaskPacketRead:
+    """Record readiness hold data on a TaskPacket."""
+    row = await session.get(TaskPacketRow, task_id)
+    if row is None:
+        raise ValueError(f"TaskPacket {task_id} not found")
+    row.readiness_hold_comment_id = comment_id
+    row.readiness_score = readiness_score
+    row.readiness_evaluation_count = evaluation_count
+    await session.commit()
+    await session.refresh(row)
+    return TaskPacketRead.model_validate(row)
+
+
+async def increment_readiness_evaluation(
+    session: AsyncSession, task_id: UUID
+) -> int:
+    """Increment and return the readiness evaluation count."""
+    row = await session.get(TaskPacketRow, task_id)
+    if row is None:
+        raise ValueError(f"TaskPacket {task_id} not found")
+    row.readiness_evaluation_count += 1
+    await session.commit()
+    await session.refresh(row)
+    return row.readiness_evaluation_count
+
+
+async def mark_readiness_miss(session: AsyncSession, task_id: UUID) -> None:
+    """Flag a TaskPacket as a readiness miss (for calibration)."""
+    row = await session.get(TaskPacketRow, task_id)
+    if row is None:
+        raise ValueError(f"TaskPacket {task_id} not found")
+    row.readiness_miss = True
+    await session.commit()
+
+
 async def increment_loopback(session: AsyncSession, task_id: UUID) -> int:
     """Increment and return the loopback count."""
     row = await session.get(TaskPacketRow, task_id)

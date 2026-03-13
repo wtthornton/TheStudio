@@ -26,6 +26,7 @@ from src.workflow.activities import (
     IntentOutput,
     PublishOutput,
     QAOutput,
+    ReadinessActivityOutput,
     VerifyOutput,
     intake_activity,
     router_activity,
@@ -210,6 +211,16 @@ def make_qa_always_fail():
         )
 
     return qa_always_fail
+
+
+@activity.defn(name="readiness_activity")
+async def mock_readiness_activity(params) -> ReadinessActivityOutput:
+    """Mock readiness gate — always passes."""
+    return ReadinessActivityOutput(
+        proceed=True,
+        overall_score=0.85,
+        gate_decision="pass",
+    )
 
 
 # --- Activity lists ---

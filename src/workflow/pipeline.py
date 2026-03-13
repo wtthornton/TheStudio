@@ -9,6 +9,7 @@ Architecture reference: thestudioarc/15-system-runtime-flow.md
 Steps:
 1. Intake Agent — eligibility, role selection
 2. Context Manager — scope, risk, complexity
+2.5. Readiness Gate — score issue, hold/escalate/pass (feature-flagged)
 3. Intent Builder — goal, constraints, acceptance criteria
 4. Expert Router — select expert subset
 5. Assembler — merge expert outputs into plan
@@ -70,6 +71,12 @@ APPROVAL_REQUIRED_TIERS = frozenset({"suggest", "execute"})
 
 # Durable wait timeout — hard policy, not configurable
 APPROVAL_TIMEOUT = timedelta(days=7)
+
+# Readiness re-evaluation wait timeout
+READINESS_REEVALUATION_TIMEOUT = timedelta(days=7)
+
+# Maximum re-evaluations before escalating to human review
+MAX_READINESS_EVALUATIONS = 3
 
 
 class WorkflowStep(StrEnum):
@@ -187,6 +194,8 @@ class PipelineOutput:
     qa_loopbacks: int = 0
     awaiting_approval: bool = False
     approved_by: str | None = None
+    readiness_evaluations: int = 0
+    readiness_escalated: bool = False
 
 
 @workflow.defn
@@ -200,12 +209,20 @@ class TheStudioPipelineWorkflow:
     between QA pass and Publish. The workflow pauses for up to 7 days waiting
     for an ``approve_publish`` signal. On timeout, the task is escalated and
     the workflow returns failure.
+
+    When the readiness gate holds an issue, the workflow waits for a
+    ``readiness_cleared`` signal. On signal, it re-evaluates. After 3 failed
+    re-evaluations, the issue is escalated to human review.
     """
 
     def __init__(self) -> None:
         self._approved = False
         self._approved_by: str | None = None
         self._approval_source: str | None = None
+        # Readiness re-evaluation state
+        self._readiness_cleared = False
+        self._updated_issue_title: str = ""
+        self._updated_issue_body: str = ""
 
     @workflow.signal
     async def approve_publish(self, approved_by: str, approval_source: str) -> None:
@@ -216,6 +233,17 @@ class TheStudioPipelineWorkflow:
         self._approved = True
         self._approved_by = approved_by
         self._approval_source = approval_source
+
+    @workflow.signal
+    async def readiness_cleared(self, issue_title: str = "", issue_body: str = "") -> None:
+        """Signal handler — submitter updated the issue, re-evaluate readiness.
+
+        Stores the latest issue content for re-scoring. Multiple signals
+        before re-evaluation runs are fine — only the latest state matters.
+        """
+        self._readiness_cleared = True
+        self._updated_issue_title = issue_title
+        self._updated_issue_body = issue_body
 
     @workflow.run
     async def run(self, params: PipelineInput) -> PipelineOutput:
@@ -261,30 +289,63 @@ class TheStudioPipelineWorkflow:
         )
         output.step_reached = WorkflowStep.CONTEXT
 
-        # Step 2.5: Readiness Gate (feature-flagged)
+        # Step 2.5: Readiness Gate (feature-flagged) with re-evaluation loop
         if params.readiness_gate_enabled:
-            readiness_policy = STEP_POLICIES[WorkflowStep.READINESS]
-            readiness_result: ReadinessActivityOutput = (
-                await workflow.execute_activity(
-                    readiness_activity,
-                    ReadinessInput(
-                        taskpacket_id=params.taskpacket_id,
-                        issue_title=params.issue_title,
-                        issue_body=params.issue_body,
-                        complexity_index=context_result.complexity_index,
-                        risk_flags=context_result.risk_flags,
-                        labels=params.labels,
-                        trust_tier=params.repo_tier,
-                    ),
-                    start_to_close_timeout=readiness_policy.timeout,
-                    retry_policy=readiness_policy.to_retry_policy(),
-                )
-            )
-            output.step_reached = WorkflowStep.READINESS
+            current_title = params.issue_title
+            current_body = params.issue_body
+            evaluation_count = 0
 
-            if not readiness_result.proceed:
-                output.rejection_reason = readiness_result.hold_reason
-                return output
+            while True:
+                readiness_policy = STEP_POLICIES[WorkflowStep.READINESS]
+                readiness_result: ReadinessActivityOutput = (
+                    await workflow.execute_activity(
+                        readiness_activity,
+                        ReadinessInput(
+                            taskpacket_id=params.taskpacket_id,
+                            issue_title=current_title,
+                            issue_body=current_body,
+                            complexity_index=context_result.complexity_index,
+                            risk_flags=context_result.risk_flags,
+                            labels=params.labels,
+                            trust_tier=params.repo_tier,
+                        ),
+                        start_to_close_timeout=readiness_policy.timeout,
+                        retry_policy=readiness_policy.to_retry_policy(),
+                    )
+                )
+                output.step_reached = WorkflowStep.READINESS
+                evaluation_count += 1
+                output.readiness_evaluations = evaluation_count
+
+                if readiness_result.proceed:
+                    # Gate passed — continue to Intent
+                    break
+
+                # Gate failed — check escalation cap
+                if evaluation_count >= MAX_READINESS_EVALUATIONS:
+                    output.rejection_reason = (
+                        f"Readiness gate failed after {evaluation_count} evaluations; "
+                        "escalated to human review"
+                    )
+                    output.readiness_escalated = True
+                    return output
+
+                # Wait for readiness_cleared signal (submitter updates issue)
+                self._readiness_cleared = False
+                try:
+                    await workflow.wait_condition(
+                        lambda: self._readiness_cleared,
+                        timeout=READINESS_REEVALUATION_TIMEOUT,
+                    )
+                except TimeoutError:
+                    output.rejection_reason = "readiness_reevaluation_timeout"
+                    return output
+
+                # Use updated issue content for re-evaluation
+                if self._updated_issue_title:
+                    current_title = self._updated_issue_title
+                if self._updated_issue_body:
+                    current_body = self._updated_issue_body
 
         # Step 3: Intent Building
         intent_policy = STEP_POLICIES[WorkflowStep.INTENT]

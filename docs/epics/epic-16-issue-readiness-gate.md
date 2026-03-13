@@ -2,7 +2,7 @@
 
 **Author:** Saga
 **Date:** 2026-03-10
-**Status:** In Progress — Sprint 17 (Stories 16.1-16.4) complete, Stories 16.5-16.8 deferred to Sprint 18
+**Status:** Complete — Sprint 17 (Stories 16.1-16.4) and Sprint 18 (Stories 16.5-16.8) delivered
 **Target Sprint:** Sprint 17–18 (weeks of 2026-03-17 to 2026-03-28)
 
 ---

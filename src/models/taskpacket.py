@@ -119,6 +119,12 @@ class TaskPacketRow(Base):
     )
     intent_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
+    # Readiness gate fields (Epic 16 — Story 16.5)
+    readiness_evaluation_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    readiness_hold_comment_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    readiness_score: Mapped[float | None] = mapped_column(nullable=True)
+    readiness_miss: Mapped[bool] = mapped_column(nullable=False, default=False)
+
     # Verification fields (Story 0.6 — Verification Gate)
     loopback_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
@@ -155,6 +161,10 @@ class TaskPacketRead(BaseModel):
     context_packs: list[dict[str, Any]] | None = None
     intent_spec_id: UUID | None = None
     intent_version: int | None = None
+    readiness_evaluation_count: int = 0
+    readiness_hold_comment_id: str | None = None
+    readiness_score: float | None = None
+    readiness_miss: bool = False
     loopback_count: int = 0
     created_at: datetime
     updated_at: datetime

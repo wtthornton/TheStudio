@@ -10,6 +10,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 from src.admin.platform_router import platform_router
+from src.admin.readiness_routes import router as readiness_router
 from src.admin.router import router as admin_router
 from src.admin.ui_router import ui_router
 from src.api.approval import router as approval_router
@@ -92,6 +93,7 @@ app.add_middleware(CorrelationMiddleware)
 app.include_router(ingress_router)
 app.include_router(compliance_router)
 app.include_router(admin_router)
+app.include_router(readiness_router)
 app.include_router(platform_router)
 app.include_router(ui_router)
 app.include_router(approval_router)

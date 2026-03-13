@@ -496,6 +496,10 @@ async def ingest_signal(
                 get_provenance_fn=get_provenance_fn,
             )
 
+        # Record readiness miss for calibration (Story 16.6)
+        if defect_category == DefectCategory.INTENT_GAP and get_taskpacket_fn:
+            await _record_readiness_miss(signal, get_taskpacket_fn)
+
         return signal
 
 
@@ -600,3 +604,44 @@ async def _produce_indicators(
         )
 
     return indicators
+
+
+async def _record_readiness_miss(
+    signal: OutcomeSignal,
+    get_taskpacket_fn: Any,
+) -> None:
+    """Record a readiness miss when an intent_gap defect is found.
+
+    Only records if the TaskPacket has a stored readiness_score,
+    indicating it passed the readiness gate.
+    """
+    taskpacket = await get_taskpacket_fn(signal.taskpacket_id)
+    if taskpacket is None:
+        return
+
+    # Only record if the issue went through the readiness gate
+    readiness_score = getattr(taskpacket, "readiness_score", None)
+    if readiness_score is None:
+        return
+
+    try:
+        from src.readiness.calibrator import get_calibrator
+
+        calibrator = get_calibrator()
+        calibrator.record_readiness_miss(
+            taskpacket_id=str(signal.taskpacket_id),
+            repo_id=taskpacket.repo,
+            readiness_score=readiness_score,
+            defect_category="intent_gap",
+        )
+        logger.info(
+            "Recorded readiness miss for TaskPacket %s (score=%.2f)",
+            signal.taskpacket_id,
+            readiness_score,
+        )
+    except Exception:
+        logger.warning(
+            "Failed to record readiness miss for TaskPacket %s",
+            signal.taskpacket_id,
+            exc_info=True,
+        )

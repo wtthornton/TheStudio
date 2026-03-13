@@ -23,7 +23,7 @@
 | 11 | Phase 4 Completion — Gateway Enforcement, Compliance | 4 | Complete |
 | 12–14 | Agent Content Enrichment, Expert Expansion, Context | 4 | Complete |
 | 15 | E2E Integration Testing | 5 | Complete |
-| 16 | Issue Readiness Gate | 5 | Sprint 17 complete (16.1-16.4), Sprint 18 pending (16.5-16.8) |
+| 16 | Issue Readiness Gate | 5 | Complete (Sprint 17: 16.1-16.4, Sprint 18: 16.5-16.8) |
 | 17–18 | Poll for Issues, Production E2E | 5 | Draft |
 | 19–22 | Critical Gaps, Execute Tier | 5 | Complete |
 | 23–27 | Unified Agent, Chat, Container, Expert Pkg, Webhooks | 5 | Draft |
@@ -37,8 +37,8 @@
 |--------|-------|
 | Source files (src/) | 149 |
 | Test files (tests/) | 87 |
-| Tests passing | 1,689 |
-| Tests deselected | 8 (integration — require PostgreSQL/Temporal) |
+| Tests passing | 1,721 |
+| Tests deselected | 14 (integration — require PostgreSQL/Temporal) |
 | Test warnings | 7 (unawaited coroutine mocks) |
 | Coverage | 84% |
 | Modules | 22 (adapters, admin, agent, assembler, compliance, context, db, evals, experts, ingress, intake, intent, models, observability, outcome, publisher, qa, recruiting, repo, reputation, routing, verification, workflow) |
