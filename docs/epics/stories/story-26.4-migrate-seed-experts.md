@@ -29,7 +29,7 @@ Each must be converted to an `EXPERT.md` file with:
 - A markdown body containing the system prompt template (derived from the `definition.operating_procedure` and `scope_description`)
 - The `definition` fields (scope_boundaries, expected_outputs, operating_procedure, edge_cases, failure_modes) encoded in the YAML frontmatter under a `definition` key or naturally mapped to frontmatter fields
 
-The startup hook in `src/app.py` must be changed from calling `seed_experts()` to calling `scan_expert_directories()` + `sync_experts()`.
+The startup hook in `src/app.py` must be extended to call `scan_expert_directories()` + `sync_experts()`. Note: `seed_experts()` is not currently called in the app lifespan — it was invoked manually or via migration scripts. This story adds the scanner/registrar as the canonical startup path.
 
 ## Tasks
 

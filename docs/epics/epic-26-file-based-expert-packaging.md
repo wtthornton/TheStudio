@@ -79,15 +79,15 @@ Epic 23 (Unified Agent Framework) introduces `AgentConfig` with `system_prompt_t
 
 7. **All five seed experts exist as file-based directories.** `experts/security-reviewer/`, `experts/qa-validation/`, `experts/technical-review/`, `experts/compliance-check/`, and `experts/process-quality/` each contain an `EXPERT.md` with frontmatter matching the current `seed.py` definitions. The `seed.py` module is deprecated (kept but not called).
 
-8. **Startup hook loads file-based experts.** The application lifespan in `src/app.py` calls `scan_expert_directories()` followed by `sync_experts()` at startup, replacing the `seed_experts()` call.
+8. **Startup hook loads file-based experts.** The application lifespan in `src/app.py` is extended to call `scan_expert_directories()` followed by `sync_experts()` at startup. Note: `seed_experts()` is defined in `src/experts/seed.py` but is not currently called in the lifespan — it was previously invoked manually or via migration. This story adds the scanner/registrar call as the canonical startup path; `seed.py` is deprecated but kept for reference.
 
 9. **Router still selects migrated experts correctly.** After migration, the Router produces identical `ConsultPlan` results for the same inputs. Existing routing tests pass without modification.
 
 ### Hot Reload and Admin API
 
-10. **Reload endpoint works.** `POST /admin/experts/reload` re-scans expert directories and syncs changes to the database. Returns a JSON response listing created, updated, unchanged, and (optionally) deactivated experts.
+10. **Reload endpoint works.** `POST /admin/experts/reload` re-scans expert directories and syncs changes to the database. Returns a JSON response listing created, updated, unchanged, and (optionally) deactivated experts. This endpoint is registered on `src/admin/platform_router.py` (the platform API router), not on `src/admin/router.py`.
 
-11. **List endpoint works.** `GET /admin/experts` returns all registered experts with their source path (file-based or legacy) and current version hash.
+11. **List endpoint works.** `GET /admin/experts/registry` returns all registered experts with their source path (file-based or legacy) and current version hash. Note: the path is `/admin/experts/registry` (not `/admin/experts`) to avoid conflict with any existing expert admin endpoints.
 
 ### Context Pack Integration
 
@@ -97,7 +97,7 @@ Epic 23 (Unified Agent Framework) introduces `AgentConfig` with `system_prompt_t
 
 ### Cross-Cutting
 
-14. **No changes to domain models.** `ExpertRow`, `ExpertVersionRow`, `ExpertCreate`, `ExpertRead`, and all other existing models are unchanged. The manifest maps to existing models, not the reverse.
+14. **No changes to domain models.** `ExpertRow`, `ExpertVersionRow`, `ExpertCreate`, `ExpertRead`, and all other existing models are unchanged. The manifest maps to existing models, not the reverse. The `version_hash` is stored inside the `definition` JSON field of `ExpertVersionRow` (e.g., `definition["version_hash"]`), not as a new column. The registrar compares the incoming manifest hash against `definition["version_hash"]` of the current version to detect changes.
 
 15. **No arbitrary code execution.** Expert directories contain data (markdown, YAML, JSON). No Python files are loaded or executed from expert directories.
 
@@ -145,9 +145,9 @@ Epic 23 (Unified Agent Framework) introduces `AgentConfig` with `system_prompt_t
 
 | Metric | Target | Measurement |
 |--------|--------|-------------|
-| Expert onboarding time | < 5 minutes to add a new expert (create directory + EXPERT.md) | Manual timing: create expert directory, write manifest, call reload endpoint, verify expert appears in library |
+| Expert onboarding time | New expert registered via reload endpoint without Python code changes | Scripted test: create expert directory, write manifest, POST /admin/experts/reload, verify expert in GET /admin/experts/registry response |
 | Zero code changes for new experts | 0 Python files modified to add an expert | Code review: new expert additions only touch `experts/` directory |
-| Migration completeness | 5/5 seed experts migrated to file format | Database query: all 5 experts present with `version_hash` field populated |
+| Migration completeness | 5/5 seed experts migrated to file format | Database query: all 5 experts present with `definition->>'version_hash'` populated in `expert_versions` table |
 | Routing stability | 100% identical ConsultPlan results before and after migration | Existing routing tests pass; snapshot test compares pre/post selection for same inputs |
 | Hot reload works | Reload endpoint syncs changes within 2 seconds | Integration test: modify EXPERT.md, call reload, verify updated version in DB |
 | Scanner resilience | Invalid manifests do not block valid experts | Unit test: mixed valid/invalid directories, all valid experts load |
@@ -165,8 +165,8 @@ Epic 23 (Unified Agent Framework) introduces `AgentConfig` with `system_prompt_t
 | `src/experts/seed.py` | **Deprecated** — no longer called at startup; kept for reference |
 | `src/experts/expert.py` | **Unchanged** — existing models are consumed, not modified |
 | `src/experts/expert_crud.py` | **Unchanged** — existing CRUD functions are called by registrar |
-| `src/app.py` | **Modified** — lifespan calls scanner + registrar instead of `seed_experts()` |
-| `src/admin/router.py` | **Modified** — add `POST /admin/experts/reload` and `GET /admin/experts` endpoints |
+| `src/app.py` | **Modified** — lifespan extended to call scanner + registrar at startup (seed_experts was not previously called here) |
+| `src/admin/platform_router.py` | **Modified** — add `POST /admin/experts/reload` and `GET /admin/experts/registry` endpoints |
 | `src/routing/router.py` | **Unchanged** — Router consumes experts from DB; source of registration is transparent |
 | `src/assembler/assembler.py` | **Minor modification** — include context file contents in expert prompt context |
 | `experts/` (project root) | **New directory** — contains expert subdirectories with EXPERT.md manifests |
@@ -290,14 +290,21 @@ def compute_version_hash(content: str) -> str:
 
 ## Meridian Review Status
 
-**Round 1: Pending**
+### Round 1: CONDITIONAL PASS — 3 gaps fixed
 
-| # | Question | Status | Notes |
-|---|----------|--------|-------|
-| 1 | Are acceptance criteria testable at epic scale? | Pending | |
-| 2 | Are constraints and non-goals clear? | Pending | |
-| 3 | Are success metrics measurable? | Pending | |
-| 4 | Is the story map ordered by risk reduction? | Pending | |
-| 5 | Are files-to-modify listed for AI implementability? | Pending | |
-| 6 | Are dependencies and assumptions explicit? | Pending | |
-| 7 | Does the epic respect scope boundaries? | Pending | |
+**Date:** 2026-03-13
+**Verdict:** CONDITIONAL PASS → all 3 must-fix items resolved in Round 2
+
+| # | Question | R1 Status | R2 Status |
+|---|----------|-----------|-----------|
+| 1 | Are acceptance criteria testable without ambiguity? | PASS | PASS |
+| 2 | Are constraints and non-goals explicit enough to prevent scope creep? | PASS | PASS |
+| 3 | Do success metrics have concrete targets? | GAP (version_hash storage undefined, onboarding metric unmeasurable) | Fixed: version_hash stored in definition JSON; onboarding metric is scripted test |
+| 4 | Are dependencies and affected systems fully enumerated? | GAP (seed_experts phantom replacement, route conflict, TBD stakeholders) | Fixed: AC8 rewritten, routes use /admin/experts/registry, platform_router.py specified |
+| 5 | Is the story map ordered by risk reduction? | PASS | PASS |
+| 6 | Can an AI agent implement each story from the description alone? | PASS | PASS |
+| 7 | Are there red flags? | 4 flags (route conflict HIGH, phantom replacement MEDIUM, version_hash MEDIUM, TBD stakeholders MEDIUM) | All resolved except stakeholder assignment (non-blocking) |
+
+### Round 2: COMMITTABLE
+
+All Round 1 fixes verified. No red flags remain. Stakeholder assignment is recommended before sprint start but does not block commit.
