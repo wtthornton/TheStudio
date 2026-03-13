@@ -41,6 +41,8 @@ with workflow.unsafe.imports_passed_through():
         PublishOutput,
         QAInput,
         QAOutput,
+        ReadinessActivityOutput,
+        ReadinessInput,
         RouterInput,
         VerifyInput,
         VerifyOutput,
@@ -51,6 +53,7 @@ with workflow.unsafe.imports_passed_through():
         intent_activity,
         publish_activity,
         qa_activity,
+        readiness_activity,
         router_activity,
         verify_activity,
     )
@@ -61,6 +64,7 @@ class WorkflowStep(StrEnum):
 
     INTAKE = "intake"
     CONTEXT = "context"
+    READINESS = "readiness"
     INTENT = "intent"
     ROUTER = "router"
     ASSEMBLER = "assembler"
@@ -98,6 +102,9 @@ STEP_POLICIES: dict[WorkflowStep, StepPolicy] = {
     ),
     WorkflowStep.CONTEXT: StepPolicy(
         timeout=timedelta(minutes=10), max_retries=3,
+    ),
+    WorkflowStep.READINESS: StepPolicy(
+        timeout=timedelta(minutes=2), max_retries=2,
     ),
     WorkflowStep.INTENT: StepPolicy(
         timeout=timedelta(minutes=10), max_retries=2,
@@ -146,6 +153,7 @@ class PipelineInput:
     issue_body: str = ""
     repo_path: str = ""
     repo_tier: str = "observe"
+    readiness_gate_enabled: bool = False
 
 
 @dataclass
@@ -213,6 +221,31 @@ class TheStudioPipelineWorkflow:
             retry_policy=context_policy.to_retry_policy(),
         )
         output.step_reached = WorkflowStep.CONTEXT
+
+        # Step 2.5: Readiness Gate (feature-flagged)
+        if params.readiness_gate_enabled:
+            readiness_policy = STEP_POLICIES[WorkflowStep.READINESS]
+            readiness_result: ReadinessActivityOutput = (
+                await workflow.execute_activity(
+                    readiness_activity,
+                    ReadinessInput(
+                        taskpacket_id=params.taskpacket_id,
+                        issue_title=params.issue_title,
+                        issue_body=params.issue_body,
+                        complexity_index=context_result.complexity_index,
+                        risk_flags=context_result.risk_flags,
+                        labels=params.labels,
+                        trust_tier=params.repo_tier,
+                    ),
+                    start_to_close_timeout=readiness_policy.timeout,
+                    retry_policy=readiness_policy.to_retry_policy(),
+                )
+            )
+            output.step_reached = WorkflowStep.READINESS
+
+            if not readiness_result.proceed:
+                output.rejection_reason = readiness_result.hold_reason
+                return output
 
         # Step 3: Intent Building
         intent_policy = STEP_POLICIES[WorkflowStep.INTENT]

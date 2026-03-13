@@ -62,6 +62,31 @@ class ContextOutput:
 
 
 @dataclass
+class ReadinessInput:
+    """Input for the readiness gate activity."""
+
+    taskpacket_id: str
+    issue_title: str
+    issue_body: str
+    complexity_index: str = "low"
+    risk_flags: dict[str, bool] = field(default_factory=dict)
+    labels: list[str] = field(default_factory=list)
+    trust_tier: str = "observe"
+
+
+@dataclass
+class ReadinessActivityOutput:
+    """Output of the readiness gate activity."""
+
+    proceed: bool = True
+    overall_score: float = 1.0
+    gate_decision: str = "pass"
+    clarification_questions: list[str] = field(default_factory=list)
+    missing_dimensions: list[str] = field(default_factory=list)
+    hold_reason: str | None = None
+
+
+@dataclass
 class IntentInput:
     """Input for the intent building activity."""
 
@@ -274,6 +299,67 @@ async def context_activity(params: ContextInput) -> ContextOutput:
         risk_flags={},
         complexity_index="low",
         context_packs=[],
+    )
+
+
+@activity.defn
+async def readiness_activity(params: ReadinessInput) -> ReadinessActivityOutput:
+    """Step 2.5: Readiness gate — score issue quality before intent building.
+
+    Calls the pure scoring engine (no I/O). Gate decision determines whether
+    the pipeline proceeds to Intent or holds for clarification.
+    """
+    import logging
+
+    from src.readiness.models import ComplexityTier
+    from src.readiness.scorer import score_readiness
+
+    logger = logging.getLogger("thestudio.readiness")
+
+    # Map complexity_index string to tier
+    tier_map = {
+        "low": ComplexityTier.LOW,
+        "medium": ComplexityTier.MEDIUM,
+        "high": ComplexityTier.HIGH,
+    }
+    complexity_tier = tier_map.get(params.complexity_index, ComplexityTier.LOW)
+
+    result = score_readiness(
+        issue_title=params.issue_title,
+        issue_body=params.issue_body,
+        complexity_tier=complexity_tier,
+        risk_flags=params.risk_flags or None,
+        labels=params.labels,
+        trust_tier=params.trust_tier,
+    )
+
+    proceed = result.gate_decision.value == "pass"
+
+    logger.info(
+        "readiness.gate.evaluated",
+        extra={
+            "taskpacket_id": params.taskpacket_id,
+            "overall_score": result.overall_score,
+            "gate_decision": result.gate_decision.value,
+            "missing_dimensions": [d.value for d in result.missing_dimensions],
+            "proceed": proceed,
+        },
+    )
+
+    hold_reason = None
+    if not proceed:
+        hold_reason = (
+            f"Readiness score {result.overall_score:.2f} below threshold; "
+            f"missing: {', '.join(d.value for d in result.missing_dimensions)}"
+        )
+
+    return ReadinessActivityOutput(
+        proceed=proceed,
+        overall_score=result.overall_score,
+        gate_decision=result.gate_decision.value,
+        clarification_questions=list(result.recommended_questions),
+        missing_dimensions=[d.value for d in result.missing_dimensions],
+        hold_reason=hold_reason,
     )
 
 

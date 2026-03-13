@@ -23,6 +23,8 @@ class TaskPacketStatus(enum.StrEnum):
 
     RECEIVED = "received"
     ENRICHED = "enriched"
+    CLARIFICATION_REQUESTED = "clarification_requested"
+    HUMAN_REVIEW_REQUIRED = "human_review_required"
     INTENT_BUILT = "intent_built"
     IN_PROGRESS = "in_progress"
     VERIFICATION_PASSED = "verification_passed"
@@ -34,7 +36,20 @@ class TaskPacketStatus(enum.StrEnum):
 # Allowed status transitions. Key = current status, value = set of valid next statuses.
 ALLOWED_TRANSITIONS: dict[TaskPacketStatus, set[TaskPacketStatus]] = {
     TaskPacketStatus.RECEIVED: {TaskPacketStatus.ENRICHED, TaskPacketStatus.FAILED},
-    TaskPacketStatus.ENRICHED: {TaskPacketStatus.INTENT_BUILT, TaskPacketStatus.FAILED},
+    TaskPacketStatus.ENRICHED: {
+        TaskPacketStatus.CLARIFICATION_REQUESTED,
+        TaskPacketStatus.HUMAN_REVIEW_REQUIRED,
+        TaskPacketStatus.INTENT_BUILT,
+        TaskPacketStatus.FAILED,
+    },
+    TaskPacketStatus.CLARIFICATION_REQUESTED: {
+        TaskPacketStatus.ENRICHED,  # re-evaluation after update
+        TaskPacketStatus.FAILED,
+    },
+    TaskPacketStatus.HUMAN_REVIEW_REQUIRED: {
+        TaskPacketStatus.ENRICHED,  # re-evaluation after update
+        TaskPacketStatus.FAILED,
+    },
     TaskPacketStatus.INTENT_BUILT: {TaskPacketStatus.IN_PROGRESS, TaskPacketStatus.FAILED},
     TaskPacketStatus.IN_PROGRESS: {
         TaskPacketStatus.VERIFICATION_PASSED,
