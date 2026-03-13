@@ -21,19 +21,19 @@ Harden rate limit handling per GitHub best practices: honor `retry-after`, expon
 
 ## Tasks
 
-- [ ] In poll client: on 403/429, raise `RateLimitError(retry_after=...)`; parse `retry-after` header (seconds)
-- [ ] In scheduler: catch `RateLimitError`, wait `retry_after` seconds (or 60 if absent)
-- [ ] On rate limit: skip remaining repos for this cycle; resume next cycle
-- [ ] Exponential backoff: if rate limited N times in a row, double wait time (cap 15 min)
-- [ ] Check `x-ratelimit-remaining` before each request; if < 50, skip remaining repos
-- [ ] Structured log: `ingress.poll.rate_limited` with repo, retry_after
+- [x] In poll client: on 403/429, raise `RateLimitError(retry_after=...)`; parse `retry-after` header (seconds)
+- [x] In scheduler: catch `RateLimitError`, wait `retry_after` seconds (or 60 if absent)
+- [x] On rate limit: skip remaining repos for this cycle; resume next cycle
+- [x] Exponential backoff: if rate limited N times in a row, double wait time (cap 15 min)
+- [x] Check `x-ratelimit-remaining` before each request; if < 50, skip remaining repos
+- [x] Structured log: `ingress.poll.rate_limited` with repo, retry_after
 
 ## Acceptance Criteria
 
-- [ ] 403/429 triggers backoff and repo skip
-- [ ] `retry-after` honored when present
-- [ ] No repeated hammering after rate limit
-- [ ] Unit tests: rate limit response handling
+- [x] 403/429 triggers backoff and repo skip
+- [x] `retry-after` honored when present
+- [x] No repeated hammering after rate limit
+- [x] Unit tests: rate limit response handling
 
 ## Files Affected
 

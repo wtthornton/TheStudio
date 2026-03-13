@@ -21,18 +21,18 @@ Add a poll settings section to the repo settings view in Admin UI. Users can tog
 
 ## Tasks
 
-- [ ] Add poll section to repo settings partial:
+- [x] Add poll section to repo settings partial:
   - Toggle: "Enable issue polling (backup when webhooks unavailable)"
   - Number input: Poll interval (minutes), default 10, min 5, max 60
   - Help text: "Polling checks GitHub for new/updated issues. Use when webhooks are not available (e.g. no public URL)."
-- [ ] Wire to Admin API PATCH for poll_enabled, poll_interval_minutes
-- [ ] Ensure existing Playwright tests pass
+- [x] Wire to Admin API PATCH for poll_enabled, poll_interval_minutes
+- [x] Ensure existing Playwright tests pass
 
 ## Acceptance Criteria
 
-- [ ] Toggle and interval render in repo settings
-- [ ] Changes persist via Admin API
-- [ ] Existing tests pass
+- [x] Toggle and interval render in repo settings
+- [x] Changes persist via Admin API
+- [x] Existing tests pass
 
 ## Files Affected
 

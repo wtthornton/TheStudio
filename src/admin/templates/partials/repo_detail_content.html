@@ -77,12 +77,13 @@
                        {% if not can_update_profile %}disabled{% endif %}>
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Issue Polling (backup when webhooks unavailable)</label>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Enable Issue Polling</label>
                 <select name="poll_enabled" class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                         {% if not can_update_profile %}disabled{% endif %}>
                     <option value="true" {% if repo.profile.poll_enabled %}selected{% endif %}>Enabled</option>
                     <option value="false" {% if not repo.profile.poll_enabled %}selected{% endif %}>Disabled</option>
                 </select>
+                <p class="text-xs text-gray-400 mt-1">Polling checks GitHub for new/updated issues. Use when webhooks are not available (e.g. no public URL).</p>
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Poll Interval (minutes)</label>
@@ -90,6 +91,7 @@
                        value="{{ repo.profile.poll_interval_minutes | default(10) }}"
                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                        {% if not can_update_profile %}disabled{% endif %}>
+                <p class="text-xs text-gray-400 mt-1">How often to check for new issues (5-60 min). Leave at default unless this repo needs a different cadence.</p>
             </div>
         </div>
         {% if can_update_profile %}

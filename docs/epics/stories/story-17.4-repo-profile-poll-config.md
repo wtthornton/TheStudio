@@ -21,19 +21,19 @@ Add poll configuration fields to the repo profile. The scheduler reads `poll_ena
 
 ## Tasks
 
-- [ ] Add to `src/repo/repo_profile.py`:
+- [x] Add to `src/repo/repo_profile.py`:
   - `poll_enabled: bool = False`
   - `poll_interval_minutes: int | None = None` (global default when null)
-- [ ] Add columns to `repo_profile` table via migration
-- [ ] Update Admin API `PATCH /admin/repos/{id}` to accept `poll_enabled`, `poll_interval_minutes`
-- [ ] Update repo profile CRUD to read/write these fields
+- [x] Add columns to `repo_profile` table via migration
+- [x] Update Admin API `PATCH /admin/repos/{id}` to accept `poll_enabled`, `poll_interval_minutes`
+- [x] Update repo profile CRUD to read/write these fields
 
 ## Acceptance Criteria
 
-- [ ] Repo profile stores poll_enabled and poll_interval_minutes
-- [ ] Admin API updates poll config
-- [ ] Scheduler reads poll_enabled from repo profile
-- [ ] Interval null → use THESTUDIO_INTAKE_POLL_INTERVAL_MINUTES
+- [x] Repo profile stores poll_enabled and poll_interval_minutes
+- [x] Admin API updates poll config
+- [x] Scheduler reads poll_enabled from repo profile
+- [x] Interval null → use THESTUDIO_INTAKE_POLL_INTERVAL_MINUTES
 
 ## Files Affected
 

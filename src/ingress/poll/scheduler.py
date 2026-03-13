@@ -1,10 +1,12 @@
 """Poll scheduler — runs poll cycle at configurable interval.
 
 Epic 17 — Poll for Issues as Backup to Webhooks.
+Supports per-repo poll intervals and exponential backoff on rate limits.
 """
 
 import asyncio
 import logging
+from datetime import datetime, timezone
 
 from sqlalchemy import select
 
@@ -17,11 +19,58 @@ from src.settings import settings
 
 logger = logging.getLogger(__name__)
 
+# Exponential backoff state (Story 17.6)
+_consecutive_rate_limits = 0
+MAX_BACKOFF_SECONDS = 900  # 15 minutes
+
+
+def _backoff_seconds(retry_after: int | None) -> int:
+    """Calculate backoff with exponential escalation on consecutive rate limits.
+
+    First hit: use retry_after (or 60s default).
+    Consecutive hits: double the wait each time, capped at 15 minutes.
+    """
+    global _consecutive_rate_limits
+    _consecutive_rate_limits += 1
+
+    base = retry_after or 60
+    multiplier = 2 ** (_consecutive_rate_limits - 1)
+    wait = min(base * multiplier, MAX_BACKOFF_SECONDS)
+
+    logger.warning(
+        "ingress.poll.rate_limited consecutive=%d backoff=%ds",
+        _consecutive_rate_limits,
+        wait,
+    )
+    return wait
+
+
+def _reset_backoff() -> None:
+    """Reset consecutive rate limit counter after a successful cycle."""
+    global _consecutive_rate_limits
+    _consecutive_rate_limits = 0
+
+
+def _repo_due_for_poll(repo: RepoProfileRow) -> bool:
+    """Check if a repo is due for polling based on its per-repo interval.
+
+    Uses repo.poll_interval_minutes if set, otherwise the global default.
+    Returns True if the repo has never been polled or the interval has elapsed.
+    """
+    if repo.poll_last_run_at is None:
+        return True
+
+    interval_minutes = repo.poll_interval_minutes or settings.intake_poll_interval_minutes
+    now = datetime.now(timezone.utc)
+    elapsed = (now - repo.poll_last_run_at).total_seconds()
+    return elapsed >= interval_minutes * 60
+
 
 async def run_poll_cycle() -> tuple[int, int, bool]:
     """Run one poll cycle for all repos with poll_enabled.
 
-    Processes repos serially. On RateLimitError, backs off and skips remaining repos.
+    Processes repos serially. Skips repos not due for polling (per-repo interval).
+    On RateLimitError, backs off exponentially and skips remaining repos.
 
     Returns:
         (repos_polled, issues_created, rate_limit_hit)
@@ -48,6 +97,14 @@ async def run_poll_cycle() -> tuple[int, int, bool]:
         repos = list(result.scalars().all())
 
         for repo in repos:
+            if not _repo_due_for_poll(repo):
+                logger.debug(
+                    "poll.skip repo=%s not due (interval=%dm)",
+                    repo.full_name,
+                    repo.poll_interval_minutes or settings.intake_poll_interval_minutes,
+                )
+                continue
+
             try:
                 config = PollConfig(
                     owner=repo.owner,
@@ -69,6 +126,7 @@ async def run_poll_cycle() -> tuple[int, int, bool]:
                     latest = max(i.get("updated_at", "") for i in result.issues)
                     if latest:
                         repo.poll_since = latest
+                repo.poll_last_run_at = datetime.now(timezone.utc)
                 await session.commit()
 
                 repos_polled += 1
@@ -81,14 +139,17 @@ async def run_poll_cycle() -> tuple[int, int, bool]:
                 )
             except RateLimitError as exc:
                 rate_limit_hit = True
-                wait_sec = exc.retry_after or 60
+                wait_sec = _backoff_seconds(exc.retry_after)
                 logger.warning(
-                    "poll.rate_limited repo=%s retry_after=%ds skipping remaining repos",
+                    "ingress.poll.rate_limited repo=%s retry_after=%ds",
                     repo.full_name,
                     wait_sec,
                 )
                 await asyncio.sleep(wait_sec)
                 break
+
+    if not rate_limit_hit and repos_polled > 0:
+        _reset_backoff()
 
     return repos_polled, issues_created, rate_limit_hit
 

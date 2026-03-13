@@ -21,20 +21,20 @@ Integration tests verify that the poll path discovers issues, creates TaskPacket
 
 ## Tasks
 
-- [ ] Create `tests/integration/test_poll_intake.py`:
+- [x] Create `tests/integration/test_poll_intake.py`:
   1. **Happy path:** Mock 200 with 1 new issue → feed creates TaskPacket → workflow started
   2. **304 path:** Mock 304 → no TaskPackets created, no workflow
   3. **Dedupe path:** Same issue polled twice (same updated_at) → one TaskPacket only
   4. **PR filtered:** Mock 200 with 1 issue + 1 PR → only 1 TaskPacket
   5. **Feature flag off:** Scheduler does not run when disabled
-- [ ] Use test database and mocked GitHub client
-- [ ] Ensure no real GitHub API calls or tokens
+- [x] Use test database and mocked GitHub client
+- [x] Ensure no real GitHub API calls or tokens
 
 ## Acceptance Criteria
 
-- [ ] All 5 scenarios pass
-- [ ] Tests run without real GitHub API or tokens
-- [ ] Existing integration tests still pass
+- [x] All 5 scenarios pass
+- [x] Tests run without real GitHub API or tokens
+- [x] Existing integration tests still pass
 
 ## Test Cases
 

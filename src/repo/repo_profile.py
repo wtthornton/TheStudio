@@ -72,6 +72,9 @@ class RepoProfileRow(Base):
     poll_etag: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
     poll_last_modified: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
     poll_since: Mapped[str | None] = mapped_column(String(64), nullable=True, default=None)
+    poll_last_run_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None
+    )
     readiness_gate_enabled: Mapped[bool] = mapped_column(nullable=False, default=False)
     merge_method: Mapped[str] = mapped_column(
         String(20), nullable=False, default="squash",

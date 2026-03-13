@@ -2,8 +2,8 @@
 
 **Author:** Saga
 **Date:** 2026-03-11
-**Status:** In Progress — Sprint 1 Complete (Stories 17.1-17.3)
-**Target Sprint:** Sprint 1 complete (2026-03-13); Stories 17.4-17.8 remain for Sprint 2-3
+**Status:** Complete — All Stories Delivered (17.1-17.8)
+**Target Sprint:** Sprint 1 complete (2026-03-13); Sprint 2 complete (2026-03-13)
 
 ---
 
@@ -435,3 +435,14 @@ Stories 17.1-17.3 delivered with full test coverage:
 - **Per-repo poll state:** `poll_etag`, `poll_last_modified`, `poll_since` columns on RepoProfileRow
 - **Total:** 21 new tests, 1,735 unit tests passing, 0 regressions
 - All code behind `THESTUDIO_INTAKE_POLL_ENABLED` feature flag (default: `false`)
+
+## Sprint 2 Completion (2026-03-13)
+
+Stories 17.4-17.8 delivered, epic fully complete:
+- **17.4 Repo Profile Config:** `poll_last_run_at` column added (migration 021), per-repo interval in scheduler
+- **17.5 Admin UI Poll Settings:** Help text added to poll toggle and interval inputs
+- **17.6 Rate Limit Handling:** Exponential backoff (2^N, capped 15 min), threshold lowered to 50, backoff resets on success
+- **17.7 Integration Tests:** 6 test scenarios (happy path, 304, dedupe, PR filter, feature flag off, full cycle)
+- **17.8 Documentation:** `docs/deployment.md` expanded with per-repo override and rate limit info; `docs/ingress.md` created with full architecture
+- **Total:** 37 poll tests (16 new), 1,745 unit tests passing, 0 regressions
+- All acceptance criteria met across all 8 stories

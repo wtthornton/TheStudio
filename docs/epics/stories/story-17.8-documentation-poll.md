@@ -21,22 +21,22 @@ Document the poll feature in deployment and intake docs. Operators need to know 
 
 ## Tasks
 
-- [ ] Add poll section to `docs/deployment.md`:
+- [x] Add poll section to `docs/deployment.md`:
   - `THESTUDIO_INTAKE_POLL_ENABLED` (default: false)
   - `THESTUDIO_INTAKE_POLL_INTERVAL_MINUTES` (default: 10)
   - Per-repo override via Admin UI
   - When to use: no public URL, webhook backup
   - When not to use: prefer webhooks when public URL exists
-- [ ] Create or expand `docs/ingress.md`:
+- [x] Create or expand `docs/ingress.md`:
   - Describe webhook path (primary) vs poll path (backup)
   - Diagram: both paths → TaskPacket creation → workflow
-- [ ] Link to `docs/ideas/poll-for-issues-backup.md` for rationale and research
+- [x] Link to `docs/ideas/poll-for-issues-backup.md` for rationale and research
 
 ## Acceptance Criteria
 
-- [ ] Deployment doc includes poll env vars and guidance
-- [ ] Intake doc describes both paths
-- [ ] Operator can enable poll from docs alone
+- [x] Deployment doc includes poll env vars and guidance
+- [x] Intake doc describes both paths
+- [x] Operator can enable poll from docs alone
 
 ## Files Affected
 

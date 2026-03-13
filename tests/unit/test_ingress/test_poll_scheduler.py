@@ -1,21 +1,43 @@
 """Unit tests for poll scheduler."""
 
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from src.ingress.poll.models import PollResult, RateLimitError
-from src.ingress.poll.scheduler import run_poll_cycle
+from src.ingress.poll.scheduler import (
+    _backoff_seconds,
+    _repo_due_for_poll,
+    _reset_backoff,
+    run_poll_cycle,
+)
 
 
-def _make_repo(owner: str = "org", repo_name: str = "repo1") -> MagicMock:
+def _make_repo(
+    owner: str = "org",
+    repo_name: str = "repo1",
+    poll_last_run_at: datetime | None = None,
+    poll_interval_minutes: int | None = None,
+) -> MagicMock:
     """Create a mock RepoProfileRow with poll_enabled."""
     repo = MagicMock()
     repo.owner = owner
     repo.repo_name = repo_name
     repo.full_name = f"{owner}/{repo_name}"
     repo.poll_enabled = True
+    repo.poll_interval_minutes = poll_interval_minutes
+    repo.poll_etag = None
+    repo.poll_last_modified = None
+    repo.poll_since = None
+    repo.poll_last_run_at = poll_last_run_at
     return repo
+
+
+@pytest.fixture(autouse=True)
+def _reset_backoff_state() -> None:
+    """Reset exponential backoff state between tests."""
+    _reset_backoff()
 
 
 @pytest.mark.asyncio
@@ -54,6 +76,7 @@ async def test_poll_cycle_single_repo(
     """One repo with poll enabled → poll client called once."""
     mock_settings.intake_poll_enabled = True
     mock_settings.intake_poll_token = "ghp_test"
+    mock_settings.intake_poll_interval_minutes = 10
 
     repo = _make_repo()
     mock_session = AsyncMock()
@@ -94,6 +117,7 @@ async def test_poll_cycle_two_repos_serial(
     """Two repos → both polled serially."""
     mock_settings.intake_poll_enabled = True
     mock_settings.intake_poll_token = "ghp_test"
+    mock_settings.intake_poll_interval_minutes = 10
 
     repo1 = _make_repo("org", "repo1")
     repo2 = _make_repo("org", "repo2")
@@ -135,6 +159,7 @@ async def test_poll_cycle_rate_limit_skips_remaining(
     """Rate limit on 2nd repo → backs off and skips remaining."""
     mock_settings.intake_poll_enabled = True
     mock_settings.intake_poll_token = "ghp_test"
+    mock_settings.intake_poll_interval_minutes = 10
 
     repo1 = _make_repo("org", "repo1")
     repo2 = _make_repo("org", "repo2")
@@ -158,4 +183,93 @@ async def test_poll_cycle_rate_limit_skips_remaining(
     assert repos == 1  # only first repo counted
     assert hit is True
     assert mock_fetch.call_count == 2  # tried 2, 3rd skipped
-    mock_sleep.assert_called_once_with(30)
+    mock_sleep.assert_called_once_with(30)  # first hit → 30s (no multiplier yet)
+
+
+# ---------------------------------------------------------------------------
+# Per-repo interval tests (Story 17.4)
+# ---------------------------------------------------------------------------
+
+
+def test_repo_due_for_poll_never_polled() -> None:
+    """Repo never polled → always due."""
+    repo = _make_repo(poll_last_run_at=None)
+    assert _repo_due_for_poll(repo) is True
+
+
+@patch("src.ingress.poll.scheduler.settings")
+def test_repo_due_for_poll_interval_elapsed(mock_settings: MagicMock) -> None:
+    """Repo polled 15 min ago, interval=10 → due."""
+    mock_settings.intake_poll_interval_minutes = 10
+    repo = _make_repo(poll_last_run_at=datetime.now(timezone.utc) - timedelta(minutes=15))
+    assert _repo_due_for_poll(repo) is True
+
+
+@patch("src.ingress.poll.scheduler.settings")
+def test_repo_not_due_for_poll_interval_not_elapsed(mock_settings: MagicMock) -> None:
+    """Repo polled 3 min ago, interval=10 → not due."""
+    mock_settings.intake_poll_interval_minutes = 10
+    repo = _make_repo(poll_last_run_at=datetime.now(timezone.utc) - timedelta(minutes=3))
+    assert _repo_due_for_poll(repo) is False
+
+
+@patch("src.ingress.poll.scheduler.settings")
+def test_repo_due_uses_per_repo_interval(mock_settings: MagicMock) -> None:
+    """Per-repo interval=5 overrides global=10; polled 6 min ago → due."""
+    mock_settings.intake_poll_interval_minutes = 10
+    repo = _make_repo(
+        poll_last_run_at=datetime.now(timezone.utc) - timedelta(minutes=6),
+        poll_interval_minutes=5,
+    )
+    assert _repo_due_for_poll(repo) is True
+
+
+@patch("src.ingress.poll.scheduler.settings")
+def test_repo_not_due_per_repo_interval(mock_settings: MagicMock) -> None:
+    """Per-repo interval=30; polled 10 min ago → not due."""
+    mock_settings.intake_poll_interval_minutes = 10
+    repo = _make_repo(
+        poll_last_run_at=datetime.now(timezone.utc) - timedelta(minutes=10),
+        poll_interval_minutes=30,
+    )
+    assert _repo_due_for_poll(repo) is False
+
+
+# ---------------------------------------------------------------------------
+# Exponential backoff tests (Story 17.6)
+# ---------------------------------------------------------------------------
+
+
+def test_backoff_first_hit_uses_retry_after() -> None:
+    """First rate limit → uses retry_after directly."""
+    wait = _backoff_seconds(30)
+    assert wait == 30
+
+
+def test_backoff_second_hit_doubles() -> None:
+    """Second consecutive rate limit → doubles."""
+    _backoff_seconds(30)  # first
+    wait = _backoff_seconds(30)  # second
+    assert wait == 60  # 30 * 2
+
+
+def test_backoff_capped_at_15_minutes() -> None:
+    """Backoff caps at 900 seconds (15 minutes)."""
+    for _ in range(10):
+        wait = _backoff_seconds(120)
+    assert wait <= 900
+
+
+def test_backoff_default_retry_after() -> None:
+    """No retry_after → uses 60s default."""
+    wait = _backoff_seconds(None)
+    assert wait == 60
+
+
+def test_reset_backoff_resets_counter() -> None:
+    """Reset clears consecutive counter."""
+    _backoff_seconds(30)  # first
+    _backoff_seconds(30)  # second
+    _reset_backoff()
+    wait = _backoff_seconds(30)  # after reset → back to first
+    assert wait == 30

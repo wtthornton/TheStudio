@@ -15,7 +15,7 @@ from src.ingress.poll.models import PollConfig, PollResult, RateLimitError
 logger = logging.getLogger(__name__)
 
 GITHUB_API_BASE = "https://api.github.com"
-RATE_LIMIT_EARLY_RETURN = 100
+RATE_LIMIT_EARLY_RETURN = 50
 
 
 def _parse_link_header(link_header: str | None) -> dict[str, str]:

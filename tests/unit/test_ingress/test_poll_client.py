@@ -123,7 +123,7 @@ def test_fetch_issues_low_remaining_early_return() -> None:
             200,
             json=[{"number": 1, "updated_at": "2026-03-11T12:00:00Z"}],
             headers={
-                "x-ratelimit-remaining": "50",
+                "x-ratelimit-remaining": "30",
                 "link": f'<{page2_url}>; rel="next"',
             },
         )
@@ -131,7 +131,7 @@ def test_fetch_issues_low_remaining_early_return() -> None:
     config = PollConfig(owner="owner", repo="repo", token="secret")
     result = asyncio.run(fetch_issues(config))
     assert len(result.issues) == 1
-    assert result.rate_limit_remaining == 50
+    assert result.rate_limit_remaining == 30
 
 
 @respx.mock

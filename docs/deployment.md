@@ -65,10 +65,16 @@ All flags default to safe/mock mode. Existing tests are unaffected regardless of
 | Variable | Default | Required | Description |
 |----------|---------|----------|-------------|
 | `THESTUDIO_INTAKE_POLL_ENABLED` | `false` | No | Enable issue polling (backup when no public URL) |
-| `THESTUDIO_INTAKE_POLL_INTERVAL_MINUTES` | `10` | No | Poll interval in minutes (5–60) |
+| `THESTUDIO_INTAKE_POLL_INTERVAL_MINUTES` | `10` | No | Global poll interval in minutes (5–60) |
 | `THESTUDIO_INTAKE_POLL_TOKEN` | `""` | When poll enabled | GitHub PAT or installation token for API calls |
 
 **When to use polling:** No public URL (local dev, air-gapped, NAT-only) or webhooks misconfigured. Prefer webhooks when a public URL exists.
+
+**Per-repo override:** Each repo can override the global poll interval via Admin UI or `PATCH /admin/repos/{id}/profile` with `poll_enabled` and `poll_interval_minutes`. When `poll_interval_minutes` is null on a repo, the global `THESTUDIO_INTAKE_POLL_INTERVAL_MINUTES` is used.
+
+**Rate limit handling:** The poller honors GitHub's `retry-after` header and uses exponential backoff (capped at 15 minutes) on consecutive rate limits. When `x-ratelimit-remaining` drops below 50, remaining repos are skipped until the next cycle.
+
+See [docs/ingress.md](ingress.md) for architecture details on webhook vs poll paths.
 
 ### GitHub Integration
 
