@@ -7,13 +7,31 @@
 # Examples:
 #   Self-signed (default):  :443
 #   Let's Encrypt:          studio.example.com
+#
+# Admin auth:
+#   Generate a password hash:  docker run --rm caddy:2.9-alpine caddy hash-password --plaintext 'YOUR_PASSWORD'
+#   Set ADMIN_USER and ADMIN_PASSWORD_HASH in your .env file.
 
 localhost {
 	tls internal
 
-	reverse_proxy app:8000 {
-		health_uri /healthz
-		health_interval 10s
+	# Admin routes require Basic Auth.
+	# Authenticated username is forwarded as X-User-ID for the app's RBAC system.
+	handle /admin/* {
+		basic_auth {
+			{$ADMIN_USER:admin} {$ADMIN_PASSWORD_HASH}
+		}
+		reverse_proxy app:8000 {
+			header_up X-User-ID {http.auth.user.id}
+		}
+	}
+
+	# All other routes (webhooks, healthz, readyz, etc.) — no auth.
+	handle {
+		reverse_proxy app:8000 {
+			health_uri /healthz
+			health_interval 10s
+		}
 	}
 
 	log {

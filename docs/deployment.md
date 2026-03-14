@@ -162,7 +162,7 @@ docker compose -f docker-compose.prod.yml up -d
 ./wait-for-stack.sh           # Optional: wait until HTTPS /healthz is ready
 ```
 
-Then open **https://localhost:9443/admin/ui/** (accept the self-signed cert). See **docs/URLs.md** for all URLs. The default compose binds Caddy to host ports **9080** (HTTP) and **9443** (HTTPS) so this stack can run alongside other systems using 80/443. To use **real** Anthropic and GitHub later, edit `infra/.env` with real keys and set `THESTUDIO_LLM_PROVIDER=anthropic`, `THESTUDIO_GITHUB_PROVIDER=real`, then `docker compose -f docker-compose.prod.yml up -d --force-recreate app`.
+Then open **https://localhost:9443/admin/ui/** (accept the self-signed cert, then enter Basic Auth credentials — default user: `admin`). See **docs/URLs.md** for all URLs. The default compose binds Caddy to host ports **9080** (HTTP) and **9443** (HTTPS) so this stack can run alongside other systems using 80/443. To use **real** Anthropic and GitHub later, edit `infra/.env` with real keys and set `THESTUDIO_LLM_PROVIDER=anthropic`, `THESTUDIO_GITHUB_PROVIDER=real`, then `docker compose -f docker-compose.prod.yml up -d --force-recreate app`.
 
 ## Secret Generation
 
@@ -194,6 +194,10 @@ POSTGRES_PASSWORD=<generated>
 THESTUDIO_ENCRYPTION_KEY=<generated>
 THESTUDIO_ANTHROPIC_API_KEY=sk-ant-...
 THESTUDIO_WEBHOOK_SECRET=<generated>
+
+# Admin UI Basic Auth (Caddy)
+ADMIN_USER=admin
+ADMIN_PASSWORD_HASH=<generated — see Admin Authentication below>
 ```
 
 ## First-Time Setup
@@ -283,6 +287,66 @@ Ensure ports 80 and 443 are open in your firewall. Caddy handles certificate iss
 
 ```bash
 docker compose -f docker-compose.prod.yml restart caddy
+```
+
+## Admin Authentication
+
+Production uses **HTTP Basic Auth** at the Caddy layer to protect all `/admin/*` routes (API and UI). Caddy forwards the authenticated username as `X-User-ID` to the FastAPI app, which resolves permissions via the RBAC system (`user_roles` table).
+
+In dev mode (`LLM_PROVIDER=mock`), auth is bypassed — the app auto-authenticates as `dev-admin@localhost`.
+
+### Setup
+
+1. **Generate a password hash:**
+   ```bash
+   docker run --rm caddy:2.9-alpine caddy hash-password --plaintext 'YOUR_SECURE_PASSWORD'
+   ```
+
+2. **Add credentials to `infra/.env`** (double all `$` signs to escape Docker Compose interpolation):
+   ```ini
+   ADMIN_USER=admin
+   ADMIN_PASSWORD_HASH=$$2a$$14$$...the hash from step 1 with $$ escaping...
+   ```
+
+3. **Seed the admin user in the RBAC table** (first time only):
+   ```bash
+   docker compose -f docker-compose.prod.yml exec postgres \
+       psql -U thestudio -d thestudio -c \
+       "INSERT INTO user_roles (id, user_id, role, created_by) VALUES (gen_random_uuid(), 'admin', 'admin', 'seed') ON CONFLICT (user_id) DO NOTHING;"
+   ```
+
+4. **Restart Caddy:**
+   ```bash
+   docker compose -f docker-compose.prod.yml up -d caddy
+   ```
+
+### How it works
+
+1. Browser requests `/admin/ui/dashboard`
+2. Caddy responds with `401 WWW-Authenticate: Basic` — browser shows login dialog
+3. On success, Caddy forwards `X-User-ID: <username>` to the app
+4. The app's RBAC system resolves the user's role from `user_roles` table
+5. Permissions are enforced per-route (ADMIN, OPERATOR, VIEWER)
+
+### Adding users
+
+```bash
+# Add an operator user
+docker compose -f docker-compose.prod.yml exec postgres \
+    psql -U thestudio -d thestudio -c \
+    "INSERT INTO user_roles (id, user_id, role, created_by) VALUES (gen_random_uuid(), 'operator1', 'operator', 'admin') ON CONFLICT (user_id) DO NOTHING;"
+```
+
+Then add the user's credentials to the Caddyfile `basic_auth` block, or use environment variables for multiple users.
+
+### Password rotation
+
+```bash
+# 1. Generate new hash
+docker run --rm caddy:2.9-alpine caddy hash-password --plaintext 'NEW_PASSWORD'
+# 2. Update ADMIN_PASSWORD_HASH in infra/.env (double all $ signs)
+# 3. Restart Caddy
+docker compose -f docker-compose.prod.yml up -d caddy
 ```
 
 ## Post-Deployment Verification

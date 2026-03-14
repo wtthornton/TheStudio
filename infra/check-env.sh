@@ -83,6 +83,14 @@ else
     pass "THESTUDIO_WEBHOOK_SECRET is set"
 fi
 
+# --- Admin UI credentials ---
+
+if [ -z "${ADMIN_PASSWORD_HASH:-}" ]; then
+    warn "WARN: ADMIN_PASSWORD_HASH is not set (Admin UI will not start in production)"
+else
+    pass "ADMIN_PASSWORD_HASH is set"
+fi
+
 # --- Known insecure values grep ---
 
 echo ""

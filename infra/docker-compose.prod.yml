@@ -9,6 +9,9 @@ services:
     ports:
       - "9080:80"
       - "9443:443"
+    environment:
+      ADMIN_USER: "${ADMIN_USER:-admin}"
+      ADMIN_PASSWORD_HASH: "${ADMIN_PASSWORD_HASH:?Set ADMIN_PASSWORD_HASH in .env — run: docker run --rm caddy:2.9-alpine caddy hash-password --plaintext YOUR_PASSWORD}"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

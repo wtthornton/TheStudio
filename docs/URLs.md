@@ -30,7 +30,9 @@ No trailing slash on base URLs. Configurable via `THESTUDIO_BASE_URL` (productio
 
 ## Admin API (authenticated)
 
-Prefix: `/admin`. Use `X-User-ID` header (e.g. `dev-admin@localhost` for mock).
+Prefix: `/admin`. Authentication differs by environment:
+- **Dev** (`LLM_PROVIDER=mock`): Auto-authenticated as `dev-admin@localhost` — no credentials needed.
+- **Production**: Caddy enforces HTTP Basic Auth on all `/admin/*` routes. The authenticated username is forwarded as `X-User-ID` to the app's RBAC system. Default username: `admin`. Set `ADMIN_USER` and `ADMIN_PASSWORD_HASH` in `infra/.env`.
 
 | Path | Method | Purpose |
 |------|--------|---------|
@@ -42,13 +44,13 @@ Prefix: `/admin`. Use `X-User-ID` header (e.g. `dev-admin@localhost` for mock).
 
 **Examples:**
 - Dev: `http://localhost:8000/admin/health`, `http://localhost:8000/docs`
-- Prod: `https://localhost:9443/admin/health`, `https://localhost:9443/docs`
+- Prod: `https://localhost:9443/admin/health` (browser will prompt for credentials), `https://localhost:9443/docs`
 
 ---
 
 ## Admin UI (HTML pages)
 
-Prefix: `/admin/ui`. Same auth as Admin API (mock: `X-User-ID: dev-admin@localhost`).
+Prefix: `/admin/ui`. Same auth as Admin API (see above).
 
 | Path | Page |
 |------|------|
@@ -68,7 +70,7 @@ Prefix: `/admin/ui`. Same auth as Admin API (mock: `X-User-ID: dev-admin@localho
 
 **Entry points:**
 - Dev: **http://localhost:8000/admin/ui/** or **http://localhost:8000/admin/ui/dashboard**
-- Prod: **https://localhost:9443/admin/ui/** or **https://localhost:9443/admin/ui/dashboard**
+- Prod: **https://localhost:9443/admin/ui/** or **https://localhost:9443/admin/ui/dashboard** (browser prompts for Basic Auth credentials)
 
 ---
 

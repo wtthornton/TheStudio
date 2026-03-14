@@ -35,6 +35,9 @@ echo ""
 POSTGRES_PASSWORD="$(python3 -c "import secrets; print(secrets.token_urlsafe(24))")"
 THESTUDIO_ENCRYPTION_KEY="$(python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")"
 THESTUDIO_WEBHOOK_SECRET="$(python3 -c "import secrets; print(secrets.token_hex(32))")"
+ADMIN_PASSWORD="$(python3 -c "import secrets; print(secrets.token_urlsafe(16))")"
+# Generate Caddy bcrypt hash and escape $ for Docker Compose
+ADMIN_PASSWORD_HASH="$(docker run --rm caddy:2.9-alpine caddy hash-password --plaintext "$ADMIN_PASSWORD" 2>/dev/null | sed 's/\$/\$\$/g')"
 
 if [ "$MOCK" = true ]; then
     THESTUDIO_ANTHROPIC_API_KEY="sk-mock-placeholder-for-production-stack"
@@ -63,6 +66,11 @@ THESTUDIO_WEBHOOK_SECRET=$THESTUDIO_WEBHOOK_SECRET
 THESTUDIO_GITHUB_APP_ID=
 THESTUDIO_GITHUB_PRIVATE_KEY_PATH=
 
+# ─── ADMIN UI AUTH ───────────────────────────────────────────────────────────
+# Caddy Basic Auth for /admin/* routes. Password: $ADMIN_PASSWORD
+ADMIN_USER=admin
+ADMIN_PASSWORD_HASH=$ADMIN_PASSWORD_HASH
+
 # ─── OPTIONAL ────────────────────────────────────────────────────────────────
 THESTUDIO_LLM_PROVIDER=$THESTUDIO_LLM_PROVIDER
 THESTUDIO_GITHUB_PROVIDER=$THESTUDIO_GITHUB_PROVIDER
@@ -74,6 +82,17 @@ THESTUDIO_GITHUB_PROVIDER=$THESTUDIO_GITHUB_PROVIDER
 EOF
 
 echo "Wrote $ENV_FILE"
+echo ""
+echo "Admin UI credentials:"
+echo "  Username: admin"
+echo "  Password: $ADMIN_PASSWORD"
+echo ""
+echo "IMPORTANT: Save this password — it is not recoverable from the hash."
+echo ""
+echo "After first deploy, seed the admin user in the RBAC table:"
+echo "  docker compose -f docker-compose.prod.yml exec postgres \\"
+echo "    psql -U thestudio -d thestudio -c \\"
+echo "    \"INSERT INTO user_roles (id, user_id, role, created_by) VALUES (gen_random_uuid(), 'admin', 'admin', 'seed') ON CONFLICT (user_id) DO NOTHING;\""
 echo ""
 if [ "$MOCK" = false ]; then
     echo "Next: edit .env and set THESTUDIO_ANTHROPIC_API_KEY (and GitHub App vars if using real provider)."
