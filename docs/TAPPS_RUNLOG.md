@@ -138,3 +138,16 @@
 [2026-03-16T01:11:00] [validate] pytest tests/agent/ — 46 passed (31 framework + 15 gateway)
 [2026-03-16T01:12:00] [validate] pytest tests/unit/ — 1,745 passed, 0 failures, 0 regressions
 [2026-03-16T01:13:00] [verify] updated sprint plan, handoff doc, runlog
+
+### Epic 23 Story 1.10 — Integration Test: Primary Agent through Framework (2026-03-16)
+
+[2026-03-16T02:00:00] [discover] read epic-23 Story 1.10 spec — end-to-end integration test
+[2026-03-16T02:01:00] [discover] read src/agent/framework.py, primary_agent.py, developer_role.py, evidence.py
+[2026-03-16T02:02:00] [discover] read tests/agent/test_framework.py (Story 1.9), test_primary_agent_gateway.py (Story 1.8)
+[2026-03-16T02:10:00] [develop] created tests/agent/test_primary_agent_framework.py — 11 integration tests
+[2026-03-16T02:11:00] [develop] TestImplementIntegration — 7 tests: full lifecycle, gateway selection, audit, spend, prompts, agentic mode, overlays
+[2026-03-16T02:12:00] [develop] TestHandleLoopbackIntegration — 3 tests: full lifecycle, audit, failure context in prompt
+[2026-03-16T02:13:00] [develop] TestFeatureFlagIntegration — 1 test: flag off skips LLM, returns valid evidence
+[2026-03-16T02:15:00] [validate] pytest tests/agent/test_primary_agent_framework.py — 11 passed in 1.09s
+[2026-03-16T02:16:00] [validate] pytest tests/agent/ — 57 passed (31 framework + 15 gateway + 11 integration), 0 regressions
+[2026-03-16T02:17:00] [verify] updated handoff doc (Sprint 1: 10/10), runlog

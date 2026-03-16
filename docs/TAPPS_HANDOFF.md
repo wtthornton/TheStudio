@@ -26,7 +26,7 @@
 | 16 | Issue Readiness Gate | 5 | Complete (Sprint 17: 16.1-16.4, Sprint 18: 16.5-16.8) |
 | 17–18 | Poll for Issues, Production E2E | 5 | Draft |
 | 19–22 | Critical Gaps, Execute Tier | 5 | Complete |
-| 23 | Unified Agent Framework | 5 | In Progress (Sprint 1: 9/10 stories done) |
+| 23 | Unified Agent Framework | 5 | In Progress (Sprint 1: 10/10 stories done — hardening 1.11-1.13 remain) |
 | 24–25, 27 | Chat, Container, Webhooks | 5 | Draft |
 | 26 | File-Based Expert Packaging | 5 | Complete |
 
@@ -38,7 +38,7 @@
 |--------|-------|
 | Source files (src/) | 150 |
 | Test files (tests/) | 88 |
-| Tests passing | 1,745 |
+| Tests passing | 1,756 |
 | Tests deselected | 14 (integration — require PostgreSQL/Temporal) |
 | Test warnings | 7 (unawaited coroutine mocks) |
 | Coverage | 84% |
