@@ -115,3 +115,26 @@
 [2026-03-13T12:41:00] [validate] pytest tests/unit/ - 1,721 passed in 88.55s, 0 failures, 0 regressions
 [2026-03-13T12:42:00] [verify] updated sprint plan DoD - all 17 items checked
 [2026-03-13T12:43:00] [verify] updated epic status to Complete, handoff doc, runlog
+
+### Epic 23 Sprint 1 — Unified Agent Framework, Stories 1.1-1.9 (2026-03-16)
+
+[2026-03-16T00:01:00] [discover] read epic-23-unified-agent-framework.md, sprint-epic23-s1.md — full sprint plan
+[2026-03-16T00:02:00] [discover] read P1/P2 investigation results — use AnthropicAdapter for completion, Pydantic for parsing
+[2026-03-16T00:10:00] [develop] Story 1.1 — created AgentConfig, AgentContext, AgentResult dataclasses in src/agent/framework.py
+[2026-03-16T00:15:00] [develop] Story 1.2 — created AgentRunner core with _resolve_provider, _check_budget, _record_audit
+[2026-03-16T00:20:00] [develop] Story 1.7 — added agent_llm_enabled dict to settings.py, registered in settings_service.py
+[2026-03-16T00:25:00] [develop] Story 1.4 — implemented _call_llm_completion() using AnthropicAdapter
+[2026-03-16T00:30:00] [develop] Story 1.3 — implemented _call_llm_agentic() wrapping claude_agent_sdk
+[2026-03-16T00:35:00] [develop] Story 1.5 — implemented _parse_output() with _extract_json_block(), span parse metrics
+[2026-03-16T00:40:00] [develop] Story 1.6 — completed run() lifecycle: spans, fallback dispatch, prompt builders
+[2026-03-16T00:45:00] [validate] Story 1.9 — 31 framework unit tests passing in test_framework.py
+[2026-03-16T01:00:00] [develop] Story 1.8 — refactored primary_agent.py to use AgentRunner
+[2026-03-16T01:01:00] [develop] Story 1.8 — created PrimaryAgentRunner subclass (custom prompt building)
+[2026-03-16T01:02:00] [develop] Story 1.8 — created _make_developer_config() factory
+[2026-03-16T01:03:00] [develop] Story 1.8 — removed _run_agent, _resolve_provider, _estimate_tokens, _record_audit_and_spend
+[2026-03-16T01:04:00] [develop] Story 1.8 — updated test_primary_agent_gateway.py (15 tests, framework-level mocking)
+[2026-03-16T01:05:00] [develop] Story 1.8 — updated tests/unit/test_primary_agent.py (2 tests adapted)
+[2026-03-16T01:10:00] [validate] ruff check — all changed files pass
+[2026-03-16T01:11:00] [validate] pytest tests/agent/ — 46 passed (31 framework + 15 gateway)
+[2026-03-16T01:12:00] [validate] pytest tests/unit/ — 1,745 passed, 0 failures, 0 regressions
+[2026-03-16T01:13:00] [verify] updated sprint plan, handoff doc, runlog

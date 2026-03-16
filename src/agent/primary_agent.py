@@ -1,11 +1,12 @@
 """Primary Agent — implements code changes from an Intent Specification.
 
-Uses Claude Agent SDK with the Developer role to implement changes,
-produce an evidence bundle, and support verification loopbacks.
+Uses the Unified Agent Framework (AgentRunner) with the Developer role
+to implement changes, produce an evidence bundle, and support verification
+loopbacks.
 
 Architecture reference: thestudioarc/08-agent-roles.md
 Epic reference: Story 0.5 — Primary Agent
-Sprint 19 Stream A: Model Gateway integration (Stories A1-A6)
+Epic 23 Story 1.8: Refactored to use AgentRunner framework.
 """
 
 import logging
@@ -13,17 +14,13 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.admin.model_gateway import (
-    BudgetExceededError,
-    ModelCallAudit,
-    NoProviderAvailableError,
-    ProviderConfig,
-    get_budget_enforcer,
-    get_model_audit_store,
-    get_model_router,
+from src.agent.developer_role import (
+    DEFAULT_TOOL_ALLOWLIST,
+    DeveloperRoleConfig,
+    build_system_prompt,
 )
-from src.agent.developer_role import DeveloperRoleConfig, build_system_prompt
 from src.agent.evidence import EvidenceBundle
+from src.agent.framework import AgentConfig, AgentContext, AgentRunner
 from src.intent.intent_crud import get_latest_for_taskpacket
 from src.models.taskpacket import TaskPacketStatus
 from src.models.taskpacket_crud import get_by_id, update_status
@@ -41,38 +38,57 @@ logger = logging.getLogger(__name__)
 tracer = get_tracer("thestudio.agent")
 
 
-async def _run_agent(
-    system_prompt: str,
-    user_prompt: str,
-    repo_path: str,
-    role_config: DeveloperRoleConfig,
-) -> str:
-    """Run the Claude Agent SDK to implement changes.
+# ---------------------------------------------------------------------------
+# Developer Agent Configuration
+# ---------------------------------------------------------------------------
 
-    Returns the agent's text result (summary of changes).
+
+def _make_developer_config(
+    role_config: DeveloperRoleConfig | None = None,
+) -> AgentConfig:
+    """Build an AgentConfig for the Developer role.
+
+    When *role_config* is provided, its values override the defaults.
+    Otherwise, settings-based defaults are used.
     """
-    from claude_agent_sdk import (  # type: ignore[import-untyped]
-        ClaudeAgentOptions,
-        ResultMessage,
-        query,
+    if role_config is not None:
+        return AgentConfig(
+            agent_name="developer",
+            pipeline_step="primary_agent",
+            tool_allowlist=role_config.tool_allowlist,
+            max_turns=role_config.max_turns,
+            max_budget_usd=role_config.max_budget_usd,
+            permission_mode=role_config.permission_mode,
+        )
+    return AgentConfig(
+        agent_name="developer",
+        pipeline_step="primary_agent",
+        tool_allowlist=list(DEFAULT_TOOL_ALLOWLIST),
+        max_turns=settings.agent_max_turns,
+        max_budget_usd=settings.agent_max_budget_usd,
+        permission_mode="acceptEdits",
     )
 
-    options = ClaudeAgentOptions(
-        cwd=repo_path,
-        allowed_tools=role_config.tool_allowlist,
-        permission_mode=role_config.permission_mode,
-        system_prompt=system_prompt,
-        model=role_config.model,
-        max_turns=role_config.max_turns,
-        max_budget_usd=role_config.max_budget_usd,
-    )
 
-    result_text = ""
-    async for message in query(prompt=user_prompt, options=options):
-        if isinstance(message, ResultMessage):
-            result_text = message.result or ""
+class PrimaryAgentRunner(AgentRunner):
+    """AgentRunner subclass for the Primary Agent.
 
-    return result_text
+    Overrides prompt building to use pre-built prompts from IntentSpec
+    and TaskPacket, passed via ``context.extra``.
+    """
+
+    def build_system_prompt(self, context: AgentContext) -> str:
+        """Return the pre-built system prompt from context.extra."""
+        return context.extra["system_prompt"]
+
+    def build_user_prompt(self, context: AgentContext) -> str:
+        """Return the pre-built user prompt from context.extra."""
+        return context.extra["user_prompt"]
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 
 def _parse_changed_files(agent_summary: str) -> list[str]:
@@ -94,78 +110,9 @@ def _parse_changed_files(agent_summary: str) -> list[str]:
     return files
 
 
-def _resolve_provider(
-    overlays: list[str] | None,
-    repo_tier: str,
-    complexity: str,
-) -> ProviderConfig:
-    """Select a provider via the Model Gateway, with fallback on failure.
-
-    Tries ``select_model`` first; on ``NoProviderAvailableError`` falls back
-    to ``select_with_fallback`` and logs the chain.
-    """
-    router = get_model_router()
-    try:
-        return router.select_model(
-            step="primary_agent",
-            role="developer",
-            overlays=overlays,
-            repo_tier=repo_tier,
-            complexity=complexity,
-        )
-    except NoProviderAvailableError:
-        logger.warning(
-            "Primary provider unavailable, attempting fallback chain "
-            "(overlays=%s, repo_tier=%s, complexity=%s)",
-            overlays,
-            repo_tier,
-            complexity,
-        )
-        provider, chain = router.select_with_fallback(
-            step="primary_agent",
-            role="developer",
-            overlays=overlays,
-            repo_tier=repo_tier,
-            complexity=complexity,
-        )
-        logger.info("Fallback resolved to %s (chain: %s)", provider.model_id, chain)
-        return provider
-
-
-def _estimate_tokens(*texts: str) -> int:
-    """Rough token estimate: 1 token per 4 characters."""
-    return sum(len(t) // 4 for t in texts)
-
-
-def _record_audit_and_spend(
-    *,
-    taskpacket_correlation_id: UUID | None,
-    taskpacket_id: UUID,
-    provider: ProviderConfig,
-    prompt_tokens: int,
-    response_tokens: int,
-    estimated_cost: float,
-) -> None:
-    """Create an audit record and record spend after an agent call."""
-    audit = ModelCallAudit(
-        correlation_id=taskpacket_correlation_id,
-        task_id=taskpacket_id,
-        step="primary_agent",
-        role="developer",
-        provider=provider.provider,
-        model=provider.model_id,
-        tokens_in=prompt_tokens,
-        tokens_out=response_tokens,
-        cost=estimated_cost,
-    )
-    get_model_audit_store().record(audit)
-
-    get_budget_enforcer().record_spend(
-        task_id=str(taskpacket_id),
-        step="primary_agent",
-        cost=estimated_cost,
-        tokens=prompt_tokens + response_tokens,
-    )
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
 
 
 async def implement(
@@ -198,29 +145,7 @@ async def implement(
 
     Raises:
         ValueError: If TaskPacket or IntentSpec not found.
-        BudgetExceededError: If the task has exceeded its spend budget.
     """
-    # --- A1: Gateway-aware role config resolution ---
-    provider: ProviderConfig | None = None
-    if role_config is None:
-        provider = _resolve_provider(overlays, repo_tier, complexity)
-        budget = get_budget_enforcer().get_budget(repo_tier)
-        role_config = DeveloperRoleConfig(
-            model=provider.model_id,
-            max_turns=settings.agent_max_turns,
-            max_budget_usd=budget.per_task_max_spend,
-        )
-
-    # --- A2: Budget check before agent call ---
-    if not get_budget_enforcer().check_budget(str(taskpacket_id)):
-        budget = get_budget_enforcer().get_budget(repo_tier)
-        current = get_budget_enforcer().get_task_spend(str(taskpacket_id))
-        raise BudgetExceededError(
-            str(taskpacket_id),
-            current,
-            budget.per_task_max_spend,
-        )
-
     with tracer.start_as_current_span(SPAN_AGENT_IMPLEMENT) as span:
         # Load TaskPacket and IntentSpec
         taskpacket = await get_by_id(session, taskpacket_id)
@@ -246,37 +171,42 @@ async def implement(
         )
 
         span.set_attribute("thestudio.intent_version", intent.version)
-        span.set_attribute("thestudio.agent_model", role_config.model)
 
-        # Run the agent
+        # Build framework config and context
+        config = _make_developer_config(role_config)
+        ctx = AgentContext(
+            taskpacket_id=taskpacket_id,
+            correlation_id=taskpacket.correlation_id,
+            repo=getattr(taskpacket, "repo", ""),
+            complexity=complexity,
+            overlays=overlays or [],
+            repo_tier=repo_tier,
+            intent=intent,
+            extra={
+                "system_prompt": system_prompt,
+                "user_prompt": user_prompt,
+                "repo_path": repo_path,
+            },
+        )
+
         logger.info(
             "Starting Primary Agent for TaskPacket %s (intent v%d)",
             taskpacket_id,
             intent.version,
         )
-        agent_summary = await _run_agent(system_prompt, user_prompt, repo_path, role_config)
 
-        # --- A3+A4: Record spend and audit after agent call ---
-        if provider is not None:
-            prompt_tokens = _estimate_tokens(system_prompt, user_prompt)
-            response_tokens = _estimate_tokens(agent_summary)
-            estimated_cost = (prompt_tokens + response_tokens) * provider.cost_per_1k_tokens / 1000
-            _record_audit_and_spend(
-                taskpacket_correlation_id=taskpacket.correlation_id,
-                taskpacket_id=taskpacket_id,
-                provider=provider,
-                prompt_tokens=prompt_tokens,
-                response_tokens=response_tokens,
-                estimated_cost=estimated_cost,
-            )
+        runner = PrimaryAgentRunner(config)
+        result = await runner.run(ctx)
+
+        span.set_attribute("thestudio.agent_model", result.model_used)
 
         # Build evidence bundle
-        changed_files = _parse_changed_files(agent_summary)
+        changed_files = _parse_changed_files(result.raw_output)
         evidence = EvidenceBundle(
             taskpacket_id=taskpacket_id,
             intent_version=intent.version,
             files_changed=changed_files,
-            agent_summary=agent_summary,
+            agent_summary=result.raw_output,
             loopback_attempt=taskpacket.loopback_count,
         )
 
@@ -319,31 +249,7 @@ async def handle_loopback(
 
     Returns:
         New EvidenceBundle from the retry attempt.
-
-    Raises:
-        BudgetExceededError: If the task has exceeded its spend budget.
     """
-    # --- A1: Gateway-aware role config resolution ---
-    provider: ProviderConfig | None = None
-    if role_config is None:
-        provider = _resolve_provider(overlays, repo_tier, complexity)
-        budget = get_budget_enforcer().get_budget(repo_tier)
-        role_config = DeveloperRoleConfig(
-            model=provider.model_id,
-            max_turns=settings.agent_max_turns,
-            max_budget_usd=budget.per_task_max_spend,
-        )
-
-    # --- A2: Budget check before agent call ---
-    if not get_budget_enforcer().check_budget(str(taskpacket_id)):
-        budget = get_budget_enforcer().get_budget(repo_tier)
-        current = get_budget_enforcer().get_task_spend(str(taskpacket_id))
-        raise BudgetExceededError(
-            str(taskpacket_id),
-            current,
-            budget.per_task_max_spend,
-        )
-
     with tracer.start_as_current_span(SPAN_AGENT_LOOPBACK) as span:
         taskpacket = await get_by_id(session, taskpacket_id)
         if taskpacket is None:
@@ -376,33 +282,38 @@ async def handle_loopback(
             f"Focus on fixing the failing checks while maintaining the original intent."
         )
 
+        # Build framework config and context
+        config = _make_developer_config(role_config)
+        ctx = AgentContext(
+            taskpacket_id=taskpacket_id,
+            correlation_id=taskpacket.correlation_id,
+            repo=getattr(taskpacket, "repo", ""),
+            complexity=complexity,
+            overlays=overlays or [],
+            repo_tier=repo_tier,
+            intent=intent,
+            extra={
+                "system_prompt": system_prompt,
+                "user_prompt": user_prompt,
+                "repo_path": repo_path,
+            },
+        )
+
         logger.info(
             "Starting loopback %d for TaskPacket %s",
             taskpacket.loopback_count,
             taskpacket_id,
         )
-        agent_summary = await _run_agent(system_prompt, user_prompt, repo_path, role_config)
 
-        # --- A3+A4: Record spend and audit after agent call ---
-        if provider is not None:
-            prompt_tokens = _estimate_tokens(system_prompt, user_prompt)
-            response_tokens = _estimate_tokens(agent_summary)
-            estimated_cost = (prompt_tokens + response_tokens) * provider.cost_per_1k_tokens / 1000
-            _record_audit_and_spend(
-                taskpacket_correlation_id=taskpacket.correlation_id,
-                taskpacket_id=taskpacket_id,
-                provider=provider,
-                prompt_tokens=prompt_tokens,
-                response_tokens=response_tokens,
-                estimated_cost=estimated_cost,
-            )
+        runner = PrimaryAgentRunner(config)
+        result = await runner.run(ctx)
 
-        changed_files = _parse_changed_files(agent_summary)
+        changed_files = _parse_changed_files(result.raw_output)
         evidence = EvidenceBundle(
             taskpacket_id=taskpacket_id,
             intent_version=intent.version,
             files_changed=changed_files,
-            agent_summary=agent_summary,
+            agent_summary=result.raw_output,
             loopback_attempt=taskpacket.loopback_count,
         )
 

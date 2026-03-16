@@ -1,6 +1,6 @@
 # TAPPS Handoff
 
-> Project-wide quality and delivery status as of 2026-03-13.
+> Project-wide quality and delivery status as of 2026-03-16.
 
 ## Project Status
 
@@ -26,18 +26,19 @@
 | 16 | Issue Readiness Gate | 5 | Complete (Sprint 17: 16.1-16.4, Sprint 18: 16.5-16.8) |
 | 17–18 | Poll for Issues, Production E2E | 5 | Draft |
 | 19–22 | Critical Gaps, Execute Tier | 5 | Complete |
-| 23–27 | Unified Agent, Chat, Container, Expert Pkg, Webhooks | 5 | Draft |
+| 23 | Unified Agent Framework | 5 | In Progress (Sprint 1: 9/10 stories done) |
+| 24–25, 27 | Chat, Container, Webhooks | 5 | Draft |
 | 26 | File-Based Expert Packaging | 5 | Complete |
 
 ---
 
-## Codebase Metrics (2026-03-13)
+## Codebase Metrics (2026-03-16)
 
 | Metric | Value |
 |--------|-------|
-| Source files (src/) | 149 |
-| Test files (tests/) | 87 |
-| Tests passing | 1,721 |
+| Source files (src/) | 150 |
+| Test files (tests/) | 88 |
+| Tests passing | 1,745 |
 | Tests deselected | 14 (integration — require PostgreSQL/Temporal) |
 | Test warnings | 7 (unawaited coroutine mocks) |
 | Coverage | 84% |

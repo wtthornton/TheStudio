@@ -16,6 +16,7 @@ from src.agent.developer_role import (
     build_system_prompt,
 )
 from src.agent.evidence import EvidenceBundle
+from src.agent.framework import AgentResult
 from src.agent.primary_agent import _parse_changed_files
 from src.intent.intent_spec import IntentSpecRead
 from src.models.taskpacket import TaskPacketRead, TaskPacketStatus
@@ -221,14 +222,20 @@ class TestImplement:
         intent = _make_intent(taskpacket_id=tp_id)
 
         mock_session = AsyncMock()
+        mock_result = AgentResult(
+            agent_name="developer",
+            raw_output="Files changed:\n- src/health.py: Added endpoint\n",
+            model_used="test-model",
+        )
 
         with (
             patch("src.agent.primary_agent.get_by_id", return_value=tp),
             patch("src.agent.primary_agent.get_latest_for_taskpacket", return_value=intent),
             patch("src.agent.primary_agent.update_status", return_value=tp),
             patch(
-                "src.agent.primary_agent._run_agent",
-                return_value="Files changed:\n- src/health.py: Added endpoint\n",
+                "src.agent.primary_agent.PrimaryAgentRunner.run",
+                new_callable=AsyncMock,
+                return_value=mock_result,
             ),
         ):
             from src.agent.primary_agent import implement
@@ -286,27 +293,32 @@ class TestHandleLoopback:
             loopback_triggered=True,
         )
 
-        captured_prompt = ""
+        mock_result = AgentResult(
+            agent_name="developer",
+            raw_output="Fixed:\n- src/health.py: Fixed test\n",
+            model_used="test-model",
+        )
 
-        async def mock_run_agent(
-            system_prompt: str, user_prompt: str, repo_path: str, role_config: object
-        ) -> str:
-            nonlocal captured_prompt
-            captured_prompt = user_prompt
-            return "Fixed:\n- src/health.py: Fixed test\n"
+        mock_run = AsyncMock(return_value=mock_result)
 
         with (
             patch("src.agent.primary_agent.get_by_id", return_value=tp),
             patch("src.agent.primary_agent.get_latest_for_taskpacket", return_value=intent),
             patch("src.agent.primary_agent.update_status", return_value=tp),
-            patch("src.agent.primary_agent._run_agent", side_effect=mock_run_agent),
+            patch(
+                "src.agent.primary_agent.PrimaryAgentRunner.run",
+                mock_run,
+            ),
         ):
             from src.agent.primary_agent import handle_loopback
 
             evidence = await handle_loopback(AsyncMock(), tp_id, "/tmp/repo", vr)
 
-        assert "1 test failed" in captured_prompt
-        assert "loopback attempt" in captured_prompt.lower()
+        # Verify failure context was passed via AgentContext.extra
+        ctx = mock_run.call_args[0][0]
+        user_prompt = ctx.extra["user_prompt"]
+        assert "1 test failed" in user_prompt
+        assert "loopback attempt" in user_prompt.lower()
         assert evidence.loopback_attempt == 1
 
     @pytest.mark.asyncio
