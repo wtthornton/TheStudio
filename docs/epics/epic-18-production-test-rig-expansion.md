@@ -2,8 +2,8 @@
 
 **Author:** Saga
 **Date:** 2026-03-12
-**Status:** Draft — Pending Meridian review
-**Target Sprint:** TBD
+**Status:** COMPLETE — All 5 slices delivered (2026-03-16)
+**Target Sprint:** Sprint 22 (delivered)
 
 ---
 
@@ -242,12 +242,29 @@ This epic closes those gaps. It splits the monolith into focused modules, adds t
 
 ## Meridian Review Status
 
-**Round 1: Pending**
+### Round 1: CONDITIONAL PASS — 3 must-fix items
 
-| # | Issue | Severity | Resolution |
-|---|-------|----------|------------|
-| — | — | — | Awaiting Meridian review |
+**Date:** 2026-03-16
+**Verdict:** CONDITIONAL PASS → all 3 must-fix items resolved in implementation
 
----
+| # | Question | Status | Notes |
+|---|----------|--------|-------|
+| 1 | Goal testable? | PASS | Concrete and falsifiable |
+| 2 | Acceptance criteria testable? | GAP → Fixed | MF-1: Header validation order (tests include all required headers); MF-3: Story 2.1 self-contained (tests specify full payload + register repo first) |
+| 3 | Non-goals explicit? | PASS | Six clear non-goals with cross-references |
+| 4 | Dependencies identified? | GAP → Fixed | MF-2: Webhook endpoint added to contract |
+| 5 | Metrics measurable? | PASS | All 6 metrics verifiable with existing tooling |
+| 6 | AI-implementable? | GAP → Fixed | Story 2.1 specifies payload shape, headers, and repo registration prerequisite |
+| 7 | Narrative compelling? | PASS | README lie identified, structural concerns escalated |
 
-*This epic must pass Meridian review before commit. Flag any untestable criteria, scope drift, or missing constraints.*
+### Must-Fix Resolutions
+
+| MF | Issue | Resolution |
+|----|-------|------------|
+| MF-1 | AC 2(b)/(c) header validation order | Tests include `X-GitHub-Delivery` when testing missing/invalid signatures. Missing delivery tested separately (Story 2.4). |
+| MF-2 | Webhook endpoint missing from contract | Added webhook section to `docs/production-test-rig-contract.md` with headers, responses, and validation order. |
+| MF-3 | Story 2.1 not self-contained | Implementation registers repo via admin API, specifies `action: "opened"` payload with all required headers and realistic GitHub payload shape. |
+
+### Round 2: COMMITTABLE
+
+All 3 must-fix items resolved. Advisory items noted (A-2: OpenAPI placement is organizational preference, kept in admin_api for now).

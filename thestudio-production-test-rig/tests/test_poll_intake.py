@@ -1,48 +1,13 @@
-"""Production smoke tests against a deployed TheStudio instance.
+"""Poll intake tests — config and E2E poll cycle.
 
-Run with THESTUDIO_BASE_URL set to your deployment.
-Polling E2E: set THESTUDIO_POLL_TEST_REPO (owner/repo) — deployment must have
-THESTUDIO_INTAKE_POLL_ENABLED=true and THESTUDIO_INTAKE_POLL_TOKEN.
-See README and TheStudio docs/production-test-rig-contract.md.
+Requires deployment with THESTUDIO_INTAKE_POLL_ENABLED=true.
+Poll E2E additionally requires THESTUDIO_POLL_TEST_REPO env var.
 """
 
 import os
 
 import httpx
 import pytest
-
-
-class TestHealth:
-    """Unauthenticated health endpoints."""
-
-    def test_healthz_returns_200(self, http_client: httpx.Client) -> None:
-        r = http_client.get("/healthz")
-        assert r.status_code == 200
-        assert r.json() == {"status": "ok"}
-
-    def test_readyz_returns_200(self, http_client: httpx.Client) -> None:
-        r = http_client.get("/readyz")
-        assert r.status_code == 200
-        data = r.json()
-        assert data.get("status") == "ready"
-
-
-class TestAdminHealth:
-    """Fleet health (admin API)."""
-
-    def test_admin_health_returns_200(self, http_client: httpx.Client) -> None:
-        r = http_client.get("/admin/health")
-        assert r.status_code == 200
-        data = r.json()
-        assert "overall_status" in data
-
-
-class TestOpenAPI:
-    """Docs endpoint."""
-
-    def test_docs_returns_200(self, http_client: httpx.Client) -> None:
-        r = http_client.get("/docs")
-        assert r.status_code == 200
 
 
 class TestPollConfig:
@@ -92,6 +57,7 @@ class TestPollConfig:
         assert detail.get("poll_enabled") is True
         assert detail.get("poll_interval_minutes") == 15
 
+        # Cleanup
         http_client.patch(
             f"/admin/repos/{repo_id}/profile",
             json={"poll_enabled": False},
@@ -155,6 +121,7 @@ class TestPollE2E:
         assert result["repos_polled"] >= 0
         assert result["rate_limit_hit"] is False, "GitHub rate limit hit during poll"
 
+        # Cleanup
         http_client.patch(
             f"/admin/repos/{repo_id}/profile",
             json={"poll_enabled": False},

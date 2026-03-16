@@ -1,10 +1,11 @@
 """Fixtures for production test rig.
 
 Loads config from environment (or .env). Skips all tests if the deployment
-is unreachable. Provides HTTP client.
+is unreachable. Provides HTTP client and webhook secret fixtures.
 """
 
 import os
+from collections.abc import Generator
 
 import httpx
 import pytest
@@ -40,7 +41,7 @@ def require_deployment() -> None:
 
 
 @pytest.fixture(scope="session")
-def http_client() -> httpx.Client:
+def http_client() -> Generator[httpx.Client, None, None]:
     headers = {"X-User-ID": ADMIN_USER}
     with httpx.Client(
         base_url=BASE_URL,
@@ -49,3 +50,19 @@ def http_client() -> httpx.Client:
         headers=headers,
     ) as client:
         yield client
+
+
+@pytest.fixture(scope="session")
+def webhook_secret() -> str:
+    """Webhook HMAC secret — required for webhook and pipeline smoke tests.
+
+    Reads from WEBHOOK_SECRET env var. Skips tests that depend on this
+    fixture if the secret is not set.
+    """
+    secret = os.environ.get("WEBHOOK_SECRET", "").strip()
+    if not secret:
+        pytest.skip(
+            "WEBHOOK_SECRET not set. Webhook tests require this env var "
+            "to match the deployment's THESTUDIO_WEBHOOK_SECRET."
+        )
+    return secret

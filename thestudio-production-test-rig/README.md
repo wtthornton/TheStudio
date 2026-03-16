@@ -34,12 +34,19 @@ Tests will skip with a clear message if the deployment is unreachable (e.g. wron
 
 ## What is tested
 
-- **Health:** `/healthz`, `/readyz` return 200 with expected JSON.
-- **Fleet health:** `/admin/health` returns 200 and reports overall status.
-- **Webhook:** Valid signed POST to `/webhook/github` returns 200 or 201; missing signature returns 401.
-- **Admin API:** Optional repo registration and pipeline smoke (register repo, send webhook, verify via admin API).
+Tests are organized into focused modules, each independently runnable:
 
-Contract details: see [TheStudio docs/production-test-rig-contract.md](../docs/production-test-rig-contract.md) in the TheStudio repo.
+| Module | Tests | What it validates |
+|--------|-------|-------------------|
+| `test_health.py` | 2 | `/healthz` and `/readyz` return 200 with expected JSON |
+| `test_admin_api.py` | 6 | `/admin/health`, `/docs`, repo registration (POST/GET), detail, profile PATCH |
+| `test_webhook.py` | 4 | Webhook HMAC-SHA256: valid sig (200/201), missing sig (401), bad sig (401/403), missing delivery (400) |
+| `test_poll_intake.py` | 2 | Poll config via profile PATCH, poll E2E cycle via `/admin/poll/run` |
+| `test_pipeline_smoke.py` | 1 | Webhook triggers TaskPacket creation for registered repo |
+
+Run a single module: `pytest tests/test_webhook.py -v`
+
+Contract details and endpoint-to-test mapping: see [TheStudio docs/production-test-rig-contract.md](../docs/production-test-rig-contract.md) in the TheStudio repo.
 
 ## CI
 

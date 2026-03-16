@@ -58,6 +58,17 @@ This document defines the contract between TheStudio and the dedicated test rig 
 - Requires `THESTUDIO_INTAKE_POLL_ENABLED=true` and `THESTUDIO_INTAKE_POLL_TOKEN` on the deployment.
 - Response: `{repos_polled, issues_created, rate_limit_hit}`.
 
+### Webhook intake
+
+| Endpoint | Method | Required Headers | Expected | Purpose |
+|----------|--------|------------------|----------|---------|
+| `/webhook/github` | POST | `X-GitHub-Delivery` (UUID), `X-Hub-Signature-256` (HMAC-SHA256), `X-GitHub-Event` | 200/201 (valid), 400 (missing delivery header), 401 (missing/invalid signature), 404 (unregistered repo) | GitHub webhook intake |
+
+- Payload: GitHub `issues` event JSON (`action: "opened"`, `issue: {number, title, body}`, `repository: {full_name}`).
+- Signature: HMAC-SHA256 of raw request body using `THESTUDIO_WEBHOOK_SECRET`. Header format: `sha256=<hex>`.
+- Header validation order: delivery header checked before signature. Missing delivery returns 400 even with valid signature.
+- Repo must be registered via `POST /admin/repos` before webhooks are accepted (unregistered repos return 404).
+
 ### Repo registration
 
 - POST `/admin/repos` with JSON: `{"owner":"...","repo":"...","installation_id":12345,"default_branch":"main"}`.
@@ -73,13 +84,34 @@ This document defines the contract between TheStudio and the dedicated test rig 
 
 1. **Health:** GET `/healthz` and `/readyz` return 200 with expected body.
 2. **Fleet health:** GET `/admin/health` returns 200 and `overall_status` (e.g. OK).
-3. **Poll config:** Register repo, PATCH profile with `poll_enabled`, GET repo to verify.
-4. **Poll E2E:** Register real repo, enable poll, POST `/admin/poll/run`, verify `repos_polled` >= 0 and `rate_limit_hit` is false.
+3. **Webhook signature:** Valid HMAC-SHA256 accepted (200/201), missing signature rejected (401), invalid signature rejected (401/403), missing delivery header rejected (400).
+4. **Admin API:** Repo registration (POST 201/409), listing (GET), detail (GET), profile update (PATCH).
+5. **Poll config:** Register repo, PATCH profile with `poll_enabled`, GET repo to verify.
+6. **Poll E2E:** Register real repo, enable poll, POST `/admin/poll/run`, verify `repos_polled` >= 0 and `rate_limit_hit` is false.
+7. **Pipeline smoke:** Register repo, send valid webhook, verify 200/201 (proves intake path works end-to-end).
 
 ## CI and multi-repo
 
 - The test rig repo’s CI job does **not** start TheStudio. It runs pytest (or equivalent) with `THESTUDIO_BASE_URL` and `WEBHOOK_SECRET` set (e.g. from CI secrets pointing at a staging or production URL).
 - TheStudio’s CI continues to run in-repo Docker smoke tests against the **dev** stack it starts. The dedicated test rig runs separately against the deployment you configure.
+
+## Test Coverage Mapping
+
+Every contract endpoint is covered by at least one test in the production test rig.
+
+| Contract Endpoint | Method | Test Module | Test Class/Function |
+|-------------------|--------|-------------|---------------------|
+| `/healthz` | GET | `test_health.py` | `TestHealth.test_healthz_returns_200` |
+| `/readyz` | GET | `test_health.py` | `TestHealth.test_readyz_returns_200` |
+| `/admin/health` | GET | `test_admin_api.py` | `TestAdminHealth.test_admin_health_returns_200` |
+| `/docs` | GET | `test_admin_api.py` | `TestOpenAPI.test_docs_returns_200` |
+| `/admin/repos` | POST | `test_admin_api.py` | `TestRepoRegistration.test_repo_registration_returns_201_or_409` |
+| `/admin/repos` | GET | `test_admin_api.py` | `TestRepoRegistration.test_repo_list_returns_repos` |
+| `/admin/repos/{id}` | GET | `test_admin_api.py` | `TestRepoRegistration.test_repo_detail_returns_profile` |
+| `/admin/repos/{id}/profile` | PATCH | `test_admin_api.py` | `TestRepoRegistration.test_repo_profile_patch` |
+| `/admin/poll/run` | POST | `test_poll_intake.py` | `TestPollE2E.test_poll_run_fetches_issues` |
+| `/webhook/github` | POST | `test_webhook.py` | `TestWebhookSignature` (4 tests) |
+| `/webhook/github` (pipeline) | POST | `test_pipeline_smoke.py` | `TestPipelineSmoke.test_webhook_triggers_taskpacket` |
 
 ## Reference
 
