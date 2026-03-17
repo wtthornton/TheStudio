@@ -50,6 +50,7 @@ SETTING_DEFINITIONS: dict[str, dict[str, Any]] = {
     "llm_provider": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
     "github_provider": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
     "store_backend": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
+    "agent_llm_enabled": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
     # Agent Config
     "agent_model": {"category": SettingCategory.AGENT_CONFIG, "sensitive": False},
     "agent_max_turns": {"category": SettingCategory.AGENT_CONFIG, "sensitive": False},

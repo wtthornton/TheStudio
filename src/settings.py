@@ -39,6 +39,19 @@ class Settings(BaseSettings):
     intake_poll_interval_minutes: int = 10
     intake_poll_token: str = ""  # PAT or installation token for GitHub API
 
+    # Agent LLM feature flags (Epic 23 — per-agent toggle)
+    # When False, agent uses rule-based fallback instead of LLM
+    agent_llm_enabled: dict[str, bool] = {
+        "developer": False,
+        "intake": False,
+        "context_manager": False,
+        "intent_builder": False,
+        "expert_router": False,
+        "expert_recruiter": False,
+        "assembler": False,
+        "qa_agent": False,
+    }
+
     # Feature flags (Epic 8 Sprint 2)
     llm_provider: str = "mock"  # "mock" or "anthropic"
     github_provider: str = "mock"  # "mock" or "real"
