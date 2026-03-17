@@ -209,4 +209,55 @@ The arc is **buildable and measurable**. It’s enough to set an aggressive road
 
 ---
 
+## Phase 5 — Agent Intelligence + Platform Growth (current, started 2026-03-12)
+
+**Goal:** Convert rule-based pipeline stubs to LLM-powered agents via a shared framework. Add container isolation for untrusted code execution. Expand intake beyond GitHub. Add chat-based approval UX. Prove the pipeline on real repositories.
+
+**Status as of 2026-03-16:**
+
+| Phase | Status | Key Milestone |
+|-------|--------|---------------|
+| **0** | Complete | One repo, Observe tier, issue → draft PR with evidence |
+| **1** | Complete | Full flow + experts, Suggest tier, signal stream |
+| **2** | Complete | Learning loop, multi-repo, Admin UI, Execute tier for 1 repo |
+| **3** | Complete | Evals, expert classes, context packs, quality metrics |
+| **4** | Complete | Tool Hub, Model Gateway, compliance, full Admin UI, production hardening |
+| **5** | **In Progress** | Agent framework, container isolation, multi-source intake |
+
+**Phase 5 Epics:**
+
+| Epic | Title | Status | Notes |
+|------|-------|--------|-------|
+| 15 | E2E Integration & Real Repo Onboarding | Draft (revised) | Awaiting sprint scheduling |
+| 16 | Issue Readiness Gate | Complete | Sprints 17-18 delivered |
+| 17 | Poll for Issues (Backup) | Complete | All 8 stories delivered |
+| 18 | Production E2E Test Suite | Complete | 5 slices, full contract coverage |
+| 19 | Critical Gaps Batch 1 (Gateway, Security, Reputation) | Complete | Sprint 19 |
+| 20 | Critical Gaps Batch 2 (JetStream, Escalation, Adversarial) | Complete | Sprint 19 |
+| 21 | Human Approval Wait States | Complete | 9 stories, Temporal durable wait |
+| 22 | Execute Tier End-to-End | Complete | 18 stories, auto-merge gating |
+| 23 | Unified Agent Framework | **In Progress** | Sprint 1: 10/10 stories done, hardening stories 1.11-1.13 remain |
+| 24 | Chat Approval Workflows | Draft | Awaiting Meridian review |
+| 25 | Container Isolation | Draft | Awaiting Meridian review |
+| 26 | File-Based Expert Packaging | Complete | 6 stories delivered |
+| 27 | Multi-Source Webhooks | Draft | Awaiting Meridian review |
+
+**Codebase Metrics (2026-03-16):**
+- 1,756 tests passing, 84% coverage, 150+ source files, 88 test files
+- TAPPS v1.8.0 quality pipeline active (ruff, mypy, bandit, radon, vulture, pip-audit)
+
+**Phase 5 Success Criteria (Meridian bar):**
+- All 8 pipeline agents share a common `AgentRunner` framework with unified observability, budget enforcement, and audit.
+- Primary Agent code execution runs in ephemeral containers with resource limits and network isolation.
+- At least one non-GitHub source (Jira, Linear, or Slack) can trigger the pipeline via config-driven webhook translation.
+- Human reviewers can ask questions about proposed changes via chat before approving.
+- At least one real repository processes issues end-to-end at Observe tier with documented results.
+
+**Recommended Next Sprint:**
+1. Epic 23 Sprint 2 — Convert Intake + Context agents to use AgentRunner framework
+2. Submit Epics 24, 25, 27 for Meridian review
+3. Epic 15 — Real repo Observe-tier onboarding trial
+
+---
+
 *Meridian — VP Success. Reviewer and challenger. Not in charge. Bar set high.*
