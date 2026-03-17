@@ -42,13 +42,13 @@ class Settings(BaseSettings):
     # Agent LLM feature flags (Epic 23 — per-agent toggle)
     # When False, agent uses rule-based fallback instead of LLM
     agent_llm_enabled: dict[str, bool] = {
-        "developer": False,
-        "intake": False,
-        "context_manager": False,
-        "intent_builder": False,
-        "expert_router": False,
-        "expert_recruiter": False,
-        "assembler": False,
+        "primary_agent": False,
+        "intake_agent": False,
+        "context_agent": False,
+        "intent_agent": False,
+        "router_agent": False,
+        "recruiter_agent": False,
+        "assembler_agent": False,
         "qa_agent": False,
     }
 
