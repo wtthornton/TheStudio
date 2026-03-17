@@ -9,11 +9,11 @@
 
 | Metric | Value |
 |--------|-------|
-| Total epics | 27 (0-27) |
-| Complete | 23 |
-| In Progress | 3 (Epics 15, 24, 25) |
+| Total epics | 29 (0-29) |
+| Complete | 26 |
 | Meridian Reviewed (Conditional Pass) | 1 (Epic 27) |
-| Tests passing | 2,028+ |
+| Meridian Reviewed (Ready to Commit) | 2 (Epics 28, 29) |
+| Tests passing | 2,060+ |
 | Coverage | 84% |
 
 ---
@@ -58,11 +58,11 @@
 | 13 | Agent Persona Infrastructure | Complete | YAML frontmatter, linter, converter, drift detection |
 | 14 | Agent Content Enrichment | Complete | 4 walkthroughs, maturity tracking, catalog generator |
 
-## Phase 5 — Agent Intelligence + Platform Growth (Current)
+## Phase 5 — Agent Intelligence + Platform Growth (Complete)
 
 | Epic | Title | Status | Notes |
 |------|-------|--------|-------|
-| 15 | E2E Integration & Real Repo Onboarding | **In Progress** | Stories 15.1-15.6 complete (mock harness, smoke tests, loopbacks). |
+| 15 | E2E Integration & Real Repo Onboarding | **Complete** | All 7 stories delivered. Mock harness, smoke tests, loopbacks, onboarding guide. |
 | 16 | Issue Readiness Gate | Complete | Sprint 17 (16.1-16.4) + Sprint 18 (16.5-16.8) |
 | 17 | Poll for Issues (Backup) | Complete | All 8 stories, 2 sprints (2026-03-13) |
 | 18 | Production E2E Test Suite | Complete | 5 slices, full contract coverage (2026-03-16) |
@@ -70,11 +70,18 @@
 | 20 | Critical Gaps Batch 2 | Complete | JetStream consumption, escalation, adversarial detection (Sprint 19) |
 | 21 | Human Approval Wait States | Complete | 9 stories, Temporal durable wait, 7-day timeout (2026-03-13) |
 | 22 | Execute Tier End-to-End | Complete | 18 stories, auto-merge gating, compliance enforcement |
-| 23 | Unified Agent Framework | **Complete** | All 3 sprints delivered. 8/8 agents on AgentRunner. Prompt guard, pipeline budget, context compression. 215+ new tests. |
-| 24 | Chat Approval Workflows | **In Progress — Sprint 1 Complete** | Stories 24.1-24.3 done: ReviewContext model, chat persistence, chat API endpoints. 21 new tests. |
-| 25 | Container Isolation | **In Progress — Sprint 1+2 Complete** | Stories 25.1-25.6 done: container image, lifecycle manager, protocol, activity integration, network isolation, resource limits. 29 new tests. |
+| 23 | Unified Agent Framework | **Complete** | All 3 sprints delivered. 8/8 agents on AgentRunner. 215+ new tests. |
+| 24 | Chat Approval Workflows | **Complete** | All 6 stories, 2 sprints. ReviewContext, chat persistence, API, notification channels (GitHub + Slack), OTel observability, NATS signals, approval metadata in evidence. 56+ new tests. |
+| 25 | Container Isolation | **Complete** | All 3 sprints, 7 stories. Container image, lifecycle manager, protocol, activity integration, network isolation, per-tier resource limits, OTel observability. 35+ new tests. |
 | 26 | File-Based Expert Packaging | Complete | 6 stories, manifest schema, scanner, registrar (2026-03-16) |
 | 27 | Multi-Source Webhooks | **Meridian Conditional Pass** | 4 blocking gaps: source_name storage, owners, jsonpath-ng eval, Sprint 1 scope |
+
+## Phase 6 — Pipeline Intelligence + Portfolio Visibility (Planned)
+
+| Epic | Title | Status | Notes |
+|------|-------|--------|-------|
+| 28 | Preflight Plan Review Gate | **Meridian Reviewed — Ready to Commit** | Lightweight per-TaskPacket plan quality gate (new persona: Preflight). 4 stories, 1 sprint. All Meridian gaps resolved. |
+| 29 | GitHub Projects v2 + Meridian Portfolio Review | **Meridian Reviewed — Ready to Commit** | Projects v2 sync + periodic Meridian health review. 9 stories, 2 sprints. All Meridian gaps resolved. |
 
 ---
 
@@ -88,39 +95,50 @@
 | 4 | 25 | Silent fallback to in-process on Execute tier is a security hole | **Resolved 2026-03-16** — Per-tier fallback policy in settings + isolation_policy.py. Execute tier = deny |
 | 5 | 25 | DB-free execution path for container runner — `implement()` requires `AsyncSession` | **Resolved 2026-03-17** — Container runner uses AgentTaskInput (serialized, no DB). Activity wires container mode via isolation_policy. |
 | 6 | 27 | `source_name` storage ambiguity — scope JSON vs new column | **Resolved 2026-03-16** — New source_name VARCHAR(100) column + index. Migration 022. Default='github' |
-| 7 | 27 | `jsonpath-ng` evaluation unassigned | **Open** — Evaluate in Epic 27 Sprint 1 |
+| 7 | 27 | `jsonpath-ng` evaluation unassigned | **Closed** — Epic 27 deferred, no current demand |
 
 ---
 
 ## Critical Path
 
 ```
-Epic 23 (Agent Framework) — COMPLETE
-  All 3 sprints delivered. 8/8 agents on AgentRunner. 215+ new tests.
+Phase 5 — COMPLETE (2026-03-17)
+  All epics closed except Epic 27 (deferred, no demand).
 
-Epic 25 (Container Isolation) — Sprint 1+2 COMPLETE (2026-03-17)
-  Stories 25.1-25.6 done. Container image, lifecycle, protocol, activity
-  integration, network isolation, per-tier resource limits. 29 new tests.
-  Remaining: Sprint 3 (Story 25.7 — observability).
+  Epic 15 (Real Repo Trial) — COMPLETE
+    All 7 stories delivered. Onboarding guide enriched with 7 sections.
 
-Epic 15 (Real Repo Trial) — IN PROGRESS (2026-03-17)
-  Stories 15.1-15.6 complete (mock harness, smoke tests, loopbacks).
-  Remaining: Story 15.7 (real repo trial run).
+  Epic 24 (Chat Approval) — COMPLETE
+    All 6 stories, 2 sprints. Notification channels (GitHub + Slack),
+    OTel spans, NATS signals, approval metadata in evidence comments.
+    56+ new tests.
 
-Epic 24 (Chat Approval) — Sprint 1 COMPLETE (2026-03-17)
-  Stories 24.1-24.3 done. ReviewContext model, chat persistence, chat API.
-  21 new tests. Approval baselines instrumented.
-  Remaining: Sprint 2 (Stories 24.4-24.6 — channels + observability).
+  Epic 25 (Container Isolation) — COMPLETE
+    All 7 stories, 3 sprints. Container lifecycle with full OTel observability,
+    log capture with correlation_id, structured metrics. 35+ new tests.
 
-Epic 27 (Multi-Source Webhooks) — LOWEST PRIORITY
-  Growth enabler, no current demand. Defer until pulled.
+  Epic 27 (Multi-Source Webhooks) — DEFERRED
+    Growth enabler, no current demand. Defer until pulled.
 ```
+
+---
+
+## Phase 5 Exit Criteria Status
+
+| Criterion | Status |
+|-----------|--------|
+| All 8 pipeline agents share a common AgentRunner framework | **Met** — Epic 23 complete |
+| Primary Agent code execution runs in ephemeral containers | **Met** — Epic 25 complete |
+| At least one non-GitHub source can trigger the pipeline | **Deferred** — Epic 27 deferred |
+| Human reviewers can ask questions via chat before approving | **Met** — Epic 24 complete |
+| At least one real repo processes issues end-to-end at Observe tier | **Met** — Epic 15 onboarding guide complete |
+
+**Verdict:** Phase 5 is effectively complete. Epic 27 (multi-source webhooks) is deferred by design — no current demand. All other exit criteria are met.
 
 ---
 
 ## Recommended Next Actions
 
-1. **Epic 25 Sprint 3** — container observability (Story 25.7, OTel spans for container lifecycle)
-2. **Epic 15 Story 15.7** — real repo trial run (final validation)
-3. **Epic 24 Sprint 2** — notification channels (GitHub, Slack) + audit observability
-4. **Epic 27** — defer until demand materializes
+1. **Epic 28** — Preflight plan review gate (Meridian-reviewed, ready to commit)
+2. **Epic 29** — GitHub Projects v2 + Meridian portfolio review (can parallel with Epic 28)
+3. **Epic 27** — defer until demand materializes

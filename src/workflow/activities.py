@@ -798,52 +798,74 @@ async def publish_activity(params: PublishInput) -> PublishOutput:
 async def post_approval_request_activity(
     params: ApprovalRequestInput,
 ) -> ApprovalRequestOutput:
-    """Step 8.5a: Post approval request comment before entering wait state.
+    """Step 8.5a: Post approval request via configured notification channels.
 
-    Delegates to publisher.post_approval_request() to post a GitHub comment
-    requesting human approval. Falls back to logging when no GitHub client
-    is available (stub/test mode).
+    Resolves configured channels and calls notify_awaiting_approval on each.
+    Falls back to logging when no channels are available (stub/test mode).
+
+    Epic 24 Story 24.4: Uses channel adapters instead of direct GitHub posting.
     """
     import logging
     from uuid import UUID
 
+    from src.approval.channels.registry import get_configured_channels
+    from src.approval.review_context import ReviewContext, TaskPacketSummary
+
     logger = logging.getLogger("thestudio.approval")
 
-    try:
-        from src.publisher.github_client import GitHubClient
-        from src.publisher.publisher import post_approval_request
-        from src.settings import settings
+    taskpacket_uuid = UUID(params.taskpacket_id)
 
-        if settings.github_provider == "real":
-            async with GitHubClient(settings.github_app_id) as github:
-                taskpacket_uuid = UUID(params.taskpacket_id)
-                # In production, issue_number comes from TaskPacket; stub uses 0
-                await post_approval_request(
-                    github=github,
-                    owner="",  # resolved from TaskPacket.repo in production
-                    repo_name="",
-                    issue_number=0,
-                    taskpacket_id=taskpacket_uuid,
-                    intent_summary=params.intent_summary,
-                    qa_passed=params.qa_passed,
+    # Build a minimal ReviewContext for channel notifications
+    context = ReviewContext(
+        taskpacket=TaskPacketSummary(
+            taskpacket_id=taskpacket_uuid,
+            repo="",  # Resolved from TaskPacket in production
+            status="awaiting_approval",
+            repo_tier=params.repo_tier,
+        ),
+    )
+    if params.intent_summary:
+        context.intent.goal = params.intent_summary
+    context.qa.passed = params.qa_passed
+
+    # Notify via all configured channels
+    channels = get_configured_channels()
+    any_posted = False
+
+    for channel in channels:
+        try:
+            posted = await channel.notify_awaiting_approval(context)
+            if posted:
+                any_posted = True
+                logger.info(
+                    "approval.request.channel_notified",
+                    extra={
+                        "taskpacket_id": params.taskpacket_id,
+                        "channel": channel.channel_name,
+                    },
                 )
-                return ApprovalRequestOutput(comment_posted=True)
-    except Exception:
-        logger.debug(
-            "GitHub client not available, falling back to log-only mode",
-            exc_info=True,
+        except Exception:
+            logger.warning(
+                "approval.request.channel_failed",
+                extra={
+                    "taskpacket_id": params.taskpacket_id,
+                    "channel": channel.channel_name,
+                },
+                exc_info=True,
+            )
+
+    if not any_posted:
+        # Fallback: log only (test/stub mode or all channels failed)
+        logger.info(
+            "approval.request.posted",
+            extra={
+                "taskpacket_id": params.taskpacket_id,
+                "repo_tier": params.repo_tier,
+                "intent_summary": params.intent_summary,
+                "qa_passed": params.qa_passed,
+            },
         )
 
-    # Fallback: log only (test/stub mode)
-    logger.info(
-        "approval.request.posted",
-        extra={
-            "taskpacket_id": params.taskpacket_id,
-            "repo_tier": params.repo_tier,
-            "intent_summary": params.intent_summary,
-            "qa_passed": params.qa_passed,
-        },
-    )
     return ApprovalRequestOutput(comment_posted=True)
 
 

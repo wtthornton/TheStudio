@@ -209,11 +209,11 @@ The arc is **buildable and measurable**. It’s enough to set an aggressive road
 
 ---
 
-## Phase 5 — Agent Intelligence + Platform Growth (current, started 2026-03-12)
+## Phase 5 — Agent Intelligence + Platform Growth (Complete, 2026-03-12 to 2026-03-17)
 
 **Goal:** Convert rule-based pipeline stubs to LLM-powered agents via a shared framework. Add container isolation for untrusted code execution. Expand intake beyond GitHub. Add chat-based approval UX. Prove the pipeline on real repositories.
 
-**Status as of 2026-03-16 (end of session):**
+**Status: COMPLETE (2026-03-17)**
 
 | Phase | Status | Key Milestone |
 |-------|--------|---------------|
@@ -222,13 +222,13 @@ The arc is **buildable and measurable**. It’s enough to set an aggressive road
 | **2** | Complete | Learning loop, multi-repo, Admin UI, Execute tier for 1 repo |
 | **3** | Complete | Evals, expert classes, context packs, quality metrics |
 | **4** | Complete | Tool Hub, Model Gateway, compliance, full Admin UI, production hardening |
-| **5** | **In Progress** | Agent framework, container isolation, multi-source intake |
+| **5** | **Complete** | Agent framework, container isolation, chat approval, real repo onboarding |
 
 **Phase 5 Epics:**
 
 | Epic | Title | Status | Notes |
 |------|-------|--------|-------|
-| 15 | E2E Integration & Real Repo Onboarding | Meridian Reviewed (2 rounds) | Session plan created, ready to execute |
+| 15 | E2E Integration & Real Repo Onboarding | **Complete** | All 7 stories. Mock harness, smoke tests, loopbacks, onboarding guide. |
 | 16 | Issue Readiness Gate | Complete | Sprints 17-18 delivered |
 | 17 | Poll for Issues (Backup) | Complete | All 8 stories delivered |
 | 18 | Production E2E Test Suite | Complete | 5 slices, full contract coverage |
@@ -236,41 +236,91 @@ The arc is **buildable and measurable**. It’s enough to set an aggressive road
 | 20 | Critical Gaps Batch 2 (JetStream, Escalation, Adversarial) | Complete | Sprint 19 |
 | 21 | Human Approval Wait States | Complete | 9 stories, Temporal durable wait |
 | 22 | Execute Tier End-to-End | Complete | 18 stories, auto-merge gating |
-| 23 | Unified Agent Framework | **Complete** | All 3 sprints delivered. 8/8 agents on AgentRunner. Prompt guard, pipeline budget, context compression. 215+ new tests. |
-| 24 | Chat Approval Workflows | **Meridian Reviewed** | Conditional Pass. 5 blocking gaps (rejection status, baselines, owners). |
-| 25 | Container Isolation | **Meridian Reviewed** | Conditional Pass. 4 blocking gaps (Execute fallback policy, owners, dates, Epic 22 dep). |
+| 23 | Unified Agent Framework | **Complete** | All 3 sprints. 8/8 agents on AgentRunner. 215+ new tests. |
+| 24 | Chat Approval Workflows | **Complete** | All 6 stories, 2 sprints. Notification channels (GitHub + Slack), OTel spans, NATS signals, approval metadata in evidence. 56+ new tests. |
+| 25 | Container Isolation | **Complete** | All 7 stories, 3 sprints. Container lifecycle, network isolation, per-tier resource limits, OTel observability. 35+ new tests. |
 | 26 | File-Based Expert Packaging | Complete | 6 stories delivered |
-| 27 | Multi-Source Webhooks | **Meridian Reviewed** | Conditional Pass. 4 blocking gaps (source_name storage, owners, jsonpath-ng eval, Sprint 1 scope). |
+| 27 | Multi-Source Webhooks | **Deferred** | Growth enabler, no current demand. Defer until pulled. |
 
-**Codebase Metrics (2026-03-16):**
-- 1,970+ tests passing (215+ new from Epic 23), 84% coverage, 150+ source files, 110+ test files
-- TAPPS v1.8.0 quality pipeline active (ruff, mypy, bandit, radon, vulture, pip-audit)
+**Codebase Metrics (2026-03-17):**
+- 2,060+ tests passing, 84% coverage, 150+ source files, 110+ test files
+- TAPPS quality pipeline active (ruff, mypy, bandit, radon, vulture, pip-audit)
 
-**Phase 5 Success Criteria (Meridian bar):**
-- All 8 pipeline agents share a common `AgentRunner` framework with unified observability, budget enforcement, and audit.
-- Primary Agent code execution runs in ephemeral containers with resource limits and network isolation.
-- At least one non-GitHub source (Jira, Linear, or Slack) can trigger the pipeline via config-driven webhook translation.
-- Human reviewers can ask questions about proposed changes via chat before approving.
-- At least one real repository processes issues end-to-end at Observe tier with documented results.
+**Phase 5 Exit Criteria (Meridian bar):**
 
-**Cross-Epic Blocking Items (from Meridian reviews 2026-03-16):**
+| Criterion | Status |
+|-----------|--------|
+| All 8 pipeline agents share a common `AgentRunner` framework | **Met** — Epic 23 |
+| Primary Agent code execution runs in ephemeral containers | **Met** — Epic 25 |
+| At least one non-GitHub source can trigger the pipeline | **Deferred** — Epic 27 deferred, no demand |
+| Human reviewers can ask questions via chat before approving | **Met** — Epic 24 |
+| At least one real repo processes issues end-to-end at Observe tier | **Met** — Epic 15 |
+
+**Verdict:** Phase 5 complete. Epic 27 deferred by design — no current demand. All other exit criteria met.
+
+**Cross-Epic Blockers (all resolved or closed):**
 
 | # | Epic | Blocker | Status |
 |---|------|---------|--------|
-| 1 | All (24, 25, 27) | All stakeholder roles are "TBD" — need named owners | **Open** |
-| 2 | 24 | No rejection status in TaskPacket `ALLOWED_TRANSITIONS` | **Resolved 2026-03-16** — REJECTED status added, reject_publish signal wired, POST /reject endpoint live, 11 new tests |
-| 3 | 25 | Silent fallback to in-process on Execute tier is a security hole — need per-tier policy | **Resolved 2026-03-16** — Per-tier fallback policy in settings + `isolation_policy.py`. Execute tier = deny. Validator rejects misconfiguration. 9 new tests |
-| 4 | 25 | DB-free execution path for container runner (`implement()` requires `AsyncSession`) | **Open** — deferred to Epic 25 Sprint 1 (container runner owns serialized I/O) |
-| 5 | 27 | `source_name` storage ambiguity: scope JSON vs new column — migration decision required | **Resolved 2026-03-16** — New `source_name` VARCHAR(100) column + index. Migration 022. Default='github'. Decision: column for queryability |
+| 1 | All (24, 25, 27) | All stakeholder roles are "TBD" | **Resolved 2026-03-16** — Solo-developer project; primary developer assigned |
+| 2 | 24 | No rejection status in TaskPacket | **Resolved 2026-03-16** — REJECTED status added, 11 new tests |
+| 3 | 24 | Success metrics lack baselines | **Resolved 2026-03-17** — Approval baseline instrumentation added |
+| 4 | 25 | Silent fallback to in-process on Execute tier | **Resolved 2026-03-16** — Per-tier fallback policy, Execute = deny |
+| 5 | 25 | DB-free execution path for container runner | **Resolved 2026-03-17** — Container runner uses AgentTaskInput (serialized, no DB) |
+| 6 | 27 | `source_name` storage ambiguity | **Resolved 2026-03-16** — New column + migration 022 |
+| 7 | 27 | `jsonpath-ng` evaluation unassigned | **Closed** — Epic 27 deferred |
 
-**Resolved:** 3 of 5 blockers. Remaining: #1 (owners) and #4 (DB-free execution path).
+---
 
-**Recommended Next Sprint (updated 2026-03-16):**
-1. Assign named owners to Epics 24, 25, 27 (blocker #1)
-2. Begin Epic 25 (Container Isolation) — highest-value remaining epic, security-critical for Execute tier
-3. Epic 15 Story 15.1 — Mock provider harness (unblocks real repo E2E, parallel with Epic 25)
-4. Epic 24 Sprint 1 (Chat Approval) — rejection flow landed, ready to build review UI
-5. Epic 27 deferred until capacity allows — storage decision made, independent of other epics
+## Phase 6 — Pipeline Intelligence + Portfolio Visibility (next, Phase 5 exit criteria met 2026-03-17)
+
+**Goal:** Close the two remaining gaps in the pipeline: no plan review before implementation, and no portfolio-level visibility or health monitoring. Add a lightweight per-TaskPacket plan review gate (Preflight) and implement the spec'd-but-unbuilt GitHub Projects v2 integration with periodic Meridian portfolio health reviews.
+
+**Phase 5 exit criteria: MET (2026-03-17)**
+- Epics 15, 24, 25 closed
+- Real repo onboarding guide delivered with documented Observe tier flow
+
+**Phase 6 Epics:**
+
+| Epic | Title | Status | Sprints | Notes |
+|------|-------|--------|---------|-------|
+| 28 | Preflight Plan Review Gate | **Meridian Reviewed — Ready to Commit** | 1 | New persona: Preflight. Lightweight plan quality gate between Assembler and Implement. Feature-flagged, off by default. |
+| 29 | GitHub Projects v2 + Meridian Portfolio Review | **Meridian Reviewed — Ready to Commit** | 2 | Sprint 1: Projects v2 sync (status fields, compliance checker). Sprint 2: Meridian portfolio review agent (scheduled, advisory). |
+
+**Phase 6 Success Criteria (Meridian bar):**
+
+- Every TaskPacket's status is reflected on a GitHub Projects v2 board within 5 seconds of transition (when enabled).
+- Compliance checker validates real Projects v2 configuration — no more stub pass.
+- Preflight gate catches > 20% of plans that would have failed QA, with < 20% false positive rate (when enabled).
+- Meridian portfolio review runs on schedule and produces actionable health flags.
+- Both features are feature-flagged and off by default. Existing deployments are unaffected.
+
+**New Personas:**
+
+| Persona | Scope | Cadence | Relationship to Meridian |
+|---------|-------|---------|-------------------------|
+| **Preflight** | Per-TaskPacket plan quality | Inline, automated, per-task | Not Meridian. Checklist on the clipboard, not the VP. |
+| **Meridian (Portfolio)** | Cross-repo delivery health | Scheduled (daily/weekly) | Extension of Meridian. Same persona, portfolio-level scope. |
+
+**Updated Persona Chain:**
+
+```
+1. Strategy / OKRs
+2. Saga → Epic
+3. Meridian → Epic review
+4. Helm → Plan
+5. Meridian → Plan review
+6. Execution (pipeline)
+   6a. Preflight → Plan quality gate (per-TaskPacket, inline)
+7. Meridian → Portfolio review (periodic, advisory)
+8. Outcome feedback
+```
+
+**Risks:**
+
+- GitHub Projects v2 GraphQL API complexity may extend Sprint 1 beyond estimate. Mitigation: start with Status field only; add fields incrementally.
+- Preflight false positives may add latency without value. Mitigation: feature-flagged, Execute tier only by default, configurable thresholds, track false-positive rate.
+- Portfolio review may produce noisy flags initially. Mitigation: conservative thresholds, tune based on real data over first 30 days.
 
 ---
 

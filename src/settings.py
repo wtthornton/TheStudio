@@ -57,6 +57,9 @@ class Settings(BaseSettings):
     github_provider: str = "mock"  # "mock" or "real"
     store_backend: str = "memory"  # "memory" or "postgres"
 
+    # Approval notification channels (Epic 24)
+    slack_approval_webhook_url: str = ""  # Slack incoming webhook for approvals
+
     # Container isolation (Epic 25)
     # Global mode: "process" (in-process, default) or "container" (Docker isolation)
     agent_isolation: str = "process"  # "process" or "container"

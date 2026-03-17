@@ -18,8 +18,15 @@ from src.admin.rbac import get_current_user_id
 from src.db.connection import get_session
 from src.models.taskpacket import TaskPacketStatus
 from src.models.taskpacket_crud import get_by_id
+from src.observability.conventions import (
+    ATTR_TASKPACKET_ID,
+    SPAN_APPROVAL_APPROVE,
+    SPAN_APPROVAL_REJECT,
+)
+from src.observability.tracing import get_tracer
 
 logger = logging.getLogger(__name__)
+tracer = get_tracer("thestudio.approval")
 
 router = APIRouter(prefix="/api/tasks", tags=["approval"])
 
@@ -120,39 +127,56 @@ async def approve_task(
             detail=f"Task is not awaiting approval (current status: {taskpacket.status.value})",
         )
 
-    try:
-        await _send_approval_signal(taskpacket_id, body.approved_by)
-    except Exception as exc:
-        logger.exception(
-            "Failed to send approval signal",
-            extra={"taskpacket_id": taskpacket_id, "error": str(exc)},
+    with tracer.start_as_current_span(SPAN_APPROVAL_APPROVE) as span:
+        span.set_attribute(ATTR_TASKPACKET_ID, taskpacket_id)
+        span.set_attribute("thestudio.approved_by", body.approved_by)
+        span.set_attribute("thestudio.user_id", user_id)
+
+        try:
+            await _send_approval_signal(taskpacket_id, body.approved_by)
+        except Exception as exc:
+            logger.exception(
+                "Failed to send approval signal",
+                extra={"taskpacket_id": taskpacket_id, "error": str(exc)},
+            )
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Workflow for TaskPacket {taskpacket_id} not found",
+            ) from exc
+
+        # Resolve associated chat thread (Epic 24 — AC #10)
+        chat_message_count = 0
+        try:
+            from src.approval.chat_crud import get_chat_by_taskpacket, resolve_chat_by_taskpacket
+
+            chat = await get_chat_by_taskpacket(session, task_uuid)
+            if chat:
+                chat_message_count = len(chat.messages) if chat.messages else 0
+                span.set_attribute("thestudio.review_message_count", chat_message_count)
+            await resolve_chat_by_taskpacket(session, task_uuid)
+            await session.commit()
+        except Exception:
+            logger.debug(
+                "Could not resolve chat thread on approval",
+                extra={"taskpacket_id": taskpacket_id},
+                exc_info=True,
+            )
+
+        # Publish NATS JetStream signal (AC #17)
+        await _publish_approval_signal(
+            taskpacket_id, "approved", body.approved_by,
+            chat_message_count=chat_message_count,
         )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Workflow for TaskPacket {taskpacket_id} not found",
-        ) from exc
 
-    # Resolve associated chat thread (Epic 24 — AC #10)
-    try:
-        from src.approval.chat_crud import resolve_chat_by_taskpacket
-
-        await resolve_chat_by_taskpacket(session, task_uuid)
-        await session.commit()
-    except Exception:
-        logger.debug(
-            "Could not resolve chat thread on approval",
-            extra={"taskpacket_id": taskpacket_id},
-            exc_info=True,
+        logger.info(
+            "approval.signaled",
+            extra={
+                "taskpacket_id": taskpacket_id,
+                "approved_by": body.approved_by,
+                "user_id": user_id,
+                "review_message_count": chat_message_count,
+            },
         )
-
-    logger.info(
-        "approval.signaled",
-        extra={
-            "taskpacket_id": taskpacket_id,
-            "approved_by": body.approved_by,
-            "user_id": user_id,
-        },
-    )
 
     return ApprovalResponse(status="approved", taskpacket_id=taskpacket_id)
 
@@ -205,39 +229,110 @@ async def reject_task(
             detail=f"Task is not awaiting approval (current status: {taskpacket.status.value})",
         )
 
-    try:
-        await _send_rejection_signal(taskpacket_id, body.rejected_by, body.reason)
-    except Exception as exc:
-        logger.exception(
-            "Failed to send rejection signal",
-            extra={"taskpacket_id": taskpacket_id, "error": str(exc)},
+    with tracer.start_as_current_span(SPAN_APPROVAL_REJECT) as span:
+        span.set_attribute(ATTR_TASKPACKET_ID, taskpacket_id)
+        span.set_attribute("thestudio.rejected_by", body.rejected_by)
+        span.set_attribute("thestudio.user_id", user_id)
+
+        try:
+            await _send_rejection_signal(taskpacket_id, body.rejected_by, body.reason)
+        except Exception as exc:
+            logger.exception(
+                "Failed to send rejection signal",
+                extra={"taskpacket_id": taskpacket_id, "error": str(exc)},
+            )
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Workflow for TaskPacket {taskpacket_id} not found",
+            ) from exc
+
+        # Resolve associated chat thread (Epic 24 — AC #10)
+        chat_message_count = 0
+        try:
+            from src.approval.chat_crud import get_chat_by_taskpacket, resolve_chat_by_taskpacket
+
+            chat = await get_chat_by_taskpacket(session, task_uuid)
+            if chat:
+                chat_message_count = len(chat.messages) if chat.messages else 0
+                span.set_attribute("thestudio.review_message_count", chat_message_count)
+            await resolve_chat_by_taskpacket(session, task_uuid)
+            await session.commit()
+        except Exception:
+            logger.debug(
+                "Could not resolve chat thread on rejection",
+                extra={"taskpacket_id": taskpacket_id},
+                exc_info=True,
+            )
+
+        # Publish NATS JetStream signal (AC #17)
+        await _publish_approval_signal(
+            taskpacket_id, "rejected", body.rejected_by,
+            reason=body.reason,
+            chat_message_count=chat_message_count,
         )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Workflow for TaskPacket {taskpacket_id} not found",
-        ) from exc
 
-    # Resolve associated chat thread (Epic 24 — AC #10)
-    try:
-        from src.approval.chat_crud import resolve_chat_by_taskpacket
-
-        await resolve_chat_by_taskpacket(session, task_uuid)
-        await session.commit()
-    except Exception:
-        logger.debug(
-            "Could not resolve chat thread on rejection",
-            extra={"taskpacket_id": taskpacket_id},
-            exc_info=True,
+        logger.info(
+            "rejection.signaled",
+            extra={
+                "taskpacket_id": taskpacket_id,
+                "rejected_by": body.rejected_by,
+                "reason": body.reason,
+                "user_id": user_id,
+                "review_message_count": chat_message_count,
+            },
         )
-
-    logger.info(
-        "rejection.signaled",
-        extra={
-            "taskpacket_id": taskpacket_id,
-            "rejected_by": body.rejected_by,
-            "reason": body.reason,
-            "user_id": user_id,
-        },
-    )
 
     return ApprovalResponse(status="rejected", taskpacket_id=taskpacket_id)
+
+
+async def _publish_approval_signal(
+    taskpacket_id: str,
+    decision: str,
+    decided_by: str,
+    *,
+    reason: str = "",
+    chat_message_count: int = 0,
+) -> None:
+    """Publish approval/rejection signal to NATS JetStream (AC #17).
+
+    Subject: approval.approved or approval.rejected
+    Payload includes decision metadata for the outcome pipeline.
+    """
+    import json
+
+    try:
+        from src.settings import settings
+
+        if settings.nats_url:
+            import nats
+
+            nc = await nats.connect(settings.nats_url)
+            js = nc.jetstream()
+
+            subject = f"approval.{decision}"
+            payload = json.dumps({
+                "taskpacket_id": taskpacket_id,
+                "decision": decision,
+                "decided_by": decided_by,
+                "reason": reason,
+                "review_message_count": chat_message_count,
+            }).encode("utf-8")
+
+            await js.publish(subject, payload)
+            await nc.close()
+
+            logger.info(
+                "approval.signal.published",
+                extra={
+                    "taskpacket_id": taskpacket_id,
+                    "subject": subject,
+                    "decision": decision,
+                },
+            )
+    except Exception:
+        # NATS unavailable — log only, don't fail the approval
+        logger.debug(
+            "NATS signal not published (NATS unavailable)",
+            extra={"taskpacket_id": taskpacket_id, "decision": decision},
+            exc_info=True,
+        )

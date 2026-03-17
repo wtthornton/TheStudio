@@ -3,9 +3,10 @@
 Epic 25 Story 25.2: Manages the Docker container lifecycle for
 Primary Agent jobs: launch, wait, collect results, and cleanup.
 
-The Temporal activity calls this class instead of running the agent
-in-process. The container receives a serialized task via a mounted
-volume and writes results back to the same volume.
+Epic 25 Story 25.7: Full OTel span coverage for each lifecycle phase
+(launch, wait, collect, cleanup). Container logs captured with
+correlation_id. Structured metrics emitted for active containers,
+resource usage by tier, and timeout rates.
 
 Platform side only — this code runs on the Temporal worker, NOT
 inside the agent container.
@@ -23,6 +24,27 @@ from pathlib import Path
 from src.agent.container_protocol import (
     AgentContainerResult,
     AgentTaskInput,
+)
+from src.observability.conventions import (
+    ATTR_CONTAINER_CPU_LIMIT,
+    ATTR_CONTAINER_EXIT_CODE,
+    ATTR_CONTAINER_ID,
+    ATTR_CONTAINER_IMAGE,
+    ATTR_CONTAINER_LAUNCH_MS,
+    ATTR_CONTAINER_MEMORY_MB,
+    ATTR_CONTAINER_OOM_KILLED,
+    ATTR_CONTAINER_TIMEOUT,
+    ATTR_CONTAINER_TIMED_OUT,
+    ATTR_CONTAINER_TOTAL_MS,
+    ATTR_CONTAINER_WAIT_MS,
+    ATTR_CORRELATION_ID,
+    ATTR_REPO_TIER,
+    ATTR_TASKPACKET_ID,
+    SPAN_CONTAINER_CLEANUP,
+    SPAN_CONTAINER_COLLECT,
+    SPAN_CONTAINER_LAUNCH,
+    SPAN_CONTAINER_LIFECYCLE,
+    SPAN_CONTAINER_WAIT,
 )
 from src.observability.tracing import get_tracer
 
@@ -108,6 +130,7 @@ class ContainerManager:
         """Launch a container, wait for completion, collect results, and clean up.
 
         This is the primary entry point. It handles the full lifecycle.
+        OTel spans are emitted for each phase: launch, wait, collect, cleanup.
 
         Args:
             task_input: Serialized task for the agent.
@@ -120,14 +143,14 @@ class ContainerManager:
         container = None
         workspace_dir = None
 
-        with tracer.start_as_current_span("container.lifecycle") as span:
-            span.set_attribute("thestudio.taskpacket_id", str(task_input.taskpacket_id))
-            span.set_attribute("thestudio.correlation_id", str(task_input.correlation_id))
-            span.set_attribute("thestudio.container.image", self.config.image)
-            span.set_attribute("thestudio.container.cpu_limit", self.config.cpu_limit)
-            span.set_attribute("thestudio.container.memory_mb", self.config.memory_mb)
-            span.set_attribute("thestudio.container.timeout_seconds", self.config.timeout_seconds)
-            span.set_attribute("thestudio.repo_tier", task_input.repo_tier)
+        with tracer.start_as_current_span(SPAN_CONTAINER_LIFECYCLE) as span:
+            span.set_attribute(ATTR_TASKPACKET_ID, str(task_input.taskpacket_id))
+            span.set_attribute(ATTR_CORRELATION_ID, str(task_input.correlation_id))
+            span.set_attribute(ATTR_CONTAINER_IMAGE, self.config.image)
+            span.set_attribute(ATTR_CONTAINER_CPU_LIMIT, self.config.cpu_limit)
+            span.set_attribute(ATTR_CONTAINER_MEMORY_MB, self.config.memory_mb)
+            span.set_attribute(ATTR_CONTAINER_TIMEOUT, self.config.timeout_seconds)
+            span.set_attribute(ATTR_REPO_TIER, task_input.repo_tier)
 
             try:
                 # Create workspace with task input
@@ -138,40 +161,28 @@ class ContainerManager:
                     encoding="utf-8",
                 )
 
-                # Launch container
-                launch_start = time.monotonic()
-                container = self._create_container(
+                # Launch container (child span)
+                container, launch_ms = self._launch_container(
                     workspace_dir=workspace_dir,
                     repo_path=repo_path,
                     task_input=task_input,
                 )
-                container.start()
-                launch_ms = int((time.monotonic() - launch_start) * 1000)
 
-                span.set_attribute("thestudio.container.id", container.short_id)
-                span.set_attribute("thestudio.container.launch_ms", launch_ms)
-                logger.info(
-                    "container.launched",
-                    extra={
-                        "container_id": container.short_id,
-                        "taskpacket_id": str(task_input.taskpacket_id),
-                        "launch_ms": launch_ms,
-                    },
-                )
+                span.set_attribute(ATTR_CONTAINER_ID, container.short_id)
+                span.set_attribute(ATTR_CONTAINER_LAUNCH_MS, launch_ms)
 
-                # Wait for container to finish
-                wait_start = time.monotonic()
-                wait_result = self._wait(container)
-                wait_ms = int((time.monotonic() - wait_start) * 1000)
+                # Wait for container to finish (child span)
+                wait_result, wait_ms = self._wait_with_span(container)
 
-                span.set_attribute("thestudio.container.exit_code", wait_result["StatusCode"])
-                span.set_attribute("thestudio.container.wait_ms", wait_ms)
+                exit_code = wait_result["StatusCode"]
+                span.set_attribute(ATTR_CONTAINER_EXIT_CODE, exit_code)
+                span.set_attribute(ATTR_CONTAINER_WAIT_MS, wait_ms)
 
                 # Check for OOM kill
                 container.reload()
                 oom_killed = container.attrs.get("State", {}).get("OOMKilled", False)
                 if oom_killed:
-                    span.set_attribute("thestudio.container.oom_killed", True)
+                    span.set_attribute(ATTR_CONTAINER_OOM_KILLED, True)
                     logger.warning(
                         "container.oom_killed",
                         extra={
@@ -180,19 +191,25 @@ class ContainerManager:
                         },
                     )
 
-                # Collect logs
+                # Collect logs with correlation_id (AC #20)
                 logs = container.logs(stdout=True, stderr=True).decode("utf-8", errors="replace")
+                self._log_container_output(
+                    logs,
+                    container_id=container.short_id,
+                    correlation_id=str(task_input.correlation_id),
+                    taskpacket_id=str(task_input.taskpacket_id),
+                )
 
-                # Collect results
-                result = self._collect_results(workspace_dir)
+                # Collect results (child span)
+                result = self._collect_with_span(workspace_dir)
 
                 total_ms = int((time.monotonic() - total_start) * 1000)
-                span.set_attribute("thestudio.container.total_ms", total_ms)
+                span.set_attribute(ATTR_CONTAINER_TOTAL_MS, total_ms)
 
-                return ContainerOutcome(
+                outcome = ContainerOutcome(
                     result=result,
                     container_id=container.short_id,
-                    exit_code=wait_result["StatusCode"],
+                    exit_code=exit_code,
                     timed_out=False,
                     oom_killed=oom_killed,
                     logs=logs,
@@ -201,8 +218,15 @@ class ContainerManager:
                     total_ms=total_ms,
                 )
 
+                # Emit structured metrics (AC #21)
+                self._emit_metrics(outcome, task_input)
+                return outcome
+
             except TimeoutError:
                 total_ms = int((time.monotonic() - total_start) * 1000)
+                span.set_attribute(ATTR_CONTAINER_TIMED_OUT, True)
+                span.set_attribute(ATTR_CONTAINER_TOTAL_MS, total_ms)
+
                 logger.warning(
                     "container.timeout",
                     extra={
@@ -212,11 +236,11 @@ class ContainerManager:
                     },
                 )
                 # Attempt partial result collection
-                result = self._collect_results(workspace_dir) if workspace_dir else None
+                result = self._collect_with_span(workspace_dir) if workspace_dir else None
                 if result:
                     result.exit_reason = "timeout"
 
-                return ContainerOutcome(
+                outcome = ContainerOutcome(
                     result=result,
                     container_id=container.short_id if container else "",
                     exit_code=-1,
@@ -224,9 +248,12 @@ class ContainerManager:
                     logs="",
                     total_ms=total_ms,
                 )
+                self._emit_metrics(outcome, task_input)
+                return outcome
 
             except Exception as exc:
                 total_ms = int((time.monotonic() - total_start) * 1000)
+                span.set_attribute(ATTR_CONTAINER_TOTAL_MS, total_ms)
                 logger.exception(
                     "container.error",
                     extra={
@@ -234,7 +261,7 @@ class ContainerManager:
                         "error": str(exc),
                     },
                 )
-                return ContainerOutcome(
+                outcome = ContainerOutcome(
                     result=AgentContainerResult(
                         success=False,
                         exit_reason="launch_error",
@@ -244,9 +271,76 @@ class ContainerManager:
                     exit_code=-1,
                     total_ms=total_ms,
                 )
+                self._emit_metrics(outcome, task_input)
+                return outcome
 
             finally:
-                self._cleanup(container, workspace_dir)
+                self._cleanup_with_span(container, workspace_dir)
+
+    def _launch_container(
+        self,
+        *,
+        workspace_dir: str,
+        repo_path: str,
+        task_input: AgentTaskInput,
+    ) -> tuple:
+        """Launch container with a dedicated OTel span. Returns (container, launch_ms)."""
+        with tracer.start_as_current_span(SPAN_CONTAINER_LAUNCH) as launch_span:
+            launch_start = time.monotonic()
+            container = self._create_container(
+                workspace_dir=workspace_dir,
+                repo_path=repo_path,
+                task_input=task_input,
+            )
+            container.start()
+            launch_ms = int((time.monotonic() - launch_start) * 1000)
+
+            launch_span.set_attribute(ATTR_CONTAINER_ID, container.short_id)
+            launch_span.set_attribute(ATTR_CONTAINER_LAUNCH_MS, launch_ms)
+            launch_span.set_attribute(ATTR_CONTAINER_IMAGE, self.config.image)
+
+            logger.info(
+                "container.launched",
+                extra={
+                    "container_id": container.short_id,
+                    "taskpacket_id": str(task_input.taskpacket_id),
+                    "correlation_id": str(task_input.correlation_id),
+                    "launch_ms": launch_ms,
+                },
+            )
+            return container, launch_ms
+
+    def _wait_with_span(self, container) -> tuple:
+        """Wait for container exit with a dedicated OTel span. Returns (result_dict, wait_ms)."""
+        with tracer.start_as_current_span(SPAN_CONTAINER_WAIT) as wait_span:
+            wait_start = time.monotonic()
+            wait_result = self._wait(container)
+            wait_ms = int((time.monotonic() - wait_start) * 1000)
+
+            wait_span.set_attribute(ATTR_CONTAINER_ID, container.short_id)
+            wait_span.set_attribute(ATTR_CONTAINER_EXIT_CODE, wait_result["StatusCode"])
+            wait_span.set_attribute(ATTR_CONTAINER_WAIT_MS, wait_ms)
+
+            return wait_result, wait_ms
+
+    def _collect_with_span(self, workspace_dir: str) -> AgentContainerResult | None:
+        """Collect results with a dedicated OTel span."""
+        with tracer.start_as_current_span(SPAN_CONTAINER_COLLECT) as collect_span:
+            result = self._collect_results(workspace_dir)
+            collect_span.set_attribute("thestudio.container.result_found", result is not None)
+            if result:
+                collect_span.set_attribute("thestudio.container.result_success", result.success)
+                collect_span.set_attribute(
+                    "thestudio.container.files_changed_count", len(result.files_changed),
+                )
+            return result
+
+    def _cleanup_with_span(self, container, workspace_dir: str | None) -> None:
+        """Cleanup with a dedicated OTel span."""
+        with tracer.start_as_current_span(SPAN_CONTAINER_CLEANUP) as cleanup_span:
+            container_id = container.short_id if container else ""
+            cleanup_span.set_attribute(ATTR_CONTAINER_ID, container_id)
+            self._cleanup(container, workspace_dir)
 
     def _create_container(
         self,
@@ -341,6 +435,59 @@ class ContainerManager:
                 shutil.rmtree(workspace_dir, ignore_errors=True)
             except Exception:
                 logger.debug("container.workspace_cleanup_failed", extra={"dir": workspace_dir})
+
+    def _log_container_output(
+        self,
+        logs: str,
+        *,
+        container_id: str,
+        correlation_id: str,
+        taskpacket_id: str,
+    ) -> None:
+        """Log container stdout/stderr with correlation_id for traceability (AC #20)."""
+        if not logs.strip():
+            return
+
+        for line in logs.splitlines():
+            logger.info(
+                "container.output",
+                extra={
+                    "container_id": container_id,
+                    "correlation_id": correlation_id,
+                    "taskpacket_id": taskpacket_id,
+                    "line": line,
+                },
+            )
+
+    def _emit_metrics(
+        self,
+        outcome: ContainerOutcome,
+        task_input: AgentTaskInput,
+    ) -> None:
+        """Emit structured log events for container metrics (AC #21).
+
+        Emits: active container count proxy, resource usage by tier,
+        duration by tier, and timeout indicator.
+        """
+        logger.info(
+            "container.metrics",
+            extra={
+                "container_id": outcome.container_id,
+                "taskpacket_id": str(task_input.taskpacket_id),
+                "correlation_id": str(task_input.correlation_id),
+                "repo_tier": task_input.repo_tier,
+                "exit_code": outcome.exit_code,
+                "timed_out": outcome.timed_out,
+                "oom_killed": outcome.oom_killed,
+                "launch_ms": outcome.launch_ms,
+                "wait_ms": outcome.wait_ms,
+                "total_ms": outcome.total_ms,
+                "cpu_limit": self.config.cpu_limit,
+                "memory_mb": self.config.memory_mb,
+                "timeout_seconds": self.config.timeout_seconds,
+                "success": outcome.result.success if outcome.result else False,
+            },
+        )
 
     def reap_orphans(self) -> int:
         """Remove agent containers older than the reaper threshold.

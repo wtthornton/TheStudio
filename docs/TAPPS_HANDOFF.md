@@ -1,11 +1,12 @@
 # TAPPS Handoff
 
-> Project-wide quality and delivery status as of 2026-03-16.
+> Project-wide quality and delivery status as of 2026-03-17.
 
 ## Project Status
 
-**Phases 0–4 complete.** Phase 5 (Agent Intelligence + Platform Growth) in progress.
-Epic 23 (Unified Agent Framework) **complete** — all 3 sprints delivered, 8/8 agents on AgentRunner. Three epics awaiting Meridian review.
+**Phases 0–5 complete.** Phase 6 (Pipeline Intelligence + Portfolio Visibility) ready to begin.
+26 epics delivered. Epic 27 (Multi-Source Webhooks) deferred — no current demand.
+Epics 28 and 29 Meridian-reviewed and ready to commit.
 
 ---
 
@@ -28,7 +29,7 @@ Epic 23 (Unified Agent Framework) **complete** — all 3 sprints delivered, 8/8 
 | 12 | Playwright Admin UI Tests | 4 | Complete |
 | 13 | Agent Persona Infrastructure | 4 | Complete |
 | 14 | Agent Content Enrichment | 4 | Complete |
-| 15 | E2E Integration & Real Repo Onboarding | 5 | **Draft** — revised after Meridian Round 1, not yet executed |
+| 15 | E2E Integration & Real Repo Onboarding | 5 | Complete (all 7 stories, 2026-03-17) |
 | 16 | Issue Readiness Gate | 5 | Complete (Sprint 17: 16.1-16.4, Sprint 18: 16.5-16.8) |
 | 17 | Poll for Issues (Backup) | 5 | Complete (all 8 stories, 2 sprints) |
 | 18 | Production E2E Test Suite | 5 | Complete (5 slices, full contract coverage) |
@@ -37,24 +38,25 @@ Epic 23 (Unified Agent Framework) **complete** — all 3 sprints delivered, 8/8 
 | 21 | Human Approval Wait States | 5 | Complete (9 stories, 2026-03-13) |
 | 22 | Execute Tier End-to-End | 5 | Complete (18 stories, auto-merge gating) |
 | 23 | Unified Agent Framework | 5 | Complete (3 sprints, 8/8 agents, 215+ tests, 2026-03-16) |
-| 24 | Chat Approval Workflows | 5 | **Draft** — awaiting Meridian review |
-| 25 | Container Isolation | 5 | **Draft** — awaiting Meridian review |
+| 24 | Chat Approval Workflows | 5 | Complete (6 stories, 2 sprints, 56+ tests, 2026-03-17) |
+| 25 | Container Isolation | 5 | Complete (7 stories, 3 sprints, 35+ tests, 2026-03-17) |
 | 26 | File-Based Expert Packaging | 5 | Complete (6 stories, 2026-03-16) |
-| 27 | Multi-Source Webhooks | 5 | **Draft** — awaiting Meridian review |
+| 27 | Multi-Source Webhooks | 5 | **Deferred** — no current demand |
+| 28 | Preflight Plan Review Gate | 6 | **Meridian Reviewed — Ready to Commit** |
+| 29 | GitHub Projects v2 + Meridian Portfolio Review | 6 | **Meridian Reviewed — Ready to Commit** |
 
 ---
 
-## Codebase Metrics (2026-03-16)
+## Codebase Metrics (2026-03-17)
 
 | Metric | Value |
 |--------|-------|
 | Source files (src/) | 150+ |
 | Test files (tests/) | 110+ |
-| Tests passing | 1,970+ |
+| Tests passing | 2,060+ |
 | Tests deselected | 14 (integration — require PostgreSQL/Temporal) |
-| Test warnings | 7 (unawaited coroutine mocks) |
 | Coverage | 84% |
-| Modules | 22 (adapters, admin, agent, assembler, compliance, context, db, evals, experts, ingress, intake, intent, models, observability, outcome, publisher, qa, recruiting, repo, reputation, routing, verification, workflow) |
+| Modules | 22+ (adapters, admin, agent, approval, assembler, compliance, context, db, evals, experts, ingress, intake, intent, models, observability, outcome, publisher, qa, recruiting, repo, reputation, routing, verification, workflow) |
 
 ---
 
@@ -75,41 +77,34 @@ Epic 23 (Unified Agent Framework) **complete** — all 3 sprints delivered, 8/8 
 
 ## Quality Pipeline
 
-- **TAPPS v1.8.0** active with ruff, mypy, bandit, radon, vulture, pip-audit
+- **TAPPS** active with ruff, mypy, bandit, radon, vulture, pip-audit
 - **Quality preset:** standard
 - **All TAPPS gates:** PASSED on last validation run
 
 ---
 
-## Active Work
+## Phase 5 Completion Summary (2026-03-17)
 
-### Epic 23 — Unified Agent Framework (Complete, 2026-03-16)
-- **Sprint 1:** AgentRunner base class, AgentConfig/AgentContext/AgentResult, LLM completion + agentic modes, output parsing, budget enforcement, audit logging, observability spans, feature flags per agent, Primary Agent refactored (Stories 1.1-1.10)
-- **Sprint 2:** Intake, Context, Intent, Router agent configs and activity conversions with tests (Stories 2.1-2.12)
-- **Sprint 3:** Recruiter, Assembler, QA agent configs and activity conversions, full pipeline integration test (39 tests), epic documentation (Stories 3.1-3.11)
-- **Hardening:** Prompt injection guard (41 tests), pipeline budget (18 tests), context compression (10 tests) (Stories 1.11-1.13)
-- **Test count:** 215+ new tests across all Epic 23 modules
-- **Architecture gaps closed:** V7 (invariants), V8 (shadow consulting), V9 (staged consults), D3 (LLM intent extraction)
+**Delivered in final sprint (2026-03-17):**
+- **Story 25.7** — Container observability: OTel child spans for container lifecycle, per-line log capture with correlation_id, structured metrics (6 new tests)
+- **Story 15.7** — Onboarding guide: 7-section `docs/ONBOARDING.md` (prerequisites, GitHub App, API registration, Admin UI, webhook verification, trust tiers, troubleshooting)
+- **Story 24.4** — Notification channel adapter: Abstract base class + GitHub implementation + channel registry (12 new tests)
+- **Story 24.5** — Slack notification channel: Block Kit messages with approve/reject buttons, incoming webhook (11 new tests)
+- **Story 24.6** — Approval observability: OTel spans on all chat/approval endpoints, ApprovalMetadata in evidence comments, NATS approval signals (12 new tests)
 
-### Epics Awaiting Meridian Review
-- **Epic 24** — Chat Approval Workflows (conditional pass, 5 blocking gaps)
-- **Epic 25** — Container Isolation (conditional pass, 4 blocking gaps)
-- **Epic 27** — Multi-Source Webhooks (conditional pass, 4 blocking gaps)
+**New files:** `src/approval/channels/` (base, github, slack, registry), test files for channels/slack/observability
+**Modified:** `src/agent/container_manager.py`, `src/api/approval.py`, `src/approval/chat_router.py`, `src/observability/conventions.py`, `src/publisher/evidence_comment.py`, `src/settings.py`, `src/workflow/activities.py`
 
-### Epic 15 — Not Yet Executed
-- Revised after Meridian Round 1, but never scheduled for a sprint
-- Integration test harness + real repo onboarding guide
-- Should be prioritized as a validation milestone
+**Phase 5 exit criteria:** 4 of 5 met. Epic 27 deferred by design (no demand).
 
 ---
 
 ## Next Actions
 
-1. **Fix cross-epic blockers** (rejection status, baselines, owners, per-tier policy) then re-review Epics 24, 25, 27
-2. **Schedule Epic 15** — real repo Observe-tier trial to validate full pipeline
-3. **Begin Epic 24 (Chat Approval) or Epic 25 (Container Isolation)** after blocker resolution
+1. **Begin Phase 6** — Epic 28 (Preflight Plan Review Gate) and Epic 29 (GitHub Projects v2 + Meridian Portfolio Review) are Meridian-reviewed and ready
+2. **Epic 28** — 4 stories, 1 sprint. New Preflight persona. Can start immediately.
+3. **Epic 29** — 9 stories, 2 sprints. Can parallel with Epic 28.
 4. **Set up CI pipeline** (GitHub Actions) for automated test/lint/security on every PR
 5. **Improve coverage** on CRUD and signal modules (target: 90%+)
-6. **Fix 7 test warnings** (unawaited AsyncMock coroutines)
-7. **Run integration tests** against real PostgreSQL/Temporal
-8. **Enable LLM feature flags** per agent incrementally (Intake first, then Context, etc.)
+6. **Run integration tests** against real PostgreSQL/Temporal
+7. **Enable LLM feature flags** per agent incrementally (Intake first, then Context, etc.)

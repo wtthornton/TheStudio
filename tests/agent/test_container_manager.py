@@ -1,10 +1,12 @@
-"""Tests for container lifecycle manager (Epic 25 Story 25.2).
+"""Tests for container lifecycle manager (Epic 25 Stories 25.2 + 25.7).
 
 These tests mock the Docker API — no real Docker daemon required.
 Integration tests with real Docker are gated by @pytest.mark.docker.
+Story 25.7: Added observability tests for OTel spans, log capture, metrics.
 """
 
 import json
+import logging
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -321,3 +323,144 @@ class TestCollectResults:
         manager = ContainerManager()
         result = manager._collect_results(str(tmp_path))
         assert result is None
+
+
+class TestContainerObservability:
+    """Epic 25 Story 25.7: OTel spans, log capture, and metrics."""
+
+    def _setup_mock_container(self, exit_code=0, oom_killed=False):
+        container = MagicMock()
+        container.short_id = "obs123"
+        container.wait.return_value = {"StatusCode": exit_code}
+        container.logs.return_value = b"line1\nline2\n"
+        container.attrs = {
+            "State": {"OOMKilled": oom_killed},
+            "Created": "2026-03-17T00:00:00Z",
+        }
+        return container
+
+    def _make_manager_with_mock(self, container):
+        mock_client = MagicMock()
+        mock_client.containers.create.return_value = container
+        manager = ContainerManager()
+        manager._client = mock_client
+        return manager
+
+    def test_log_container_output_with_correlation_id(self, caplog):
+        """AC #20: Container logs are captured with correlation_id."""
+        task = _make_task_input()
+        manager = ContainerManager()
+
+        with caplog.at_level(logging.INFO, logger="src.agent.container_manager"):
+            manager._log_container_output(
+                "test output line\nsecond line",
+                container_id="abc123",
+                correlation_id=str(task.correlation_id),
+                taskpacket_id=str(task.taskpacket_id),
+            )
+
+        log_records = [r for r in caplog.records if r.message == "container.output"]
+        assert len(log_records) == 2
+        assert log_records[0].correlation_id == str(task.correlation_id)
+        assert log_records[0].taskpacket_id == str(task.taskpacket_id)
+        assert log_records[0].line == "test output line"
+
+    def test_log_empty_output_skipped(self, caplog):
+        """Empty container output does not produce log entries."""
+        manager = ContainerManager()
+        with caplog.at_level(logging.INFO, logger="src.agent.container_manager"):
+            manager._log_container_output(
+                "  ",
+                container_id="x",
+                correlation_id="cid",
+                taskpacket_id="tid",
+            )
+        log_records = [r for r in caplog.records if r.message == "container.output"]
+        assert len(log_records) == 0
+
+    def test_emit_metrics_structured(self, caplog):
+        """AC #21: Container metrics emitted as structured log events."""
+        task = _make_task_input(repo_tier="suggest")
+        outcome = ContainerOutcome(
+            result=AgentContainerResult(success=True),
+            container_id="met123",
+            exit_code=0,
+            timed_out=False,
+            oom_killed=False,
+            launch_ms=100,
+            wait_ms=5000,
+            total_ms=5200,
+        )
+        manager = ContainerManager(
+            ContainerConfig(cpu_limit=2.0, memory_mb=4096, timeout_seconds=600),
+        )
+
+        with caplog.at_level(logging.INFO, logger="src.agent.container_manager"):
+            manager._emit_metrics(outcome, task)
+
+        metric_records = [r for r in caplog.records if r.message == "container.metrics"]
+        assert len(metric_records) == 1
+        rec = metric_records[0]
+        assert rec.repo_tier == "suggest"
+        assert rec.cpu_limit == 2.0
+        assert rec.memory_mb == 4096
+        assert rec.total_ms == 5200
+        assert rec.success is True
+
+    def test_metrics_emitted_on_timeout(self, caplog):
+        """Metrics are emitted even when container times out."""
+        task = _make_task_input()
+        outcome = ContainerOutcome(
+            result=None,
+            container_id="to123",
+            exit_code=-1,
+            timed_out=True,
+            total_ms=30000,
+        )
+        manager = ContainerManager()
+
+        with caplog.at_level(logging.INFO, logger="src.agent.container_manager"):
+            manager._emit_metrics(outcome, task)
+
+        metric_records = [r for r in caplog.records if r.message == "container.metrics"]
+        assert len(metric_records) == 1
+        assert metric_records[0].timed_out is True
+        assert metric_records[0].success is False
+
+    def test_full_lifecycle_emits_metrics(self, caplog):
+        """Full launch lifecycle emits container.metrics log event."""
+        task = _make_task_input()
+        mock_container = self._setup_mock_container()
+        manager = self._make_manager_with_mock(mock_container)
+
+        real_dir = tempfile.mkdtemp(prefix="test-obs-")
+        _write_result_to_dir(real_dir)
+
+        with (
+            caplog.at_level(logging.INFO, logger="src.agent.container_manager"),
+            patch("src.agent.container_manager.tempfile.mkdtemp", return_value=real_dir),
+        ):
+            outcome = manager.launch(task)
+
+        assert outcome.result is not None
+        metric_records = [r for r in caplog.records if r.message == "container.metrics"]
+        assert len(metric_records) == 1
+
+    def test_full_lifecycle_logs_container_output(self, caplog):
+        """Full launch captures container stdout/stderr with correlation_id."""
+        task = _make_task_input()
+        mock_container = self._setup_mock_container()
+        manager = self._make_manager_with_mock(mock_container)
+
+        real_dir = tempfile.mkdtemp(prefix="test-obs-")
+        _write_result_to_dir(real_dir)
+
+        with (
+            caplog.at_level(logging.INFO, logger="src.agent.container_manager"),
+            patch("src.agent.container_manager.tempfile.mkdtemp", return_value=real_dir),
+        ):
+            manager.launch(task)
+
+        output_records = [r for r in caplog.records if r.message == "container.output"]
+        assert len(output_records) == 2  # "line1" and "line2"
+        assert output_records[0].correlation_id == str(task.correlation_id)

@@ -187,3 +187,30 @@
 [2026-03-16T03:11:00] [verify] rewrote TAPPS_HANDOFF.md — corrected all 27 epic statuses, expanded to individual epic rows, updated TAPPS version to v1.8.0, added Active Work section, updated Next Actions
 [2026-03-16T03:12:00] [verify] created docs/epics/EPIC-STATUS-TRACKER.md — consolidated epic status tracker with phase mapping and recommendations
 [2026-03-16T03:13:00] [verify] updated TAPPS_RUNLOG.md — added this session entry
+
+### Phase 5 Final Sprint — Stories 25.7, 15.7, 24.4, 24.5, 24.6 (2026-03-17)
+
+[2026-03-17T00:01:00] [discover] read epic-25, epic-15, epic-24 — identified 5 remaining stories across 3 epics
+[2026-03-17T00:02:00] [discover] read src/agent/container_manager.py, src/observability/conventions.py — existing patterns
+[2026-03-17T00:10:00] [develop] Story 25.7 — added container lifecycle OTel spans to conventions.py (SPAN_CONTAINER_LAUNCH/WAIT/COLLECT/CLEANUP)
+[2026-03-17T00:11:00] [develop] Story 25.7 — rewrote container_manager.py with child spans, per-line log capture, structured metrics
+[2026-03-17T00:12:00] [develop] Story 25.7 — created 6 tests in tests/agent/test_container_manager.py (TestContainerObservability)
+[2026-03-17T00:20:00] [develop] Story 15.7 — rewrote docs/ONBOARDING.md with 7 sections (prerequisites, GitHub App, API, Admin UI, webhook, tiers, troubleshooting)
+[2026-03-17T00:30:00] [develop] Story 24.4 — created src/approval/channels/ package (base.py, github.py, registry.py)
+[2026-03-17T00:31:00] [develop] Story 24.4 — NotificationChannel ABC with 4 methods, GitHubChannel with structured markdown
+[2026-03-17T00:32:00] [develop] Story 24.4 — modified src/workflow/activities.py to use channel registry
+[2026-03-17T00:33:00] [develop] Story 24.4 — created tests/approval/test_channels.py (12 tests)
+[2026-03-17T00:40:00] [develop] Story 24.5 — created src/approval/channels/slack.py — Block Kit messages, approve/reject buttons
+[2026-03-17T00:41:00] [develop] Story 24.5 — added slack_approval_webhook_url to settings.py
+[2026-03-17T00:42:00] [develop] Story 24.5 — created tests/approval/test_slack_channel.py (11 tests)
+[2026-03-17T00:50:00] [develop] Story 24.6 — added approval OTel spans to conventions.py (SPAN_APPROVAL_REVIEW_CONTEXT/CHAT_MESSAGE/LLM_RESPONSE/APPROVE/REJECT)
+[2026-03-17T00:51:00] [develop] Story 24.6 — instrumented src/approval/chat_router.py with OTel spans
+[2026-03-17T00:52:00] [develop] Story 24.6 — instrumented src/api/approval.py with OTel spans + NATS signal publishing
+[2026-03-17T00:53:00] [develop] Story 24.6 — added ApprovalMetadata to src/publisher/evidence_comment.py
+[2026-03-17T00:54:00] [develop] Story 24.6 — created tests/approval/test_observability.py (12 tests)
+[2026-03-17T01:00:00] [validate] pytest tests/approval/ tests/agent/test_container_manager.py — 77 new tests passing
+[2026-03-17T01:10:00] [verify] updated epic-15, epic-24, epic-25 status to Complete
+[2026-03-17T01:11:00] [verify] updated EPIC-STATUS-TRACKER.md — Phase 5 complete, 26 epics done, 2,060+ tests
+[2026-03-17T01:12:00] [verify] updated MERIDIAN-ROADMAP-AGGRESSIVE.md — Phase 5 marked Complete, all blockers resolved
+[2026-03-17T01:13:00] [verify] updated TAPPS_HANDOFF.md — Phase 5 completion summary, next actions for Phase 6
+[2026-03-17T01:14:00] [verify] updated TAPPS_RUNLOG.md — added this session entry

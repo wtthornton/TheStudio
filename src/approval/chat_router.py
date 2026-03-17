@@ -1,6 +1,8 @@
 """Approval Chat API — endpoints for review context, chat, and actions.
 
 Epic 24 Story 24.3: Provides the API layer for the approval chat interface.
+Epic 24 Story 24.6: OTel spans for all chat interactions, approval metadata
+in evidence comments, NATS signals for approval/rejection.
 
 - GET  /api/tasks/{id}/review       — review context + chat history
 - POST /api/tasks/{id}/review/messages — send a message, get LLM response
@@ -23,8 +25,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.admin.rbac import get_current_user_id
 from src.approval.chat_models import MessageRole
 from src.db.connection import get_session
+from src.observability.conventions import (
+    ATTR_CORRELATION_ID,
+    ATTR_TASKPACKET_ID,
+    SPAN_APPROVAL_CHAT_MESSAGE,
+    SPAN_APPROVAL_LLM_RESPONSE,
+    SPAN_APPROVAL_REVIEW_CONTEXT,
+)
+from src.observability.tracing import get_tracer
 
 logger = logging.getLogger(__name__)
+tracer = get_tracer("thestudio.approval.chat")
 
 router = APIRouter(prefix="/api/tasks", tags=["approval-chat"])
 
@@ -98,17 +109,24 @@ async def get_review(
     taskpacket = await _get_taskpacket_or_404(session, task_uuid)
     _assert_awaiting_approval(taskpacket)
 
-    # Build review context
-    from src.approval.review_context import build_review_context
+    with tracer.start_as_current_span(SPAN_APPROVAL_REVIEW_CONTEXT) as span:
+        span.set_attribute(ATTR_TASKPACKET_ID, taskpacket_id)
+        span.set_attribute("thestudio.user_id", user_id)
 
-    context = await build_review_context(task_uuid, session=session)
+        # Build review context
+        from src.approval.review_context import build_review_context
 
-    # Get or create chat thread
-    from src.approval.chat_crud import create_chat, get_messages
+        context = await build_review_context(task_uuid, session=session)
 
-    chat = await create_chat(session, task_uuid, created_by=user_id)
-    messages = await get_messages(session, chat.id)
-    await session.commit()
+        # Get or create chat thread
+        from src.approval.chat_crud import create_chat, get_messages
+
+        chat = await create_chat(session, task_uuid, created_by=user_id)
+        messages = await get_messages(session, chat.id)
+        await session.commit()
+
+        span.set_attribute("thestudio.chat_id", str(chat.id))
+        span.set_attribute("thestudio.message_count", len(messages))
 
     return ReviewContextResponse(
         taskpacket_id=taskpacket_id,
@@ -150,6 +168,7 @@ async def send_message(
 
     Persists the user message, calls the Model Gateway with full
     ReviewContext + chat history, persists the assistant response.
+    OTel spans cover message send and LLM response.
     """
     task_uuid = _parse_uuid(taskpacket_id)
     taskpacket = await _get_taskpacket_or_404(session, task_uuid)
@@ -161,23 +180,36 @@ async def send_message(
     # Get or create chat
     chat = await create_chat(session, task_uuid, created_by=user_id)
 
-    # Persist user message
-    try:
-        user_msg = await add_message(
-            session, chat.id, MessageRole.USER, body.content,
-        )
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=str(exc),
-        ) from exc
+    # Persist user message (with span)
+    with tracer.start_as_current_span(SPAN_APPROVAL_CHAT_MESSAGE) as msg_span:
+        msg_span.set_attribute(ATTR_TASKPACKET_ID, taskpacket_id)
+        msg_span.set_attribute("thestudio.chat_id", str(chat.id))
+        msg_span.set_attribute("thestudio.user_id", user_id)
+        msg_span.set_attribute("thestudio.message_role", "user")
+
+        try:
+            user_msg = await add_message(
+                session, chat.id, MessageRole.USER, body.content,
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=str(exc),
+            ) from exc
 
     # Build context for LLM
     context = await build_review_context(task_uuid, session=session)
     history = await get_messages(session, chat.id)
 
-    # Get LLM response
-    assistant_text = await _get_llm_response(context, history)
+    # Get LLM response (with span)
+    with tracer.start_as_current_span(SPAN_APPROVAL_LLM_RESPONSE) as llm_span:
+        llm_span.set_attribute(ATTR_TASKPACKET_ID, taskpacket_id)
+        llm_span.set_attribute("thestudio.chat_id", str(chat.id))
+        llm_span.set_attribute("thestudio.history_length", len(history))
+
+        assistant_text = await _get_llm_response(context, history)
+
+        llm_span.set_attribute("thestudio.response_length", len(assistant_text))
 
     # Persist assistant message
     assistant_msg = await add_message(
@@ -192,6 +224,7 @@ async def send_message(
             "taskpacket_id": taskpacket_id,
             "chat_id": str(chat.id),
             "user_id": user_id,
+            "message_count": len(history) + 1,
         },
     )
 

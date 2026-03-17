@@ -2,7 +2,7 @@
 
 **Author:** Saga
 **Date:** 2026-03-13
-**Status:** In Progress — Sprint 1 Complete (2026-03-17). Stories 24.1-24.3 delivered. Sprint 2 (channels + observability) remaining.
+**Status:** Complete — All sprints delivered (2026-03-17). Stories 24.1-24.6 done. 56+ new tests.
 **Target Sprint:** Multi-sprint (estimated 2-3 sprints after Epic 22 completes)
 **Prerequisites:** Epic 21 (Human Approval Wait States) — complete. Epic 22 (Execute Tier) — complete. All Meridian blockers resolved.
 
@@ -217,13 +217,13 @@ Stories are ordered as vertical slices. Story 24.1 and 24.2 are foundational (da
 | 24.2 | **Approval Chat Thread Persistence** | M | Chat history survives restarts | `src/approval/chat_models.py`, `src/approval/chat_crud.py`, `tests/approval/test_chat_crud.py` | **Done** — ApprovalChat + ApprovalChatMessage models, 8 CRUD functions, 50-msg cap |
 | 24.3 | **Approval Chat API Endpoints** | L | Reviewers can interact before approving | `src/approval/chat_router.py`, `src/api/approval.py`, `src/app.py`, `tests/approval/test_chat_router.py` | **Done** — GET /review, POST /review/messages, chat thread resolution on approve/reject |
 
-### Sprint 2: Channels + Observability
+### Sprint 2: Channels + Observability — COMPLETE (2026-03-17)
 
-| # | Story | Size | Value | Files |
-|---|-------|------|-------|-------|
-| 24.4 | **Notification Channel Adapter (Base + GitHub)** | M | Reviewers get structured notifications where they work | `src/approval/channels/base.py`, `src/approval/channels/github.py`, `src/workflow/activities.py`, `tests/approval/test_channels.py` |
-| 24.5 | **Slack Notification Channel (Optional)** | M | Slack-native teams can approve without leaving Slack | `src/approval/channels/slack.py`, `src/settings.py`, `tests/approval/test_slack_channel.py` |
-| 24.6 | **Approval Chat Observability + Audit** | M | Full audit trail for compliance | `src/approval/chat_router.py`, `src/publisher/evidence_comment.py`, `src/settings.py`, `tests/approval/test_observability.py` |
+| # | Story | Size | Value | Files | Status |
+|---|-------|------|-------|-------|--------|
+| 24.4 | **Notification Channel Adapter (Base + GitHub)** | M | Reviewers get structured notifications where they work | `src/approval/channels/base.py`, `src/approval/channels/github.py`, `src/approval/channels/registry.py`, `src/workflow/activities.py`, `tests/approval/test_channels.py` | **Done** — Abstract NotificationChannel base, GitHubChannel with structured comments, channel registry, activity integration. 12 new tests. |
+| 24.5 | **Slack Notification Channel (Optional)** | M | Slack-native teams can approve without leaving Slack | `src/approval/channels/slack.py`, `src/settings.py`, `tests/approval/test_slack_channel.py` | **Done** — SlackChannel with Block Kit messages, approve/reject action buttons, webhook posting. 11 new tests. |
+| 24.6 | **Approval Chat Observability + Audit** | M | Full audit trail for compliance | `src/approval/chat_router.py`, `src/api/approval.py`, `src/publisher/evidence_comment.py`, `src/observability/conventions.py`, `tests/approval/test_observability.py` | **Done** — OTel spans for review context, chat message, LLM response, approve, reject. ApprovalMetadata in evidence comments. NATS JetStream signals. 12 new tests. |
 
 ---
 

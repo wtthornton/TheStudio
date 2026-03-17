@@ -2,7 +2,7 @@
 
 **Author:** Saga
 **Date:** 2026-03-13
-**Status:** In Progress — Sprint 1+2 Complete (2026-03-17). Stories 25.1-25.6 delivered. Sprint 3 (observability) remaining.
+**Status:** Complete — All 3 sprints delivered (2026-03-17). Stories 25.1-25.7 done. 35+ new tests.
 **Target Sprint:** Multi-sprint (estimated 2-3 sprints, ~3 months)
 **Prerequisites:** None hard-required. Epic 23 (Unified Agent Framework) recommended but not blocking. All Meridian blockers resolved.
 
@@ -232,11 +232,11 @@ Stories are ordered by risk reduction. Sprint 1 builds the container image, prot
 | 25.5 | **Agent Network Isolation** | M | Security boundary enforced | `docker-compose.dev.yml`, `infra/docker-compose.prod.yml` | **Done** — agent-net bridge network, Docker socket mount |
 | 25.6 | **Resource Limits and Cleanup** | L | Tier-based resource control, orphan reaping | `src/agent/container_manager.py`, `src/settings.py` | **Done** — per-tier CPU/memory/timeout via resolve_isolation() |
 
-### Sprint 3: Observability and Hardening
+### Sprint 3: Observability and Hardening — COMPLETE (2026-03-17)
 
-| # | Story | Size | Value | Files |
-|---|-------|------|-------|-------|
-| 25.7 | **Observability for Containerized Agents** | M | Full traceability of container lifecycle | `src/agent/container_manager.py`, `src/observability/conventions.py` |
+| # | Story | Size | Value | Files | Status |
+|---|-------|------|-------|-------|--------|
+| 25.7 | **Observability for Containerized Agents** | M | Full traceability of container lifecycle | `src/agent/container_manager.py`, `src/observability/conventions.py` | **Done** — Child spans for launch/wait/collect/cleanup, container log capture with correlation_id, structured metrics emission. 6 new tests. |
 
 ---
 
