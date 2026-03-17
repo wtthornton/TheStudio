@@ -1,4 +1,4 @@
-<!-- tapps-agents-version: 1.4.1 -->
+<!-- tapps-agents-version: 1.8.0 -->
 # TappsMCP - instructions for AI assistants
 
 When the **TappsMCP** MCP server is configured, you have access to tools for **code quality, doc lookup, and domain expert advice**. Use them to avoid hallucinated APIs, missed quality steps, and inconsistent output.
@@ -168,7 +168,7 @@ Four agent definitions per platform in `.claude/agents/` or `.cursor/agents/`:
 
 ### Skills (auto-generated)
 
-Seven SKILL.md files per platform in `.claude/skills/` or `.cursor/skills/`:
+Twelve SKILL.md files per platform in `.claude/skills/` or `.cursor/skills/`:
 - **tapps-score** - Score a Python file across 7 quality categories
 - **tapps-gate** - Run a quality gate check and report pass/fail
 - **tapps-validate** - Validate all changed files before declaring work complete
@@ -252,7 +252,7 @@ DocsMCP is a separate MCP server. Install via `pip install docs-mcp` or `npx doc
 
 ## TappsMCP and the production test rig
 
-The **production test rig** lives in `thestudio-production-test-rig/` (scaffold for a separate repo). When TappsMCP runs via **MCP_DOCKER** (container gateway), the container’s project root may not include that path, so tools like `tapps_quick_check` or `tapps_validate_changed` may not see test rig files.
+The **production test rig** lives in `thestudio-production-test-rig/` (scaffold for a separate repo). Ensure `TAPPS_MCP_PROJECT_ROOT` is set to the TheStudio repo root so that tools like `tapps_quick_check` or `tapps_validate_changed` can see test rig files.
 
 **Options:**
 

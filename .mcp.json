@@ -1,28 +1,42 @@
 {
   "mcpServers": {
-    "MCP_DOCKER": {
-      "command": "docker",
-      "args": [
-        "mcp",
-        "gateway",
-        "run"
-      ],
-      "env": {
-        "LOCALAPPDATA": "C:\\Users\\tappt\\AppData\\Local",
-        "ProgramData": "C:\\ProgramData",
-        "ProgramFiles": "C:\\Program Files"
-      }
-    },
     "tapps-mcp": {
       "type": "stdio",
-      "command": "tapps-mcp",
+      "command": "uv",
       "args": [
+        "--directory",
+        "C:\\cursor\\TappMCP",
+        "run",
+        "--no-sync",
+        "tapps-mcp",
         "serve"
       ],
       "env": {
-        "TAPPS_MCP_PROJECT_ROOT": "."
+        "TAPPS_MCP_PROJECT_ROOT": ".",
+        "TAPPS_MCP_CONTEXT7_API_KEY": "ctx7sk-534b7c8b-6e58-4019-8206-a084b4939e1e"
       },
       "instructions": "Code quality scoring (0-100 across 7 categories), security scanning (Bandit + secret detection), quality gates (pass/fail against configurable presets), documentation lookup, domain expert consultation, and project profiling for Python projects."
+    },
+    "docs-mcp": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "--directory",
+        "C:\\cursor\\TappMCP",
+        "run",
+        "--no-sync",
+        "docsmcp",
+        "serve"
+      ],
+      "env": {
+        "DOCS_MCP_PROJECT_ROOT": "."
+      }
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest"
+      ]
     }
   }
 }

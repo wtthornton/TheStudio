@@ -1,43 +1,43 @@
 {
-  "timestamp": "2026-03-12T18:55:26Z",
-  "timestamp_epoch": 1773341726.0233462,
-  "platform": "win32",
+  "timestamp": "2026-03-14T19:39:56Z",
+  "timestamp_epoch": 1773517196.7467005,
+  "platform": "linux",
   "tools": [
     {
       "name": "ruff",
-      "version": "ruff 0.15.5",
+      "version": "ruff 0.15.0",
       "available": true,
       "install_hint": null
     },
     {
       "name": "mypy",
-      "version": null,
+      "version": "mypy 1.19.1 (compiled: yes)",
       "available": true,
       "install_hint": null
     },
     {
       "name": "bandit",
-      "version": null,
+      "version": "bandit 1.9.3",
       "available": true,
       "install_hint": null
     },
     {
       "name": "radon",
-      "version": null,
+      "version": "6.0.1",
       "available": true,
       "install_hint": null
     },
     {
       "name": "vulture",
       "version": null,
-      "available": true,
-      "install_hint": null
+      "available": false,
+      "install_hint": "pip install vulture"
     },
     {
       "name": "pip-audit",
       "version": null,
-      "available": true,
-      "install_hint": null
+      "available": false,
+      "install_hint": "pip install pip-audit"
     }
   ]
 }

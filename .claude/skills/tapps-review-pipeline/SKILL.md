@@ -1,9 +1,11 @@
 ---
 name: tapps-review-pipeline
+user-invocable: true
+model: claude-sonnet-4-6
 description: >-
   Orchestrate a parallel review-fix-validate pipeline across multiple changed files.
   Spawns tapps-review-fixer agents in worktrees for parallel processing.
-allowed-tools: mcp__tapps-mcp__tapps_validate_changed, mcp__tapps-mcp__tapps_checklist
+allowed-tools: mcp__tapps-mcp__tapps_validate_changed mcp__tapps-mcp__tapps_checklist
 context: fork
 agent: general-purpose
 ---
