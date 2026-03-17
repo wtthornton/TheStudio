@@ -2,7 +2,7 @@
 
 **Author:** Saga
 **Date:** 2026-03-13
-**Status:** Draft — Awaiting Meridian Review
+**Status:** Meridian Reviewed — Conditional Pass (2026-03-16)
 **Target Sprint:** Multi-sprint (estimated 2-3 sprints, ~3 months)
 **Prerequisites:** None hard-required. Epic 23 (Unified Agent Framework) recommended but not blocking.
 
@@ -242,8 +242,33 @@ Stories are ordered by risk reduction. Sprint 1 builds the container image, prot
 
 ## Meridian Review Status
 
-**Round 1: Pending**
+**Round 1: Conditional Pass (2026-03-16)**
+
+**Verdict:** 6/7 questions PASS, 1 GAP. Best-specified ACs of the three reviewed epics. 21 criteria, each verifiable.
+
+| # | Question | Verdict |
+|---|----------|---------|
+| 1 | Goal specific enough to test? | PASS |
+| 2 | AC testable at epic scale? | PASS |
+| 3 | Non-goals explicit? | PASS |
+| 4 | Dependencies identified with owners/dates? | GAP |
+| 5 | Success metrics measurable? | PASS (caveat on startup metric timing) |
+| 6 | AI agent can implement without guessing? | PASS (recommendation on DB-free entrypoint) |
+| 7 | Narrative compelling? | PASS |
+
+**Must fix before commit:**
 
 | # | Issue | Resolution |
 |---|-------|------------|
-| — | — | — |
+| 1 | Silent fallback to in-process on Execute tier is a security regression. AC #11 must define per-tier fallback policy: Observe/Suggest can fall back to in-process; Execute must fail-closed. | Open |
+| 2 | All stakeholder roles TBD. No named owners or assignment dates. | Open |
+| 3 | No target sprint dates. "2-3 sprints, ~3 months" needs anchoring with Sprint 1 start date. | Open |
+| 4 | Epic 22 dependency relationship unclear. If Execute tier is the primary security motivator, this relationship should be explicit in Dependencies section. | Open |
+
+**Recommended (not blocking):**
+
+| # | Recommendation |
+|---|----------------|
+| 1 | Clarify DB-free execution path. `implement()` requires `AsyncSession` but container runner won't have DB access. Note whether a new session-free entrypoint is needed or container runner calls `AgentRunner.run()` directly. |
+| 2 | Docker Desktop vs. Linux networking: network isolation integration tests should run on Linux CI only; Docker Desktop tests are smoke-only. |
+| 3 | Add early startup timing check in Sprint 1. `container_launch_ms` metric only exists after Story 25.7. |

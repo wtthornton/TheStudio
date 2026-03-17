@@ -213,7 +213,7 @@ The arc is **buildable and measurable**. It’s enough to set an aggressive road
 
 **Goal:** Convert rule-based pipeline stubs to LLM-powered agents via a shared framework. Add container isolation for untrusted code execution. Expand intake beyond GitHub. Add chat-based approval UX. Prove the pipeline on real repositories.
 
-**Status as of 2026-03-16:**
+**Status as of 2026-03-16 (end of session):**
 
 | Phase | Status | Key Milestone |
 |-------|--------|---------------|
@@ -228,7 +228,7 @@ The arc is **buildable and measurable**. It’s enough to set an aggressive road
 
 | Epic | Title | Status | Notes |
 |------|-------|--------|-------|
-| 15 | E2E Integration & Real Repo Onboarding | Draft (revised) | Awaiting sprint scheduling |
+| 15 | E2E Integration & Real Repo Onboarding | Meridian Reviewed (2 rounds) | Session plan created, ready to execute |
 | 16 | Issue Readiness Gate | Complete | Sprints 17-18 delivered |
 | 17 | Poll for Issues (Backup) | Complete | All 8 stories delivered |
 | 18 | Production E2E Test Suite | Complete | 5 slices, full contract coverage |
@@ -236,14 +236,14 @@ The arc is **buildable and measurable**. It’s enough to set an aggressive road
 | 20 | Critical Gaps Batch 2 (JetStream, Escalation, Adversarial) | Complete | Sprint 19 |
 | 21 | Human Approval Wait States | Complete | 9 stories, Temporal durable wait |
 | 22 | Execute Tier End-to-End | Complete | 18 stories, auto-merge gating |
-| 23 | Unified Agent Framework | **In Progress** | Sprint 1: 10/10 stories done, hardening stories 1.11-1.13 remain |
-| 24 | Chat Approval Workflows | Draft | Awaiting Meridian review |
-| 25 | Container Isolation | Draft | Awaiting Meridian review |
+| 23 | Unified Agent Framework | **In Progress** | Sprint 1 complete (1.1-1.10). Sprint 2 started: Intake + Context configs done (42 tests). Intent + Router next. |
+| 24 | Chat Approval Workflows | **Meridian Reviewed** | Conditional Pass. 5 blocking gaps (rejection status, baselines, owners). |
+| 25 | Container Isolation | **Meridian Reviewed** | Conditional Pass. 4 blocking gaps (Execute fallback policy, owners, dates, Epic 22 dep). |
 | 26 | File-Based Expert Packaging | Complete | 6 stories delivered |
-| 27 | Multi-Source Webhooks | Draft | Awaiting Meridian review |
+| 27 | Multi-Source Webhooks | **Meridian Reviewed** | Conditional Pass. 4 blocking gaps (source_name storage, owners, jsonpath-ng eval, Sprint 1 scope). |
 
 **Codebase Metrics (2026-03-16):**
-- 1,756 tests passing, 84% coverage, 150+ source files, 88 test files
+- 1,798+ tests passing (42 new from Epic 23 Sprint 2), 84% coverage, 150+ source files, 90+ test files
 - TAPPS v1.8.0 quality pipeline active (ruff, mypy, bandit, radon, vulture, pip-audit)
 
 **Phase 5 Success Criteria (Meridian bar):**
@@ -253,10 +253,21 @@ The arc is **buildable and measurable**. It’s enough to set an aggressive road
 - Human reviewers can ask questions about proposed changes via chat before approving.
 - At least one real repository processes issues end-to-end at Observe tier with documented results.
 
+**Cross-Epic Blocking Items (from Meridian reviews 2026-03-16):**
+
+| # | Epic | Blocker | Owner |
+|---|------|---------|-------|
+| 1 | All (24, 25, 27) | All stakeholder roles are "TBD" — need named owners | TBD |
+| 2 | 24 | No rejection status in TaskPacket `ALLOWED_TRANSITIONS` | TBD |
+| 3 | 25 | Silent fallback to in-process on Execute tier is a security hole — need per-tier policy | TBD |
+| 4 | 25 | DB-free execution path for container runner (`implement()` requires `AsyncSession`) | TBD |
+| 5 | 27 | `source_name` storage ambiguity: scope JSON vs new column — migration decision required | TBD |
+
 **Recommended Next Sprint:**
-1. Epic 23 Sprint 2 — Convert Intake + Context agents to use AgentRunner framework
-2. Submit Epics 24, 25, 27 for Meridian review
-3. Epic 15 — Real repo Observe-tier onboarding trial
+1. Epic 23 Sprint 2 continued — Convert Intent Builder + Router agents to use AgentRunner framework
+2. Fix cross-epic blockers above, then re-review Epics 24, 25, 27
+3. Epic 15 Story 15.1 — Mock provider harness (unblocks rest of Epic 15)
+4. Epic 23 hardening stories 1.11-1.13 (prompt guard, pipeline budget, context compression)
 
 ---
 

@@ -2,7 +2,7 @@
 
 **Author:** Saga
 **Date:** 2026-03-13
-**Status:** Draft — Awaiting Meridian Review
+**Status:** Meridian Reviewed — Conditional Pass (2026-03-16)
 **Target Sprint:** Multi-sprint (estimated 2-3 sprints after Epic 22 completes)
 **Prerequisites:** Epic 21 (Human Approval Wait States) — complete. Epic 22 (Execute Tier) — complete.
 
@@ -229,8 +229,26 @@ Stories are ordered as vertical slices. Story 24.1 and 24.2 are foundational (da
 
 ## Meridian Review Status
 
-**Round 1: Pending**
+**Round 1: Conditional Pass (2026-03-16)**
+
+**Verdict:** 5/7 questions PASS, 2 CONDITIONAL. Well-structured epic with strong ACs and non-goals.
+
+| # | Question | Verdict |
+|---|----------|---------|
+| 1 | Goal specific enough to test? | PASS |
+| 2 | AC testable at epic scale? | PASS |
+| 3 | Non-goals explicit? | PASS |
+| 4 | Dependencies identified with owners/dates? | GAP |
+| 5 | Success metrics measurable? | GAP |
+| 6 | AI agent can implement without guessing? | PASS |
+| 7 | Narrative compelling? | PASS |
+
+**Must fix before commit:**
 
 | # | Issue | Status | Resolution |
 |---|-------|--------|------------|
-| — | — | — | — |
+| 1 | No rejection status defined in TaskPacket `ALLOWED_TRANSITIONS`. AC #9 references rejection signal but no `REJECTED` status exists. Must decide: `FAILED` or new `REJECTED` status. | Open | — |
+| 2 | Success metrics lack baselines. "Approval time median < 4 hours" set against "~unknown" baseline. "Timeout rate < 10%" has no current measurement. Data exists in Temporal workflow history — measure before setting targets. | Open | — |
+| 3 | All stakeholder roles TBD. No named owners or assignment dates. | Open | — |
+| 4 | `reject_publish` signal does not exist in `src/workflow/`. Current wait condition is `self._approved` — needs to change to `self._approved or self._rejected`. Should be elevated from risk to explicit AC. | Open | — |
+| 5 | Evidence comment edge case: what happens when approval occurs via raw API with no chat thread? AC #16 needs clarification. | Open | — |

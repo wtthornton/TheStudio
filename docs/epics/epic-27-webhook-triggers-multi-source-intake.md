@@ -2,7 +2,7 @@
 
 **Author:** Saga
 **Date:** 2026-03-13
-**Status:** Draft — Awaiting Meridian Review
+**Status:** Meridian Reviewed — Conditional Pass (2026-03-16)
 **Target Sprint:** Multi-sprint (estimated 2-3 sprints)
 **Prerequisites:** None (independent of other active epics)
 
@@ -218,8 +218,33 @@ Stories are ordered by vertical slices. Sprint 1 delivers a working end-to-end g
 
 ## Meridian Review Status
 
-**Round 1: Pending**
+**Round 1: Conditional Pass (2026-03-16)**
+
+**Verdict:** 5/7 questions PASS, 2 GAP/CONDITIONAL. Clean architectural vision with strong non-goals. Most AI-implementable of the three reviewed epics.
+
+| # | Question | Verdict |
+|---|----------|---------|
+| 1 | Goal specific enough to test? | PASS |
+| 2 | AC testable at epic scale? | PASS (one minor gap) |
+| 3 | Non-goals explicit? | PASS |
+| 4 | Dependencies identified with owners/dates? | GAP |
+| 5 | Success metrics measurable? | PASS (one gap on "time to add source") |
+| 6 | AI agent can implement without guessing? | CONDITIONAL (source_name storage ambiguity) |
+| 7 | Narrative compelling? | PASS |
+
+**Must fix before commit:**
 
 | # | Issue | Resolution |
 |---|-------|------------|
-| — | — | — |
+| 1 | AC #14 ambiguous: `source_name` storage is "scope JSON or new metadata field." Current TaskPacket model has no `source_name` or `metadata` field. Must decide: scope JSON column or new column with migration. "Or" is not a specification. | Open |
+| 2 | All stakeholder roles TBD. No named owners or assignment dates. | Open |
+| 3 | `jsonpath-ng` evaluation unassigned. AC #4 assumes it exists. If evaluation fails, translation layer needs redesign. Assign a person with a decision date. | Open |
+| 4 | Explicitly state Sprint 1 is file-config-only (no DB table, no DB registry). Story map implies this but ACs do not make it airtight. | Open |
+
+**Recommended (not blocking):**
+
+| # | Recommendation |
+|---|----------------|
+| 1 | Story numbering does not match execution order (Sprint 1: 27.1, 27.5, 27.3, 27.4). Renumber to match execution order. |
+| 2 | "Time to add a new source < 30 minutes" needs a concrete usability validation protocol with a named tester and date. |
+| 3 | Identify source for real-world Jira/Linear/Slack test payloads. Someone needs tool access to capture actual payloads. |
