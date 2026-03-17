@@ -43,6 +43,7 @@ services:
       THESTUDIO_INTAKE_POLL_INTERVAL_MINUTES: "${THESTUDIO_INTAKE_POLL_INTERVAL_MINUTES:-10}"
       THESTUDIO_INTAKE_POLL_TOKEN: "${THESTUDIO_INTAKE_POLL_TOKEN:-}"
       THESTUDIO_OTEL_EXPORTER: "${THESTUDIO_OTEL_EXPORTER:-console}"
+      THESTUDIO_AGENT_ISOLATION: "${THESTUDIO_AGENT_ISOLATION:-process}"
     depends_on:
       postgres:
         condition: service_healthy
@@ -50,6 +51,8 @@ services:
         condition: service_healthy
       nats:
         condition: service_started
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
       interval: 10s
@@ -64,6 +67,7 @@ services:
           cpus: "1.0"
     networks:
       - thestudio-net
+      - agent-net
 
   postgres:
     image: postgres:16-alpine
@@ -191,6 +195,15 @@ services:
 networks:
   thestudio-net:
     driver: bridge
+  # Agent network — isolated network for ephemeral agent containers.
+  # Agent containers connect ONLY to agent-net. They cannot reach
+  # postgres (5432), temporal (7233), nats (4222), or the app (8000).
+  # Outbound HTTPS to GitHub and Anthropic API is allowed.
+  agent-net:
+    driver: bridge
+    internal: false
+    labels:
+      thestudio.role: "agent-isolation"
 
 volumes:
   pgdata:

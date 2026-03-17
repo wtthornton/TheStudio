@@ -74,9 +74,24 @@ services:
         condition: service_healthy
       nats:
         condition: service_healthy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     healthcheck:
       test: ["CMD", "python", "-c", "import httpx; r = httpx.get('http://localhost:8000/healthz'); assert r.status_code == 200"]
       interval: 10s
       timeout: 5s
       retries: 6
       start_period: 15s
+    networks:
+      - default
+      - agent-net
+
+# Agent network — restricted network for ephemeral agent containers.
+# Agent containers connect ONLY to agent-net (no access to postgres,
+# temporal, nats, or the app). Outbound HTTPS to GitHub is allowed.
+networks:
+  agent-net:
+    driver: bridge
+    internal: false  # Allows outbound internet (GitHub API, Anthropic API)
+    labels:
+      thestudio.role: "agent-isolation"

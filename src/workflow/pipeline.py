@@ -418,6 +418,7 @@ class TheStudioPipelineWorkflow:
                     taskpacket_id=params.taskpacket_id,
                     repo_path=params.repo_path,
                     loopback_attempt=verification_loopbacks + qa_loopbacks,
+                    repo_tier=params.repo_tier,
                 ),
                 start_to_close_timeout=impl_policy.timeout,
                 retry_policy=impl_policy.to_retry_policy(),
@@ -495,6 +496,7 @@ class TheStudioPipelineWorkflow:
 
             output.step_reached = WorkflowStep.AWAITING_APPROVAL
             output.awaiting_approval = True
+            approval_wait_start = workflow.now()
 
             # Durable wait: block until approved, rejected, or 7-day timeout
             try:
@@ -513,6 +515,19 @@ class TheStudioPipelineWorkflow:
                     start_to_close_timeout=timedelta(minutes=5),
                     retry_policy=RetryPolicy(maximum_attempts=3),
                 )
+                # Approval baseline: record timeout event
+                approval_wait_hours = (
+                    (workflow.now() - approval_wait_start).total_seconds() / 3600.0
+                )
+                workflow.logger.info(
+                    "approval.baseline.timeout",
+                    extra={
+                        "taskpacket_id": params.taskpacket_id,
+                        "repo_tier": params.repo_tier,
+                        "outcome": "timeout",
+                        "wait_hours": f"{approval_wait_hours:.2f}",
+                    },
+                )
                 output.rejection_reason = "approval_timeout"
                 output.verification_loopbacks = verification_loopbacks
                 output.qa_loopbacks = qa_loopbacks
@@ -520,6 +535,19 @@ class TheStudioPipelineWorkflow:
 
             # Check if rejected
             if self._rejected:
+                approval_wait_hours = (
+                    (workflow.now() - approval_wait_start).total_seconds() / 3600.0
+                )
+                workflow.logger.info(
+                    "approval.baseline.rejected",
+                    extra={
+                        "taskpacket_id": params.taskpacket_id,
+                        "repo_tier": params.repo_tier,
+                        "outcome": "rejected",
+                        "rejected_by": self._rejected_by,
+                        "wait_hours": f"{approval_wait_hours:.2f}",
+                    },
+                )
                 output.rejection_reason = (
                     f"rejected by {self._rejected_by}: {self._rejection_reason}"
                 )
@@ -527,7 +555,20 @@ class TheStudioPipelineWorkflow:
                 output.qa_loopbacks = qa_loopbacks
                 return output
 
-            # Approved — record approver
+            # Approved — record approver and baseline timing
+            approval_wait_hours = (
+                (workflow.now() - approval_wait_start).total_seconds() / 3600.0
+            )
+            workflow.logger.info(
+                "approval.baseline.approved",
+                extra={
+                    "taskpacket_id": params.taskpacket_id,
+                    "repo_tier": params.repo_tier,
+                    "outcome": "approved",
+                    "approved_by": self._approved_by,
+                    "wait_hours": f"{approval_wait_hours:.2f}",
+                },
+            )
             output.approved_by = self._approved_by
 
         # Step 9: Publish

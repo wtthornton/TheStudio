@@ -132,6 +132,19 @@ async def approve_task(
             detail=f"Workflow for TaskPacket {taskpacket_id} not found",
         ) from exc
 
+    # Resolve associated chat thread (Epic 24 — AC #10)
+    try:
+        from src.approval.chat_crud import resolve_chat_by_taskpacket
+
+        await resolve_chat_by_taskpacket(session, task_uuid)
+        await session.commit()
+    except Exception:
+        logger.debug(
+            "Could not resolve chat thread on approval",
+            extra={"taskpacket_id": taskpacket_id},
+            exc_info=True,
+        )
+
     logger.info(
         "approval.signaled",
         extra={
@@ -203,6 +216,19 @@ async def reject_task(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Workflow for TaskPacket {taskpacket_id} not found",
         ) from exc
+
+    # Resolve associated chat thread (Epic 24 — AC #10)
+    try:
+        from src.approval.chat_crud import resolve_chat_by_taskpacket
+
+        await resolve_chat_by_taskpacket(session, task_uuid)
+        await session.commit()
+    except Exception:
+        logger.debug(
+            "Could not resolve chat thread on rejection",
+            extra={"taskpacket_id": taskpacket_id},
+            exc_info=True,
+        )
 
     logger.info(
         "rejection.signaled",

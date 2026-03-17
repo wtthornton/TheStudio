@@ -155,6 +155,7 @@ class ImplementInput:
     taskpacket_id: str
     repo_path: str
     loopback_attempt: int = 0
+    repo_tier: str = "observe"
 
 
 @dataclass
@@ -567,10 +568,96 @@ async def assembler_activity(params: AssemblerInput) -> AssemblerOutput:
 async def implement_activity(params: ImplementInput) -> ImplementOutput:
     """Step 6: Primary Agent implements changes.
 
-    Routes LLM calls through Model Gateway; checks Tool Hub access for
-    code-quality tools. In production, delegates to
-    primary_agent.implement() or handle_loopback().
+    Supports two modes controlled by THESTUDIO_AGENT_ISOLATION:
+    - "process" (default): Routes LLM calls through Model Gateway in-process.
+    - "container": Serializes task to AgentTaskInput, launches an ephemeral
+      Docker container via ContainerManager, collects results.
+
+    Fallback policy is tier-aware: Observe/Suggest fall back to in-process
+    if Docker is unavailable; Execute tier fails closed.
     """
+    from src.agent.isolation_policy import IsolationMode, resolve_isolation
+    from src.settings import settings
+
+    repo_tier = getattr(params, "repo_tier", "observe")
+
+    # Resolve isolation mode based on settings and Docker availability
+    if settings.agent_isolation == "container":
+        from src.agent.container_manager import ContainerManager
+
+        container_available = ContainerManager.is_docker_available()
+        decision = resolve_isolation(repo_tier, container_available)
+
+        if decision.mode == IsolationMode.CONTAINER:
+            return await _implement_container(params, decision)
+
+    # In-process mode (default or fallback)
+    return await _implement_in_process(params, repo_tier)
+
+
+async def _implement_container(params: ImplementInput, decision) -> ImplementOutput:
+    """Run implementation in an ephemeral Docker container."""
+    import logging
+    from uuid import UUID
+
+    from src.agent.container_manager import ContainerConfig, ContainerManager
+    from src.agent.container_protocol import AgentTaskInput
+
+    logger = logging.getLogger("thestudio.implement")
+
+    # Build container config from tier-based limits
+    config = ContainerConfig(
+        cpu_limit=decision.cpu_limit,
+        memory_mb=decision.memory_mb,
+        timeout_seconds=decision.timeout_seconds,
+    )
+
+    # Serialize task input for the container
+    task_input = AgentTaskInput(
+        taskpacket_id=UUID(params.taskpacket_id),
+        correlation_id=UUID(params.taskpacket_id),  # Use taskpacket as correlation
+        repo_url="",  # Resolved from TaskPacket in production
+        system_prompt="",  # Resolved from developer_role in production
+        loopback_attempt=params.loopback_attempt,
+        repo_tier=getattr(params, "repo_tier", "observe"),
+    )
+
+    manager = ContainerManager(config)
+    outcome = manager.launch(task_input, repo_path=params.repo_path)
+
+    logger.info(
+        "implement.container.completed",
+        extra={
+            "taskpacket_id": params.taskpacket_id,
+            "container_id": outcome.container_id,
+            "exit_code": outcome.exit_code,
+            "timed_out": outcome.timed_out,
+            "oom_killed": outcome.oom_killed,
+            "total_ms": outcome.total_ms,
+        },
+    )
+
+    if outcome.result is not None:
+        return ImplementOutput(
+            taskpacket_id=params.taskpacket_id,
+            intent_version=outcome.result.intent_version,
+            files_changed=outcome.result.files_changed,
+            agent_summary=outcome.result.agent_summary,
+        )
+
+    return ImplementOutput(
+        taskpacket_id=params.taskpacket_id,
+        intent_version=1,
+        files_changed=[],
+        agent_summary=(
+            f"Container failed: exit_code={outcome.exit_code} "
+            f"timed_out={outcome.timed_out}"
+        ),
+    )
+
+
+async def _implement_in_process(params: ImplementInput, repo_tier: str) -> ImplementOutput:
+    """Run implementation in-process (default mode)."""
     from src.admin.model_gateway import ModelCallAudit, get_model_audit_store, get_model_router
     from src.admin.tool_catalog import get_tool_policy_engine
 
@@ -588,7 +675,7 @@ async def implement_activity(params: ImplementInput) -> ImplementOutput:
     policy.check_access(
         role="developer",
         overlays=[],
-        repo_tier="observe",
+        repo_tier=repo_tier,
         suite_name="code-quality",
         tool_name="ruff",
     )

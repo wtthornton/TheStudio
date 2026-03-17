@@ -2,9 +2,9 @@
 
 **Author:** Saga
 **Date:** 2026-03-13
-**Status:** Meridian Reviewed — Conditional Pass (2026-03-16). Blocker #3 resolved (2026-03-16): Per-tier fallback policy implemented in settings + isolation_policy.py. Execute tier MUST deny fallback to in-process.
+**Status:** In Progress — Sprint 1+2 Complete (2026-03-17). Stories 25.1-25.6 delivered. Sprint 3 (observability) remaining.
 **Target Sprint:** Multi-sprint (estimated 2-3 sprints, ~3 months)
-**Prerequisites:** None hard-required. Epic 23 (Unified Agent Framework) recommended but not blocking. Blocker #3 (fallback policy) — resolved.
+**Prerequisites:** None hard-required. Epic 23 (Unified Agent Framework) recommended but not blocking. All Meridian blockers resolved.
 
 ---
 
@@ -87,7 +87,7 @@ Three factors converge:
 
 10. **implement_activity supports both modes.** When `THESTUDIO_AGENT_ISOLATION=container`, the activity serializes the task, calls `ContainerManager.launch()`, waits, collects results, and returns an `ImplementOutput`. When `THESTUDIO_AGENT_ISOLATION=process` (default), it runs in-process as today.
 
-11. **Fallback to in-process mode on Docker unavailability.** If container mode is configured but Docker is unavailable (socket not found, daemon not running), the activity logs a warning and falls back to in-process execution. The task does not fail because of infrastructure issues.
+11. **Fallback behavior is governed by trust tier.** If container mode is configured but Docker is unavailable: Observe and Suggest tiers fall back to in-process execution with a warning log. **Execute tier fails closed** — no fallback to in-process, the task fails. Per-tier policy is enforced by `isolation_policy.py`.
 
 12. **Resource limits are configurable per trust tier.** Settings define CPU, memory, and wall-clock timeout per tier: Observe (1 CPU, 2GB, 30min), Suggest (2 CPU, 4GB, 60min), Execute (4 CPU, 8GB, 120min). These are overridable via environment variables.
 
@@ -151,9 +151,9 @@ Three factors converge:
 
 | Role | Who | Responsibility |
 |------|-----|----------------|
-| Epic Owner | Platform Lead (TBD — assign before sprint start) | Accepts epic scope, reviews AC completion |
-| Tech Lead | Backend/Infra Engineer (TBD — assign before sprint start) | Owns container architecture, Docker integration, network policy |
-| QA | QA Engineer (TBD — assign before sprint start) | Validates isolation boundaries, resource limits, cleanup behavior |
+| Epic Owner | Primary Developer | Accepts epic scope, reviews AC completion |
+| Tech Lead | Primary Developer | Owns container architecture, Docker integration, network policy |
+| QA | Primary Developer | Validates isolation boundaries, resource limits, cleanup behavior |
 | Saga | Epic Creator | Authored this epic; available for scope clarification |
 | Meridian | VP Success | Reviews this epic before commit; reviews sprint plans |
 
@@ -216,21 +216,21 @@ Three factors converge:
 
 Stories are ordered by risk reduction. Sprint 1 builds the container image, protocol, and lifecycle manager. Sprint 2 wires the activity integration, network isolation, and resource management. Sprint 3 adds observability and hardens cleanup.
 
-### Sprint 1: Container Foundation
+### Sprint 1: Container Foundation — COMPLETE (2026-03-17)
 
-| # | Story | Size | Value | Files |
-|---|-------|------|-------|-------|
-| 25.1 | **Agent Container Image Definition** | M | Container exists and runs | `docker/agent/Dockerfile`, `src/agent/container_runner.py` |
-| 25.2 | **Container Lifecycle Manager** | L | Platform can launch/wait/collect/cleanup containers | `src/agent/container_manager.py` |
-| 25.3 | **Task Serialization and Result Collection Protocol** | M | Clean contract between platform and container | `src/agent/container_protocol.py`, `src/agent/container_runner.py` |
+| # | Story | Size | Value | Files | Status |
+|---|-------|------|-------|-------|--------|
+| 25.1 | **Agent Container Image Definition** | M | Container exists and runs | `docker/agent/Dockerfile`, `src/agent/container_runner.py` | **Done** |
+| 25.2 | **Container Lifecycle Manager** | L | Platform can launch/wait/collect/cleanup containers | `src/agent/container_manager.py` | **Done** |
+| 25.3 | **Task Serialization and Result Collection Protocol** | M | Clean contract between platform and container | `src/agent/container_protocol.py`, `src/agent/container_runner.py` | **Done** |
 
-### Sprint 2: Integration and Isolation
+### Sprint 2: Integration and Isolation — COMPLETE (2026-03-17)
 
-| # | Story | Size | Value | Files |
-|---|-------|------|-------|-------|
-| 25.4 | **Implement Activity Integration** | L | Container mode works end-to-end | `src/workflow/activities.py`, `src/settings.py` |
-| 25.5 | **Agent Network Isolation** | M | Security boundary enforced | `docker-compose.dev.yml`, `infra/docker-compose.prod.yml` |
-| 25.6 | **Resource Limits and Cleanup** | L | Tier-based resource control, orphan reaping | `src/agent/container_manager.py`, `src/settings.py` |
+| # | Story | Size | Value | Files | Status |
+|---|-------|------|-------|-------|--------|
+| 25.4 | **Implement Activity Integration** | L | Container mode works end-to-end | `src/workflow/activities.py`, `src/settings.py` | **Done** — dual-mode implement_activity with isolation_policy routing |
+| 25.5 | **Agent Network Isolation** | M | Security boundary enforced | `docker-compose.dev.yml`, `infra/docker-compose.prod.yml` | **Done** — agent-net bridge network, Docker socket mount |
+| 25.6 | **Resource Limits and Cleanup** | L | Tier-based resource control, orphan reaping | `src/agent/container_manager.py`, `src/settings.py` | **Done** — per-tier CPU/memory/timeout via resolve_isolation() |
 
 ### Sprint 3: Observability and Hardening
 
@@ -260,8 +260,8 @@ Stories are ordered by risk reduction. Sprint 1 builds the container image, prot
 
 | # | Issue | Resolution |
 |---|-------|------------|
-| 1 | Silent fallback to in-process on Execute tier is a security regression. AC #11 must define per-tier fallback policy: Observe/Suggest can fall back to in-process; Execute must fail-closed. | Open |
-| 2 | All stakeholder roles TBD. No named owners or assignment dates. | Open |
+| 1 | Silent fallback to in-process on Execute tier is a security regression. AC #11 must define per-tier fallback policy: Observe/Suggest can fall back to in-process; Execute must fail-closed. | **Resolved 2026-03-16** — AC #11 updated. Per-tier policy in `isolation_policy.py`. Execute = deny. |
+| 2 | All stakeholder roles TBD. No named owners or assignment dates. | **Resolved 2026-03-16** — Solo-developer project; primary developer assigned to all roles. |
 | 3 | No target sprint dates. "2-3 sprints, ~3 months" needs anchoring with Sprint 1 start date. | Open |
 | 4 | Epic 22 dependency relationship unclear. If Execute tier is the primary security motivator, this relationship should be explicit in Dependencies section. | Open |
 

@@ -1,6 +1,7 @@
-"""Operational Targets — lead time, cycle time, and reopen target tracking.
+"""Operational Targets — lead time, cycle time, reopen, and approval baseline tracking.
 
 Story 7.9: Lead Time, Cycle Time & Reopen Target Tracking
+Epic 24 Prep: Approval flow baseline metrics (latency, timeout rate)
 Architecture reference: thestudioarc/MERIDIAN-ROADMAP-AGGRESSIVE.md (Phase 4 targets)
 """
 
@@ -146,6 +147,90 @@ def clear_timing_events() -> None:
     _timing_events.clear()
 
 
+# ---------------------------------------------------------------------------
+# Approval baseline metrics (Epic 24 prep — Meridian blocker #3)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class ApprovalEvent:
+    """A recorded approval decision event for baseline measurement.
+
+    Captures the timing from AWAITING_APPROVAL entry to resolution
+    (approve, reject, or timeout). These baselines are required by
+    Meridian before Epic 24 can start.
+    """
+
+    taskpacket_id: str
+    repo_tier: str
+    awaiting_at: datetime
+    resolved_at: datetime | None = None
+    outcome: str = ""  # "approved", "rejected", "timeout"
+    approved_by: str = ""
+    rejected_by: str = ""
+    rejection_reason: str = ""
+    message_count: int = 0  # Chat messages (future: Epic 24)
+
+    @property
+    def latency_hours(self) -> float | None:
+        """Hours from AWAITING_APPROVAL to resolution."""
+        if self.resolved_at is None:
+            return None
+        delta = self.resolved_at - self.awaiting_at
+        return delta.total_seconds() / 3600.0
+
+
+# In-memory approval event store
+_approval_events: list[ApprovalEvent] = []
+
+
+def record_approval_event(event: ApprovalEvent) -> None:
+    """Record an approval decision for baseline tracking."""
+    _approval_events.append(event)
+    logger.info(
+        "approval.baseline.recorded",
+        extra={
+            "taskpacket_id": event.taskpacket_id,
+            "outcome": event.outcome,
+            "latency_hours": f"{event.latency_hours:.2f}" if event.latency_hours else "pending",
+            "repo_tier": event.repo_tier,
+        },
+    )
+
+
+def clear_approval_events() -> None:
+    """Clear all approval events (for testing)."""
+    _approval_events.clear()
+
+
+@dataclass
+class ApprovalBaselineMetrics:
+    """Approval flow baseline metrics — required before Epic 24 starts."""
+
+    total_approvals: int = 0
+    total_rejections: int = 0
+    total_timeouts: int = 0
+    median_latency_hours: float = 0.0
+    p95_latency_hours: float = 0.0
+    timeout_rate: float = 0.0
+    sample_count: int = 0
+    window_days: int = DEFAULT_WINDOW_DAYS
+    insufficient_data: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "total_approvals": self.total_approvals,
+            "total_rejections": self.total_rejections,
+            "total_timeouts": self.total_timeouts,
+            "median_latency_hours": round(self.median_latency_hours, 2),
+            "p95_latency_hours": round(self.p95_latency_hours, 2),
+            "timeout_rate": round(self.timeout_rate, 4),
+            "sample_count": self.sample_count,
+            "window_days": self.window_days,
+            "insufficient_data": self.insufficient_data,
+        }
+
+
 class OperationalTargetsService:
     """Computes lead time, cycle time, and reopen rate against targets."""
 
@@ -199,7 +284,9 @@ class OperationalTargetsService:
         if sample_count < min_samples:
             p50, p95, p99 = _compute_percentiles(values) if values else (0.0, 0.0, 0.0)
             return LeadTimeMetrics(
-                p50=p50, p95=p95, p99=p99,
+                p50=p50,
+                p95=p95,
+                p99=p99,
                 sample_count=sample_count,
                 window_days=window_days,
                 insufficient_data=True,
@@ -207,7 +294,9 @@ class OperationalTargetsService:
 
         p50, p95, p99 = _compute_percentiles(values)
         return LeadTimeMetrics(
-            p50=p50, p95=p95, p99=p99,
+            p50=p50,
+            p95=p95,
+            p99=p99,
             sample_count=sample_count,
             window_days=window_days,
         )
@@ -225,7 +314,9 @@ class OperationalTargetsService:
         if sample_count < min_samples:
             p50, p95, p99 = _compute_percentiles(values) if values else (0.0, 0.0, 0.0)
             return CycleTimeMetrics(
-                p50=p50, p95=p95, p99=p99,
+                p50=p50,
+                p95=p95,
+                p99=p99,
                 sample_count=sample_count,
                 window_days=window_days,
                 insufficient_data=True,
@@ -233,7 +324,9 @@ class OperationalTargetsService:
 
         p50, p95, p99 = _compute_percentiles(values)
         return CycleTimeMetrics(
-            p50=p50, p95=p95, p99=p99,
+            p50=p50,
+            p95=p95,
+            p99=p99,
             sample_count=sample_count,
             window_days=window_days,
         )
@@ -266,6 +359,60 @@ class OperationalTargetsService:
             target=DEFAULT_REOPEN_TARGET,
             met=current_rate <= DEFAULT_REOPEN_TARGET,
             sample_count=sample_count,
+            window_days=window_days,
+        )
+
+    def get_approval_baseline(
+        self,
+        repo_filter: str | None = None,
+        window_days: int = DEFAULT_WINDOW_DAYS,
+        min_samples: int = DEFAULT_MIN_SAMPLES,
+    ) -> ApprovalBaselineMetrics:
+        """Compute approval flow baseline metrics.
+
+        Required by Meridian before Epic 24 can start:
+        - Current median approval latency
+        - Current timeout rate
+        - Approval/rejection/timeout counts
+        """
+        cutoff = datetime.now(UTC) - timedelta(days=window_days)
+        events = [
+            e
+            for e in _approval_events
+            if e.awaiting_at >= cutoff
+            and (repo_filter is None or e.taskpacket_id.startswith(repo_filter))
+        ]
+
+        total = len(events)
+        approvals = sum(1 for e in events if e.outcome == "approved")
+        rejections = sum(1 for e in events if e.outcome == "rejected")
+        timeouts = sum(1 for e in events if e.outcome == "timeout")
+
+        latencies = [e.latency_hours for e in events if e.latency_hours is not None]
+
+        if total < min_samples:
+            p50, p95, _ = _compute_percentiles(latencies) if latencies else (0.0, 0.0, 0.0)
+            return ApprovalBaselineMetrics(
+                total_approvals=approvals,
+                total_rejections=rejections,
+                total_timeouts=timeouts,
+                median_latency_hours=p50,
+                p95_latency_hours=p95,
+                timeout_rate=timeouts / total if total else 0.0,
+                sample_count=total,
+                window_days=window_days,
+                insufficient_data=True,
+            )
+
+        p50, p95, _ = _compute_percentiles(latencies)
+        return ApprovalBaselineMetrics(
+            total_approvals=approvals,
+            total_rejections=rejections,
+            total_timeouts=timeouts,
+            median_latency_hours=p50,
+            p95_latency_hours=p95,
+            timeout_rate=timeouts / total if total else 0.0,
+            sample_count=total,
             window_days=window_days,
         )
 

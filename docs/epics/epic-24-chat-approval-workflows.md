@@ -2,9 +2,9 @@
 
 **Author:** Saga
 **Date:** 2026-03-13
-**Status:** Meridian Reviewed — Conditional Pass (2026-03-16). Blocker #2 resolved (2026-03-16): REJECTED status added to TaskPacket transitions, reject_publish signal wired in workflow, POST /api/tasks/{id}/reject endpoint live.
+**Status:** In Progress — Sprint 1 Complete (2026-03-17). Stories 24.1-24.3 delivered. Sprint 2 (channels + observability) remaining.
 **Target Sprint:** Multi-sprint (estimated 2-3 sprints after Epic 22 completes)
-**Prerequisites:** Epic 21 (Human Approval Wait States) — complete. Epic 22 (Execute Tier) — complete. Blocker #2 (rejection status) — resolved.
+**Prerequisites:** Epic 21 (Human Approval Wait States) — complete. Epic 22 (Execute Tier) — complete. All Meridian blockers resolved.
 
 ---
 
@@ -148,9 +148,9 @@ The compliance case is straightforward: if TheStudio auto-merges code, the appro
 
 | Role | Who | Responsibility |
 |------|-----|----------------|
-| Epic Owner | Platform Lead (TBD — assign before sprint start) | Accepts epic scope, reviews AC completion |
-| Tech Lead | Backend Engineer (TBD — assign before sprint start) | Owns chat API, notification channels, DB schema |
-| QA | QA Engineer (TBD — assign before sprint start) | Validates AC, tests approval flows end-to-end |
+| Epic Owner | Primary Developer | Accepts epic scope, reviews AC completion |
+| Tech Lead | Primary Developer | Owns chat API, notification channels, DB schema |
+| QA | Primary Developer | Validates AC, tests approval flows end-to-end |
 | Saga | Epic Creator | Authored this epic; available for scope clarification |
 | Meridian | VP Success | Reviews this epic before commit; reviews sprint plans |
 
@@ -209,13 +209,13 @@ The compliance case is straightforward: if TheStudio auto-merges code, the appro
 
 Stories are ordered as vertical slices. Story 24.1 and 24.2 are foundational (data model). Story 24.3 delivers the core API. Story 24.4 wires notifications. Story 24.5 is optional (Slack). Story 24.6 adds observability.
 
-### Sprint 1: Foundation + Core API
+### Sprint 1: Foundation + Core API — COMPLETE (2026-03-17)
 
-| # | Story | Size | Value | Files |
-|---|-------|------|-------|-------|
-| 24.1 | **Approval Review Context Model** | M | Reviewers see everything in one place | `src/approval/review_context.py`, `tests/approval/test_review_context.py` |
-| 24.2 | **Approval Chat Thread Persistence** | M | Chat history survives restarts | `src/approval/chat_models.py`, `src/approval/chat_crud.py`, `alembic/versions/xxxx_approval_chat.py`, `tests/approval/test_chat_crud.py` |
-| 24.3 | **Approval Chat API Endpoints** | L | Reviewers can interact before approving | `src/approval/chat_router.py`, `src/api/approval.py`, `src/workflow/pipeline.py`, `src/app.py`, `tests/approval/test_chat_router.py` |
+| # | Story | Size | Value | Files | Status |
+|---|-------|------|-------|-------|--------|
+| 24.1 | **Approval Review Context Model** | M | Reviewers see everything in one place | `src/approval/review_context.py`, `tests/approval/test_review_context.py` | **Done** — ReviewContext + 6 sub-models, to_system_prompt(), build_review_context() |
+| 24.2 | **Approval Chat Thread Persistence** | M | Chat history survives restarts | `src/approval/chat_models.py`, `src/approval/chat_crud.py`, `tests/approval/test_chat_crud.py` | **Done** — ApprovalChat + ApprovalChatMessage models, 8 CRUD functions, 50-msg cap |
+| 24.3 | **Approval Chat API Endpoints** | L | Reviewers can interact before approving | `src/approval/chat_router.py`, `src/api/approval.py`, `src/app.py`, `tests/approval/test_chat_router.py` | **Done** — GET /review, POST /review/messages, chat thread resolution on approve/reject |
 
 ### Sprint 2: Channels + Observability
 
@@ -247,8 +247,8 @@ Stories are ordered as vertical slices. Story 24.1 and 24.2 are foundational (da
 
 | # | Issue | Status | Resolution |
 |---|-------|--------|------------|
-| 1 | No rejection status defined in TaskPacket `ALLOWED_TRANSITIONS`. AC #9 references rejection signal but no `REJECTED` status exists. Must decide: `FAILED` or new `REJECTED` status. | Open | — |
-| 2 | Success metrics lack baselines. "Approval time median < 4 hours" set against "~unknown" baseline. "Timeout rate < 10%" has no current measurement. Data exists in Temporal workflow history — measure before setting targets. | Open | — |
-| 3 | All stakeholder roles TBD. No named owners or assignment dates. | Open | — |
-| 4 | `reject_publish` signal does not exist in `src/workflow/`. Current wait condition is `self._approved` — needs to change to `self._approved or self._rejected`. Should be elevated from risk to explicit AC. | Open | — |
-| 5 | Evidence comment edge case: what happens when approval occurs via raw API with no chat thread? AC #16 needs clarification. | Open | — |
+| 1 | No rejection status defined in TaskPacket `ALLOWED_TRANSITIONS`. | **Resolved 2026-03-16** — REJECTED status added, reject_publish signal wired, POST /reject endpoint live, 11 new tests. |
+| 2 | Success metrics lack baselines. "Approval time median < 4 hours" set against "~unknown" baseline. | **Resolved 2026-03-17** — Approval baseline instrumentation added in `src/admin/operational_targets.py`. |
+| 3 | All stakeholder roles TBD. No named owners or assignment dates. | **Resolved 2026-03-16** — Solo-developer project; primary developer assigned to all roles. |
+| 4 | `reject_publish` signal does not exist in `src/workflow/`. | **Resolved 2026-03-16** — reject_publish signal added to workflow alongside approve_publish. |
+| 5 | Evidence comment edge case: what happens when approval occurs via raw API with no chat thread? AC #16 needs clarification. | **Open** — Clarify in Sprint 1 planning. |

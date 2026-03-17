@@ -111,7 +111,7 @@ Three forcing functions:
 
 - **GitHub webhook handler is unchanged.** `POST /webhook/github` remains the dedicated endpoint for GitHub events. This epic adds a parallel generic path, not a replacement.
 - **No changes to pipeline stages.** Everything downstream of TaskPacket creation is unaffected. The pipeline does not know or care about source origin beyond metadata.
-- **No changes to TaskPacket schema.** `source_name` is stored in the existing JSON `scope` or a new metadata field. The core TaskPacket columns (repo, issue_id, delivery_id, correlation_id, status) are unchanged.
+- **`source_name` stored as dedicated column.** Migration 022 adds `source_name` VARCHAR(100) with default `'github'` and index. Decision made: new column for queryability over scope JSON.
 - **Secrets via environment variables only.** No secrets stored in YAML files or database. Source auth configs reference env var names. Encrypted DB-stored secrets are out of scope.
 - **Sources must map to registered repos.** The `repo` extracted from a payload (or fixed in config) must match a repo in the `repo_profile` table. Unregistered repos are rejected.
 - **Python 3.12+, existing test infrastructure.** New dependency allowed only for JSONPath evaluation (evaluate `jsonpath-ng`).
@@ -130,9 +130,9 @@ Three forcing functions:
 
 | Role | Who | Responsibility |
 |------|-----|----------------|
-| Epic Owner | Platform Lead (TBD — assign before sprint start) | Accepts scope, reviews AC completion |
-| Tech Lead | Backend Engineer (TBD — assign before sprint start) | Owns implementation of all 7 stories |
-| QA | QA Engineer (TBD — assign before sprint start) | Validates AC, tests with real webhook payloads from external tools |
+| Epic Owner | Primary Developer | Accepts scope, reviews AC completion |
+| Tech Lead | Primary Developer | Owns implementation of all 7 stories |
+| QA | Primary Developer | Validates AC, tests with real webhook payloads from external tools |
 | Saga | Epic Creator | Authored this epic; available for scope clarification |
 | Meridian | VP Success | Reviews this epic before commit; reviews sprint plans |
 
@@ -236,8 +236,8 @@ Stories are ordered by vertical slices. Sprint 1 delivers a working end-to-end g
 
 | # | Issue | Resolution |
 |---|-------|------------|
-| 1 | AC #14 ambiguous: `source_name` storage is "scope JSON or new metadata field." Current TaskPacket model has no `source_name` or `metadata` field. Must decide: scope JSON column or new column with migration. "Or" is not a specification. | Open |
-| 2 | All stakeholder roles TBD. No named owners or assignment dates. | Open |
+| 1 | AC #14 ambiguous: `source_name` storage is "scope JSON or new metadata field." | **Resolved 2026-03-16** — New `source_name` VARCHAR(100) column + index. Migration 022. Default='github'. Constraint text updated. |
+| 2 | All stakeholder roles TBD. No named owners or assignment dates. | **Resolved 2026-03-16** — Solo-developer project; primary developer assigned to all roles. |
 | 3 | `jsonpath-ng` evaluation unassigned. AC #4 assumes it exists. If evaluation fails, translation layer needs redesign. Assign a person with a decision date. | Open |
 | 4 | Explicitly state Sprint 1 is file-config-only (no DB table, no DB registry). Story map implies this but ACs do not make it airtight. | Open |
 
