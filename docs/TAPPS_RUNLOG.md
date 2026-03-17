@@ -152,6 +152,31 @@
 [2026-03-16T02:16:00] [validate] pytest tests/agent/ — 57 passed (31 framework + 15 gateway + 11 integration), 0 regressions
 [2026-03-16T02:17:00] [verify] updated handoff doc (Sprint 1: 10/10), runlog
 
+### Epic 23 Sprint 2+3 + Hardening — Unified Agent Framework Completion (2026-03-16)
+
+[2026-03-16T04:00:00] [discover] read epic-23, roadmap, existing configs — identified remaining 25+ stories
+[2026-03-16T04:05:00] [develop] Story 2.7 — created src/intent/intent_config.py — IntentAgentConfig with invariants (V7)
+[2026-03-16T04:06:00] [develop] Story 2.9 — created tests/intent/test_intent_llm.py — 26 tests
+[2026-03-16T04:10:00] [develop] Story 2.10 — created src/routing/router_config.py — RouterAgentConfig with shadow (V8) + staged (V9)
+[2026-03-16T04:11:00] [develop] Story 2.12 — created tests/routing/test_router_llm.py — 19 tests
+[2026-03-16T04:15:00] [develop] Story 3.1 — created src/recruiting/recruiter_config.py — RecruiterAgentConfig
+[2026-03-16T04:16:00] [develop] Story 3.3 — created tests/recruiting/test_recruiter_llm.py — 14 tests
+[2026-03-16T04:20:00] [develop] Story 3.4 — created src/assembler/assembler_config.py — AssemblerAgentConfig
+[2026-03-16T04:21:00] [develop] Story 3.6 — created tests/assembler/test_assembler_llm.py — 18 tests
+[2026-03-16T04:25:00] [develop] Story 3.7 — created src/qa/qa_config.py — QAAgentConfig with 8-category defect taxonomy
+[2026-03-16T04:26:00] [develop] Story 3.9 — created tests/qa/test_qa_llm.py — 22 tests
+[2026-03-16T04:30:00] [develop] Stories 2.2/2.5/2.8/2.11/3.5/3.8 — wired all 6 activities in activities.py to AgentRunner
+[2026-03-16T04:35:00] [develop] Story 1.11 — created src/agent/prompt_guard.py — 7 threat categories, 9 patterns, 41 tests
+[2026-03-16T04:36:00] [develop] Story 1.12 — added PipelineBudget to framework.py — thread-safe, tier defaults, 18 tests
+[2026-03-16T04:37:00] [develop] Story 1.13 — added _compress_context() to framework.py — placeholder detection, 10 tests
+[2026-03-16T04:40:00] [develop] Story 3.10 — created tests/integration/test_full_pipeline_agents.py — 39 tests across 6 test classes
+[2026-03-16T04:45:00] [validate] pytest tests/agent/ tests/intent/ tests/routing/ tests/recruiting/ tests/assembler/ tests/qa/ tests/integration/test_full_pipeline_agents.py — 314 passed in 1.54s
+[2026-03-16T04:46:00] [verify] Story 3.11 — updated epic-23 status to Complete, roadmap updated
+[2026-03-16T04:50:00] [verify] updated agent-catalog.md — all 8 agents now show LLM support in maturity matrix
+[2026-03-16T04:51:00] [verify] updated architecture-vs-implementation-mapping.md — closed V7, V8, V9, D3; THERE count 108→112, MISSING 42→38
+[2026-03-16T04:52:00] [verify] updated TAPPS_HANDOFF.md — Epic 23 Complete, test count 1,756→1,970+
+[2026-03-16T04:53:00] [verify] updated TAPPS_RUNLOG.md — added this session entry
+
 ### Documentation & Status Review — Full Epic Audit (2026-03-16)
 
 [2026-03-16T03:00:00] [discover] tapps_session_start - v1.8.0, all checkers installed, standard preset

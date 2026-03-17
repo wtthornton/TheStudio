@@ -1,7 +1,8 @@
-"""TaskPacket model — the durable work record for a single GitHub work item.
+"""TaskPacket model — the durable work record for a single work item.
 
 Created by Ingress (Story 0.1), enriched by Context Manager (Story 0.3).
 Every downstream component reads from and/or updates the TaskPacket.
+Supports multi-source intake via source_name column (Epic 27).
 """
 
 import enum
@@ -31,6 +32,7 @@ class TaskPacketStatus(enum.StrEnum):
     VERIFICATION_FAILED = "verification_failed"
     AWAITING_APPROVAL = "awaiting_approval"
     AWAITING_APPROVAL_EXPIRED = "awaiting_approval_expired"
+    REJECTED = "rejected"
     PUBLISHED = "published"
     FAILED = "failed"
 
@@ -66,9 +68,11 @@ ALLOWED_TRANSITIONS: dict[TaskPacketStatus, set[TaskPacketStatus]] = {
     TaskPacketStatus.AWAITING_APPROVAL: {
         TaskPacketStatus.PUBLISHED,
         TaskPacketStatus.AWAITING_APPROVAL_EXPIRED,
+        TaskPacketStatus.REJECTED,
         TaskPacketStatus.FAILED,
     },
     TaskPacketStatus.AWAITING_APPROVAL_EXPIRED: {TaskPacketStatus.FAILED},
+    TaskPacketStatus.REJECTED: {TaskPacketStatus.FAILED},
     TaskPacketStatus.VERIFICATION_FAILED: {
         TaskPacketStatus.IN_PROGRESS,  # loopback
         TaskPacketStatus.FAILED,
@@ -88,6 +92,12 @@ class TaskPacketRow(Base):
     issue_id: Mapped[int] = mapped_column(nullable=False)
     delivery_id: Mapped[str] = mapped_column(String(255), nullable=False)
     correlation_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    # Source that created this TaskPacket (Epic 27 — multi-source intake)
+    # "github" for the default GitHub webhook, or the source config name
+    # (e.g. "jira", "linear", "slack") for generic webhook sources.
+    source_name: Mapped[str] = mapped_column(
+        String(100), nullable=False, default="github", server_default="github"
+    )
     status: Mapped[TaskPacketStatus] = mapped_column(
         Enum(
             TaskPacketStatus,
@@ -141,6 +151,7 @@ class TaskPacketCreate(BaseModel):
     issue_id: int
     delivery_id: str
     correlation_id: UUID = Field(default_factory=uuid4)
+    source_name: str = "github"
 
 
 class TaskPacketRead(BaseModel):
@@ -153,6 +164,7 @@ class TaskPacketRead(BaseModel):
     issue_id: int
     delivery_id: str
     correlation_id: UUID
+    source_name: str = "github"
     status: TaskPacketStatus
     scope: dict[str, Any] | None = None
     risk_flags: dict[str, bool] | None = None

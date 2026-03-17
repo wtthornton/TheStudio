@@ -1,6 +1,6 @@
 # TheStudio Agent Catalog
 
-**Date:** 2026-03-12
+**Date:** 2026-03-16
 **Scope:** All 8 pipeline agents + 1 platform service (Publisher)
 **Methodology:** Architecture docs cross-referenced against `src/` implementation. Gaps flagged where code diverges from design.
 
@@ -33,7 +33,7 @@ First agent in the pipeline. Evaluates whether a GitHub issue is eligible for au
 
 | Architecture | Implementation |
 |---|---|
-| LLM-powered agent with classification prompt | **GAP: No system prompt. No LLM call.** Pure function (`evaluate_eligibility()`) with deterministic rule matching. |
+| LLM-powered agent with classification prompt | **THERE** — `INTAKE_AGENT_CONFIG` in `src/intake/intake_config.py` with full system prompt template. LLM call via AgentRunner (feature-flagged, disabled by default). Rule-based fallback via `_intake_fallback()`. |
 
 ### Tools
 
@@ -47,10 +47,10 @@ First agent in the pipeline. Evaluates whether a GitHub issue is eligible for au
 
 | Property | Value |
 |---|---|
-| **Triggered by** | Temporal workflow start (`intake_activity`) |
+| **Triggered by** | Temporal workflow start (`intake_activity`) via AgentRunner |
 | **Timeout** | 2 minutes |
 | **Retries** | 2 (exponential backoff) |
-| **Duration** | Milliseconds (pure function, no I/O beyond adversarial check) |
+| **Duration** | Milliseconds (fallback mode); seconds (LLM mode) |
 | **Terminates when** | Returns `IntakeResult` (accepted or rejected) |
 | **Escalation** | Repo not registered or tier blocks |
 
@@ -58,7 +58,7 @@ First agent in the pipeline. Evaluates whether a GitHub issue is eligible for au
 
 | Architecture | Implementation |
 |---|---|
-| Fast model, strict token caps | **GAP: No model call.** Rule-based only. |
+| Fast model, strict token caps | **THERE** — `model_class="fast"`, `max_budget_usd=0.10` via AgentConfig. Routes through Model Gateway. |
 
 ### Inputs
 
@@ -77,7 +77,6 @@ First agent in the pipeline. Evaluates whether a GitHub issue is eligible for au
 
 | Gap | Severity |
 |---|---|
-| No LLM — architecture expects LLM-based classification | Phase 0 simplification (D3) |
 | No admin override of role selection | Documented as deferred (D5) |
 
 ---
@@ -96,7 +95,7 @@ Scoping engine. Enriches the TaskPacket with scope analysis, risk flags, complex
 
 | Architecture | Implementation |
 |---|---|
-| LLM-powered with progressive disclosure guidance | **GAP: No system prompt. No LLM call.** Deterministic functions: `analyze_scope()`, `flag_risks()`, `compute_complexity_index()`, `get_context_packs()`. |
+| LLM-powered with progressive disclosure guidance | **THERE** — `CONTEXT_AGENT_CONFIG` in `src/context/context_config.py` with system prompt template. LLM call via AgentRunner (feature-flagged, disabled by default). Rule-based fallback via `_context_fallback()` using existing `analyze_scope()`, `flag_risks()`, etc. |
 
 ### Tools
 
@@ -110,10 +109,10 @@ Scoping engine. Enriches the TaskPacket with scope analysis, risk flags, complex
 
 | Property | Value |
 |---|---|
-| **Triggered by** | Temporal `context_activity` after Intake passes |
+| **Triggered by** | Temporal `context_activity` via AgentRunner |
 | **Timeout** | 10 minutes |
 | **Retries** | 3 (exponential backoff) |
-| **Duration** | Sub-second for pure functions; async DB read/write for TaskPacket update |
+| **Duration** | Sub-second (fallback mode); seconds (LLM mode) |
 | **Terminates when** | Returns `ContextOutput` (scope, risk flags, complexity, packs) |
 | **Escalation** | Repeated failure or missing pack gap |
 
@@ -121,7 +120,7 @@ Scoping engine. Enriches the TaskPacket with scope analysis, risk flags, complex
 
 | Architecture | Implementation |
 |---|---|
-| Fast or balanced for summarization; prefer deterministic tools | **GAP: No model call.** All deterministic. Workflow stub records Model Gateway audit but actual enrichment is rule-based. |
+| Fast or balanced for summarization; prefer deterministic tools | **THERE** — `model_class="fast"`, `max_budget_usd=0.20` via AgentConfig. Routes through Model Gateway. |
 
 ### Inputs
 
@@ -137,7 +136,6 @@ Scoping engine. Enriches the TaskPacket with scope analysis, risk flags, complex
 
 | Gap | Severity |
 |---|---|
-| No LLM — architecture expects agent judgment for scope analysis | Phase 0 simplification |
 | No open questions / uncertainty recording | Documented as deferred (D4) |
 
 ---
@@ -156,7 +154,7 @@ Defines what correctness means before implementation begins. Produces a versione
 
 | Architecture | Implementation |
 |---|---|
-| LLM agent that consults intent experts via Router | **GAP: No system prompt. No LLM call.** Rule-based extraction using regex patterns for checkboxes, bullet lists, "out of scope" sections. |
+| LLM agent that consults intent experts via Router | **THERE** — `INTENT_AGENT_CONFIG` in `src/intent/intent_config.py` with system prompt template including invariant extraction (closes V7). LLM call via AgentRunner (feature-flagged). Rule-based fallback via `_intent_fallback()` using existing `extract_goal()`, `derive_constraints()`. |
 
 ### Tools
 
@@ -169,10 +167,10 @@ Defines what correctness means before implementation begins. Produces a versione
 
 | Property | Value |
 |---|---|
-| **Triggered by** | Temporal `intent_activity` after Context completes |
+| **Triggered by** | Temporal `intent_activity` via AgentRunner |
 | **Timeout** | 10 minutes |
 | **Retries** | 2 (exponential backoff) |
-| **Duration** | Sub-second (regex extraction + DB writes) |
+| **Duration** | Sub-second (fallback mode); seconds (LLM mode) |
 | **Terminates when** | Returns `IntentOutput` with intent_spec_id, version, goal, criteria |
 | **Escalation** | Missing required fields or conflicting constraints |
 | **Can be re-invoked** | Yes — refinement loop when QA or Assembler request it |
@@ -181,7 +179,7 @@ Defines what correctness means before implementation begins. Produces a versione
 
 | Architecture | Implementation |
 |---|---|
-| Balanced by default; strong when security/compliance/billing overlays | **GAP: No model call.** Workflow stub records gateway audit but `build_intent()` is rule-based. |
+| Balanced by default; strong when security/compliance/billing overlays | **THERE** — `model_class="balanced"`, `max_budget_usd=0.50` via AgentConfig. Routes through Model Gateway. |
 
 ### Inputs
 
@@ -198,8 +196,6 @@ Defines what correctness means before implementation begins. Produces a versione
 
 | Gap | Severity |
 |---|---|
-| No LLM — architecture expects semantic extraction | Phase 0 simplification (D3) |
-| No invariant identification ("what must not change") | Valuable gap (V7) |
 | No expert consultation via Router for intent refinement | Phase 0 simplification |
 
 ---
@@ -218,7 +214,7 @@ Single entry point for expert consultation. Selects expert subsets based on risk
 
 | Architecture | Implementation |
 |---|---|
-| LLM agent for synthesis and selection reasoning | **GAP: No system prompt. No LLM call.** Pure function `route()` with algorithmic scoring: `trust_tier_score * (1 + weight * confidence)`. |
+| LLM agent for synthesis and selection reasoning | **THERE** — `ROUTER_AGENT_CONFIG` in `src/routing/router_config.py` with system prompt template including shadow recommendations (V8) and staged rationale (V9). LLM call via AgentRunner (feature-flagged). Rule-based fallback via `_router_fallback()` using existing `route()`. |
 
 ### Tools
 
@@ -233,10 +229,10 @@ Single entry point for expert consultation. Selects expert subsets based on risk
 
 | Property | Value |
 |---|---|
-| **Triggered by** | Temporal `router_activity` after Intent completes |
+| **Triggered by** | Temporal `router_activity` via AgentRunner |
 | **Timeout** | 15 minutes |
 | **Retries** | 2 (exponential backoff) |
-| **Duration** | Milliseconds (pure function, no I/O) |
+| **Duration** | Milliseconds (fallback mode); seconds (LLM mode) |
 | **Terminates when** | Returns `ConsultPlan` (selections, recruiter requests, rationale) |
 | **Escalation** | Budget exceeded, missing coverage, low confidence on high risk |
 
@@ -244,7 +240,7 @@ Single entry point for expert consultation. Selects expert subsets based on risk
 
 | Architecture | Implementation |
 |---|---|
-| Balanced for synthesis | **GAP: No model call.** Algorithmic scoring only. |
+| Balanced for synthesis | **THERE** — `model_class="balanced"`, `max_budget_usd=0.30` via AgentConfig. Routes through Model Gateway. |
 
 ### Inputs
 
@@ -259,10 +255,7 @@ Single entry point for expert consultation. Selects expert subsets based on risk
 
 ### Gaps
 
-| Gap | Severity |
-|---|---|
-| No LLM — architecture expects reasoning for selection | Phase 0 simplification |
-| All consults are parallel — no staged or shadow patterns | Valuable gap (V8, V9) |
+None remaining. Shadow consulting (V8) and staged consults (V9) are now modeled in the LLM output schema.
 
 ---
 
@@ -280,7 +273,7 @@ Manages expert supply. When the Router finds no eligible expert for a required c
 
 | Architecture | Implementation |
 |---|---|
-| LLM agent with skill-pack orientation | **GAP: No system prompt. No LLM call.** Template-based creation with deterministic qualification harness. |
+| LLM agent with skill-pack orientation | **THERE** — `RECRUITER_AGENT_CONFIG` in `src/recruiting/recruiter_config.py` with system prompt template. LLM call via AgentRunner (feature-flagged). Rule-based fallback via `_recruiter_fallback()`. |
 
 ### Tools
 
@@ -303,7 +296,7 @@ Manages expert supply. When the Router finds no eligible expert for a required c
 
 | Architecture | Implementation |
 |---|---|
-| Not specified (implied balanced) | **GAP: No model call.** Template-based only. |
+| Not specified (implied balanced) | **THERE** — `model_class="balanced"`, `max_budget_usd=0.30` via AgentConfig. Routes through Model Gateway. |
 
 ### Inputs
 
@@ -319,7 +312,6 @@ Manages expert supply. When the Router finds no eligible expert for a required c
 
 | Gap | Severity |
 |---|---|
-| No LLM — architecture expects agent judgment for pack construction | Phase 0 simplification |
 | No tool policy binding formalized in code | Structural gap |
 | 8-step pipeline described in docs; code combines several steps | Structural gap |
 
@@ -339,7 +331,7 @@ Merges expert outputs into a single executable plan. Resolves conflicts using in
 
 | Architecture | Implementation |
 |---|---|
-| LLM agent for synthesis, conflict resolution, plan generation | **GAP: No system prompt. No LLM call.** Deterministic merging with keyword-based conflict detection and intent constraint matching. |
+| LLM agent for synthesis, conflict resolution, plan generation | **THERE** — `ASSEMBLER_AGENT_CONFIG` in `src/assembler/assembler_config.py` with system prompt template for semantic conflict resolution. LLM call via AgentRunner (feature-flagged). Rule-based fallback via `_assembler_fallback()` using existing `assemble()`. |
 
 ### Tools
 
@@ -355,10 +347,10 @@ Merges expert outputs into a single executable plan. Resolves conflicts using in
 
 | Property | Value |
 |---|---|
-| **Triggered by** | Temporal `assembler_activity` after Router completes |
+| **Triggered by** | Temporal `assembler_activity` via AgentRunner |
 | **Timeout** | 10 minutes |
 | **Retries** | 2 (exponential backoff) |
-| **Duration** | Milliseconds (pure function) |
+| **Duration** | Milliseconds (fallback mode); seconds (LLM mode) |
 | **Terminates when** | Returns `AssemblyPlan` (steps, conflicts, risks, QA handoff, provenance) |
 | **Escalation** | Unresolved conflicts in high-risk domains |
 
@@ -366,7 +358,7 @@ Merges expert outputs into a single executable plan. Resolves conflicts using in
 
 | Architecture | Implementation |
 |---|---|
-| Balanced; strong for multi-domain conflicts | **GAP: No model call.** Keyword matching only. |
+| Balanced; strong for multi-domain conflicts | **THERE** — `model_class="balanced"`, `max_budget_usd=0.50` via AgentConfig. Routes through Model Gateway. |
 
 ### Inputs
 
@@ -382,8 +374,7 @@ Merges expert outputs into a single executable plan. Resolves conflicts using in
 
 | Gap | Severity |
 |---|---|
-| No LLM — architecture expects synthesis and reasoning | Phase 0 simplification |
-| Conflict detection is assumption-overlap only | Keyword matching, not semantic |
+| Conflict detection is assumption-overlap only in fallback mode | Keyword matching; LLM mode supports semantic resolution |
 
 ---
 
@@ -496,7 +487,7 @@ Intent-first validation. Validates implementation against acceptance criteria, c
 
 | Architecture | Implementation |
 |---|---|
-| LLM agent for judgment and validation | **GAP: No system prompt. No LLM call.** Deterministic keyword matching against evidence dictionary. |
+| LLM agent for judgment and validation | **THERE** — `QA_AGENT_CONFIG` in `src/qa/qa_config.py` with system prompt template including 8-category defect taxonomy. LLM call via AgentRunner (feature-flagged). Rule-based fallback via `_qa_fallback()` using existing `validate()`. |
 
 ### Tools
 
@@ -513,10 +504,10 @@ Intent-first validation. Validates implementation against acceptance criteria, c
 
 | Property | Value |
 |---|---|
-| **Triggered by** | Temporal `qa_activity` after Verification passes |
+| **Triggered by** | Temporal `qa_activity` via AgentRunner |
 | **Timeout** | 30 minutes |
 | **Retries** | 2 (exponential backoff) |
-| **Duration** | Milliseconds (deterministic validation) |
+| **Duration** | Milliseconds (fallback mode); seconds (LLM mode) |
 | **Terminates when** | Returns `QAResult` (passed/failed + defects + loopback/refinement) |
 | **Loopback** | Emits `LoopbackRequest` with defect list and intent mapping |
 | **Escalation** | Defect pressure high or intent gap |
@@ -525,7 +516,7 @@ Intent-first validation. Validates implementation against acceptance criteria, c
 
 | Architecture | Implementation |
 |---|---|
-| Balanced; strong for high-risk or repeated loops | **GAP: No model call.** Workflow stub records gateway audit but `validate()` is rule-based. |
+| Balanced; strong for high-risk or repeated loops | **THERE** — `model_class="balanced"`, `max_budget_usd=0.50` via AgentConfig. Routes through Model Gateway. |
 
 ### Inputs
 
@@ -542,7 +533,6 @@ Intent-first validation. Validates implementation against acceptance criteria, c
 
 | Gap | Severity |
 |---|---|
-| No LLM — architecture expects reasoning for validation | Phase 0 simplification |
 | No QA expert consultation via Router | Valuable gap (V10) |
 | Reopen event handling in QA | Deferred (D6) — outcome module handles it |
 
@@ -623,18 +613,18 @@ None. Verification Gate is a deterministic gate, not an agent.
 
 ## Summary: Agent Maturity Matrix
 
-| # | Agent | Has LLM? | Has System Prompt? | Has Tool Loop? | Lifecycle |
-|---|---|---|---|---|---|
-| 1 | Intake Agent | No (rule-based) | No | No | ~ms, 2min timeout |
-| 2 | Context Manager | No (rule-based) | No | No | ~ms, 10min timeout |
-| 3 | Intent Builder | No (regex) | No | No | ~ms, 10min timeout |
-| 4 | Expert Router | No (algorithmic) | No | No | ~ms, 15min timeout |
-| 5 | Expert Recruiter | No (template) | No | No | ~ms, within Router |
-| 6 | Assembler | No (keyword matching) | No | No | ~ms, 10min timeout |
-| **7** | **Primary Agent** | **Yes (Claude SDK)** | **Yes (full template)** | **Yes (30 turns)** | **Minutes, 60min timeout** |
-| 8 | QA Agent | No (keyword matching) | No | No | ~ms, 30min timeout |
+| # | Agent | Has LLM? | Has System Prompt? | Has Tool Loop? | Model Class | Budget | Lifecycle |
+|---|---|---|---|---|---|---|---|
+| 1 | Intake Agent | Yes (feature-flagged) | Yes | No (completion) | fast | $0.10 | ~ms fallback, 2min timeout |
+| 2 | Context Manager | Yes (feature-flagged) | Yes | No (completion) | fast | $0.20 | ~ms fallback, 10min timeout |
+| 3 | Intent Builder | Yes (feature-flagged) | Yes | No (completion) | balanced | $0.50 | ~ms fallback, 10min timeout |
+| 4 | Expert Router | Yes (feature-flagged) | Yes | No (completion) | balanced | $0.30 | ~ms fallback, 15min timeout |
+| 5 | Expert Recruiter | Yes (feature-flagged) | Yes | No (completion) | balanced | $0.30 | ~ms fallback, within Router |
+| 6 | Assembler | Yes (feature-flagged) | Yes | No (completion) | balanced | $0.50 | ~ms fallback, 10min timeout |
+| **7** | **Primary Agent** | **Yes (always on)** | **Yes (full template)** | **Yes (30 turns)** | **balanced** | **$5.00** | **Minutes, 60min timeout** |
+| 8 | QA Agent | Yes (feature-flagged) | Yes | No (completion) | balanced | $0.50 | ~ms fallback, 30min timeout |
 
-**Key finding:** Only 1 of 8 agents (Primary Agent/Developer) currently uses an LLM with a system prompt and agentic tool loop. The remaining 7 are Phase 0 rule-based implementations. The architecture intends all 8 to be LLM-powered — upgrading them is a Phase 2+ effort.
+**Key finding (Epic 23 complete):** All 8 agents now share the `AgentRunner` framework with `AgentConfig`, system prompts, output schemas, and Model Gateway routing. 7 of 8 use completion mode with feature-flagged LLM (disabled by default, safe fallback). The Primary Agent uses agentic mode with Claude Agent SDK tool loop. Prompt injection guard, pipeline budget, and context compression are in place as hardening layers.
 
 ---
 

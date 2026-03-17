@@ -2,9 +2,9 @@
 
 **Author:** Saga
 **Date:** 2026-03-13
-**Status:** Meridian Reviewed — Conditional Pass (2026-03-16)
+**Status:** Meridian Reviewed — Conditional Pass (2026-03-16). Blocker #2 resolved (2026-03-16): REJECTED status added to TaskPacket transitions, reject_publish signal wired in workflow, POST /api/tasks/{id}/reject endpoint live.
 **Target Sprint:** Multi-sprint (estimated 2-3 sprints after Epic 22 completes)
-**Prerequisites:** Epic 21 (Human Approval Wait States) — complete. Epic 22 (Execute Tier) — complete.
+**Prerequisites:** Epic 21 (Human Approval Wait States) — complete. Epic 22 (Execute Tier) — complete. Blocker #2 (rejection status) — resolved.
 
 ---
 

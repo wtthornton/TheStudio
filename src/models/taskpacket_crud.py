@@ -35,6 +35,7 @@ async def create(session: AsyncSession, data: TaskPacketCreate) -> TaskPacketRea
             issue_id=data.issue_id,
             delivery_id=data.delivery_id,
             correlation_id=data.correlation_id,
+            source_name=data.source_name,
             status=TaskPacketStatus.RECEIVED,
         )
         .on_conflict_do_nothing(index_elements=["delivery_id", "repo"])

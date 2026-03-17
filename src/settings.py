@@ -57,6 +57,35 @@ class Settings(BaseSettings):
     github_provider: str = "mock"  # "mock" or "real"
     store_backend: str = "memory"  # "memory" or "postgres"
 
+    # Container isolation (Epic 25)
+    # Global mode: "process" (in-process, default) or "container" (Docker isolation)
+    agent_isolation: str = "process"  # "process" or "container"
+    # Per-tier fallback policy: what happens when container mode is requested
+    # but Docker is unavailable. "allow" = fall back to in-process,
+    # "deny" = fail the task. Execute tier MUST be "deny" to prevent
+    # untrusted code running without isolation.
+    agent_isolation_fallback: dict[str, str] = {
+        "observe": "allow",
+        "suggest": "allow",
+        "execute": "deny",
+    }
+    # Container resource limits per tier
+    agent_container_cpu_limit: dict[str, float] = {
+        "observe": 1.0,
+        "suggest": 2.0,
+        "execute": 4.0,
+    }
+    agent_container_memory_mb: dict[str, int] = {
+        "observe": 512,
+        "suggest": 1024,
+        "execute": 2048,
+    }
+    agent_container_timeout_seconds: dict[str, int] = {
+        "observe": 300,
+        "suggest": 600,
+        "execute": 1200,
+    }
+
     @model_validator(mode="after")
     def _reject_placeholder_encryption_key(self) -> "Settings":
         if self.store_backend == "postgres" and self.encryption_key == _PLACEHOLDER_KEY:
@@ -64,6 +93,18 @@ class Settings(BaseSettings):
                 "THESTUDIO_ENCRYPTION_KEY must be set to a real Fernet key "
                 "when store_backend=postgres. Generate one with: "
                 "python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _validate_execute_tier_isolation(self) -> "Settings":
+        if (
+            self.agent_isolation == "container"
+            and self.agent_isolation_fallback.get("execute") != "deny"
+        ):
+            raise ValueError(
+                "Execute tier MUST have agent_isolation_fallback='deny'. "
+                "Silent fallback to in-process on Execute tier is a security hole."
             )
         return self
 

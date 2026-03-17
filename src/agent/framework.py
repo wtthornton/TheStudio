@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import threading
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
@@ -35,6 +36,61 @@ from src.settings import settings
 
 logger = logging.getLogger(__name__)
 tracer = get_tracer("thestudio.agent.framework")
+
+
+# ---------------------------------------------------------------------------
+# Story 1.12: Pipeline-wide budget (Appendix D defaults by trust tier)
+# ---------------------------------------------------------------------------
+
+PIPELINE_BUDGET_DEFAULTS: dict[str, float] = {
+    "observe": 5.00,
+    "suggest": 8.50,
+    "execute": 10.00,
+}
+
+
+class PipelineBudget:
+    """Thread-safe shared cost counter across all agents for a single TaskPacket.
+
+    Created per workflow execution.  Every agent in the pipeline calls
+    ``consume()`` before invoking an LLM; if the budget is exhausted the
+    call returns *False* and the agent should use its fallback path.
+    """
+
+    def __init__(self, max_total_usd: float) -> None:
+        self._max_total_usd = max_total_usd
+        self._used: float = 0.0
+        self._lock = threading.Lock()
+
+    # -- public API ---------------------------------------------------------
+
+    def consume(self, cost: float) -> bool:
+        """Try to consume *cost* USD from the budget.
+
+        Returns ``True`` if the budget had enough room (and *cost* was
+        deducted), ``False`` if the budget is exhausted.  Thread-safe.
+        """
+        with self._lock:
+            if self._used + cost > self._max_total_usd:
+                return False
+            self._used += cost
+            return True
+
+    @property
+    def remaining(self) -> float:
+        """How much budget is left (USD)."""
+        with self._lock:
+            return max(self._max_total_usd - self._used, 0.0)
+
+    @property
+    def used(self) -> float:
+        """How much has been spent so far (USD)."""
+        with self._lock:
+            return self._used
+
+    @property
+    def max_total_usd(self) -> float:
+        return self._max_total_usd
 
 
 # ---------------------------------------------------------------------------
@@ -84,6 +140,7 @@ class AgentContext:
     evidence: dict[str, Any] = field(default_factory=dict)
     extra: dict[str, Any] = field(default_factory=dict)
     per_repo_notes: list[str] = field(default_factory=list)
+    pipeline_budget: PipelineBudget | None = None
 
 
 @dataclass
@@ -191,7 +248,7 @@ class AgentRunner:
                 )
                 return await self._run_fallback(context, span, start_time)
 
-            # Budget check
+            # Budget check (per-agent)
             if context.taskpacket_id:
                 try:
                     self._check_budget(str(context.taskpacket_id), context.repo_tier)
@@ -201,6 +258,19 @@ class AgentRunner:
                         self.config.agent_name,
                         context.taskpacket_id,
                     )
+                    return await self._run_fallback(context, span, start_time)
+
+            # Pipeline-wide budget check (Story 1.12)
+            if context.pipeline_budget is not None:
+                if not context.pipeline_budget.consume(self.config.max_budget_usd):
+                    logger.warning(
+                        "Pipeline budget exhausted for agent %s "
+                        "(remaining=%.2f, needed=%.2f), using fallback",
+                        self.config.agent_name,
+                        context.pipeline_budget.remaining,
+                        self.config.max_budget_usd,
+                    )
+                    span.set_attribute("thestudio.agent.pipeline_budget_exhausted", True)
                     return await self._run_fallback(context, span, start_time)
 
             # Build prompts
@@ -213,11 +283,16 @@ class AgentRunner:
             try:
                 if self.config.tool_allowlist:
                     response = await self._call_llm_agentic(
-                        system_prompt, user_prompt, context, provider,
+                        system_prompt,
+                        user_prompt,
+                        context,
+                        provider,
                     )
                 else:
                     response = await self._call_llm_completion(
-                        system_prompt, user_prompt, provider,
+                        system_prompt,
+                        user_prompt,
+                        provider,
                     )
             except Exception:
                 logger.exception(
@@ -450,8 +525,69 @@ class AgentRunner:
             stop_reason="end_turn",
         )
 
+    # ------------------------------------------------------------------
+    # Story 1.13: Context compression (placeholder — detection only)
+    # ------------------------------------------------------------------
+
+    def _compress_context(
+        self,
+        messages: list[dict[str, Any]],
+        context_window: int,
+    ) -> list[dict[str, Any]]:
+        """Detect when context compression is needed and log a warning.
+
+        Only applies to agentic mode (tool loop).  When the estimated
+        token count exceeds ``compress_threshold * context_window``, the
+        method would summarise middle turns while preserving the first 3
+        and last 4 turns verbatim.
+
+        Current implementation is a **placeholder**: it logs a warning
+        when compression would trigger but does *not* call a secondary
+        LLM.  Returns the original messages unchanged.
+        """
+        # Rough token estimate: 1 token ≈ 4 characters
+        total_chars = sum(len(str(m.get("content", ""))) for m in messages)
+        estimated_tokens = total_chars // 4
+
+        threshold = self.config.compress_threshold * context_window
+        if estimated_tokens <= threshold:
+            return messages  # no compression needed
+
+        preserve_head = 3
+        preserve_tail = 4
+
+        compressible = len(messages) - preserve_head - preserve_tail
+        if compressible <= 0:
+            logger.debug(
+                "Context compression triggered for %s but not enough "
+                "turns to compress (%d messages, need >%d)",
+                self.config.agent_name,
+                len(messages),
+                preserve_head + preserve_tail,
+            )
+            return messages
+
+        logger.warning(
+            "Context compression triggered for agent %s: "
+            "estimated_tokens=%d, threshold=%.0f, "
+            "would compress %d middle turns (preserving first %d + last %d). "
+            "Compression model would be '%s'. "
+            "Placeholder: returning uncompressed context.",
+            self.config.agent_name,
+            estimated_tokens,
+            threshold,
+            compressible,
+            preserve_head,
+            preserve_tail,
+            self.config.compress_model_class,
+        )
+        return messages
+
     async def _run_fallback(
-        self, context: AgentContext, span: Any, start_time: float,
+        self,
+        context: AgentContext,
+        span: Any,
+        start_time: float,
     ) -> AgentResult:
         """Execute the fallback function and return a fallback result."""
         raw_output = ""

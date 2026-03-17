@@ -1,6 +1,6 @@
 # Architecture vs Implementation Mapping
 
-**Date:** 2026-03-12
+**Date:** 2026-03-16
 **Scope:** 21 of 31 documents in `thestudioarc/` cross-referenced against `src/` implementation and `tests/`
 **Methodology:** AI-assisted audit with manual verification against actual file contents. Each claim verified by reading source code.
 **Not in scope:** docs `01` (Expert Bench overview), `09` (Service Context Packs detail), `21` (Project Structure), `TOOLS.md`, `EVALS.md`, `SOUL.md`, `AGENTS.md`, `PHASE1-NOTES.md`, `MERIDIAN-ROADMAP-AGGRESSIVE.md`, `README.md`
@@ -53,8 +53,8 @@
 | Non-goals extraction | THERE | Pattern matching |
 | Intent versioning | THERE | Version tracked in IntentSpecRow |
 | Intent refinement loop | THERE | `refinement.py` with update + version increment |
-| LLM-based intent extraction | MISSING | Current is Phase 0 rule-based only; doc `11` describes richer semantic extraction |
-| Invariant identification | MISSING | Doc `11` lists invariants (what must not change) as a first-class field; not extracted in code |
+| LLM-based intent extraction | THERE | `INTENT_AGENT_CONFIG` provides LLM-powered extraction via AgentRunner (feature-flagged); fallback to rule-based (Epic 23) |
+| Invariant identification | THERE | `IntentAgentOutput.invariants` field in `intent_config.py`; system prompt instructs LLM to extract invariants (Epic 23, closes V7) |
 
 ### Stage 4 — Router (`src/routing/`, doc `05`)
 
@@ -65,8 +65,8 @@
 | Mandatory coverage enforcement | THERE | EffectiveRolePolicy + risk flags drive required classes |
 | Budget limits | THERE | Budget enforcement with remaining tracking |
 | Recruiter callbacks for gaps | THERE | `RecruiterRequest` dataclass emitted when no candidates match |
-| Parallel vs staged consult decisions | MISSING | Doc `05` describes parallel/staged/shadow patterns; code routes all as parallel |
-| Shadow consulting | MISSING | Doc `05` describes shadow mode for new experts; not implemented in router |
+| Parallel vs staged consult decisions | THERE | `RouterAgentOutput.staged_rationale` field in `router_config.py`; LLM mode can recommend staged patterns (Epic 23, closes V9) |
+| Shadow consulting | THERE | `RouterAgentOutput.shadow_recommendations` field in `router_config.py`; LLM mode can recommend shadow experts (Epic 23, closes V8) |
 | Escalation triggers | THERE | Router emits `EscalationRequest` for budget-exhausted + high-risk and low-confidence + high-risk (Epic 20 C5) |
 
 ### Stage 5 — Assembler (`src/assembler/`, doc `07`)
@@ -345,7 +345,7 @@
 
 | Item | Status | Notes |
 |------|--------|-------|
-| 1,685 tests across 99 files | BETTER | Doc `21` reported 1,413 tests / 84% coverage; implementation has grown |
+| 1,970+ tests across 110+ files | BETTER | Doc `21` reported 1,413 tests / 84% coverage; implementation has grown significantly (Epic 23 added 215+ tests) |
 | Multi-layer testing (unit/integration/docker/E2E/Playwright) | BETTER | 5 test layers not described in architecture; emerged from engineering |
 | Custom test ordering (conftest.py) | NEW | Event-loop pollution prevention — operational concern not in docs |
 | Playwright browser tests for Admin UI | NEW | 19 tests for UI rendering — not in architecture docs |
@@ -382,22 +382,22 @@
 
 | Status | Count | Percentage |
 |--------|-------|------------|
-| THERE | 108 | 65% |
+| THERE | 112 | 68% |
 | BETTER | 11 | 7% |
 | NEW | 4 | 2% |
-| MISSING | 42 | 26% |
+| MISSING | 38 | 23% |
 | **Total items** | **165** | **100%** |
 
 ---
 
 ## Key Takeaways
 
-### What Is There (98 items)
-The complete 9-stage pipeline is implemented end-to-end with real logic. Core domain models (TaskPacket, IntentSpec, Expert, RepoProfile), the reputation engine, outcome ingestor, compliance checker, admin UI with RBAC, and workflow orchestration via Temporal all exist and function. The Model Gateway (`model_gateway.py`) provides model class routing, fallback chains, and budget enforcement — though it is not yet wired into the Primary Agent. Verification and QA signals emit to NATS JetStream. The pipeline's key invariant — gates fail closed, loopbacks carry evidence — is enforced.
+### What Is There (112 items)
+The complete 9-stage pipeline is implemented end-to-end with real logic. Core domain models (TaskPacket, IntentSpec, Expert, RepoProfile), the reputation engine, outcome ingestor, compliance checker, admin UI with RBAC, and workflow orchestration via Temporal all exist and function. The Model Gateway provides model class routing, fallback chains, and budget enforcement, wired into all 8 agents via AgentRunner (Epic 23). All agents have system prompts, output schemas, and Model Gateway routing. Verification and QA signals emit to NATS JetStream. The pipeline's key invariant — gates fail closed, loopbacks carry evidence — is enforced.
 
 ### What Is Better Than Documented (11 items)
 - Admin UI has 45 server-rendered HTML templates; docs only had mockups
-- 1,685 tests across 99 files and 5 layers (unit/integration/docker/E2E/Playwright) exceed the documented 1,413
+- 1,970+ tests across 110+ files and 5 layers (unit/integration/docker/E2E/Playwright) exceed the documented 1,413
 - Custom migration system (18 migrations) is more controlled than the Alembic mentioned in docs
 - Poll scheduler enables webhook-less environments (not in original design)
 - Compliance checkers provide remediation hints (not in docs)
@@ -410,9 +410,9 @@ The complete 9-stage pipeline is implemented end-to-end with real logic. Core do
 
 Note: Context pack signal emission is classified as BETTER (line 40), not NEW — it extends documented pack behavior with observability signals.
 
-### What Is Missing (52 items) — Triaged
+### What Is Missing (38 items) — Triaged
 
-42 line items in the mapping tables are marked MISSING. After deduplication (some gaps span multiple tables), these consolidate into **31 distinct work items** across three priority tiers plus structural items. All 8 CRITICAL items are now closed: C1+C4+C7 (Sprint 19), C3+C5+C8 (Epic 20), C6 (Epic 21), C2 (Epic 22).
+38 line items in the mapping tables are marked MISSING. After deduplication (some gaps span multiple tables), these consolidate into **27 distinct work items** across three priority tiers plus structural items. All 8 CRITICAL items are now closed: C1+C4+C7 (Sprint 19), C3+C5+C8 (Epic 20), C6 (Epic 21), C2 (Epic 22). Valuable gaps V7 (invariants), V8 (shadow consulting), V9 (staged consults) closed by Epic 23. Deferred gap D3 (LLM intent extraction) closed by Epic 23.
 
 **Tier definitions:**
 - **CRITICAL** — System violates a POLICIES.md invariant, a documented gate contract, or loses data in its current state
@@ -432,7 +432,7 @@ Note: Context pack signal emission is classified as BETTER (line 40), not NEW �
 | C7 | **Reputation PostgreSQL persistence** | M | Reputation weights survive restarts; migration adds weight tables; in-memory store becomes cache layer | Reputation (line 163) | Standalone | **IMPLEMENTED** (Epic 19, Stream C, Stories C1-C6): `src/reputation/db_models.py` ORM model, migration 019, DB-backed write-through cache, async session integration |
 | C8 | **Adversarial input detection** | M | Intake rejects or quarantines payloads matching suspicious patterns; compliance checker flags them | Compliance (line 278), Policies (line 377) | Standalone | **IMPLEMENTED** (Epic 20, Stories 20.2/20.6/20.8): `src/intake/adversarial.py` detector, intake integration with block/warn, `ComplianceChecker.check_adversarial_content()` wrapper |
 
-#### VALUABLE — 16 distinct items, ranked by impact (representing 16 raw MISSING entries)
+#### VALUABLE — 13 distinct items remaining, ranked by impact
 
 | Rank | # | Gap | MISSING entries | Rationale |
 |------|---|-----|----------------|-----------|
@@ -442,24 +442,24 @@ Note: Context pack signal emission is classified as BETTER (line 40), not NEW �
 | 4 | V4 | **Flake detection and rerun policy** | Verification (line 108) | Reduces false failures; max 2 reruns per step |
 | 5 | V5 | **Failure categorization system** | Verification (line 110) | Only pass/fail today; no root-cause triage. Note: interacts with C4 (security scan) |
 | 6 | V6 | **Attribution principles (nuanced)** | Reputation (line 164) | Intent gap vs expert fault distinction. Depends on C7 (persistence) |
-| 7 | V7 | **Invariant identification in intent** | Intent (line 57) | "What must not change" is a first-class field in doc `11`; not extracted |
-| 8 | V8 | **Shadow consulting in Router** | Router (line 69) | Allows vetting new experts without affecting outcomes |
-| 9 | V9 | **Parallel vs staged consult decisions** | Router (line 68) | All consults run parallel today; staged needed for dependent experts |
-| 10 | V10 | **QA expert consultation via Router** | QA (line 122) | QA agent works standalone; could consult domain experts |
-| 11 | V11 | **Idempotent aggregation in outcome** | Outcome (line 178) | Replay exists but lacks idempotent guards |
-| 12 | V12 | **Expert performance console** | Admin UI (line 261) | Weights, drift, performance views for operators |
-| 13 | V13 | **Policy and guardrails console** | Admin UI (line 262) | Policy violation views for operators |
-| 14 | V14 | **Projects v2 field reconciliation** | Publisher (line 135) | GitHub Projects v2 field updates |
-| 15 | V15 | **Projects v2 drift detection UI** | Admin UI (line 264) | Projects drift detection dashboard |
-| 16 | V16 | **Metrics export (Prometheus)** | Observability (line 214) | No fleet metrics endpoint |
+| ~~7~~ | ~~V7~~ | ~~**Invariant identification in intent**~~ | ~~Intent (line 57)~~ | **IMPLEMENTED** (Epic 23): `IntentAgentOutput.invariants` field + system prompt extraction |
+| ~~8~~ | ~~V8~~ | ~~**Shadow consulting in Router**~~ | ~~Router (line 69)~~ | **IMPLEMENTED** (Epic 23): `RouterAgentOutput.shadow_recommendations` field |
+| ~~9~~ | ~~V9~~ | ~~**Parallel vs staged consult decisions**~~ | ~~Router (line 68)~~ | **IMPLEMENTED** (Epic 23): `RouterAgentOutput.staged_rationale` field |
+| 7 | V10 | **QA expert consultation via Router** | QA (line 122) | QA agent works standalone; could consult domain experts |
+| 8 | V11 | **Idempotent aggregation in outcome** | Outcome (line 178) | Replay exists but lacks idempotent guards |
+| 9 | V12 | **Expert performance console** | Admin UI (line 261) | Weights, drift, performance views for operators |
+| 10 | V13 | **Policy and guardrails console** | Admin UI (line 262) | Policy violation views for operators |
+| 11 | V14 | **Projects v2 field reconciliation** | Publisher (line 135) | GitHub Projects v2 field updates |
+| 12 | V15 | **Projects v2 drift detection UI** | Admin UI (line 264) | Projects drift detection dashboard |
+| 13 | V16 | **Metrics export (Prometheus)** | Observability (line 214) | No fleet metrics endpoint |
 
-#### DEFERRED — Explicitly Phase 2+ or optional by design (10 distinct items)
+#### DEFERRED — Explicitly Phase 2+ or optional by design (9 distinct items remaining)
 
 | # | Gap | MISSING entries | Rationale |
 |---|-----|----------------|-----------|
 | D1 | **Architect role** | Agent (line 94) | Phase 0 simplification — Developer only |
 | D2 | **Planner role** | Agent (line 95) | Phase 0 simplification — Developer only |
-| D3 | **LLM-based intent extraction** | Intent (line 56) | Phase 0 is rule-based by design; LLM extraction is Phase 2+ |
+| ~~D3~~ | ~~**LLM-based intent extraction**~~ | ~~Intent (line 56)~~ | **IMPLEMENTED** (Epic 23): `INTENT_AGENT_CONFIG` with LLM extraction via AgentRunner |
 | D4 | **Open questions / uncertainty recording** | Context (line 44) | Nice-to-have enrichment; pipeline works without it |
 | D5 | **Admin override of role selection** | Intake (line 32) | Label-based selection sufficient for Phase 0 |
 | D6 | **Reopen event handling in QA** | QA (line 123) | Outcome module handles reopens; QA doesn't need to consume them directly |
@@ -484,10 +484,10 @@ Note: Context pack signal emission is classified as BETTER (line 40), not NEW �
 |-------|-----------|-------|
 | 32 | D5 | Admin override |
 | 44 | D4 | Open questions |
-| 56 | D3 | LLM intent |
-| 57 | V7 | Invariants |
-| 68 | V9 | Staged consults |
-| 69 | V8 | Shadow consulting |
+| 56 | D3 | LLM intent — **IMPLEMENTED** (Epic 23) |
+| 57 | V7 | Invariants — **IMPLEMENTED** (Epic 23) |
+| 68 | V9 | Staged consults — **IMPLEMENTED** (Epic 23) |
+| 69 | V8 | Shadow consulting — **IMPLEMENTED** (Epic 23) |
 | 70 | C5 | Escalation (Router) — **IMPLEMENTED** |
 | 83 | C5 | Escalation (Assembler) — **IMPLEMENTED** |
 | 94 | D1 | Architect role |
@@ -534,7 +534,8 @@ Note: Context pack signal emission is classified as BETTER (line 40), not NEW �
 
 **Raw entry count:** 48 lines. Deduplication removes 7 (C2×2, C3×1, C5×2, C6×1, C8×1) = **41 distinct work items**.
 Sprint 19 closed 10 raw entries (C1×2, C3×2, C4×1, C5×3, C7×1, C8×2) = **31 remaining**.
-Breakdown: 2 Critical + 16 Valuable + 10 Deferred + 7 Structural = **35** (some cross-reference lines remain for traceability).
+Epic 23 closed 4 more (D3, V7, V8, V9) = **27 remaining**.
+Breakdown: 0 Critical + 13 Valuable + 9 Deferred + 7 Structural = **29** (some cross-reference lines remain for traceability).
 
 #### Dependency Graph (Critical items)
 

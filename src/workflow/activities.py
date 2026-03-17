@@ -269,35 +269,47 @@ class EscalateTimeoutOutput:
 async def intake_activity(params: IntakeInput) -> IntakeOutput:
     """Step 1: Evaluate eligibility and select role.
 
-    Calls the real evaluate_eligibility() — it is pure (no DB).
+    Uses AgentRunner with IntakeAgentConfig (Epic 23 Story 2.2).
+    Falls back to rule-based evaluate_eligibility() when LLM is disabled.
     """
-    from src.intake.intake_agent import evaluate_eligibility
+    from src.agent.framework import AgentContext, AgentRunner
+    from src.intake.intake_config import INTAKE_AGENT_CONFIG
 
-    result = evaluate_eligibility(
-        labels=params.labels,
+    context = AgentContext(
         repo=params.repo,
-        repo_registered=params.repo_registered,
-        repo_paused=params.repo_paused,
-        has_active_workflow=params.has_active_workflow,
-        event_id=params.event_id,
         issue_title=params.issue_title,
         issue_body=params.issue_body,
+        labels=params.labels,
+        extra={
+            "repo_registered": params.repo_registered,
+            "repo_paused": params.repo_paused,
+            "has_active_workflow": params.has_active_workflow,
+            "event_id": params.event_id,
+        },
     )
 
-    if not result.accepted:
+    runner = AgentRunner(INTAKE_AGENT_CONFIG)
+    result = await runner.run(context)
+
+    # Parse from AgentResult
+    if result.parsed_output is not None:
+        output = result.parsed_output
         return IntakeOutput(
-            accepted=False,
-            rejection_reason=result.rejection.reason if result.rejection else "Unknown",
+            accepted=output.accepted,
+            rejection_reason=output.rejection_reason or None,
+            base_role=output.base_role if output.accepted else None,
+            overlays=output.overlays if output.accepted else [],
         )
 
-    policy = result.effective_role
-    if policy is None:
-        msg = "Accepted intake result must have effective_role"
-        raise RuntimeError(msg)
+    # Fallback produced raw JSON
+    import json
+    data = json.loads(result.raw_output) if result.raw_output else {}
+    accepted = data.get("accepted", False)
     return IntakeOutput(
-        accepted=True,
-        base_role=policy.base_role.value,
-        overlays=[o.value for o in policy.overlays],
+        accepted=accepted,
+        rejection_reason=data.get("rejection_reason") or None,
+        base_role=data.get("base_role") if accepted else None,
+        overlays=data.get("overlays", []) if accepted else [],
     )
 
 
@@ -305,36 +317,39 @@ async def intake_activity(params: IntakeInput) -> IntakeOutput:
 async def context_activity(params: ContextInput) -> ContextOutput:
     """Step 2: Context enrichment (scope, risk, complexity).
 
-    Routes LLM calls through Model Gateway; checks Tool Hub access for
-    context-retrieval tools. In production, delegates to
-    context_manager.enrich_taskpacket() with a real database session.
+    Uses AgentRunner with ContextAgentConfig (Epic 23 Story 2.5).
+    Deterministic functions run first, LLM reviews and augments.
+    Falls back to deterministic enrich_taskpacket() when LLM is disabled.
     """
-    from src.admin.model_gateway import ModelCallAudit, get_model_audit_store, get_model_router
-    from src.admin.tool_catalog import get_tool_policy_engine
+    from src.agent.framework import AgentContext, AgentRunner
+    from src.context.context_config import CONTEXT_AGENT_CONFIG
 
-    router = get_model_router()
-    audit_store = get_model_audit_store()
-    policy = get_tool_policy_engine()
-
-    # Select model via gateway (no direct provider calls)
-    provider = router.select_model(step="context")
-    audit_store.record(
-        ModelCallAudit(step="context", provider=provider.provider, model=provider.model_id)
+    context = AgentContext(
+        repo=params.repo,
+        issue_title=params.issue_title,
+        issue_body=params.issue_body,
+        labels=params.labels,
+        extra={"taskpacket_id": params.taskpacket_id},
     )
 
-    # Verify tool access for context-retrieval suite
-    policy.check_access(
-        role="developer",
-        overlays=[],
-        repo_tier="observe",
-        suite_name="context-retrieval",
-        tool_name="pack-lookup",
-    )
+    runner = AgentRunner(CONTEXT_AGENT_CONFIG)
+    result = await runner.run(context)
 
+    if result.parsed_output is not None:
+        output = result.parsed_output
+        return ContextOutput(
+            scope={"type": "feature", "summary": output.scope_summary},
+            risk_flags=output.risk_flags,
+            complexity_index="medium" if output.risk_flags else "low",
+            context_packs=[],
+        )
+
+    import json
+    data = json.loads(result.raw_output) if result.raw_output else {}
     return ContextOutput(
-        scope={"type": "feature", "components": ""},
-        risk_flags={},
-        complexity_index="low",
+        scope={"type": "feature", "summary": data.get("scope_summary", "")},
+        risk_flags=data.get("risk_flags", {}),
+        complexity_index=data.get("complexity_index", "low"),
         context_packs=[],
     )
 
@@ -404,28 +419,40 @@ async def readiness_activity(params: ReadinessInput) -> ReadinessActivityOutput:
 async def intent_activity(params: IntentInput) -> IntentOutput:
     """Step 3: Build intent specification.
 
-    Routes LLM calls through Model Gateway. In production, delegates to
-    intent_builder.build_intent() with a real database session.
+    Uses AgentRunner with IntentAgentConfig (Epic 23 Story 2.8).
+    LLM extracts semantic intent including invariants; falls back to
+    rule-based build_intent() when LLM is disabled.
     """
-    from src.admin.model_gateway import ModelCallAudit, get_model_audit_store, get_model_router
+    from src.agent.framework import AgentContext, AgentRunner
+    from src.intent.intent_config import INTENT_AGENT_CONFIG
 
-    router = get_model_router()
-    audit_store = get_model_audit_store()
-
-    # All LLM calls go through gateway — no direct provider access
-    overlays = [k for k, v in params.risk_flags.items() if v]
-    provider = router.select_model(step="intent", overlays=overlays)
-    audit_store.record(
-        ModelCallAudit(
-            step="intent", provider=provider.provider, model=provider.model_id, overlays=overlays
-        )
+    context = AgentContext(
+        repo="",
+        issue_title=params.issue_title,
+        issue_body=params.issue_body,
+        risk_flags=params.risk_flags,
+        extra={"taskpacket_id": params.taskpacket_id},
     )
 
+    runner = AgentRunner(INTENT_AGENT_CONFIG)
+    result = await runner.run(context)
+
+    if result.parsed_output is not None:
+        output = result.parsed_output
+        return IntentOutput(
+            intent_spec_id="",
+            version=1,
+            goal=output.goal,
+            acceptance_criteria=output.acceptance_criteria,
+        )
+
+    import json
+    data = json.loads(result.raw_output) if result.raw_output else {}
     return IntentOutput(
         intent_spec_id="",
         version=1,
-        goal=params.issue_title,
-        acceptance_criteria=[],
+        goal=data.get("goal", params.issue_title),
+        acceptance_criteria=data.get("acceptance_criteria", []),
     )
 
 
@@ -433,34 +460,48 @@ async def intent_activity(params: IntentInput) -> IntentOutput:
 async def router_activity(params: RouterInput) -> RouterOutput:
     """Step 4: Route to expert subset.
 
-    Calls the real router.route() — it is pure (no DB dependency).
+    Uses AgentRunner with RouterAgentConfig (Epic 23 Story 2.11).
+    Algorithmic route() runs first; LLM reviews and adjusts patterns/escalations.
+    Falls back to pure algorithmic routing when LLM is disabled.
     """
-    from src.intake.effective_role import BaseRole, EffectiveRolePolicy, Overlay
-    from src.routing.router import route
+    from src.agent.framework import AgentContext, AgentRunner
+    from src.routing.router_config import ROUTER_AGENT_CONFIG
 
-    overlays = [Overlay(o) for o in params.overlays]
-    policy = EffectiveRolePolicy.compute(BaseRole(params.base_role), overlays)
-    plan = route(policy, params.risk_flags, [])
+    context = AgentContext(
+        risk_flags=params.risk_flags,
+        overlays=params.overlays,
+        extra={
+            "base_role": params.base_role,
+            "required_classes": ",".join(
+                k for k, v in params.risk_flags.items() if v
+            ),
+        },
+    )
 
+    runner = AgentRunner(ROUTER_AGENT_CONFIG)
+    result = await runner.run(context)
+
+    if result.parsed_output is not None:
+        output = result.parsed_output
+        return RouterOutput(
+            selections=[
+                {
+                    "expert_class": s.expert_class,
+                    "pattern": s.pattern,
+                    "rationale": s.rationale,
+                }
+                for s in output.selections
+            ],
+            recruiter_requests=[],
+            rationale=output.adjustments or "LLM-augmented routing",
+        )
+
+    import json
+    data = json.loads(result.raw_output) if result.raw_output else {}
     return RouterOutput(
-        selections=[
-            {
-                "expert_id": str(s.expert_id),
-                "expert_version": s.expert_version,
-                "expert_class": s.expert_class.value,
-                "pattern": s.pattern,
-            }
-            for s in plan.selections
-        ],
-        recruiter_requests=[
-            {
-                "expert_class": r.expert_class.value,
-                "capability_tags": ",".join(r.capability_tags),
-                "reason": r.reason,
-            }
-            for r in plan.recruiter_requests
-        ],
-        rationale=plan.rationale,
+        selections=data.get("selections", []),
+        recruiter_requests=data.get("recruiter_requests", []),
+        rationale=data.get("adjustments", ""),
     )
 
 
@@ -468,11 +509,56 @@ async def router_activity(params: RouterInput) -> RouterOutput:
 async def assembler_activity(params: AssemblerInput) -> AssemblerOutput:
     """Step 5: Assemble expert outputs into plan.
 
-    In production, delegates to assembler.assemble(). Stub returns defaults.
+    Uses AgentRunner with AssemblerAgentConfig (Epic 23 Story 3.5).
+    LLM performs semantic conflict detection and plan synthesis.
+    Falls back to keyword-based assemble() when LLM is disabled.
     """
+    from uuid import UUID
+
+    from src.agent.framework import AgentContext, AgentRunner
+    from src.assembler.assembler_config import ASSEMBLER_AGENT_CONFIG
+
+    context = AgentContext(
+        taskpacket_id=UUID(params.taskpacket_id) if params.taskpacket_id else None,
+        expert_outputs=params.expert_outputs,
+        extra={
+            "intent_goal": params.intent_goal,
+            "intent_constraints": params.intent_constraints,
+            "acceptance_criteria": params.acceptance_criteria,
+            "expert_count": str(len(params.expert_outputs)),
+            "intent_version": 1,
+        },
+    )
+
+    runner = AgentRunner(ASSEMBLER_AGENT_CONFIG)
+    result = await runner.run(context)
+
+    if result.parsed_output is not None:
+        output = result.parsed_output
+        return AssemblerOutput(
+            plan_steps=[s.description for s in output.plan_steps],
+            conflicts=[
+                {
+                    "expert_a": c.expert_a,
+                    "expert_b": c.expert_b,
+                    "description": c.description,
+                    "resolution": c.resolution,
+                }
+                for c in output.conflicts
+            ],
+            qa_handoff=[
+                {"criterion": h.get("criterion", ""), "validation_steps": ",".join(h.get("validation_steps", []))}
+                for h in output.qa_handoff
+            ],
+            provenance={"taskpacket_id": params.taskpacket_id},
+            needs_intent_refinement=any(c.resolved_by == "unresolved" for c in output.conflicts),
+        )
+
+    import json
+    data = json.loads(result.raw_output) if result.raw_output else {}
     return AssemblerOutput(
-        plan_steps=["implement_changes"],
-        qa_handoff=[],
+        plan_steps=[s.get("description", "") for s in data.get("plan_steps", [{"description": "implement_changes"}])],
+        qa_handoff=data.get("qa_handoff", []),
         provenance={"taskpacket_id": params.taskpacket_id},
     )
 
@@ -542,21 +628,50 @@ async def verify_activity(params: VerifyInput) -> VerifyOutput:
 async def qa_activity(params: QAInput) -> QAOutput:
     """Step 8: QA validation against intent.
 
-    Routes LLM calls through Model Gateway. In production, delegates to
-    qa.qa_agent.validate().
+    Uses AgentRunner with QAAgentConfig (Epic 23 Story 3.8).
+    LLM reasons about intent satisfaction; falls back to keyword-based
+    validate() when LLM is disabled.
     """
-    from src.admin.model_gateway import ModelCallAudit, get_model_audit_store, get_model_router
+    from src.agent.framework import AgentContext, AgentRunner
+    from src.qa.qa_config import QA_AGENT_CONFIG
 
-    router = get_model_router()
-    audit_store = get_model_audit_store()
-
-    # All LLM calls through gateway
-    provider = router.select_model(step="qa_eval")
-    audit_store.record(
-        ModelCallAudit(step="qa_eval", provider=provider.provider, model=provider.model_id)
+    context = AgentContext(
+        evidence=params.evidence,
+        extra={
+            "taskpacket_id": params.taskpacket_id,
+            "acceptance_criteria": params.acceptance_criteria,
+            "qa_handoff": params.qa_handoff,
+            "evidence_keys": ",".join(params.evidence.keys()) if params.evidence else "",
+        },
     )
 
-    return QAOutput(passed=True)
+    runner = AgentRunner(QA_AGENT_CONFIG)
+    result = await runner.run(context)
+
+    if result.parsed_output is not None:
+        output = result.parsed_output
+        all_passed = all(cr.passed for cr in output.criteria_results)
+        has_intent_gap = len(output.intent_gaps) > 0
+        return QAOutput(
+            passed=all_passed and not has_intent_gap,
+            has_intent_gap=has_intent_gap,
+            defect_count=len(output.defects),
+            needs_loopback=not all_passed,
+            needs_intent_refinement=has_intent_gap,
+        )
+
+    import json
+    data = json.loads(result.raw_output) if result.raw_output else {}
+    criteria = data.get("criteria_results", [])
+    all_passed = all(cr.get("passed", False) for cr in criteria) if criteria else True
+    intent_gaps = data.get("intent_gaps", [])
+    return QAOutput(
+        passed=all_passed and not intent_gaps,
+        has_intent_gap=bool(intent_gaps),
+        defect_count=len(data.get("defects", [])),
+        needs_loopback=not all_passed,
+        needs_intent_refinement=bool(intent_gaps),
+    )
 
 
 @activity.defn

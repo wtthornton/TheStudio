@@ -70,3 +70,36 @@ class TestApprovalStatusTransitions:
         assert TaskPacketStatus.FAILED in ALLOWED_TRANSITIONS[
             TaskPacketStatus.AWAITING_APPROVAL_EXPIRED
         ]
+
+
+class TestRejectionStatusTransitions:
+    """Verify REJECTED status transitions (Epic 24 blocker fix)."""
+
+    def test_rejected_status_exists(self):
+        assert TaskPacketStatus.REJECTED.value == "rejected"
+
+    def test_awaiting_approval_can_transition_to_rejected(self):
+        allowed = ALLOWED_TRANSITIONS[TaskPacketStatus.AWAITING_APPROVAL]
+        assert TaskPacketStatus.REJECTED in allowed
+
+    def test_rejected_can_transition_to_failed(self):
+        allowed = ALLOWED_TRANSITIONS[TaskPacketStatus.REJECTED]
+        assert TaskPacketStatus.FAILED in allowed
+
+    def test_rejected_is_near_terminal(self):
+        """REJECTED can only go to FAILED."""
+        allowed = ALLOWED_TRANSITIONS[TaskPacketStatus.REJECTED]
+        assert allowed == {TaskPacketStatus.FAILED}
+
+    def test_rejected_in_allowed_transitions(self):
+        """REJECTED must have an entry in ALLOWED_TRANSITIONS."""
+        assert TaskPacketStatus.REJECTED in ALLOWED_TRANSITIONS
+
+    def test_full_rejection_path(self):
+        """Verify: AWAITING_APPROVAL -> REJECTED -> FAILED."""
+        assert TaskPacketStatus.REJECTED in ALLOWED_TRANSITIONS[
+            TaskPacketStatus.AWAITING_APPROVAL
+        ]
+        assert TaskPacketStatus.FAILED in ALLOWED_TRANSITIONS[
+            TaskPacketStatus.REJECTED
+        ]

@@ -5,7 +5,7 @@
 ## Project Status
 
 **Phases 0–4 complete.** Phase 5 (Agent Intelligence + Platform Growth) in progress.
-Epic 23 (Unified Agent Framework) Sprint 1 delivered. Three epics awaiting Meridian review.
+Epic 23 (Unified Agent Framework) **complete** — all 3 sprints delivered, 8/8 agents on AgentRunner. Three epics awaiting Meridian review.
 
 ---
 
@@ -36,7 +36,7 @@ Epic 23 (Unified Agent Framework) Sprint 1 delivered. Three epics awaiting Merid
 | 20 | Critical Gaps Batch 2 | 5 | Complete (Sprint 19) |
 | 21 | Human Approval Wait States | 5 | Complete (9 stories, 2026-03-13) |
 | 22 | Execute Tier End-to-End | 5 | Complete (18 stories, auto-merge gating) |
-| 23 | Unified Agent Framework | 5 | **In Progress** — Sprint 1: 10/10 stories done, hardening 1.11-1.13 remain |
+| 23 | Unified Agent Framework | 5 | Complete (3 sprints, 8/8 agents, 215+ tests, 2026-03-16) |
 | 24 | Chat Approval Workflows | 5 | **Draft** — awaiting Meridian review |
 | 25 | Container Isolation | 5 | **Draft** — awaiting Meridian review |
 | 26 | File-Based Expert Packaging | 5 | Complete (6 stories, 2026-03-16) |
@@ -49,8 +49,8 @@ Epic 23 (Unified Agent Framework) Sprint 1 delivered. Three epics awaiting Merid
 | Metric | Value |
 |--------|-------|
 | Source files (src/) | 150+ |
-| Test files (tests/) | 88 |
-| Tests passing | 1,756 |
+| Test files (tests/) | 110+ |
+| Tests passing | 1,970+ |
 | Tests deselected | 14 (integration — require PostgreSQL/Temporal) |
 | Test warnings | 7 (unawaited coroutine mocks) |
 | Coverage | 84% |
@@ -83,17 +83,18 @@ Epic 23 (Unified Agent Framework) Sprint 1 delivered. Three epics awaiting Merid
 
 ## Active Work
 
-### Epic 23 — Unified Agent Framework (In Progress)
-- **Sprint 1 delivered:** AgentRunner base class, AgentConfig/AgentContext/AgentResult dataclasses, LLM completion + agentic modes, output parsing, budget enforcement, audit logging, observability spans, feature flags per agent
-- **Primary Agent refactored:** Now uses AgentRunner framework (Story 1.8)
-- **Integration tested:** 11 tests proving Primary Agent through AgentRunner (Story 1.10)
-- **Test count:** 57 agent tests (31 framework + 15 gateway + 11 integration)
-- **Remaining:** Hardening stories 1.11-1.13, then Sprint 2 (convert Intake + Context agents)
+### Epic 23 — Unified Agent Framework (Complete, 2026-03-16)
+- **Sprint 1:** AgentRunner base class, AgentConfig/AgentContext/AgentResult, LLM completion + agentic modes, output parsing, budget enforcement, audit logging, observability spans, feature flags per agent, Primary Agent refactored (Stories 1.1-1.10)
+- **Sprint 2:** Intake, Context, Intent, Router agent configs and activity conversions with tests (Stories 2.1-2.12)
+- **Sprint 3:** Recruiter, Assembler, QA agent configs and activity conversions, full pipeline integration test (39 tests), epic documentation (Stories 3.1-3.11)
+- **Hardening:** Prompt injection guard (41 tests), pipeline budget (18 tests), context compression (10 tests) (Stories 1.11-1.13)
+- **Test count:** 215+ new tests across all Epic 23 modules
+- **Architecture gaps closed:** V7 (invariants), V8 (shadow consulting), V9 (staged consults), D3 (LLM intent extraction)
 
 ### Epics Awaiting Meridian Review
-- **Epic 24** — Chat Approval Workflows (6 stories, depends on Epic 21/22 ✓)
-- **Epic 25** — Container Isolation for Primary Agent (7 stories, security-critical)
-- **Epic 27** — Multi-Source Webhooks (7 stories, independent)
+- **Epic 24** — Chat Approval Workflows (conditional pass, 5 blocking gaps)
+- **Epic 25** — Container Isolation (conditional pass, 4 blocking gaps)
+- **Epic 27** — Multi-Source Webhooks (conditional pass, 4 blocking gaps)
 
 ### Epic 15 — Not Yet Executed
 - Revised after Meridian Round 1, but never scheduled for a sprint
@@ -104,11 +105,11 @@ Epic 23 (Unified Agent Framework) Sprint 1 delivered. Three epics awaiting Merid
 
 ## Next Actions
 
-1. **Execute Epic 23 hardening stories (1.11-1.13)** — error handling, retry logic, edge cases
-2. **Schedule Epic 23 Sprint 2** — convert Intake Agent and Context Manager to AgentRunner
-3. **Submit Epics 24, 25, 27 for Meridian review** — unblock future sprint planning
-4. **Schedule Epic 15** — real repo Observe-tier trial to validate full pipeline
-5. **Set up CI pipeline** (GitHub Actions) for automated test/lint/security on every PR
-6. **Improve coverage** on CRUD and signal modules (target: 90%+)
-7. **Fix 7 test warnings** (unawaited AsyncMock coroutines)
-8. **Run integration tests** against real PostgreSQL/Temporal
+1. **Fix cross-epic blockers** (rejection status, baselines, owners, per-tier policy) then re-review Epics 24, 25, 27
+2. **Schedule Epic 15** — real repo Observe-tier trial to validate full pipeline
+3. **Begin Epic 24 (Chat Approval) or Epic 25 (Container Isolation)** after blocker resolution
+4. **Set up CI pipeline** (GitHub Actions) for automated test/lint/security on every PR
+5. **Improve coverage** on CRUD and signal modules (target: 90%+)
+6. **Fix 7 test warnings** (unawaited AsyncMock coroutines)
+7. **Run integration tests** against real PostgreSQL/Temporal
+8. **Enable LLM feature flags** per agent incrementally (Intake first, then Context, etc.)

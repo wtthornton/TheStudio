@@ -2,9 +2,9 @@
 
 **Author:** Saga
 **Date:** 2026-03-13
-**Status:** Meridian Reviewed — Conditional Pass (2026-03-16)
+**Status:** Meridian Reviewed — Conditional Pass (2026-03-16). Blocker #3 resolved (2026-03-16): Per-tier fallback policy implemented in settings + isolation_policy.py. Execute tier MUST deny fallback to in-process.
 **Target Sprint:** Multi-sprint (estimated 2-3 sprints, ~3 months)
-**Prerequisites:** None hard-required. Epic 23 (Unified Agent Framework) recommended but not blocking.
+**Prerequisites:** None hard-required. Epic 23 (Unified Agent Framework) recommended but not blocking. Blocker #3 (fallback policy) — resolved.
 
 ---
 

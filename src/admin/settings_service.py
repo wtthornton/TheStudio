@@ -56,6 +56,12 @@ SETTING_DEFINITIONS: dict[str, dict[str, Any]] = {
     "agent_max_turns": {"category": SettingCategory.AGENT_CONFIG, "sensitive": False},
     "agent_max_budget_usd": {"category": SettingCategory.AGENT_CONFIG, "sensitive": False},
     "agent_max_loopbacks": {"category": SettingCategory.AGENT_CONFIG, "sensitive": False},
+    # Container Isolation (Epic 25)
+    "agent_isolation": {"category": SettingCategory.AGENT_CONFIG, "sensitive": False},
+    "agent_isolation_fallback": {"category": SettingCategory.AGENT_CONFIG, "sensitive": False},
+    "agent_container_cpu_limit": {"category": SettingCategory.AGENT_CONFIG, "sensitive": False},
+    "agent_container_memory_mb": {"category": SettingCategory.AGENT_CONFIG, "sensitive": False},
+    "agent_container_timeout_seconds": {"category": SettingCategory.AGENT_CONFIG, "sensitive": False},
     # Secrets
     "encryption_key": {"category": SettingCategory.SECRETS, "sensitive": True},
     "webhook_secret": {"category": SettingCategory.SECRETS, "sensitive": True},

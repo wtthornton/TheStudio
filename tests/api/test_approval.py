@@ -107,3 +107,101 @@ async def test_approve_idempotent_for_published_task():
 
         assert resp.status_code == 200
         assert resp.json()["status"] == "approved"
+
+
+# --- Rejection endpoint tests (Epic 24 blocker fix) ---
+
+
+@pytest.mark.asyncio
+async def test_reject_returns_200_for_awaiting_task():
+    """POST /api/tasks/{id}/reject returns 200 for a task in AWAITING_APPROVAL."""
+    task_id = str(uuid4())
+    tp = _make_taskpacket_read(TaskPacketStatus.AWAITING_APPROVAL)
+
+    with (
+        patch("src.api.approval.get_by_id", new_callable=AsyncMock, return_value=tp),
+        patch("src.api.approval._send_rejection_signal", new_callable=AsyncMock),
+    ):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post(
+                f"/api/tasks/{task_id}/reject",
+                json={"rejected_by": "reviewer@test.com", "reason": "Needs rework"},
+                headers={"X-User-ID": "test-user"},
+            )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "rejected"
+        assert data["taskpacket_id"] == task_id
+
+
+@pytest.mark.asyncio
+async def test_reject_returns_404_for_unknown_task():
+    """POST /api/tasks/{id}/reject returns 404 when TaskPacket not found."""
+    task_id = str(uuid4())
+
+    with patch("src.api.approval.get_by_id", new_callable=AsyncMock, return_value=None):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post(
+                f"/api/tasks/{task_id}/reject",
+                json={"rejected_by": "reviewer@test.com", "reason": "Bad"},
+                headers={"X-User-ID": "test-user"},
+            )
+
+        assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_reject_returns_409_for_wrong_status():
+    """POST /api/tasks/{id}/reject returns 409 when task is not awaiting approval."""
+    task_id = str(uuid4())
+    tp = _make_taskpacket_read(TaskPacketStatus.RECEIVED)
+
+    with patch("src.api.approval.get_by_id", new_callable=AsyncMock, return_value=tp):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post(
+                f"/api/tasks/{task_id}/reject",
+                json={"rejected_by": "reviewer@test.com", "reason": "Bad"},
+                headers={"X-User-ID": "test-user"},
+            )
+
+        assert resp.status_code == 409
+        assert "not awaiting approval" in resp.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_reject_idempotent_for_already_rejected():
+    """POST /api/tasks/{id}/reject returns 200 for already-rejected task."""
+    task_id = str(uuid4())
+    tp = _make_taskpacket_read(TaskPacketStatus.REJECTED)
+
+    with patch("src.api.approval.get_by_id", new_callable=AsyncMock, return_value=tp):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post(
+                f"/api/tasks/{task_id}/reject",
+                json={"rejected_by": "reviewer@test.com", "reason": "Bad"},
+                headers={"X-User-ID": "test-user"},
+            )
+
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "rejected"
+
+
+@pytest.mark.asyncio
+async def test_reject_requires_reason():
+    """POST /api/tasks/{id}/reject requires a reason field."""
+    task_id = str(uuid4())
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            f"/api/tasks/{task_id}/reject",
+            json={"rejected_by": "reviewer@test.com"},
+            headers={"X-User-ID": "test-user"},
+        )
+
+    assert resp.status_code == 422

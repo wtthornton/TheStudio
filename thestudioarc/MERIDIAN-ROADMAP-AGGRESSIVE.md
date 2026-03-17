@@ -236,14 +236,14 @@ The arc is **buildable and measurable**. It’s enough to set an aggressive road
 | 20 | Critical Gaps Batch 2 (JetStream, Escalation, Adversarial) | Complete | Sprint 19 |
 | 21 | Human Approval Wait States | Complete | 9 stories, Temporal durable wait |
 | 22 | Execute Tier End-to-End | Complete | 18 stories, auto-merge gating |
-| 23 | Unified Agent Framework | **In Progress** | Sprint 1 complete (1.1-1.10). Sprint 2 started: Intake + Context configs done (42 tests). Intent + Router next. |
+| 23 | Unified Agent Framework | **Complete** | All 3 sprints delivered. 8/8 agents on AgentRunner. Prompt guard, pipeline budget, context compression. 215+ new tests. |
 | 24 | Chat Approval Workflows | **Meridian Reviewed** | Conditional Pass. 5 blocking gaps (rejection status, baselines, owners). |
 | 25 | Container Isolation | **Meridian Reviewed** | Conditional Pass. 4 blocking gaps (Execute fallback policy, owners, dates, Epic 22 dep). |
 | 26 | File-Based Expert Packaging | Complete | 6 stories delivered |
 | 27 | Multi-Source Webhooks | **Meridian Reviewed** | Conditional Pass. 4 blocking gaps (source_name storage, owners, jsonpath-ng eval, Sprint 1 scope). |
 
 **Codebase Metrics (2026-03-16):**
-- 1,798+ tests passing (42 new from Epic 23 Sprint 2), 84% coverage, 150+ source files, 90+ test files
+- 1,970+ tests passing (215+ new from Epic 23), 84% coverage, 150+ source files, 110+ test files
 - TAPPS v1.8.0 quality pipeline active (ruff, mypy, bandit, radon, vulture, pip-audit)
 
 **Phase 5 Success Criteria (Meridian bar):**
@@ -255,19 +255,22 @@ The arc is **buildable and measurable**. It’s enough to set an aggressive road
 
 **Cross-Epic Blocking Items (from Meridian reviews 2026-03-16):**
 
-| # | Epic | Blocker | Owner |
-|---|------|---------|-------|
-| 1 | All (24, 25, 27) | All stakeholder roles are "TBD" — need named owners | TBD |
-| 2 | 24 | No rejection status in TaskPacket `ALLOWED_TRANSITIONS` | TBD |
-| 3 | 25 | Silent fallback to in-process on Execute tier is a security hole — need per-tier policy | TBD |
-| 4 | 25 | DB-free execution path for container runner (`implement()` requires `AsyncSession`) | TBD |
-| 5 | 27 | `source_name` storage ambiguity: scope JSON vs new column — migration decision required | TBD |
+| # | Epic | Blocker | Status |
+|---|------|---------|--------|
+| 1 | All (24, 25, 27) | All stakeholder roles are "TBD" — need named owners | **Open** |
+| 2 | 24 | No rejection status in TaskPacket `ALLOWED_TRANSITIONS` | **Resolved 2026-03-16** — REJECTED status added, reject_publish signal wired, POST /reject endpoint live, 11 new tests |
+| 3 | 25 | Silent fallback to in-process on Execute tier is a security hole — need per-tier policy | **Resolved 2026-03-16** — Per-tier fallback policy in settings + `isolation_policy.py`. Execute tier = deny. Validator rejects misconfiguration. 9 new tests |
+| 4 | 25 | DB-free execution path for container runner (`implement()` requires `AsyncSession`) | **Open** — deferred to Epic 25 Sprint 1 (container runner owns serialized I/O) |
+| 5 | 27 | `source_name` storage ambiguity: scope JSON vs new column — migration decision required | **Resolved 2026-03-16** — New `source_name` VARCHAR(100) column + index. Migration 022. Default='github'. Decision: column for queryability |
 
-**Recommended Next Sprint:**
-1. Epic 23 Sprint 2 continued — Convert Intent Builder + Router agents to use AgentRunner framework
-2. Fix cross-epic blockers above, then re-review Epics 24, 25, 27
-3. Epic 15 Story 15.1 — Mock provider harness (unblocks rest of Epic 15)
-4. Epic 23 hardening stories 1.11-1.13 (prompt guard, pipeline budget, context compression)
+**Resolved:** 3 of 5 blockers. Remaining: #1 (owners) and #4 (DB-free execution path).
+
+**Recommended Next Sprint (updated 2026-03-16):**
+1. Assign named owners to Epics 24, 25, 27 (blocker #1)
+2. Begin Epic 25 (Container Isolation) — highest-value remaining epic, security-critical for Execute tier
+3. Epic 15 Story 15.1 — Mock provider harness (unblocks real repo E2E, parallel with Epic 25)
+4. Epic 24 Sprint 1 (Chat Approval) — rejection flow landed, ready to build review UI
+5. Epic 27 deferred until capacity allows — storage decision made, independent of other epics
 
 ---
 

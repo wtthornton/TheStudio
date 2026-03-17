@@ -2,9 +2,9 @@
 
 **Author:** Saga
 **Date:** 2026-03-13
-**Status:** Meridian Reviewed — Conditional Pass (2026-03-16)
+**Status:** Meridian Reviewed — Conditional Pass (2026-03-16). Blocker #5 resolved (2026-03-16): source_name stored as dedicated VARCHAR(100) column with index. Migration 022 adds column with 'github' default. Decision: new column over scope JSON for queryability.
 **Target Sprint:** Multi-sprint (estimated 2-3 sprints)
-**Prerequisites:** None (independent of other active epics)
+**Prerequisites:** None (independent of other active epics). Blocker #5 (source_name storage) — resolved.
 
 ---
 

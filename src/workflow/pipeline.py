@@ -219,6 +219,9 @@ class TheStudioPipelineWorkflow:
         self._approved = False
         self._approved_by: str | None = None
         self._approval_source: str | None = None
+        self._rejected = False
+        self._rejected_by: str | None = None
+        self._rejection_reason: str | None = None
         # Readiness re-evaluation state
         self._readiness_cleared = False
         self._updated_issue_title: str = ""
@@ -233,6 +236,16 @@ class TheStudioPipelineWorkflow:
         self._approved = True
         self._approved_by = approved_by
         self._approval_source = approval_source
+
+    @workflow.signal
+    async def reject_publish(self, rejected_by: str, reason: str) -> None:
+        """Signal handler — sets rejection flag and records reason.
+
+        Idempotent: calling twice is harmless (flag stays True).
+        """
+        self._rejected = True
+        self._rejected_by = rejected_by
+        self._rejection_reason = reason
 
     @workflow.signal
     async def readiness_cleared(self, issue_title: str = "", issue_body: str = "") -> None:
@@ -483,10 +496,10 @@ class TheStudioPipelineWorkflow:
             output.step_reached = WorkflowStep.AWAITING_APPROVAL
             output.awaiting_approval = True
 
-            # Durable wait: block until approved or 7-day timeout
+            # Durable wait: block until approved, rejected, or 7-day timeout
             try:
                 await workflow.wait_condition(
-                    lambda: self._approved,
+                    lambda: self._approved or self._rejected,
                     timeout=APPROVAL_TIMEOUT,
                 )
             except TimeoutError:
@@ -501,6 +514,15 @@ class TheStudioPipelineWorkflow:
                     retry_policy=RetryPolicy(maximum_attempts=3),
                 )
                 output.rejection_reason = "approval_timeout"
+                output.verification_loopbacks = verification_loopbacks
+                output.qa_loopbacks = qa_loopbacks
+                return output
+
+            # Check if rejected
+            if self._rejected:
+                output.rejection_reason = (
+                    f"rejected by {self._rejected_by}: {self._rejection_reason}"
+                )
                 output.verification_loopbacks = verification_loopbacks
                 output.qa_loopbacks = qa_loopbacks
                 return output

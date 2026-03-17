@@ -2,10 +2,11 @@
 
 **Author:** Saga
 **Date:** 2026-03-12
-**Status:** In Progress — Sprint 2 started (2026-03-16)
+**Status:** Complete (2026-03-16)
 **Target Sprint:** Multi-sprint (estimated 3-4 sprints after Epic 22 completes)
-**Sprint 1:** Complete (Stories 1.1-1.10, AgentRunner framework + Primary Agent refactor)
-**Sprint 2:** In Progress (Intake Agent + Context Agent conversion delivered 2026-03-16)
+**Sprint 1:** Complete (Stories 1.1-1.13, AgentRunner framework + Primary Agent refactor + prompt guard + pipeline budget + context compression)
+**Sprint 2:** Complete (Stories 2.1-2.12, Intake + Context + Intent + Router conversions)
+**Sprint 3:** Complete (Stories 3.1-3.11, Recruiter + Assembler + QA conversions + integration test + docs)
 **Prerequisites:** Epic 19 (Gateway Wiring) must be complete. Epic 22 (Execute Tier) recommended.
 
 ---
@@ -492,15 +493,15 @@ Stories are ordered by risk reduction (highest-risk first). Sprint 1 builds the 
 
 ### Sprint 2: Intake + Context + Intent + Router Conversions
 
-**Sprint 2 Status:** Stories 2.1, 2.3, 2.4, 2.6 complete (2026-03-16). Stories 2.2, 2.5, 2.7-2.12 pending.
+**Sprint 2 Status:** Complete (2026-03-16). All stories 2.1-2.12 delivered.
 
 | # | Story | Size | Value | Files | Status |
 |---|-------|------|-------|-------|--------|
 | 2.1 | **Intake Agent config + output schema** — Define `IntakeAgentConfig`, `IntakeAgentOutput`, system prompt template. | S | Config ready | `src/intake/intake_config.py` | **Done** |
-| 2.2 | **Intake Agent conversion** — Wire `AgentRunner` into `intake_activity`. LLM classifies from issue content; `evaluate_eligibility()` as fallback. | M | LLM-powered intake | `src/intake/intake_agent.py`, `src/workflow/activities.py` | Pending |
+| 2.2 | **Intake Agent conversion** — Wire `AgentRunner` into `intake_activity`. LLM classifies from issue content; `evaluate_eligibility()` as fallback. | M | LLM-powered intake | `src/intake/intake_agent.py`, `src/workflow/activities.py` | **Done** |
 | 2.3 | **Intake Agent tests** — Test: LLM classification, fallback on failure, adversarial detection, structured output parsing. | M | Confidence | `tests/intake/test_intake_config.py` | **Done** (22 tests) |
 | 2.4 | **Context Manager config + output schema** — Define `ContextAgentConfig`, `ContextAgentOutput`, system prompt template. | S | Config ready | `src/context/context_config.py` | **Done** |
-| 2.5 | **Context Manager conversion** — Wire `AgentRunner` into `context_activity`. Deterministic functions run first, LLM reviews and augments. | M | LLM-enriched context | `src/context/context_manager.py`, `src/workflow/activities.py` | Pending |
+| 2.5 | **Context Manager conversion** — Wire `AgentRunner` into `context_activity`. Deterministic functions run first, LLM reviews and augments. | M | LLM-enriched context | `src/context/context_manager.py`, `src/workflow/activities.py` | **Done** |
 | 2.6 | **Context Manager tests** — Test: LLM augmentation, fallback, signal emission preserved. | M | Confidence | `tests/context/test_context_config.py` | **Done** (20 tests) |
 | 2.7 | **Intent Builder config + output schema** — Define `IntentAgentConfig`, `IntentAgentOutput` (includes invariants field — closes V7), system prompt template. | S | Config ready | `src/intent/intent_config.py` |
 | 2.8 | **Intent Builder conversion** — Wire `AgentRunner` into `intent_activity`. LLM extracts semantic intent; `build_intent()` as fallback. | M | LLM-powered intent | `src/intent/intent_builder.py`, `src/workflow/activities.py` |
