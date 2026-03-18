@@ -333,4 +333,85 @@ The arc is **buildable and measurable**. It’s enough to set an aggressive road
 
 ---
 
+## Phase 7 — Real Provider Validation + Cost Model (In Progress, 2026-03-18 to TBD)
+
+**Goal:** Flip `llm_provider`, `github_provider`, and `store_backend` from mock to real. Validate every agent against real Claude. Establish a sustainable cost model for 24/7 pipeline operations. Prove the system works on real GitHub issues against a real repository.
+
+**Status: IN PROGRESS (2026-03-18)**
+
+| Phase | Status | Key Milestone |
+|-------|--------|---------------|
+| **0** | Complete | One repo, Observe tier, issue → draft PR with evidence |
+| **1** | Complete | Full flow + experts, Suggest tier, signal stream |
+| **2** | Complete | Learning loop, multi-repo, Admin UI, Execute tier for 1 repo |
+| **3** | Complete | Evals, expert classes, context packs, quality metrics |
+| **4** | Complete | Tool Hub, Model Gateway, compliance, full Admin UI, production hardening |
+| **5** | Complete | Agent framework, container isolation, chat approval, real repo onboarding |
+| **6** | Complete | Preflight plan review gate, Projects v2 sync, Meridian portfolio review |
+| **7** | **In Progress** | Real provider validation, cost model, OAuth research, deployment runbook |
+
+**Phase 7 Epics:**
+
+| Epic | Title | Status | Priority | Notes |
+|------|-------|--------|----------|-------|
+| 30 | Real Provider Integration & Validation | **In Progress** | P0 | Sprint 1: LLM eval (intent PASS, QA + primary next). Sprint 2: GitHub + Postgres. Sprint 3: Feature flags + deployment. |
+| 31 | Anthropic Max OAuth Adapter | **Planned (Research Complete)** | P1 | Research revealed TOS risk for standalone servers. OAuth viable for dev/test only. Cost estimation fix is prerequisite. See alternative cost strategies. |
+
+### Cost Model Findings (Epic 30 Sprint 1)
+
+**The problem:** All 29 prior epics ran on mock providers. The first real LLM validation (Story 30.2, intent agent, 10 cases) revealed:
+
+| Metric | Internal Estimate | Actual (Anthropic Billing) | Gap |
+|--------|-------------------|---------------------------|-----|
+| Intent eval (10 cases) | $0.13 | $2.08 (80+ calls across 8 tests) | 16x underreport |
+| Per API call | $0.0013 | $0.023 | 18x underreport |
+
+**Projected production costs (standard API keys):**
+
+| Volume | Monthly Cost (Conservative) |
+|--------|---------------------------|
+| 10 issues/day | $600-2,400 |
+| 50 issues/day | $3,000-12,000 |
+| 100 issues/day | $6,000-24,000 |
+
+**Max subscription alternative:** $200/month flat, currently at 3% Sonnet / 20% all-models weekly usage with 3-5 coding agents. Massive headroom. But OAuth tokens are restricted to first-party tools (Claude Code, Claude Desktop). Using them in a standalone pipeline server may violate Anthropic TOS.
+
+**Cost reduction strategies (if OAuth not viable for production):**
+1. Route cheap agents (intake, context, router) to Haiku — 12x cost reduction
+2. Tighten per-issue budget caps from $5 to $2 at Observe tier
+3. Cache intent specs and context enrichment for similar issues
+4. Run pipeline within Claude Code context (legitimate first-party usage)
+
+### Critical Path
+
+```
+Epic 30 Story 30.2 (Intent) ✅ COMPLETE
+    ↓
+Epic 31 Story 31.0 (OAuth Research) ✅ COMPLETE
+    ↓
+Epic 31 Story 31.1 (Fix cost estimation) ← NEXT (unblocks accurate budgeting)
+    ↓
+Epic 30 Stories 30.3-30.4 (QA + Primary agent eval)
+    ↓
+Epic 31 Stories 31.2-31.5 (OAuth adapter, dev/test only)
+    ↓
+Epic 30 Sprint 2 (GitHub + Postgres + full pipeline)
+    ↓
+Epic 30 Sprint 3 (Feature flags + deployment runbook)
+```
+
+**Phase 7 Success Criteria (Meridian bar):**
+
+| Criterion | Status |
+|-----------|--------|
+| Intent agent produces valid specs >= 8/10 with real Claude | **Met** — 10/10, $0.13 reported / $2.08 actual |
+| QA agent catches planted defects >= 7/10 | Pending (Story 30.3) |
+| Primary agent produces valid output for 3/3 simple issues | Pending (Story 30.4) |
+| Full pipeline processes real GitHub issue into draft PR | Pending (Sprint 2) |
+| Cost model documented with accurate estimates | **In Progress** — 16x gap found, fix in Epic 31 Story 31.1 |
+| Deployment runbook enables cold start | Pending (Sprint 3) |
+| OAuth adapter available for development use | Pending (Epic 31, blocked on TOS clarity) |
+
+---
+
 *Meridian — VP Success. Reviewer and challenger. Not in charge. Bar set high.*

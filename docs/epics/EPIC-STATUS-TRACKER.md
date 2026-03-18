@@ -9,9 +9,11 @@
 
 | Metric | Value |
 |--------|-------|
-| Total epics | 30 (0-30) |
+| Total epics | 32 (0-32) |
 | Complete | 29 |
-| Planned | 1 (Epic 30) |
+| In Progress | 1 (Epic 30) |
+| Research Complete | 1 (Epic 31 — implementation deferred, TOS risk) |
+| Planned | 1 (Epic 32 — Model Routing & Cost Optimization) |
 | Deferred | 1 (Epic 27) |
 | Tests passing | 2,120+ |
 | Coverage | 84% |
@@ -97,11 +99,13 @@
 | 6 | 27 | `source_name` storage ambiguity — scope JSON vs new column | **Resolved 2026-03-16** — New source_name VARCHAR(100) column + index. Migration 022. Default='github' |
 | 7 | 27 | `jsonpath-ng` evaluation unassigned | **Closed** — Epic 27 deferred, no current demand |
 
-## Phase 7 — Real Provider Validation (In Progress)
+## Phase 7 — Real Provider Validation + Cost Model (In Progress)
 
 | Epic | Title | Status | Notes |
 |------|-------|--------|-------|
-| 30 | Real Provider Integration & Validation | **Planned** | 3 sprints. Sprint 1: LLM eval harness + intent/QA/primary agent validation. Sprint 2: Postgres + real GitHub + full pipeline at Observe tier. Sprint 3: Feature flags + deployment runbook + Suggest tier. Meridian review passed 2026-03-18. |
+| 30 | Real Provider Integration & Validation | **In Progress** | Sprint 1 underway. Eval harness + intent eval built (Stories 30.1-30.2). QA eval + primary eval built (Stories 30.3-30.4). Cost estimation fixed (split input/output rates). Meridian review passed 2026-03-18. |
+| 31 | Anthropic Max OAuth Adapter | **Research Complete / Deferred** | Story 31.0 (research) complete. OAuth in standalone server likely violates Anthropic TOS. Implementation deferred. Cost estimation fix (Story 31.1) moved to Epic 30. |
+| 32 | Model Routing & Cost Optimization | **Planned** | Route cheap agents to Haiku (12x savings), per-tier budget caps, prompt caching, cost dashboard. Saga epic created 2026-03-18. |
 
 ---
 
@@ -146,7 +150,11 @@ Phase 5 — COMPLETE (2026-03-17)
 2. ~~**Epic 29 Sprint 1**~~ — **Complete** (2026-03-17). 63 tests.
 3. ~~**Epic 29 Sprint 2**~~ — **Complete** (2026-03-18). 60 tests.
 4. ~~**Phase 7 planning**~~ — **Complete** (2026-03-18). Epic 30 planned, Meridian reviewed, Sprint 1 approved.
-5. **Epic 30 Sprint 1** — Build eval harness, validate intent/QA/primary agents with real Anthropic API. Provision API key first.
-6. **Epic 30 Sprint 2** — Postgres backend + real GitHub provider + full pipeline at Observe tier.
-7. **Epic 30 Sprint 3** — Feature flag activation + deployment runbook + Suggest tier validation.
-8. **Epic 27** — Deferred. Do not schedule until demand materializes.
+5. ~~**Cost estimation fix (Story 31.1)**~~ — **Complete** (2026-03-18). Split input/output rates in ProviderConfig. 2026 pricing applied.
+6. ~~**Epic 30 Sprint 1 Stories 30.1-30.4**~~ — **Complete** (2026-03-18). Eval harness, intent eval, QA eval, primary eval built. Integration tests ready (require API key).
+7. **Run Epic 30 integration tests** — Set `THESTUDIO_ANTHROPIC_API_KEY` and run `pytest tests/eval/ -m requires_api_key` to validate all 3 agents against real Claude.
+8. **Epic 30 Sprint 2** — Postgres backend + real GitHub provider + full pipeline at Observe tier.
+9. **Epic 32 Sprint 1** — Route intake/context/router agents to Haiku. Per-tier budget caps. Cost dashboard.
+10. **Epic 30 Sprint 3** — Feature flag activation + deployment runbook + Suggest tier validation.
+11. **Epic 27** — Deferred. Do not schedule until demand materializes.
+12. **Epic 31** — Implementation deferred. OAuth in standalone server risks Anthropic TOS violation. Use API keys for production.

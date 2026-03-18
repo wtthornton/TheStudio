@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, ClassVar, Protocol, runtime_checkable
 from uuid import UUID, uuid4
 
 logger = logging.getLogger(__name__)
@@ -30,16 +30,41 @@ _CLASS_ORDER = [ModelClass.FAST, ModelClass.BALANCED, ModelClass.STRONG]
 
 @dataclass
 class ProviderConfig:
-    """Configuration for a model provider."""
+    """Configuration for a model provider.
+
+    Cost fields use per-1k-token rates.  When ``cost_per_1k_input`` and
+    ``cost_per_1k_output`` are provided they take precedence over the
+    legacy ``cost_per_1k_tokens`` (which assumed a single blended rate).
+    """
 
     provider_id: str
     provider: str
     model_id: str
     model_class: ModelClass
-    cost_per_1k_tokens: float
+    cost_per_1k_tokens: float  # legacy blended rate — kept for compat
+    cost_per_1k_input: float | None = None
+    cost_per_1k_output: float | None = None
     rate_limit_tpm: int = 100_000
     priority: int = 0
     enabled: bool = True
+
+    @property
+    def input_rate(self) -> float:
+        """Per-1k-token input cost (split rate or legacy fallback)."""
+        if self.cost_per_1k_input is not None:
+            return self.cost_per_1k_input
+        return self.cost_per_1k_tokens
+
+    @property
+    def output_rate(self) -> float:
+        """Per-1k-token output cost (split rate or legacy fallback)."""
+        if self.cost_per_1k_output is not None:
+            return self.cost_per_1k_output
+        return self.cost_per_1k_tokens
+
+    def estimate_cost(self, tokens_in: int, tokens_out: int) -> float:
+        """Estimate cost for a call with the given token counts."""
+        return tokens_in * self.input_rate / 1000 + tokens_out * self.output_rate / 1000
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -48,6 +73,8 @@ class ProviderConfig:
             "model_id": self.model_id,
             "model_class": self.model_class.value,
             "cost_per_1k_tokens": self.cost_per_1k_tokens,
+            "cost_per_1k_input": self.input_rate,
+            "cost_per_1k_output": self.output_rate,
             "rate_limit_tpm": self.rate_limit_tpm,
             "priority": self.priority,
             "enabled": self.enabled,
@@ -188,7 +215,9 @@ DEFAULT_PROVIDERS: list[ProviderConfig] = [
         provider="anthropic",
         model_id="claude-haiku-4-5",
         model_class=ModelClass.FAST,
-        cost_per_1k_tokens=0.001,
+        cost_per_1k_tokens=0.001,  # legacy blended
+        cost_per_1k_input=0.001,   # $1.00/M input tokens
+        cost_per_1k_output=0.005,  # $5.00/M output tokens
         rate_limit_tpm=200_000,
         priority=0,
     ),
@@ -197,7 +226,9 @@ DEFAULT_PROVIDERS: list[ProviderConfig] = [
         provider="anthropic",
         model_id="claude-sonnet-4-6",
         model_class=ModelClass.BALANCED,
-        cost_per_1k_tokens=0.003,
+        cost_per_1k_tokens=0.003,  # legacy blended
+        cost_per_1k_input=0.003,   # $3.00/M input tokens
+        cost_per_1k_output=0.015,  # $15.00/M output tokens
         rate_limit_tpm=100_000,
         priority=0,
     ),
@@ -206,7 +237,9 @@ DEFAULT_PROVIDERS: list[ProviderConfig] = [
         provider="anthropic",
         model_id="claude-opus-4-6",
         model_class=ModelClass.STRONG,
-        cost_per_1k_tokens=0.015,
+        cost_per_1k_tokens=0.015,  # legacy blended
+        cost_per_1k_input=0.005,   # $5.00/M input tokens
+        cost_per_1k_output=0.025,  # $25.00/M output tokens
         rate_limit_tpm=50_000,
         priority=0,
     ),
@@ -216,13 +249,27 @@ DEFAULT_PROVIDERS: list[ProviderConfig] = [
 class ModelRouter:
     """Selects the appropriate model for a workflow step."""
 
+    # Epic 32: Steps eligible for FAST downgrade when cost optimization is on.
+    # Overlay overrides still escalate to STRONG (e.g. security overlay).
+    _COST_OPTIMIZED_STEPS: ClassVar[dict[str, ModelClass]] = {
+        "expert_routing": ModelClass.FAST,
+        "assembler": ModelClass.FAST,
+    }
+
     def __init__(
         self,
         providers: list[ProviderConfig] | None = None,
         rules: list[RoutingRule] | None = None,
+        cost_routing_enabled: bool | None = None,
     ) -> None:
         self._providers = {p.provider_id: p for p in (providers or DEFAULT_PROVIDERS)}
         self._rules = {r.step: r for r in (rules or DEFAULT_ROUTING_RULES)}
+        if cost_routing_enabled is not None:
+            self._cost_routing_enabled = cost_routing_enabled
+        else:
+            from src.settings import settings
+            self._cost_routing_enabled = settings.cost_optimization_routing_enabled
+        self._cost_routing_overrides = self._COST_OPTIMIZED_STEPS
 
     @property
     def providers(self) -> list[ProviderConfig]:
@@ -253,12 +300,20 @@ class ModelRouter:
 
         Priority: overlay_overrides > tier_overrides > role_overrides > default_class.
         Always picks the highest (most capable) class from applicable overrides.
+
+        When ``cost_optimization_routing_enabled`` is True, applies optimized
+        routing rules that downgrade certain steps to FAST (Epic 32).
         """
         rule = self._rules.get(step)
         if rule is None:
             return ModelClass.BALANCED
 
-        candidates: list[ModelClass] = [rule.default_class]
+        # Epic 32: Apply cost-optimized routing when flag is on
+        base_class = rule.default_class
+        if self._cost_routing_enabled and step in self._cost_routing_overrides:
+            base_class = self._cost_routing_overrides[step]
+
+        candidates: list[ModelClass] = [base_class]
 
         if role and role in rule.role_overrides:
             candidates.append(rule.role_overrides[role])

@@ -150,6 +150,72 @@ class TestModelRouter:
         assert cls == ModelClass.STRONG
 
 
+class TestCostOptimizationRouting:
+    """Epic 32: Cost optimization routing feature flag tests."""
+
+    def test_routing_flag_off_by_default(self):
+        """When cost_routing_enabled=False, expert_routing stays BALANCED."""
+        router = ModelRouter(cost_routing_enabled=False)
+        cls = router.resolve_class("expert_routing")
+        assert cls == ModelClass.BALANCED
+
+    def test_routing_flag_on_downgrades_expert_routing(self):
+        """When cost_routing_enabled=True, expert_routing drops to FAST."""
+        router = ModelRouter(cost_routing_enabled=True)
+        cls = router.resolve_class("expert_routing")
+        assert cls == ModelClass.FAST
+
+    def test_routing_flag_on_downgrades_assembler(self):
+        """When cost_routing_enabled=True, assembler drops to FAST."""
+        router = ModelRouter(cost_routing_enabled=True)
+        cls = router.resolve_class("assembler")
+        assert cls == ModelClass.FAST
+
+    def test_routing_flag_preserves_security_overlay(self):
+        """Security overlay still escalates to STRONG even with cost routing on."""
+        router = ModelRouter(cost_routing_enabled=True)
+        cls = router.resolve_class("assembler", overlays=["security"])
+        assert cls == ModelClass.STRONG
+
+    def test_routing_flag_does_not_affect_intent(self):
+        """Intent is not in the cost-optimized list — stays BALANCED."""
+        router = ModelRouter(cost_routing_enabled=True)
+        cls = router.resolve_class("intent")
+        assert cls == ModelClass.BALANCED
+
+    def test_routing_flag_does_not_affect_primary_agent(self):
+        """Primary agent is not in the cost-optimized list."""
+        router = ModelRouter(cost_routing_enabled=True)
+        cls = router.resolve_class("primary_agent")
+        assert cls == ModelClass.BALANCED
+
+    def test_routing_flag_does_not_affect_qa(self):
+        """QA eval is not in the cost-optimized list."""
+        router = ModelRouter(cost_routing_enabled=True)
+        cls = router.resolve_class("qa_eval")
+        assert cls == ModelClass.BALANCED
+
+    def test_intake_and_context_already_fast(self):
+        """Intake and context are already FAST — flag makes no difference."""
+        router_off = ModelRouter(cost_routing_enabled=False)
+        router_on = ModelRouter(cost_routing_enabled=True)
+        for step in ("intake", "context"):
+            assert router_off.resolve_class(step) == ModelClass.FAST
+            assert router_on.resolve_class(step) == ModelClass.FAST
+
+    def test_select_model_with_cost_routing(self):
+        """select_model returns FAST provider when cost routing is on."""
+        router = ModelRouter(cost_routing_enabled=True)
+        provider = router.select_model("expert_routing")
+        assert provider.model_class == ModelClass.FAST
+
+    def test_tier_override_still_escalates_with_cost_routing(self):
+        """Tier overrides still escalate even when cost routing is on."""
+        router = ModelRouter(cost_routing_enabled=True)
+        cls = router.resolve_class("primary_agent", repo_tier="execute")
+        assert cls == ModelClass.STRONG
+
+
 class TestBudgetEnforcer:
     def test_default_budget(self, enforcer):
         budget = enforcer.get_budget("any-repo")

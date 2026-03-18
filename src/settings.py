@@ -41,8 +41,11 @@ class Settings(BaseSettings):
 
     # Agent LLM feature flags (Epic 23 — per-agent toggle)
     # When False, agent uses rule-based fallback instead of LLM
+    # Note: "developer" is the runtime agent_name for PrimaryAgentRunner
+    # (distinct from the settings key "primary_agent" for documentation).
     agent_llm_enabled: dict[str, bool] = {
         "primary_agent": False,
+        "developer": False,
         "intake_agent": False,
         "context_agent": False,
         "intent_agent": False,
@@ -80,6 +83,16 @@ class Settings(BaseSettings):
     llm_provider: str = "mock"  # "mock" or "anthropic"
     github_provider: str = "mock"  # "mock" or "real"
     store_backend: str = "memory"  # "memory" or "postgres"
+
+    # Cost optimization (Epic 32)
+    cost_optimization_routing_enabled: bool = False  # Route cheap agents to FAST
+    cost_optimization_caching_enabled: bool = False  # Prompt caching headers
+    cost_optimization_batch_enabled: bool = False  # Batch API for async agents
+    cost_optimization_budget_tiers: dict[str, float] = {
+        "observe": 2.00,
+        "suggest": 5.00,
+        "execute": 8.00,
+    }
 
     # Approval notification channels (Epic 24)
     slack_approval_webhook_url: str = ""  # Slack incoming webhook for approvals

@@ -307,8 +307,7 @@ class AgentRunner:
                 provider=provider,
                 tokens_in=response.tokens_in,
                 tokens_out=response.tokens_out,
-                cost=response.tokens_in * provider.cost_per_1k_tokens / 1000
-                + response.tokens_out * provider.cost_per_1k_tokens / 1000,
+                cost=provider.estimate_cost(response.tokens_in, response.tokens_out),
             )
 
             # Parse output
@@ -330,8 +329,7 @@ class AgentRunner:
                 model_used=response.model or provider.model_id,
                 tokens_in=response.tokens_in,
                 tokens_out=response.tokens_out,
-                cost_estimated=response.tokens_in * provider.cost_per_1k_tokens / 1000
-                + response.tokens_out * provider.cost_per_1k_tokens / 1000,
+                cost_estimated=provider.estimate_cost(response.tokens_in, response.tokens_out),
                 duration_ms=elapsed_ms,
                 used_fallback=False,
             )

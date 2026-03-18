@@ -10,7 +10,8 @@
                     <th class="py-2">Provider</th>
                     <th class="py-2">Model</th>
                     <th class="py-2">Class</th>
-                    <th class="py-2 text-right">Cost/1k</th>
+                    <th class="py-2 text-right">In/1k</th>
+                    <th class="py-2 text-right">Out/1k</th>
                     <th class="py-2 text-right">Rate Limit</th>
                     <th class="py-2 text-center">Status</th>
                 </tr>
@@ -29,7 +30,8 @@
                         <span class="inline-block px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">STRONG</span>
                         {% endif %}
                     </td>
-                    <td class="py-2 text-right">${{ "%.4f"|format(p.cost_per_1k_tokens) }}</td>
+                    <td class="py-2 text-right">${{ "%.4f"|format(p.cost_per_1k_input if p.cost_per_1k_input is not none else p.cost_per_1k_tokens) }}</td>
+                    <td class="py-2 text-right">${{ "%.4f"|format(p.cost_per_1k_output if p.cost_per_1k_output is not none else p.cost_per_1k_tokens) }}</td>
                     <td class="py-2 text-right">{{ "{:,}".format(p.rate_limit_tpm) }} tpm</td>
                     <td class="py-2 text-center">
                         {% if p.enabled %}

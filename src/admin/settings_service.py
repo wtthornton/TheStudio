@@ -62,6 +62,26 @@ SETTING_DEFINITIONS: dict[str, dict[str, Any]] = {
     "agent_container_cpu_limit": {"category": SettingCategory.AGENT_CONFIG, "sensitive": False},
     "agent_container_memory_mb": {"category": SettingCategory.AGENT_CONFIG, "sensitive": False},
     "agent_container_timeout_seconds": {"category": SettingCategory.AGENT_CONFIG, "sensitive": False},
+    # Preflight (Epic 28)
+    "preflight_enabled": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
+    "preflight_tiers": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
+    # GitHub Projects v2 (Epic 29)
+    "projects_v2_enabled": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
+    "projects_v2_owner": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
+    "projects_v2_number": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
+    "projects_v2_token": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": True},
+    # Meridian Portfolio (Epic 29 Sprint 2)
+    "meridian_portfolio_enabled": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
+    "meridian_portfolio_github_issue": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
+    "meridian_portfolio_repo": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
+    "meridian_thresholds": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
+    # Approval Channels (Epic 24)
+    "slack_approval_webhook_url": {"category": SettingCategory.INFRASTRUCTURE, "sensitive": True},
+    # Cost Optimization (Epic 32)
+    "cost_optimization_routing_enabled": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
+    "cost_optimization_caching_enabled": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
+    "cost_optimization_batch_enabled": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
+    "cost_optimization_budget_tiers": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
     # Secrets
     "encryption_key": {"category": SettingCategory.SECRETS, "sensitive": True},
     "webhook_secret": {"category": SettingCategory.SECRETS, "sensitive": True},
