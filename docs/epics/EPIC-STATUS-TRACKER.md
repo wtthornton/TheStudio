@@ -9,8 +9,9 @@
 
 | Metric | Value |
 |--------|-------|
-| Total epics | 29 (0-29) |
+| Total epics | 30 (0-30) |
 | Complete | 29 |
+| Planned | 1 (Epic 30) |
 | Deferred | 1 (Epic 27) |
 | Tests passing | 2,120+ |
 | Coverage | 84% |
@@ -96,6 +97,12 @@
 | 6 | 27 | `source_name` storage ambiguity — scope JSON vs new column | **Resolved 2026-03-16** — New source_name VARCHAR(100) column + index. Migration 022. Default='github' |
 | 7 | 27 | `jsonpath-ng` evaluation unassigned | **Closed** — Epic 27 deferred, no current demand |
 
+## Phase 7 — Real Provider Validation (In Progress)
+
+| Epic | Title | Status | Notes |
+|------|-------|--------|-------|
+| 30 | Real Provider Integration & Validation | **Planned** | 3 sprints. Sprint 1: LLM eval harness + intent/QA/primary agent validation. Sprint 2: Postgres + real GitHub + full pipeline at Observe tier. Sprint 3: Feature flags + deployment runbook + Suggest tier. Meridian review passed 2026-03-18. |
+
 ---
 
 ## Critical Path
@@ -138,7 +145,8 @@ Phase 5 — COMPLETE (2026-03-17)
 1. ~~**Epic 28**~~ — **Complete** (2026-03-17). All 4 stories, 46 tests.
 2. ~~**Epic 29 Sprint 1**~~ — **Complete** (2026-03-17). 63 tests.
 3. ~~**Epic 29 Sprint 2**~~ — **Complete** (2026-03-18). 60 tests.
-4. **Phase 6 exit review** — Run Meridian review against Phase 6 success criteria.
-5. **Enable feature flags** — Deploy with `projects_v2_enabled=True` and `meridian_portfolio_enabled=True` on a test environment. Verify GitHub App has `project` scope.
-6. **Epic 27** — Deferred. Do not schedule until demand materializes.
-7. **Phase 7 planning** — Identify next priorities (evals? multi-source? scale?).
+4. ~~**Phase 7 planning**~~ — **Complete** (2026-03-18). Epic 30 planned, Meridian reviewed, Sprint 1 approved.
+5. **Epic 30 Sprint 1** — Build eval harness, validate intent/QA/primary agents with real Anthropic API. Provision API key first.
+6. **Epic 30 Sprint 2** — Postgres backend + real GitHub provider + full pipeline at Observe tier.
+7. **Epic 30 Sprint 3** — Feature flag activation + deployment runbook + Suggest tier validation.
+8. **Epic 27** — Deferred. Do not schedule until demand materializes.
