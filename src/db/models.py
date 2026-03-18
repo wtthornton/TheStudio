@@ -1,6 +1,6 @@
-"""ORM models for Epic 8 Sprint 2 persistence tables.
+"""ORM models for persistence tables.
 
-Tables: tool_suites, tool_entries, tool_profiles, model_call_audit
+Tables: tool_suites, tool_entries, tool_profiles, model_call_audit, portfolio_reviews
 """
 
 from __future__ import annotations
@@ -8,7 +8,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import Boolean, DateTime, Float, Integer, JSON, String, Text, ForeignKey, Uuid
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.db.base import Base
@@ -72,3 +72,16 @@ class ModelCallAuditRow(Base):
     error_class: Mapped[str | None] = mapped_column(String(100), nullable=True)
     fallback_chain: Mapped[list] = mapped_column(JSON, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class PortfolioReviewRow(Base):
+    """Persistence row for Meridian portfolio health reviews (Epic 29 AC 15)."""
+
+    __tablename__ = "portfolio_reviews"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    reviewed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    overall_health: Mapped[str] = mapped_column(String(20))
+    flags: Mapped[list] = mapped_column(JSON, default=list)
+    metrics: Mapped[dict] = mapped_column(JSON, default=dict)
+    recommendations: Mapped[list] = mapped_column(JSON, default=list)

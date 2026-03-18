@@ -1503,3 +1503,71 @@ async def partial_settings_secrets_regenerate_webhook(request: Request) -> Respo
         "flash": "Webhook secret regenerated",
     }
     return templates.TemplateResponse(request, "partials/settings_secrets.html", ctx)
+
+
+# --- Portfolio Health Dashboard (Epic 29 Sprint 2, Story 29.8) ---
+
+
+@ui_router.get("/portfolio-health", response_class=HTMLResponse)
+async def portfolio_health_page(request: Request) -> Response:
+    """Render the Meridian portfolio health dashboard page."""
+    ctx = _base_context(request)
+    ctx["active_page"] = "portfolio-health"
+    return templates.TemplateResponse(request, "portfolio_health.html", ctx)
+
+
+@ui_router.get("/partials/portfolio-health", response_class=HTMLResponse)
+async def portfolio_health_partial(request: Request) -> Response:
+    """Render portfolio health partial with latest review data."""
+    reviews = await _get_recent_portfolio_reviews(limit=7)
+
+    latest = reviews[0] if reviews else None
+    trend = [
+        {
+            "reviewed_at": r["reviewed_at"],
+            "overall_health": r["overall_health"],
+            "flag_count": len(r.get("flags", [])),
+        }
+        for r in reviews
+    ]
+
+    ctx = {
+        "request": request,
+        "latest": latest,
+        "trend": trend,
+        "has_data": latest is not None,
+    }
+    return templates.TemplateResponse(
+        request, "partials/portfolio_health_content.html", ctx
+    )
+
+
+async def _get_recent_portfolio_reviews(limit: int = 7) -> list[dict]:
+    """Fetch recent portfolio reviews from the database."""
+    try:
+        from sqlalchemy import select
+
+        from src.db.models import PortfolioReviewRow
+
+        async with get_async_session() as session:
+            stmt = (
+                select(PortfolioReviewRow)
+                .order_by(PortfolioReviewRow.reviewed_at.desc())
+                .limit(limit)
+            )
+            result = await session.execute(stmt)
+            rows = result.scalars().all()
+            return [
+                {
+                    "id": row.id,
+                    "reviewed_at": row.reviewed_at.strftime("%Y-%m-%d %H:%M UTC"),
+                    "overall_health": row.overall_health,
+                    "flags": row.flags or [],
+                    "metrics": row.metrics or {},
+                    "recommendations": row.recommendations or [],
+                }
+                for row in rows
+            ]
+    except Exception:
+        logger.debug("Could not fetch portfolio reviews", exc_info=True)
+        return []

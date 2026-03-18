@@ -1,6 +1,6 @@
 # Epic Status Tracker
 
-> Consolidated status of all epics as of 2026-03-17.
+> Consolidated status of all epics as of 2026-03-18.
 > Source of truth for epic status is each epic's own file. This tracker is a rollup view.
 
 ---
@@ -10,10 +10,9 @@
 | Metric | Value |
 |--------|-------|
 | Total epics | 29 (0-29) |
-| Complete | 26 |
-| Meridian Reviewed (Conditional Pass) | 1 (Epic 27) |
-| Meridian Reviewed (Ready to Commit) | 2 (Epics 28, 29) |
-| Tests passing | 2,060+ |
+| Complete | 29 |
+| Deferred | 1 (Epic 27) |
+| Tests passing | 2,120+ |
 | Coverage | 84% |
 
 ---
@@ -74,14 +73,14 @@
 | 24 | Chat Approval Workflows | **Complete** | All 6 stories, 2 sprints. ReviewContext, chat persistence, API, notification channels (GitHub + Slack), OTel observability, NATS signals, approval metadata in evidence. 56+ new tests. |
 | 25 | Container Isolation | **Complete** | All 3 sprints, 7 stories. Container image, lifecycle manager, protocol, activity integration, network isolation, per-tier resource limits, OTel observability. 35+ new tests. |
 | 26 | File-Based Expert Packaging | Complete | 6 stories, manifest schema, scanner, registrar (2026-03-16) |
-| 27 | Multi-Source Webhooks | **Meridian Conditional Pass** | 4 blocking gaps: source_name storage, owners, jsonpath-ng eval, Sprint 1 scope |
+| 27 | Multi-Source Webhooks | **Deferred** | Growth enabler, no current demand. Defer until pulled. 4 Meridian gaps remain — resolve when demand materializes. |
 
-## Phase 6 — Pipeline Intelligence + Portfolio Visibility (Planned)
+## Phase 6 — Pipeline Intelligence + Portfolio Visibility (Complete)
 
 | Epic | Title | Status | Notes |
 |------|-------|--------|-------|
-| 28 | Preflight Plan Review Gate | **Meridian Reviewed — Ready to Commit** | Lightweight per-TaskPacket plan quality gate (new persona: Preflight). 4 stories, 1 sprint. All Meridian gaps resolved. |
-| 29 | GitHub Projects v2 + Meridian Portfolio Review | **Meridian Reviewed — Ready to Commit** | Projects v2 sync + periodic Meridian health review. 9 stories, 2 sprints. All Meridian gaps resolved. |
+| 28 | Preflight Plan Review Gate | **Complete** | All 4 stories delivered. Preflight agent config, activity, pipeline integration, observability, evidence comment, 46 tests passing. |
+| 29 | GitHub Projects v2 + Meridian Portfolio Review | **Complete** | Both sprints delivered. Sprint 1: GraphQL client, status mapping, pipeline sync, compliance checker (63 tests). Sprint 2: Portfolio collector, Meridian review agent, Temporal workflow, Admin UI dashboard, GitHub issue report (60 tests). 123 total tests. |
 
 ---
 
@@ -102,23 +101,20 @@
 ## Critical Path
 
 ```
+Phase 6 — COMPLETE (2026-03-18)
+  All epics closed. Both Phase 6 epics delivered.
+
+  Epic 28 (Preflight Plan Review Gate) — COMPLETE
+    All 4 stories. Lightweight plan quality gate. 46 tests.
+
+  Epic 29 (Projects v2 + Meridian Portfolio Review) — COMPLETE
+    All 10 stories, 2 sprints. GraphQL client, pipeline sync,
+    compliance checker, portfolio collector, Meridian review agent,
+    Temporal workflow, Admin UI dashboard, GitHub issue report.
+    123 tests across tests/github/ and tests/meridian/.
+
 Phase 5 — COMPLETE (2026-03-17)
   All epics closed except Epic 27 (deferred, no demand).
-
-  Epic 15 (Real Repo Trial) — COMPLETE
-    All 7 stories delivered. Onboarding guide enriched with 7 sections.
-
-  Epic 24 (Chat Approval) — COMPLETE
-    All 6 stories, 2 sprints. Notification channels (GitHub + Slack),
-    OTel spans, NATS signals, approval metadata in evidence comments.
-    56+ new tests.
-
-  Epic 25 (Container Isolation) — COMPLETE
-    All 7 stories, 3 sprints. Container lifecycle with full OTel observability,
-    log capture with correlation_id, structured metrics. 35+ new tests.
-
-  Epic 27 (Multi-Source Webhooks) — DEFERRED
-    Growth enabler, no current demand. Defer until pulled.
 ```
 
 ---
@@ -139,6 +135,10 @@ Phase 5 — COMPLETE (2026-03-17)
 
 ## Recommended Next Actions
 
-1. **Epic 28** — Preflight plan review gate (Meridian-reviewed, ready to commit)
-2. **Epic 29** — GitHub Projects v2 + Meridian portfolio review (can parallel with Epic 28)
-3. **Epic 27** — defer until demand materializes
+1. ~~**Epic 28**~~ — **Complete** (2026-03-17). All 4 stories, 46 tests.
+2. ~~**Epic 29 Sprint 1**~~ — **Complete** (2026-03-17). 63 tests.
+3. ~~**Epic 29 Sprint 2**~~ — **Complete** (2026-03-18). 60 tests.
+4. **Phase 6 exit review** — Run Meridian review against Phase 6 success criteria.
+5. **Enable feature flags** — Deploy with `projects_v2_enabled=True` and `meridian_portfolio_enabled=True` on a test environment. Verify GitHub App has `project` scope.
+6. **Epic 27** — Deferred. Do not schedule until demand materializes.
+7. **Phase 7 planning** — Identify next priorities (evals? multi-source? scale?).

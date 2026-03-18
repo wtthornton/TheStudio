@@ -85,6 +85,17 @@ def format_evidence_comment(
 
 
 @dataclass
+class PreflightSummary:
+    """Summary of preflight plan review for the evidence comment.
+
+    Epic 28 AC 11: Preflight result is included in evidence comment.
+    """
+
+    status: str = "skipped"  # "approved", "approved_after_replan", "skipped"
+    summary: str = ""
+
+
+@dataclass
 class ApprovalMetadata:
     """Metadata about the approval decision for the evidence comment.
 
@@ -135,6 +146,7 @@ def format_full_evidence_comment(
     expert_coverage: ExpertCoverageSummary | None = None,
     loopback: LoopbackSummary | None = None,
     approval: ApprovalMetadata | None = None,
+    preflight: PreflightSummary | None = None,
 ) -> str:
     """Format the full evidence comment per 15-system-runtime-flow.md.
 
@@ -147,6 +159,7 @@ def format_full_evidence_comment(
     - QA result
     - Expert coverage summary
     - Loopback summary
+    - Preflight result (Epic 28)
     """
     # Verification summary table
     check_lines = []
@@ -231,6 +244,21 @@ def format_full_evidence_comment(
     else:
         approval_section = "- Pending"
 
+    # Preflight section (Epic 28 AC 11)
+    if preflight is not None:
+        status_map = {
+            "approved": "Approved",
+            "approved_after_replan": "Approved after re-plan",
+            "skipped": "Skipped (disabled)",
+            "skipped_tier": "Skipped (tier not configured)",
+        }
+        preflight_label = status_map.get(preflight.status, preflight.status.title())
+        preflight_section = f"**{preflight_label}**"
+        if preflight.summary:
+            preflight_section += f" — {preflight.summary}"
+    else:
+        preflight_section = "- Not configured"
+
     return f"""{EVIDENCE_COMMENT_MARKER}
 
 ## TheStudio Evidence
@@ -268,6 +296,10 @@ def format_full_evidence_comment(
 ### Expert Coverage
 
 {expert_section}
+
+### Preflight
+
+{preflight_section}
 
 ### Loopback Summary
 

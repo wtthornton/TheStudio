@@ -50,6 +50,30 @@ class Settings(BaseSettings):
         "recruiter_agent": False,
         "assembler_agent": False,
         "qa_agent": False,
+        "preflight_agent": False,
+    }
+
+    # Preflight plan review gate (Epic 28)
+    preflight_enabled: bool = False  # Feature flag — off by default
+    preflight_tiers: list[str] = ["execute"]  # Only run for these trust tiers
+
+    # GitHub Projects v2 integration (Epic 29)
+    projects_v2_enabled: bool = False  # Feature flag — off by default (AC 7)
+    projects_v2_owner: str = ""  # GitHub org or user that owns the project
+    projects_v2_number: int = 0  # Project number (visible in URL)
+    projects_v2_token: str = ""  # Installation token (falls back to github_app_id)
+
+    # Meridian portfolio review (Epic 29 Sprint 2)
+    meridian_portfolio_enabled: bool = False  # Feature flag — off by default (AC 18)
+    meridian_portfolio_github_issue: bool = False  # Post review to pinned issue (AC 17)
+    meridian_portfolio_repo: str = ""  # Repo for health report issue
+    meridian_thresholds: dict[str, float] = {
+        "blocked_ratio": 0.20,
+        "high_risk_concurrent": 3,
+        "review_stale_hours": 48,
+        "repo_concentration": 0.50,
+        "failure_rate": 0.30,
+        "queued_stale_days": 7,
     }
 
     # Feature flags (Epic 8 Sprint 2)

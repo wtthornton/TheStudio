@@ -2,8 +2,9 @@
 
 **Author:** Saga
 **Date:** 2026-03-17
-**Status:** Meridian Reviewed — Conditional Pass (2026-03-17). Fixes applied.
-**Target Sprint:** TBD (after Epics 15, 24, 25 close; can parallel with Epic 28)
+**Status:** Complete (2026-03-18). Both sprints delivered. Meridian review passed.
+**Sprint 1 Delivered:** 2026-03-17. Stories 29.0–29.4. 63 tests.
+**Sprint 2 Delivered:** 2026-03-18. Stories 29.5–29.9. 60 tests.
 **Prerequisites:** None hard-required. Publisher (step 9) is the integration point. Sprint 1 can validate with synthetic project data; Epic 15 real-repo output is not required.
 
 ---
@@ -240,7 +241,7 @@ Both are Meridian. One challenges artifacts before they're committed. The other 
 
 | Dependency | Type | Owner | Status | Required By |
 |------------|------|-------|--------|-------------|
-| GitHub App `project` scope (read:project, write:project) | Infrastructure | Primary Developer | **Action required** — verify current App permissions, update if needed | Sprint 1 start |
+| GitHub App `project` scope (read:project, write:project) | Infrastructure | Primary Developer | **Action required** — verify current App permissions, update if needed. **Gating task: Story 29.0 must complete before any Sprint 1 work begins.** | Story 29.0 (Day 1 of Sprint 1) |
 | GitHub Projects v2 GraphQL API reference | Knowledge | Primary Developer | Available — [GitHub docs: ProjectV2](https://docs.github.com/en/graphql/reference/objects#projectv2). Key types: `ProjectV2`, `ProjectV2Item`, `ProjectV2FieldValue`. Key mutation: `updateProjectV2ItemFieldValue`. | Story 29.1 |
 | Epic 15 (Real Repo Onboarding) | Soft scheduling | Primary Developer | In Progress | Not required — Sprint 1 validates with synthetic project data. Real-repo data improves Sprint 2 portfolio review quality but is not blocking. |
 | Existing REST `GitHubClient` (`src/publisher/github_client.py`) | Reference only | — | Complete | Note: `ProjectsV2Client` uses a separate GraphQL httpx client path (`https://api.github.com/graphql`), not the existing REST client. |
@@ -255,8 +256,9 @@ Both are Meridian. One challenges artifacts before they're committed. The other 
 
 | # | Story | Size | Value | Files |
 |---|-------|------|-------|-------|
+| 29.0 | **Verify GitHub App Permissions** | XS | **Gating** — all Sprint 1 work blocked until this completes | None (infrastructure verification). Verify GitHub App has `project` scope (read:project, write:project). Update App permissions if needed. Confirm with a test GraphQL query (`query { viewer { login } }` against `https://api.github.com/graphql`). |
 | 29.1 | **Projects v2 GraphQL Client** | M | Foundation — all sync depends on this | `src/github/projects_client.py`, `src/github/projects_mapping.py` |
-| 29.2 | **Pipeline Status Sync Activity** | M | Status transitions reflected on board | `src/workflow/activities.py`, `src/workflow/pipeline.py`, `src/settings.py` |
+| 29.2 | **Pipeline Status Sync Activity** | M | Status transitions reflected on board. Includes adding `project_item_id` field to TaskPacket (or mapping table) for sync coverage tracking (see Success Metric: Sync coverage). | `src/workflow/activities.py`, `src/workflow/pipeline.py`, `src/settings.py`, `src/models/task_packet.py` (new field), migration |
 | 29.3 | **Publisher Projects v2 Integration** | S | Published tasks show as Done | `src/publisher/publisher.py` |
 | 29.4 | **Compliance Checker Implementation** | S | Real pass/fail replaces stub | `src/compliance/checker.py`, `src/admin/compliance_scorecard.py` |
 
@@ -326,3 +328,36 @@ The TEAM.md persona chain should be updated to reflect:
 - Health dashboard visualization format — deferred to story-level detail (acceptable for epic scope).
 
 **Status: All gaps resolved. Ready to commit.**
+
+---
+
+## Sprint 2 Delivery Notes (2026-03-18)
+
+**Sprint 2: Meridian Portfolio Review — COMPLETE (60 tests)**
+
+| # | Story | Status | Tests | Key Deliverables |
+|---|-------|--------|-------|------------------|
+| 29.5 | Portfolio Data Collector | **Complete** | 17 | `src/meridian/portfolio_collector.py` — `PortfolioSnapshot` with items grouped by repo/status, `_parse_item()`, `_extract_field_value()`, OTel span |
+| 29.6 | Meridian Portfolio Review Agent | **Complete** | 26 | `src/meridian/portfolio_config.py` — `MERIDIAN_PORTFOLIO_CONFIG` (AgentRunner), `PortfolioReviewOutput` model (AC 12), 6 health checks in `_portfolio_fallback()` (AC 11), `format_health_report_markdown()` |
+| 29.7 | Scheduled Review Workflow | **Complete** | 13 | `src/meridian/portfolio_workflow.py` — Temporal `MeridianPortfolioReviewWorkflow`, `portfolio_review_activity()`, `_persist_review()`, DB migration 024 (`portfolio_reviews` table), `PortfolioReviewRow` ORM model |
+| 29.8 | Admin UI Health Dashboard | **Complete** | 4 | `/admin/ui/portfolio-health` page + HTMX partial, health indicator (green/yellow/red), metrics grid, flags with severity cards, 7-review trend table, nav link |
+| 29.9 | GitHub Issue Health Report | **Complete** | (in 29.6/29.7) | `_post_github_issue()` in workflow, `format_health_report_markdown()` in config, feature-flagged via `meridian_portfolio_github_issue` |
+
+**Health Checks Implemented (AC 11):**
+1. Throughput — blocked ratio >20% of active items
+2. Risk Concentration — >3 high-risk items in progress concurrently
+3. Approval Bottleneck — items stalled in review
+4. Repo Balance — >50% of active items in a single repo
+5. Failure Rate — >30% of completed items failed
+6. Stale Items — items queued >7 days
+
+**New Files Created:**
+- `src/meridian/__init__.py`, `portfolio_collector.py`, `portfolio_config.py`, `portfolio_workflow.py`
+- `src/db/migrations/024_portfolio_reviews.py`
+- `src/admin/templates/portfolio_health.html`, `partials/portfolio_health_content.html`
+- `tests/meridian/__init__.py`, `test_portfolio_collector.py`, `test_portfolio_config.py`, `test_portfolio_workflow.py`, `test_admin_portfolio_health.py`
+
+**Combined Epic 29 Totals:**
+- Sprint 1: 63 tests (GraphQL client, status mapping, pipeline sync, compliance checker)
+- Sprint 2: 60 tests (portfolio collector, review agent, workflow, admin UI, issue report)
+- **Total: 123 tests across `tests/github/` and `tests/meridian/`**

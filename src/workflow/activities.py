@@ -149,6 +149,47 @@ class AssemblerOutput:
 
 
 @dataclass
+class PreflightInput:
+    """Input for the preflight plan review activity."""
+
+    taskpacket_id: str
+    plan_steps: list[str] = field(default_factory=list)
+    acceptance_criteria: list[str] = field(default_factory=list)
+    constraints: list[str] = field(default_factory=list)
+
+
+@dataclass
+class PreflightActivityOutput:
+    """Output of the preflight plan review activity."""
+
+    approved: bool = True
+    uncovered_criteria: list[str] = field(default_factory=list)
+    constraint_violations: list[str] = field(default_factory=list)
+    vague_steps: list[str] = field(default_factory=list)
+    summary: str = ""
+
+
+@dataclass
+class ProjectStatusInput:
+    """Input for the Projects v2 status sync activity."""
+
+    taskpacket_id: str
+    taskpacket_status: str
+    repo_tier: str = "observe"
+    complexity_index: str = "low"
+    project_item_id: str = ""  # Set after first add_item call
+
+
+@dataclass
+class ProjectStatusOutput:
+    """Output of the Projects v2 status sync activity."""
+
+    synced: bool = False
+    project_item_id: str = ""
+    error: str = ""
+
+
+@dataclass
 class ImplementInput:
     """Input for the implementation activity."""
 
@@ -565,6 +606,53 @@ async def assembler_activity(params: AssemblerInput) -> AssemblerOutput:
 
 
 @activity.defn
+async def preflight_activity(params: PreflightInput) -> PreflightActivityOutput:
+    """Step 5.5: Preflight plan review gate.
+
+    Uses AgentRunner with PREFLIGHT_AGENT_CONFIG (Epic 28 AC 1-4).
+    Evaluates plan quality via three checks: criteria coverage, constraint
+    compliance, and step specificity. Falls back to approving when LLM
+    is unavailable — preflight never blocks on its own failure.
+    """
+    from uuid import UUID
+
+    from src.agent.framework import AgentContext, AgentRunner
+    from src.preflight.preflight_config import PREFLIGHT_AGENT_CONFIG
+
+    context = AgentContext(
+        taskpacket_id=UUID(params.taskpacket_id) if params.taskpacket_id else None,
+        extra={
+            "plan_steps": params.plan_steps,
+            "acceptance_criteria": params.acceptance_criteria,
+            "constraints": params.constraints,
+        },
+    )
+
+    runner = AgentRunner(PREFLIGHT_AGENT_CONFIG)
+    result = await runner.run(context)
+
+    if result.parsed_output is not None:
+        output = result.parsed_output
+        return PreflightActivityOutput(
+            approved=output.approved,
+            uncovered_criteria=output.uncovered_criteria,
+            constraint_violations=output.constraint_violations,
+            vague_steps=output.vague_steps,
+            summary=output.summary,
+        )
+
+    import json
+    data = json.loads(result.raw_output) if result.raw_output else {}
+    return PreflightActivityOutput(
+        approved=data.get("approved", True),
+        uncovered_criteria=data.get("uncovered_criteria", []),
+        constraint_violations=data.get("constraint_violations", []),
+        vague_steps=data.get("vague_steps", []),
+        summary=data.get("summary", ""),
+    )
+
+
+@activity.defn
 async def implement_activity(params: ImplementInput) -> ImplementOutput:
     """Step 6: Primary Agent implements changes.
 
@@ -867,6 +955,97 @@ async def post_approval_request_activity(
         )
 
     return ApprovalRequestOutput(comment_posted=True)
+
+
+@activity.defn
+async def update_project_status_activity(
+    params: ProjectStatusInput,
+) -> ProjectStatusOutput:
+    """Sync TaskPacket status to GitHub Projects v2 board.
+
+    Epic 29 AC 6: Best-effort status sync at key transitions.
+    If Projects v2 is disabled or the API call fails, the activity
+    returns gracefully — sync never blocks the pipeline.
+    """
+    import logging
+
+    from src.settings import settings
+
+    logger = logging.getLogger("thestudio.projects_v2")
+
+    if not settings.projects_v2_enabled:
+        return ProjectStatusOutput(synced=False, error="projects_v2_disabled")
+
+    if not settings.projects_v2_owner or not settings.projects_v2_number:
+        return ProjectStatusOutput(synced=False, error="projects_v2_not_configured")
+
+    try:
+        from src.github.projects_client import ProjectsV2Client
+        from src.github.projects_mapping import map_risk, map_status, map_tier
+
+        token = settings.projects_v2_token or settings.github_app_id
+        if not token:
+            return ProjectStatusOutput(synced=False, error="no_token")
+
+        async with ProjectsV2Client(token) as client:
+            owner = settings.projects_v2_owner
+            project_number = settings.projects_v2_number
+
+            # Map status
+            projects_status = map_status(params.taskpacket_status)
+            if projects_status is None:
+                return ProjectStatusOutput(
+                    synced=False,
+                    error=f"unmapped_status:{params.taskpacket_status}",
+                )
+
+            item_id = params.project_item_id
+
+            # If no item_id yet, we can't update (item must be added first
+            # via intake or a separate add_item call)
+            if not item_id:
+                logger.debug(
+                    "projects_v2.skip_no_item_id",
+                    extra={"taskpacket_id": params.taskpacket_id},
+                )
+                return ProjectStatusOutput(synced=False, error="no_item_id")
+
+            # Update status
+            await client.set_status(owner, project_number, item_id, projects_status)
+
+            # Set tier on first sync (RECEIVED status)
+            if params.taskpacket_status == "RECEIVED":
+                tier_value = map_tier(params.repo_tier)
+                if tier_value:
+                    await client.set_automation_tier(
+                        owner, project_number, item_id, tier_value
+                    )
+
+            # Set risk tier after context enrichment (ENRICHED status)
+            if params.taskpacket_status == "ENRICHED":
+                risk_value = map_risk(params.complexity_index)
+                if risk_value:
+                    await client.set_risk_tier(
+                        owner, project_number, item_id, risk_value
+                    )
+
+            logger.info(
+                "projects_v2.status_synced",
+                extra={
+                    "taskpacket_id": params.taskpacket_id,
+                    "status": projects_status,
+                    "item_id": item_id,
+                },
+            )
+            return ProjectStatusOutput(synced=True, project_item_id=item_id)
+
+    except Exception:
+        logger.warning(
+            "projects_v2.sync_failed",
+            extra={"taskpacket_id": params.taskpacket_id},
+            exc_info=True,
+        )
+        return ProjectStatusOutput(synced=False, error="sync_exception")
 
 
 @activity.defn

@@ -33,6 +33,29 @@ ATTR_CONTAINER_TOTAL_MS = "thestudio.container.total_ms"
 ATTR_CONTAINER_TIMED_OUT = "thestudio.container.timed_out"
 ATTR_REPO_TIER = "thestudio.repo_tier"
 
+# Projects v2 sync spans (Epic 29)
+SPAN_PROJECTS_V2_SYNC = "projects_v2.sync_status"
+SPAN_PROJECTS_V2_ADD_ITEM = "projects_v2.add_item"
+SPAN_PROJECTS_V2_SET_FIELD = "projects_v2.set_field"
+
+# Meridian portfolio review spans (Epic 29 Sprint 2)
+SPAN_MERIDIAN_PORTFOLIO_REVIEW = "meridian.portfolio_review"
+SPAN_MERIDIAN_PORTFOLIO_COLLECT = "meridian.portfolio_collect"
+
+# Projects v2 span attribute keys
+ATTR_PROJECTS_V2_STATUS = "thestudio.projects_v2.status"
+ATTR_PROJECTS_V2_ITEM_ID = "thestudio.projects_v2.item_id"
+ATTR_PROJECTS_V2_PROJECT_ID = "thestudio.projects_v2.project_id"
+
+# Preflight plan review spans (Epic 28)
+SPAN_PREFLIGHT_REVIEW = "preflight.review"
+
+# Preflight span attribute keys
+ATTR_PREFLIGHT_APPROVED = "thestudio.preflight.approved"
+ATTR_PREFLIGHT_UNCOVERED_COUNT = "thestudio.preflight.uncovered_count"
+ATTR_PREFLIGHT_VIOLATION_COUNT = "thestudio.preflight.violation_count"
+ATTR_PREFLIGHT_VAGUE_COUNT = "thestudio.preflight.vague_count"
+
 # Approval chat spans (Epic 24 Story 24.6)
 SPAN_APPROVAL_REVIEW_CONTEXT = "approval.review_context"
 SPAN_APPROVAL_CHAT_MESSAGE = "approval.chat_message"

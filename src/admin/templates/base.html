@@ -90,6 +90,12 @@
                         <span class="mr-2">&#9638;</span> Planes
                     </a>
                 </li>
+                <li>
+                    <a href="/admin/ui/portfolio-health"
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'portfolio-health' %}bg-gray-800 text-white{% else %}text-gray-300{% endif %}">
+                        <span class="mr-2">&#9829;</span> Portfolio Health
+                    </a>
+                </li>
                 {% if current_user_role and current_user_role.value == 'admin' %}
                 <li>
                     <a href="/admin/ui/audit"

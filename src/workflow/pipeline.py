@@ -13,6 +13,7 @@ Steps:
 3. Intent Builder — goal, constraints, acceptance criteria
 4. Expert Router — select expert subset
 5. Assembler — merge expert outputs into plan
+5.5. Preflight — plan quality gate (feature-flagged, Epic 28)
 6. Primary Agent — implement changes
 7. Verification Gate — run checks, loopback on failure
 8. QA Agent — validate against intent, loopback on failure
@@ -43,6 +44,9 @@ with workflow.unsafe.imports_passed_through():
         IntakeOutput,
         IntentInput,
         IntentOutput,
+        PreflightActivityOutput,
+        PreflightInput,
+        ProjectStatusInput,
         PublishInput,
         PublishOutput,
         QAInput,
@@ -59,10 +63,12 @@ with workflow.unsafe.imports_passed_through():
         intake_activity,
         intent_activity,
         post_approval_request_activity,
+        preflight_activity,
         publish_activity,
         qa_activity,
         readiness_activity,
         router_activity,
+        update_project_status_activity,
         verify_activity,
     )
 
@@ -88,11 +94,13 @@ class WorkflowStep(StrEnum):
     INTENT = "intent"
     ROUTER = "router"
     ASSEMBLER = "assembler"
+    PREFLIGHT = "preflight"
     IMPLEMENT = "implement"
     VERIFY = "verify"
     QA = "qa"
     AWAITING_APPROVAL = "awaiting_approval"
     PUBLISH = "publish"
+    PROJECTS_V2_SYNC = "projects_v2_sync"
 
 
 # --- Retry/Timeout Policy Table ---
@@ -136,6 +144,10 @@ STEP_POLICIES: dict[WorkflowStep, StepPolicy] = {
     WorkflowStep.ASSEMBLER: StepPolicy(
         timeout=timedelta(minutes=10), max_retries=2,
     ),
+    WorkflowStep.PREFLIGHT: StepPolicy(
+        timeout=timedelta(minutes=2), max_retries=1,
+        backoff_coefficient=2.0,
+    ),
     WorkflowStep.IMPLEMENT: StepPolicy(
         timeout=timedelta(minutes=60), max_retries=2,
     ),
@@ -152,6 +164,10 @@ STEP_POLICIES: dict[WorkflowStep, StepPolicy] = {
     WorkflowStep.PUBLISH: StepPolicy(
         timeout=timedelta(minutes=5), max_retries=5,
         initial_interval=timedelta(seconds=0.5),  # fast retry
+        backoff_coefficient=1.5,
+    ),
+    WorkflowStep.PROJECTS_V2_SYNC: StepPolicy(
+        timeout=timedelta(seconds=30), max_retries=2,
         backoff_coefficient=1.5,
     ),
 }
@@ -178,6 +194,10 @@ class PipelineInput:
     repo_path: str = ""
     repo_tier: str = "observe"
     readiness_gate_enabled: bool = False
+    preflight_enabled: bool = False
+    preflight_tiers: list[str] = field(default_factory=lambda: ["execute"])
+    projects_v2_enabled: bool = False
+    project_item_id: str = ""  # Populated after item is added to project
 
 
 @dataclass
@@ -196,6 +216,8 @@ class PipelineOutput:
     approved_by: str | None = None
     readiness_evaluations: int = 0
     readiness_escalated: bool = False
+    preflight_approved: bool | None = None
+    preflight_summary: str = ""
 
 
 @workflow.defn
@@ -258,6 +280,36 @@ class TheStudioPipelineWorkflow:
         self._updated_issue_title = issue_title
         self._updated_issue_body = issue_body
 
+    async def _sync_project_status(
+        self,
+        params: PipelineInput,
+        status: str,
+        complexity_index: str = "low",
+    ) -> None:
+        """Fire-and-forget Projects v2 status sync (best-effort, AC 6)."""
+        if not params.projects_v2_enabled:
+            return
+        sync_policy = STEP_POLICIES[WorkflowStep.PROJECTS_V2_SYNC]
+        try:
+            await workflow.execute_activity(
+                update_project_status_activity,
+                ProjectStatusInput(
+                    taskpacket_id=params.taskpacket_id,
+                    taskpacket_status=status,
+                    repo_tier=params.repo_tier,
+                    complexity_index=complexity_index,
+                    project_item_id=params.project_item_id,
+                ),
+                start_to_close_timeout=sync_policy.timeout,
+                retry_policy=sync_policy.to_retry_policy(),
+            )
+        except Exception:
+            # Best-effort — log but never fail the pipeline (AC 5, 6)
+            workflow.logger.warning(
+                "projects_v2.sync_failed",
+                extra={"taskpacket_id": params.taskpacket_id, "status": status},
+            )
+
     @workflow.run
     async def run(self, params: PipelineInput) -> PipelineOutput:
         output = PipelineOutput()
@@ -286,6 +338,9 @@ class TheStudioPipelineWorkflow:
         base_role = intake_result.base_role or "developer"
         overlays = intake_result.overlays
 
+        # Projects v2: sync RECEIVED → Queued
+        await self._sync_project_status(params, "RECEIVED")
+
         # Step 2: Context Enrichment
         context_policy = STEP_POLICIES[WorkflowStep.CONTEXT]
         context_result: ContextOutput = await workflow.execute_activity(
@@ -301,6 +356,11 @@ class TheStudioPipelineWorkflow:
             retry_policy=context_policy.to_retry_policy(),
         )
         output.step_reached = WorkflowStep.CONTEXT
+
+        # Projects v2: sync ENRICHED → Queued (sets Risk Tier from complexity)
+        await self._sync_project_status(
+            params, "ENRICHED", complexity_index=context_result.complexity_index
+        )
 
         # Step 2.5: Readiness Gate (feature-flagged) with re-evaluation loop
         if params.readiness_gate_enabled:
@@ -375,6 +435,9 @@ class TheStudioPipelineWorkflow:
         )
         output.step_reached = WorkflowStep.INTENT
 
+        # Projects v2: sync INTENT_BUILT → In Progress
+        await self._sync_project_status(params, "INTENT_BUILT")
+
         # Step 4: Expert Routing
         router_policy = STEP_POLICIES[WorkflowStep.ROUTER]
         await workflow.execute_activity(
@@ -403,6 +466,84 @@ class TheStudioPipelineWorkflow:
             retry_policy=assembler_policy.to_retry_policy(),
         )
         output.step_reached = WorkflowStep.ASSEMBLER
+
+        # Step 5.5: Preflight Plan Review (Epic 28, feature-flagged)
+        if params.preflight_enabled and params.repo_tier in [
+            t.lower() for t in params.preflight_tiers
+        ]:
+            preflight_policy = STEP_POLICIES[WorkflowStep.PREFLIGHT]
+            preflight_result: PreflightActivityOutput = (
+                await workflow.execute_activity(
+                    preflight_activity,
+                    PreflightInput(
+                        taskpacket_id=params.taskpacket_id,
+                        plan_steps=assembler_result.plan_steps,
+                        acceptance_criteria=intent_result.acceptance_criteria,
+                        constraints=[],
+                    ),
+                    start_to_close_timeout=preflight_policy.timeout,
+                    retry_policy=preflight_policy.to_retry_policy(),
+                )
+            )
+            output.step_reached = WorkflowStep.PREFLIGHT
+            output.preflight_approved = preflight_result.approved
+            output.preflight_summary = preflight_result.summary
+
+            if not preflight_result.approved:
+                # One loopback to Assembler with preflight feedback (AC 7)
+                feedback_extra = []
+                if preflight_result.uncovered_criteria:
+                    feedback_extra.append(
+                        f"Uncovered criteria: {', '.join(preflight_result.uncovered_criteria)}"
+                    )
+                if preflight_result.constraint_violations:
+                    violations = ", ".join(preflight_result.constraint_violations)
+                    feedback_extra.append(
+                        f"Constraint violations: {violations}"
+                    )
+                if preflight_result.vague_steps:
+                    feedback_extra.append(
+                        f"Vague steps: {', '.join(preflight_result.vague_steps)}"
+                    )
+
+                assembler_result = await workflow.execute_activity(
+                    assembler_activity,
+                    AssemblerInput(
+                        taskpacket_id=params.taskpacket_id,
+                        intent_goal=intent_result.goal,
+                        intent_constraints=feedback_extra,
+                        acceptance_criteria=intent_result.acceptance_criteria,
+                    ),
+                    start_to_close_timeout=assembler_policy.timeout,
+                    retry_policy=assembler_policy.to_retry_policy(),
+                )
+
+                # Second preflight check
+                preflight_result2: PreflightActivityOutput = (
+                    await workflow.execute_activity(
+                        preflight_activity,
+                        PreflightInput(
+                            taskpacket_id=params.taskpacket_id,
+                            plan_steps=assembler_result.plan_steps,
+                            acceptance_criteria=intent_result.acceptance_criteria,
+                            constraints=[],
+                        ),
+                        start_to_close_timeout=preflight_policy.timeout,
+                        retry_policy=preflight_policy.to_retry_policy(),
+                    )
+                )
+                output.preflight_approved = preflight_result2.approved
+                output.preflight_summary = preflight_result2.summary
+
+                if not preflight_result2.approved:
+                    # Proceed with warning — preflight does not block indefinitely (AC 7)
+                    workflow.logger.warning(
+                        "preflight.proceeding_with_warning",
+                        extra={
+                            "taskpacket_id": params.taskpacket_id,
+                            "summary": preflight_result2.summary,
+                        },
+                    )
 
         # Steps 6-8: Implementation -> Verification -> QA loop
         verification_loopbacks = 0
@@ -496,6 +637,9 @@ class TheStudioPipelineWorkflow:
 
             output.step_reached = WorkflowStep.AWAITING_APPROVAL
             output.awaiting_approval = True
+
+            # Projects v2: sync AWAITING_APPROVAL → In Review
+            await self._sync_project_status(params, "AWAITING_APPROVAL")
             approval_wait_start = workflow.now()
 
             # Durable wait: block until approved, rejected, or 7-day timeout
@@ -585,6 +729,9 @@ class TheStudioPipelineWorkflow:
         )
         output.step_reached = WorkflowStep.PUBLISH
         output.success = True
+
+        # Projects v2: sync PUBLISHED → Done (AC 5)
+        await self._sync_project_status(params, "PUBLISHED")
         output.pr_number = publish_result.pr_number
         output.pr_url = publish_result.pr_url
         output.marked_ready = publish_result.marked_ready

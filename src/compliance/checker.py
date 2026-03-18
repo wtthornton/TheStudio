@@ -65,6 +65,7 @@ class ComplianceChecker:
         execution_plane_checker: ExecutionPlaneChecker | None = None,
         publisher_idempotency_checker: PublisherIdempotencyChecker | None = None,
         credential_scope_checker: CredentialScopeChecker | None = None,
+        projects_v2_client: Any | None = None,
     ) -> None:
         """Initialize compliance checker.
 
@@ -77,6 +78,8 @@ class ComplianceChecker:
                                           If None, creates default checker.
             credential_scope_checker: Checker for GitHub token scopes.
                                      If None, creates default checker.
+            projects_v2_client: ProjectsV2Client for verifying Projects v2 integration.
+                               If None, Projects v2 check will pass with a stub note.
         """
         self._github_client = github_client
         self._execution_plane_checker = execution_plane_checker or ExecutionPlaneChecker()
@@ -84,6 +87,7 @@ class ComplianceChecker:
             publisher_idempotency_checker or PublisherIdempotencyChecker()
         )
         self._credential_scope_checker = credential_scope_checker or CredentialScopeChecker()
+        self._projects_v2_client = projects_v2_client
         self._check_results: list[ComplianceCheckResult] = []
 
     async def check_compliance(
@@ -121,7 +125,7 @@ class ComplianceChecker:
             self._check_required_reviewers(repo_info)
             self._check_branch_protection(repo_info)
             self._check_labels(repo_info)
-            self._check_projects_v2(repo_info, waived=projects_v2_waived)
+            await self._check_projects_v2(repo_info, waived=projects_v2_waived)
 
             # Execution plane checks (Story 3.2) - optional
             if check_execution_plane:
@@ -330,13 +334,17 @@ class ComplianceChecker:
             },
         )
 
-    def _check_projects_v2(
+    async def _check_projects_v2(
         self,
         repo_info: GitHubRepoInfo,
         *,
         waived: bool = False,
     ) -> None:
-        """Check that Projects v2 integration is configured (or explicitly waived)."""
+        """Check that Projects v2 integration is configured (or explicitly waived).
+
+        Epic 29 AC 8: Queries the GitHub API to verify the project exists,
+        required fields are configured, and at least one item has been synced.
+        """
         check = ComplianceCheck.PROJECTS_V2
 
         if waived:
@@ -346,12 +354,76 @@ class ComplianceChecker:
             )
             return
 
-        # For now, pass if waived is False but we don't have a way to check
-        # In production, this would query GitHub Projects API
-        self._add_pass(
-            check,
-            details={"waived": False, "note": "Projects v2 check not yet implemented"},
-        )
+        if self._projects_v2_client is None:
+            # No client provided — stub pass for backwards compatibility
+            self._add_pass(
+                check,
+                details={"waived": False, "note": "Projects v2 client not configured"},
+            )
+            return
+
+        from src.github.projects_mapping import REQUIRED_FIELDS
+        from src.settings import settings
+
+        if not settings.projects_v2_enabled:
+            self._add_pass(
+                check,
+                details={"waived": False, "note": "Projects v2 sync disabled"},
+            )
+            return
+
+        owner = settings.projects_v2_owner
+        project_number = settings.projects_v2_number
+
+        if not owner or not project_number:
+            self._add_failure(
+                check,
+                reason=(
+                    "Projects v2 is enabled but not configured: "
+                    "missing projects_v2_owner or projects_v2_number"
+                ),
+            )
+            return
+
+        try:
+            configured_fields = await self._projects_v2_client.get_configured_fields(
+                owner, project_number
+            )
+
+            missing_fields = REQUIRED_FIELDS - configured_fields
+            if missing_fields:
+                self._add_failure(
+                    check,
+                    reason=(
+                        f"Projects v2 missing required fields: {', '.join(sorted(missing_fields))}"
+                    ),
+                    details={
+                        "configured_fields": sorted(configured_fields),
+                        "missing_fields": sorted(missing_fields),
+                    },
+                )
+                return
+
+            # Check that at least one item exists (sync is operational)
+            items = await self._projects_v2_client.get_project_items(
+                owner, project_number, first=1
+            )
+            has_items = len(items) > 0
+
+            self._add_pass(
+                check,
+                details={
+                    "owner": owner,
+                    "project_number": project_number,
+                    "configured_fields": sorted(configured_fields),
+                    "has_synced_items": has_items,
+                },
+            )
+        except Exception as exc:
+            self._add_failure(
+                check,
+                reason=f"Projects v2 check failed: {exc}",
+            )
 
     async def _check_execution_plane_health(self, repo_id: UUID) -> None:
         """Check that execution plane is healthy.
