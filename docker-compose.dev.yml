@@ -67,6 +67,23 @@ services:
       THESTUDIO_WEBHOOK_SECRET: "test-webhook-secret"
       THESTUDIO_ENCRYPTION_KEY: "hWaGRA3AtIn5jP9TYc3Vu56PS9JQHkFpcekh9PWg7Ac="
       THESTUDIO_OTEL_EXPORTER: "console"
+      # Projects v2 integration (Epic 29) — set in .env to enable
+      THESTUDIO_PROJECTS_V2_ENABLED: "${THESTUDIO_PROJECTS_V2_ENABLED:-false}"
+      THESTUDIO_PROJECTS_V2_OWNER: "${THESTUDIO_PROJECTS_V2_OWNER:-}"
+      THESTUDIO_PROJECTS_V2_NUMBER: "${THESTUDIO_PROJECTS_V2_NUMBER:-0}"
+      THESTUDIO_PROJECTS_V2_TOKEN: "${THESTUDIO_PROJECTS_V2_TOKEN:-}"
+      # Meridian portfolio review (Epic 29) — set in .env to enable
+      THESTUDIO_MERIDIAN_PORTFOLIO_ENABLED: "${THESTUDIO_MERIDIAN_PORTFOLIO_ENABLED:-false}"
+      THESTUDIO_MERIDIAN_PORTFOLIO_GITHUB_ISSUE: "${THESTUDIO_MERIDIAN_PORTFOLIO_GITHUB_ISSUE:-false}"
+      THESTUDIO_MERIDIAN_PORTFOLIO_REPO: "${THESTUDIO_MERIDIAN_PORTFOLIO_REPO:-}"
+      # Preflight plan review gate (Epic 28) — set in .env to enable
+      THESTUDIO_PREFLIGHT_ENABLED: "${THESTUDIO_PREFLIGHT_ENABLED:-false}"
+      THESTUDIO_PREFLIGHT_TIERS: "${THESTUDIO_PREFLIGHT_TIERS:-[\"execute\"]}"
+      # Approval auto-bypass (Story 30.14) — skip approval gate in dev
+      THESTUDIO_APPROVAL_AUTO_BYPASS: "${THESTUDIO_APPROVAL_AUTO_BYPASS:-true}"
+      # Container isolation (Epic 25) — set in .env to enable
+      THESTUDIO_AGENT_ISOLATION: "${THESTUDIO_AGENT_ISOLATION:-process}"
+      THESTUDIO_AGENT_ISOLATION_FALLBACK: "${THESTUDIO_AGENT_ISOLATION_FALLBACK:-{\"observe\":\"allow\",\"suggest\":\"allow\",\"execute\":\"deny\"}}"
     depends_on:
       postgres:
         condition: service_healthy

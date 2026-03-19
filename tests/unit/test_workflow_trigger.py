@@ -114,6 +114,7 @@ class TestStartWorkflow:
             arg={
                 "taskpacket_id": str(tp_id),
                 "correlation_id": str(corr_id),
+                "approval_auto_bypass": mock_settings.approval_auto_bypass,
             },
             id=str(tp_id),
             task_queue="my-queue",

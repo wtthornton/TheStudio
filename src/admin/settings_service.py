@@ -75,6 +75,8 @@ SETTING_DEFINITIONS: dict[str, dict[str, Any]] = {
     "meridian_portfolio_github_issue": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
     "meridian_portfolio_repo": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
     "meridian_thresholds": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
+    # Approval auto-bypass (Story 30.14)
+    "approval_auto_bypass": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
     # Approval Channels (Epic 24)
     "slack_approval_webhook_url": {"category": SettingCategory.INFRASTRUCTURE, "sensitive": True},
     # Cost Optimization (Epic 32)

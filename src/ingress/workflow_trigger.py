@@ -35,6 +35,7 @@ async def start_workflow(taskpacket_id: UUID, correlation_id: UUID) -> str:
         arg={
             "taskpacket_id": str(taskpacket_id),
             "correlation_id": str(correlation_id),
+            "approval_auto_bypass": settings.approval_auto_bypass,
         },
         id=str(taskpacket_id),
         task_queue=settings.temporal_task_queue,

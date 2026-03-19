@@ -97,6 +97,9 @@ class Settings(BaseSettings):
         "execute": 8.00,
     }
 
+    # Approval auto-bypass (Story 30.14)
+    approval_auto_bypass: bool = False  # Skip approval gate for ALL tiers when True
+
     # Approval notification channels (Epic 24)
     slack_approval_webhook_url: str = ""  # Slack incoming webhook for approvals
 
@@ -128,6 +131,21 @@ class Settings(BaseSettings):
         "suggest": 600,
         "execute": 1200,
     }
+
+    @model_validator(mode="after")
+    def _reject_approval_bypass_in_production(self) -> "Settings":
+        if (
+            self.approval_auto_bypass
+            and self.github_provider == "real"
+            and self.llm_provider == "anthropic"
+        ):
+            raise ValueError(
+                "THESTUDIO_APPROVAL_AUTO_BYPASS cannot be true when "
+                "github_provider=real and llm_provider=anthropic. "
+                "The approval gate is a safety-critical control for real PR publication. "
+                "Set approval_auto_bypass=false or use mock providers for testing."
+            )
+        return self
 
     @model_validator(mode="after")
     def _reject_placeholder_encryption_key(self) -> "Settings":

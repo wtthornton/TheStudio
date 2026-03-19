@@ -33,6 +33,7 @@ Example: `THESTUDIO_PREFLIGHT_ENABLED=true` enables the preflight gate.
 | `projects_v2_enabled` | `bool` | `False` | 29 | Enable GitHub Projects v2 board sync at pipeline status transitions |
 | `meridian_portfolio_enabled` | `bool` | `False` | 29 | Enable scheduled Meridian portfolio health reviews |
 | `meridian_portfolio_github_issue` | `bool` | `False` | 29 | Post portfolio health report to a pinned GitHub issue |
+| `approval_auto_bypass` | `bool` | `False` | 30 | Skip human approval gate (dev/test only; blocked when github_provider=real + llm_provider=anthropic) |
 | `intake_poll_enabled` | `bool` | `False` | 17 | Enable polling for new GitHub issues (backup to webhooks) |
 
 ### Infrastructure Provider Flags

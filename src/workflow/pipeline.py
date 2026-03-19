@@ -198,6 +198,7 @@ class PipelineInput:
     preflight_tiers: list[str] = field(default_factory=lambda: ["execute"])
     projects_v2_enabled: bool = False
     project_item_id: str = ""  # Populated after item is added to project
+    approval_auto_bypass: bool = False
 
 
 @dataclass
@@ -214,6 +215,7 @@ class PipelineOutput:
     qa_loopbacks: int = 0
     awaiting_approval: bool = False
     approved_by: str | None = None
+    approval_bypassed: bool = False
     readiness_evaluations: int = 0
     readiness_escalated: bool = False
     preflight_approved: bool | None = None
@@ -621,7 +623,7 @@ class TheStudioPipelineWorkflow:
             # Loop back to implementation for QA rework
 
         # Step 8.5: Approval Wait (Suggest/Execute tier only)
-        if params.repo_tier in APPROVAL_REQUIRED_TIERS:
+        if params.repo_tier in APPROVAL_REQUIRED_TIERS and not params.approval_auto_bypass:
             # Post approval request comment before entering wait
             await workflow.execute_activity(
                 post_approval_request_activity,
@@ -714,6 +716,16 @@ class TheStudioPipelineWorkflow:
                 },
             )
             output.approved_by = self._approved_by
+
+        elif params.repo_tier in APPROVAL_REQUIRED_TIERS and params.approval_auto_bypass:
+            workflow.logger.info(
+                "approval.auto_bypass",
+                extra={
+                    "taskpacket_id": params.taskpacket_id,
+                    "repo_tier": params.repo_tier,
+                },
+            )
+            output.approval_bypassed = True
 
         # Step 9: Publish
         publish_policy = STEP_POLICIES[WorkflowStep.PUBLISH]

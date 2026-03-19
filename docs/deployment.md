@@ -54,11 +54,44 @@ All flags default to safe/mock mode. Existing tests are unaffected regardless of
 
 | Variable | Default | Required | Description |
 |----------|---------|----------|-------------|
-| `THESTUDIO_ANTHROPIC_API_KEY` | `""` | When `LLM_PROVIDER=anthropic` | Anthropic API key |
+| `THESTUDIO_ANTHROPIC_API_KEY` | `""` | When `LLM_PROVIDER=anthropic` | Anthropic API key (`sk-ant-api03-...`) |
+| `THESTUDIO_ANTHROPIC_AUTH_MODE` | `auto` | No | Auth mode: `auto` (detect by prefix), `api_key`, or `oauth` |
+| `THESTUDIO_ANTHROPIC_REFRESH_TOKEN` | `""` | No | OAuth refresh token (`sk-ant-ort01-...`) for dev use only |
+| `THESTUDIO_ANTHROPIC_OAUTH_CLIENT_ID` | `9d1c250a-...` | No | Anthropic OAuth client ID |
 | `THESTUDIO_AGENT_MODEL` | `claude-sonnet-4-5` | No | Default model for primary agent |
 | `THESTUDIO_AGENT_MAX_TURNS` | `30` | No | Max agent conversation turns |
 | `THESTUDIO_AGENT_MAX_BUDGET_USD` | `5.0` | No | Max spend per task (USD) |
 | `THESTUDIO_AGENT_MAX_LOOPBACKS` | `2` | No | Max QA loopbacks before escalation |
+
+**Auth mode detection:** When `auth_mode=auto`, the adapter detects the key prefix:
+- `sk-ant-api03-*` → standard `x-api-key` header
+- `sk-ant-oat01-*` → OAuth `Authorization: Bearer` header + `anthropic-beta: oauth-2025-04-20`
+
+**OAuth tokens (development only):** Anthropic restricts OAuth to first-party tools (Claude Code, Claude Desktop). Do not use OAuth tokens for production standalone servers. See Epic 31 for full TOS analysis.
+
+### Per-Agent LLM Toggles (Epic 23)
+
+Each agent can be individually switched from rule-based fallback to real LLM. All default to `false`.
+
+```bash
+THESTUDIO_AGENT_LLM_ENABLED='{"primary_agent": true, "developer": true, "intake_agent": true, "context_agent": true, "intent_agent": true, "router_agent": true, "recruiter_agent": true, "assembler_agent": true, "qa_agent": true, "preflight_agent": true}'
+```
+
+> **Note:** `developer` is the runtime agent_name for the Primary Agent (distinct from the settings key `primary_agent`). Both should be `true` for the Primary Agent to use LLM.
+
+**Measured per-agent costs (Epic 30 Sprint 2 baselines, single issue):**
+
+| Agent | Model Class | Model | Cost/Issue |
+|-------|-------------|-------|------------|
+| intake_agent | FAST | Haiku 4.5 | $0.0007 |
+| context_agent | FAST | Haiku 4.5 | $0.0047 |
+| intent_agent | BALANCED | Sonnet 4.6 | $0.031 |
+| router_agent | BALANCED | Sonnet 4.6 | $0.014 |
+| assembler_agent | BALANCED | Sonnet 4.6 | $0.031 |
+| qa_agent | BALANCED | Sonnet 4.6 | $0.005 |
+| **Total (6 agents)** | | | **$0.087** |
+
+Projected monthly costs: ~$39 at 10 issues/day, ~$195 at 50 issues/day.
 
 ### Poll Intake (Epic 17 — Backup when webhooks unavailable)
 
@@ -81,7 +114,85 @@ See [docs/ingress.md](ingress.md) for architecture details on webhook vs poll pa
 | Variable | Default | Required | Description |
 |----------|---------|----------|-------------|
 | `THESTUDIO_GITHUB_APP_ID` | `""` | When `GITHUB_PROVIDER=real` | GitHub App ID |
-| `THESTUDIO_GITHUB_PRIVATE_KEY_PATH` | `""` | When `GITHUB_PROVIDER=real` | Path to GitHub App private key |
+| `THESTUDIO_GITHUB_PRIVATE_KEY_PATH` | `""` | When `GITHUB_PROVIDER=real` | Path to GitHub App private key PEM |
+| `THESTUDIO_WEBHOOK_SECRET` | `""` | When `GITHUB_PROVIDER=real` | GitHub webhook HMAC secret |
+
+#### GitHub App Setup
+
+1. Go to **Settings > Developer settings > GitHub Apps > New GitHub App**
+2. Configure:
+   - **Name:** `TheStudio-<your-org>` (must be globally unique)
+   - **Homepage URL:** Your deployment URL
+   - **Webhook URL:** `https://<your-domain>/webhook/github`
+   - **Webhook secret:** Generate and save to `THESTUDIO_WEBHOOK_SECRET`
+
+3. **Repository permissions:**
+   | Permission | Access | Purpose |
+   |-----------|--------|---------|
+   | Contents | Read & Write | Create branches, read files |
+   | Issues | Read & Write | Read issues, post comments |
+   | Pull requests | Read & Write | Create PRs, post evidence comments |
+   | Metadata | Read | Repository info |
+   | Projects | Read & Write | Projects v2 board sync |
+
+4. **Subscribe to events:** `issues`, `issue_comment`, `pull_request`, `pull_request_review`
+
+5. After creating the app:
+   - Note the **App ID** → `THESTUDIO_GITHUB_APP_ID`
+   - Generate a **private key** → save as PEM, set path in `THESTUDIO_GITHUB_PRIVATE_KEY_PATH`
+   - Install the app on your target repository or organization
+
+### Approval and Chat (Epic 24)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `THESTUDIO_SLACK_APPROVAL_WEBHOOK_URL` | `""` | Slack incoming webhook URL for approval notifications |
+
+### Preflight Plan Review (Epic 28)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `THESTUDIO_PREFLIGHT_ENABLED` | `false` | Enable preflight plan quality gate |
+| `THESTUDIO_PREFLIGHT_TIERS` | `["execute"]` | Trust tiers that require preflight review |
+
+### GitHub Projects v2 (Epic 29)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `THESTUDIO_PROJECTS_V2_ENABLED` | `false` | Enable Projects v2 board sync |
+| `THESTUDIO_PROJECTS_V2_OWNER` | `""` | GitHub org or user that owns the project |
+| `THESTUDIO_PROJECTS_V2_NUMBER` | `0` | Project number (visible in project URL) |
+| `THESTUDIO_PROJECTS_V2_TOKEN` | `""` | Token with `project` scope |
+
+### Meridian Portfolio Review (Epic 29)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `THESTUDIO_MERIDIAN_PORTFOLIO_ENABLED` | `false` | Enable scheduled portfolio health reviews |
+| `THESTUDIO_MERIDIAN_PORTFOLIO_GITHUB_ISSUE` | `false` | Post health report to a pinned GitHub issue |
+| `THESTUDIO_MERIDIAN_PORTFOLIO_REPO` | `""` | Repo for health report issue (`owner/repo`) |
+| `THESTUDIO_MERIDIAN_THRESHOLDS` | `{"blocked_ratio":0.20,...}` | Health check thresholds (blocked ratio, failure rate, etc.) |
+
+### Cost Optimization (Epic 32)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `THESTUDIO_COST_OPTIMIZATION_ROUTING_ENABLED` | `false` | Route cheap agents to FAST (Haiku) |
+| `THESTUDIO_COST_OPTIMIZATION_CACHING_ENABLED` | `false` | Send prompt caching headers |
+| `THESTUDIO_COST_OPTIMIZATION_BATCH_ENABLED` | `false` | Use Batch API for async agents |
+| `THESTUDIO_COST_OPTIMIZATION_BUDGET_TIERS` | `{"observe": 2.0, "suggest": 5.0, "execute": 8.0}` | Per-issue budget caps by tier |
+
+### Container Isolation (Epic 25)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `THESTUDIO_AGENT_ISOLATION` | `process` | `process` (in-process) or `container` (Docker) |
+| `THESTUDIO_AGENT_ISOLATION_FALLBACK` | `{"observe":"allow","suggest":"allow","execute":"deny"}` | Fallback policy per tier |
+| `THESTUDIO_AGENT_CONTAINER_CPU_LIMIT` | `{"observe":1.0,"suggest":2.0,"execute":4.0}` | CPU limits per tier |
+| `THESTUDIO_AGENT_CONTAINER_MEMORY_MB` | `{"observe":512,"suggest":1024,"execute":2048}` | Memory limits per tier |
+| `THESTUDIO_AGENT_CONTAINER_TIMEOUT_SECONDS` | `{"observe":300,"suggest":600,"execute":1200}` | Timeout per tier |
+
+> **Security invariant:** Execute tier MUST have `"deny"` fallback. The app validates this on startup and refuses to start if Execute tier allows fallback to in-process.
 
 ### Infrastructure
 
@@ -107,6 +218,123 @@ See [docs/ingress.md](ingress.md) for architecture details on webhook vs poll pa
 | `THESTUDIO_OTEL_SERVICE_NAME` | `thestudio` | OpenTelemetry service name |
 | `THESTUDIO_OTEL_EXPORTER` | `console` | `console` or `otlp` |
 | `THESTUDIO_OTEL_OTLP_ENDPOINT` | `http://localhost:4317` | OTLP collector endpoint |
+
+## Feature Flag Activation Order
+
+Activate flags in this order. Verify each step before proceeding to the next.
+
+### Step 1: Core providers (required for any real processing)
+```bash
+THESTUDIO_LLM_PROVIDER=anthropic
+THESTUDIO_GITHUB_PROVIDER=real
+THESTUDIO_STORE_BACKEND=postgres
+```
+**Verify:** `curl -sk https://localhost:9443/readyz` returns `{"status":"ready"}`.
+
+### Step 2: Per-agent LLM (start cheap, add expensive)
+```bash
+# Phase A: FAST-class agents (Haiku, ~$0.005/issue)
+THESTUDIO_AGENT_LLM_ENABLED='{"intake_agent": true, "context_agent": true}'
+
+# Phase B: All agents (Haiku + Sonnet, ~$0.087/issue)
+THESTUDIO_AGENT_LLM_ENABLED='{"primary_agent": true, "developer": true, "intake_agent": true, "context_agent": true, "intent_agent": true, "router_agent": true, "recruiter_agent": true, "assembler_agent": true, "qa_agent": true}'
+```
+
+### Step 3: Projects v2 sync (read-write to GitHub Projects board)
+```bash
+THESTUDIO_PROJECTS_V2_ENABLED=true
+THESTUDIO_PROJECTS_V2_OWNER=<org-or-user>
+THESTUDIO_PROJECTS_V2_NUMBER=<project-number>
+# Token is optional if GitHub App has project scope; otherwise set a PAT:
+# THESTUDIO_PROJECTS_V2_TOKEN=ghp_xxx
+```
+**Verify:** Process a test issue. Check the GitHub Projects v2 board — the item should appear with Status=Queued, then update through In Progress → Done as the pipeline runs. Sync is best-effort: failures log warnings but never block the pipeline.
+
+**Verify (Admin UI):** Navigate to `/admin/ui/` → Compliance Scorecard. The `projects_v2` check should show real pass/fail status (not the old stub).
+
+### Step 4: Meridian portfolio review (periodic health reports)
+```bash
+THESTUDIO_MERIDIAN_PORTFOLIO_ENABLED=true
+THESTUDIO_MERIDIAN_PORTFOLIO_GITHUB_ISSUE=true
+THESTUDIO_MERIDIAN_PORTFOLIO_REPO=<owner/repo>
+```
+**Verify:** A Temporal scheduled workflow `MeridianPortfolioReviewWorkflow` runs daily at 09:00 UTC. Check Temporal UI (`http://localhost:8088`) for schedule registration. The review collects Projects v2 board state, evaluates 6 health checks (throughput, risk concentration, approval bottleneck, repo balance, failure rate, stale items), persists results to the `portfolio_reviews` table, and optionally posts a health report issue.
+
+**Verify (Admin UI):** Navigate to `/admin/ui/portfolio-health`. The dashboard should show the latest review: overall health indicator (green/yellow/red), flags with severity, recommendations, and a 7-review trend table.
+
+**Thresholds:** Default health check thresholds are documented in `docs/FEATURE-FLAGS.md`. Override via `THESTUDIO_MERIDIAN_THRESHOLDS` JSON env var if needed.
+
+### Step 5: Preflight plan review gate
+```bash
+THESTUDIO_PREFLIGHT_ENABLED=true
+# Optional: restrict to specific tiers (default: only Execute tier)
+# THESTUDIO_PREFLIGHT_TIERS='["execute"]'
+```
+**Verify:** Process a test issue at Execute trust tier. The pipeline log should show a `preflight_activity` step between Assembler and Implement. Check the Temporal workflow history — a `PREFLIGHT` step should appear with `approved: true/false`. For non-Execute tiers (Observe, Suggest), preflight is skipped by default.
+
+**Verify (settings validation):** Restart the app with `THESTUDIO_PREFLIGHT_ENABLED=true`. The app should start normally. The preflight agent uses `model_class=fast` (Haiku) and costs ~$0.01 per review.
+
+**Verify (tier filtering):** Set `THESTUDIO_PREFLIGHT_TIERS='["execute", "suggest"]'` to also run preflight for Suggest tier issues. Observe tier issues should still skip preflight.
+
+### Step 6: Container isolation (requires Docker socket mount)
+```bash
+THESTUDIO_AGENT_ISOLATION=container
+# Fallback policy per tier (defaults shown — do NOT change execute to "allow"):
+# THESTUDIO_AGENT_ISOLATION_FALLBACK='{"observe":"allow","suggest":"allow","execute":"deny"}'
+```
+**Verify (Docker available):** With Docker running, process a test issue. The pipeline log should show `implement_activity` launching a container (look for `container.launch` structured log events with container ID, CPU/memory limits, and timing).
+
+**Verify (security invariant):** The app **refuses to start** if you set `THESTUDIO_AGENT_ISOLATION=container` with `execute` fallback set to `"allow"`. This is enforced by the `_validate_execute_tier_isolation` model validator in `src/settings.py`. This prevents untrusted Execute-tier code from silently falling back to in-process execution.
+
+**Verify (fallback behavior):** If Docker is unavailable:
+- **Observe/Suggest tiers:** Fall back to in-process execution (logged as `isolation.fallback`).
+- **Execute tier:** Task fails with `ContainerUnavailableError` (fails closed). This is the correct security behavior — Execute tier must not run without isolation.
+
+**Verify (resource limits):** Container resource limits escalate by tier:
+| Tier | CPU | Memory | Timeout |
+|------|-----|--------|---------|
+| Observe | 1.0 cores | 512 MB | 5 min |
+| Suggest | 2.0 cores | 1024 MB | 10 min |
+| Execute | 4.0 cores | 2048 MB | 20 min |
+
+### Approval Auto-Bypass (Dev/Test Only)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `THESTUDIO_APPROVAL_AUTO_BYPASS` | `false` | Skip approval gate for all tiers (dev/test only) |
+
+> **Safety:** A startup validator blocks `approval_auto_bypass=true` when both `github_provider=real` AND `llm_provider=anthropic`. This prevents bypassing approval in full production mode.
+
+### Step 7: Cost optimization (after baselines measured)
+```bash
+THESTUDIO_COST_OPTIMIZATION_ROUTING_ENABLED=true
+THESTUDIO_COST_OPTIMIZATION_CACHING_ENABLED=true
+```
+
+After each step, rebuild: `docker compose -f docker-compose.prod.yml up -d --build`
+
+## P0 Test Suite
+
+Run after deployment to validate the full stack:
+
+```bash
+# Health check only
+./scripts/run-p0-tests.sh --health
+
+# Full P0 (skip eval to save ~$5)
+./scripts/run-p0-tests.sh --skip-eval
+
+# Full P0 including eval (25 tests, ~$5, ~70 min)
+./scripts/run-p0-tests.sh
+```
+
+Results saved to `docs/eval-results/`. Test suites:
+- **p0-deployed:** Docker stack health, API endpoint validation
+- **eval:** Agent quality validation against real Claude (25 tests)
+- **github-integration:** Real GitHub API operations (4 tests)
+- **postgres-integration:** Database lifecycle validation (6 tests)
+
+---
 
 ## CI Pipeline
 
