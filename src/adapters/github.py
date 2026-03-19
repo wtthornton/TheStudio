@@ -59,7 +59,7 @@ class ResilientGitHubClient:
         self._client = httpx.AsyncClient(
             base_url=GITHUB_API_BASE,
             headers={
-                "Authorization": f"token {self._token}",
+                "Authorization": f"Bearer {self._token}",
                 "Accept": "application/vnd.github+json",
                 "X-GitHub-Api-Version": "2022-11-28",
             },

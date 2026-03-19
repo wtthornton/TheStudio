@@ -80,6 +80,17 @@ class TestRealGitHub:
             # Create branch
             await client.create_branch(owner, repo, branch_name, sha)
 
+            # Create a file on the branch so there's a diff for the PR
+            await client._request_json(
+                "PUT",
+                f"/repos/{owner}/{repo}/contents/test-{branch_name.split('/')[-1]}.md",
+                json={
+                    "message": f"test: smoke test file for {branch_name}",
+                    "content": "dGVzdA==",  # base64("test")
+                    "branch": branch_name,
+                },
+            )
+
             # Create draft PR
             pr_data = await client.create_pull_request(
                 owner, repo,

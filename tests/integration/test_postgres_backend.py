@@ -31,17 +31,27 @@ pytestmark = pytest.mark.integration
 
 
 @pytest.fixture
-async def session():
-    """Create a test database session with fresh tables."""
-    engine = create_async_engine(settings.database_url, echo=False)
-    async with engine.begin() as conn:
+async def engine():
+    """Create and expose the async engine for tests that need it."""
+    import src.db.models  # noqa: F401 — register all ORM models with Base.metadata
+
+    eng = create_async_engine(settings.database_url, echo=False)
+    # Drop then re-create to handle schema drift (missing columns)
+    async with eng.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
+    yield eng
+    async with eng.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+    await eng.dispose()
+
+
+@pytest.fixture
+async def session(engine):
+    """Create a test database session with fresh tables."""
     factory = async_sessionmaker(engine, expire_on_commit=False)
     async with factory() as sess:
         yield sess
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-    await engine.dispose()
 
 
 # --- Lifecycle Round-Trip ---
@@ -193,11 +203,6 @@ async def test_model_audit_roundtrip(session: AsyncSession) -> None:
     from src.admin.model_gateway import ModelCallAudit
     from src.admin.persistence.pg_model_audit import PostgresModelAuditStore
     from src.db.models import ModelCallAuditRow  # noqa: F401 — ensure table exists
-
-    # Ensure the model_call_audit table exists
-    engine = session.get_bind()
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
 
     store = PostgresModelAuditStore(session)
     task_id = uuid4()

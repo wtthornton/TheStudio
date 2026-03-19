@@ -324,12 +324,37 @@ class TestAssemblerEvalUnit:
 # --- Integration Tests (requires real API key) ---
 
 
+def _enable_real_agent_llm(
+    monkeypatch: pytest.MonkeyPatch,
+    agent_names: list[str],
+) -> None:
+    """Configure settings to use real Anthropic LLM for specified agents."""
+    import os
+
+    from src.settings import settings
+
+    api_key = os.environ.get("THESTUDIO_ANTHROPIC_API_KEY", "")
+    assert api_key.startswith("sk-ant-"), (
+        "THESTUDIO_ANTHROPIC_API_KEY must be a valid Anthropic key (sk-ant-...)"
+    )
+    monkeypatch.setattr(settings, "anthropic_api_key", api_key)
+    monkeypatch.setattr(settings, "llm_provider", "anthropic")
+
+    enabled = dict(settings.agent_llm_enabled)
+    for name in agent_names:
+        enabled[name] = True
+    monkeypatch.setattr(settings, "agent_llm_enabled", enabled)
+
+
 @pytest.mark.requires_api_key
 @pytest.mark.slow
 class TestIntakeEvalIntegration:
     @pytest.mark.asyncio
-    async def test_intake_classification_accuracy(self):
+    async def test_intake_classification_accuracy(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ):
         """Intake agent correctly classifies at least 6/8 cases."""
+        _enable_real_agent_llm(monkeypatch, ["intake_agent"])
         from src.eval.intake_eval import run_intake_eval
 
         summary = await run_intake_eval()
@@ -338,8 +363,11 @@ class TestIntakeEvalIntegration:
         )
 
     @pytest.mark.asyncio
-    async def test_intake_cost_under_budget(self):
+    async def test_intake_cost_under_budget(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ):
         """Total intake eval costs less than $1."""
+        _enable_real_agent_llm(monkeypatch, ["intake_agent"])
         from src.eval.intake_eval import run_intake_eval
 
         summary = await run_intake_eval()
@@ -350,15 +378,21 @@ class TestIntakeEvalIntegration:
 @pytest.mark.slow
 class TestContextEvalIntegration:
     @pytest.mark.asyncio
-    async def test_context_enrichment_quality(self):
+    async def test_context_enrichment_quality(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ):
         """Context agent enriches at least 5/7 accepted cases adequately."""
+        _enable_real_agent_llm(monkeypatch, ["context_agent"])
         from src.eval.context_eval import run_context_eval
 
         summary = await run_context_eval()
         assert summary.pass_rate >= 0.6
 
     @pytest.mark.asyncio
-    async def test_context_cost_under_budget(self):
+    async def test_context_cost_under_budget(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ):
+        _enable_real_agent_llm(monkeypatch, ["context_agent"])
         from src.eval.context_eval import run_context_eval
 
         summary = await run_context_eval()
@@ -369,15 +403,21 @@ class TestContextEvalIntegration:
 @pytest.mark.slow
 class TestRouterEvalIntegration:
     @pytest.mark.asyncio
-    async def test_router_expert_selection(self):
+    async def test_router_expert_selection(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ):
         """Router correctly selects experts for at least 5/7 cases."""
+        _enable_real_agent_llm(monkeypatch, ["router_agent"])
         from src.eval.routing_eval import run_router_eval
 
         summary = await run_router_eval()
         assert summary.pass_rate >= 0.6
 
     @pytest.mark.asyncio
-    async def test_router_cost_under_budget(self):
+    async def test_router_cost_under_budget(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ):
+        _enable_real_agent_llm(monkeypatch, ["router_agent"])
         from src.eval.routing_eval import run_router_eval
 
         summary = await run_router_eval()
@@ -388,15 +428,21 @@ class TestRouterEvalIntegration:
 @pytest.mark.slow
 class TestAssemblerEvalIntegration:
     @pytest.mark.asyncio
-    async def test_assembler_plan_quality(self):
+    async def test_assembler_plan_quality(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ):
         """Assembler produces adequate plans for at least 5/7 cases."""
+        _enable_real_agent_llm(monkeypatch, ["assembler_agent"])
         from src.eval.assembler_eval import run_assembler_eval
 
         summary = await run_assembler_eval()
         assert summary.pass_rate >= 0.6
 
     @pytest.mark.asyncio
-    async def test_assembler_cost_under_budget(self):
+    async def test_assembler_cost_under_budget(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ):
+        _enable_real_agent_llm(monkeypatch, ["assembler_agent"])
         from src.eval.assembler_eval import run_assembler_eval
 
         summary = await run_assembler_eval()
