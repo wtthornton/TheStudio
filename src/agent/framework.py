@@ -423,6 +423,7 @@ class AgentRunner:
             task_id=context.taskpacket_id,
             step=self.config.pipeline_step,
             role=self.config.agent_name,
+            overlays=list(context.overlays) if context.overlays else [],
             provider=provider.provider,
             model=provider.model_id,
             tokens_in=tokens_in,
