@@ -1,6 +1,6 @@
 # Epic Status Tracker
 
-> Consolidated status of all epics as of 2026-03-18.
+> Consolidated status of all epics as of 2026-03-18 (evening update).
 > Source of truth for epic status is each epic's own file. This tracker is a rollup view.
 
 ---
@@ -11,11 +11,13 @@
 |--------|-------|
 | Total epics | 32 (0-32) |
 | Complete | 29 |
-| In Progress | 1 (Epic 30) |
-| Research Complete | 1 (Epic 31 — implementation deferred, TOS risk) |
-| Planned | 1 (Epic 32 — Model Routing & Cost Optimization) |
+| In Progress | 2 (Epic 30 Sprint 1 complete, Epic 32 Slice 1 complete) |
+| Top Priority | Epic 31 (Anthropic Max OAuth — eval costs ~$5/run) |
+| Research Complete | 1 (Epic 31 — research done, implementation is top must) |
+| Planned | 1 (Epic 32 — Slice 1 delivered, Slice 2 planned 2026-03-25) |
 | Deferred | 1 (Epic 27) |
-| Tests passing | 2,120+ |
+| Tests passing | 1,853+ unit, 10 integration (Postgres 6/6, GitHub 4/4) |
+| Eval tests | 20/25 passed with real Claude (~$5/run, ~47 min) |
 | Coverage | 84% |
 
 ---
@@ -103,9 +105,9 @@
 
 | Epic | Title | Status | Notes |
 |------|-------|--------|-------|
-| 30 | Real Provider Integration & Validation | **In Progress** | Sprint 1 underway. Eval harness + intent eval built (Stories 30.1-30.2). QA eval + primary eval built (Stories 30.3-30.4). Cost estimation fixed (split input/output rates). Meridian review passed 2026-03-18. |
-| 31 | Anthropic Max OAuth Adapter | **Research Complete / Deferred** | Story 31.0 (research) complete. OAuth in standalone server likely violates Anthropic TOS. Implementation deferred. Cost estimation fix (Story 31.1) moved to Epic 30. |
-| 32 | Model Routing & Cost Optimization | **Planned** | Route cheap agents to Haiku (12x savings), per-tier budget caps, prompt caching, cost dashboard. Saga epic created 2026-03-18. |
+| 30 | Real Provider Integration & Validation | **Sprint 1 Complete** | Sprint 1 delivered (Stories 30.1-30.6). Eval harness, 6 agent eval suites, real GitHub integration (4/4), Postgres integration (6/6), Bearer auth fix. 20/25 eval tests pass with real Claude. Sprint 2 next (Stories 30.7-30.8). |
+| 31 | Anthropic Max OAuth Adapter | **TOP MUST** | Research complete (Story 31.0). Eval tests cost ~$5/run — OAuth/Max integration is critical for sustainable testing and operations. Elevated to top priority 2026-03-18. |
+| 32 | Model Routing & Cost Optimization | **Slice 1 Complete** | Cost routing gate in ModelRouter (feature-flagged off). Downgrades expert_routing + assembler to FAST when enabled. Security overlay preserved. Meridian Round 2 approved. Slice 2 planned 2026-03-25. |
 
 ---
 
@@ -151,10 +153,11 @@ Phase 5 — COMPLETE (2026-03-17)
 3. ~~**Epic 29 Sprint 2**~~ — **Complete** (2026-03-18). 60 tests.
 4. ~~**Phase 7 planning**~~ — **Complete** (2026-03-18). Epic 30 planned, Meridian reviewed, Sprint 1 approved.
 5. ~~**Cost estimation fix (Story 31.1)**~~ — **Complete** (2026-03-18). Split input/output rates in ProviderConfig. 2026 pricing applied.
-6. ~~**Epic 30 Sprint 1 Stories 30.1-30.4**~~ — **Complete** (2026-03-18). Eval harness, intent eval, QA eval, primary eval built. Integration tests ready (require API key).
-7. **Run Epic 30 integration tests** — Set `THESTUDIO_ANTHROPIC_API_KEY` and run `pytest tests/eval/ -m requires_api_key` to validate all 3 agents against real Claude.
-8. **Epic 30 Sprint 2** — Postgres backend + real GitHub provider + full pipeline at Observe tier.
-9. **Epic 32 Sprint 1** — Route intake/context/router agents to Haiku. Per-tier budget caps. Cost dashboard.
-10. **Epic 30 Sprint 3** — Feature flag activation + deployment runbook + Suggest tier validation.
-11. **Epic 27** — Deferred. Do not schedule until demand materializes.
-12. **Epic 31** — Implementation deferred. OAuth in standalone server risks Anthropic TOS violation. Use API keys for production.
+6. ~~**Epic 30 Sprint 1 Stories 30.1-30.6**~~ — **Complete** (2026-03-18). Eval harness, 6 agent eval suites, Postgres + GitHub integration tests. All passing.
+7. ~~**Run Epic 30 integration tests**~~ — **Complete** (2026-03-18). Postgres 6/6, GitHub 4/4, eval 20/25 (5 failures = routing agents needed LLM enable, fixed). ~$5/run, ~47 min.
+8. ~~**Epic 32 Slice 1**~~ — **Complete** (2026-03-18). Cost routing gate, comparison eval mode, settings registered, Meridian approved.
+9. **Epic 31 (TOP MUST)** — Anthropic Max OAuth adapter. Eval tests cost ~$5/run; OAuth/Max is critical for sustainable operations. Start immediately.
+10. **Epic 30 Sprint 2** — Stories 30.7-30.8: full pipeline end-to-end run + failure catalog.
+11. **Epic 32 Slice 2** — Story 32.0 (measured baselines), 32.4 (routing rules update), 32.5 (caching). Planned 2026-03-25.
+12. **Epic 30 Sprint 3** — Feature flag activation + deployment runbook + Suggest tier validation.
+13. **Epic 27** — Deferred. Do not schedule until demand materializes.

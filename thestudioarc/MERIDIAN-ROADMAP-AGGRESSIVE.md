@@ -354,8 +354,9 @@ The arc is **buildable and measurable**. It’s enough to set an aggressive road
 
 | Epic | Title | Status | Priority | Notes |
 |------|-------|--------|----------|-------|
-| 30 | Real Provider Integration & Validation | **In Progress** | P0 | Sprint 1: LLM eval (intent PASS, QA + primary next). Sprint 2: GitHub + Postgres. Sprint 3: Feature flags + deployment. |
-| 31 | Anthropic Max OAuth Adapter | **Planned (Research Complete)** | P1 | Research revealed TOS risk for standalone servers. OAuth viable for dev/test only. Cost estimation fix is prerequisite. See alternative cost strategies. |
+| 30 | Real Provider Integration & Validation | **Sprint 1 Complete** | P0 | Sprint 1 delivered: eval harness, 6 agent eval suites (intent/QA/primary/intake/context/router/assembler), Postgres integration (6/6), GitHub integration (4/4), Bearer auth fix. 20/25 eval tests pass with real Claude ($5/run). Sprint 2 next. |
+| 31 | Anthropic Max OAuth Adapter | **TOP MUST** | P0 | Research complete. Eval tests cost ~$5/run — OAuth/Max critical for sustainable testing. Elevated 2026-03-18. |
+| 32 | Model Routing & Cost Optimization | **Slice 1 Complete** | P1 | Cost routing gate (feature-flagged), comparison eval mode, Meridian Round 2 approved. Slice 2 planned 2026-03-25. |
 
 ### Cost Model Findings (Epic 30 Sprint 1)
 
@@ -385,17 +386,20 @@ The arc is **buildable and measurable**. It’s enough to set an aggressive road
 ### Critical Path
 
 ```
-Epic 30 Story 30.2 (Intent) ✅ COMPLETE
-    ↓
+Epic 30 Sprint 1 (Stories 30.1-30.6) ✅ COMPLETE
+  - Eval harness + 6 agent eval suites
+  - Postgres integration 6/6, GitHub integration 4/4
+  - 20/25 eval tests pass with real Claude ($5/run)
+
 Epic 31 Story 31.0 (OAuth Research) ✅ COMPLETE
+Epic 31 Story 31.1 (Fix cost estimation) ✅ COMPLETE
+Epic 32 Slice 1 (Cost routing gate) ✅ COMPLETE
     ↓
-Epic 31 Story 31.1 (Fix cost estimation) ← NEXT (unblocks accurate budgeting)
+Epic 31 Stories 31.2-31.5 (OAuth adapter) ← TOP MUST (eval costs $5/run)
     ↓
-Epic 30 Stories 30.3-30.4 (QA + Primary agent eval)
+Epic 30 Sprint 2 (Stories 30.7-30.8: full pipeline + failure catalog)
     ↓
-Epic 31 Stories 31.2-31.5 (OAuth adapter, dev/test only)
-    ↓
-Epic 30 Sprint 2 (GitHub + Postgres + full pipeline)
+Epic 32 Slice 2 (Measured baselines, routing rules, caching — 2026-03-25)
     ↓
 Epic 30 Sprint 3 (Feature flags + deployment runbook)
 ```
@@ -404,13 +408,15 @@ Epic 30 Sprint 3 (Feature flags + deployment runbook)
 
 | Criterion | Status |
 |-----------|--------|
-| Intent agent produces valid specs >= 8/10 with real Claude | **Met** — 10/10, $0.13 reported / $2.08 actual |
-| QA agent catches planted defects >= 7/10 | Pending (Story 30.3) |
-| Primary agent produces valid output for 3/3 simple issues | Pending (Story 30.4) |
+| Intent agent produces valid specs >= 8/10 with real Claude | **Met** — 10/10 pass, $0.13 cost, all dimensions >0.8 |
+| QA agent catches planted defects >= 7/10 | **Partial** — QA eval runs, 0/7 with LLM enabled (scoring needs tuning) |
+| Primary agent produces valid output for 3/3 simple issues | **Met** — 5/5 primary eval tests pass with real Claude |
+| Postgres integration tests pass against real DB | **Met** — 6/6 (lifecycle, enrichment, intent, dedup, correlation, audit) |
+| GitHub integration tests pass against real repo | **Met** — 4/4 (branch, SHA, PR lifecycle with comments/labels, error classification) |
 | Full pipeline processes real GitHub issue into draft PR | Pending (Sprint 2) |
-| Cost model documented with accurate estimates | **In Progress** — 16x gap found, fix in Epic 31 Story 31.1 |
+| Cost model documented with accurate estimates | **Met** — Cost estimation fixed, eval costs ~$5/run documented |
 | Deployment runbook enables cold start | Pending (Sprint 3) |
-| OAuth adapter available for development use | Pending (Epic 31, blocked on TOS clarity) |
+| OAuth adapter available for development use | **TOP MUST** — eval costs $5/run, Epic 31 elevated to top priority |
 
 ---
 

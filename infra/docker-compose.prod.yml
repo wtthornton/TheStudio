@@ -183,6 +183,18 @@ services:
     networks:
       - thestudio-net
 
+  pg-proxy:
+    image: alpine/socat
+    command: "tcp-listen:5432,fork,reuseaddr tcp-connect:postgres:5432"
+    ports:
+      - "5434:5432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - thestudio-net
+
   nats:
     image: nats:2.10-alpine
     command: ["--jetstream", "--store_dir", "/data"]
