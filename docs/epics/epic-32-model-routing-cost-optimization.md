@@ -210,11 +210,11 @@ Estimated monthly costs with optimizations applied. Assumes average 9 agent call
 
 **Blocked by:** Epic 30 Stories 30.1-30.4 (eval harness + LLM validation for intent, QA, primary agents). These are complete as of 2026-03-18.
 
-**Planned start:** 2026-03-25 (after Epic 30 Sprint 1 integration tests are validated with real API key).
+**Status:** Story 32.0 COMPLETE (2026-03-18). Docker-validated cost baselines measured.
 
 | Story | Title | Files to Modify/Create | Estimate |
 |-------|-------|----------------------|----------|
-| 32.0 | Establish measured per-agent cost baselines | Run 10 full pipeline executions on real Anthropic API, record per-agent token counts and costs via ModelCallAudit. Produce a baseline cost table (mean ± stddev per agent) that replaces "$2-8 estimated" in success metrics. | 1 day |
+| 32.0 | Establish measured per-agent cost baselines — **COMPLETE** | Measured against Docker prod stack. Total: $0.087/issue (6 agents). See `docs/eval-results/sprint2-cost-baselines.md`. | 1 day |
 | 32.1 | Add cost optimization feature flags to Settings | `src/settings.py` | 0.5 day |
 | 32.2 | Eval suites for 4 target agents (intake, context, expert_routing, assembler) | `src/eval/intake_eval.py`, `src/eval/context_eval.py`, `src/eval/routing_eval.py`, `src/eval/assembler_eval.py`, `tests/eval/` | 2.5 days |
 | 32.3 | Model-class comparison mode in eval harness | `src/eval/harness.py`, `src/eval/models.py` | 1 day |

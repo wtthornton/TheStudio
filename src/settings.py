@@ -22,6 +22,9 @@ class Settings(BaseSettings):
 
     # Primary Agent (Story 0.5)
     anthropic_api_key: str = ""
+    anthropic_auth_mode: str = "auto"  # "auto", "api_key", "oauth" (Epic 31)
+    anthropic_refresh_token: str = ""  # OAuth refresh token (sk-ant-ort01-...)
+    anthropic_oauth_client_id: str = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"  # Anthropic default
     agent_model: str = "claude-sonnet-4-5"
     agent_max_turns: int = 30
     agent_max_budget_usd: float = 5.0
