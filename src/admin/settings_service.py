@@ -32,6 +32,9 @@ logger = logging.getLogger(__name__)
 SETTING_DEFINITIONS: dict[str, dict[str, Any]] = {
     # API Keys
     "anthropic_api_key": {"category": SettingCategory.API_KEYS, "sensitive": True},
+    "anthropic_auth_mode": {"category": SettingCategory.API_KEYS, "sensitive": False},
+    "anthropic_refresh_token": {"category": SettingCategory.API_KEYS, "sensitive": True},
+    "anthropic_oauth_client_id": {"category": SettingCategory.API_KEYS, "sensitive": False},
     "github_app_id": {"category": SettingCategory.API_KEYS, "sensitive": False},
     "github_private_key_path": {"category": SettingCategory.API_KEYS, "sensitive": False},
     # Infrastructure

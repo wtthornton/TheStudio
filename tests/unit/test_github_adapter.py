@@ -161,7 +161,7 @@ class TestResilientGitHubClient:
         client = make_client([httpx.Response(200, json={"default_branch": "main"})])
 
         await client.get_default_branch("owner", "repo")
-        assert requests[0].headers["authorization"] == "token test-token"
+        assert requests[0].headers["authorization"] == "Bearer test-token"
         assert requests[0].headers["x-github-api-version"] == "2022-11-28"
 
 

@@ -599,15 +599,21 @@ class TestActivityCallArguments:
         ]
         mock_exec = AsyncMock(side_effect=activity_returns)
 
+        from datetime import datetime, timezone
+
+        wf = TheStudioPipelineWorkflow()
+
         async def mock_wait_condition(fn, *, timeout=None):
             """Simulate immediate approval."""
-            pass
+            wf._approved = True
+            wf._approved_by = "test-user"
 
         with (
             patch("temporalio.workflow.execute_activity", mock_exec),
             patch("temporalio.workflow.wait_condition", mock_wait_condition),
+            patch("temporalio.workflow.now", return_value=datetime.now(timezone.utc)),
+            patch("temporalio.workflow.logger") as mock_logger,
         ):
-            wf = TheStudioPipelineWorkflow()
             params = _default_params(repo_tier="execute")
             await wf.run(params)
 
