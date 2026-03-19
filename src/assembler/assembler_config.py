@@ -10,9 +10,27 @@ Model class reference: thestudioarc/26-model-runtime-and-routing.md (balanced fo
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from src.agent.framework import AgentConfig, AgentContext
+
+
+class QAHandoffItem(BaseModel):
+    """A single QA handoff mapping: acceptance criterion → validation steps."""
+
+    criterion: str = Field(description="Acceptance criterion text")
+    validation_steps: list[str] = Field(
+        default_factory=list,
+        description="Steps to validate this criterion",
+    )
+
+    @field_validator("criterion", mode="before")
+    @classmethod
+    def coerce_criterion(cls, v: object) -> str:
+        """Coerce list[str] to str — LLMs sometimes return a list."""
+        if isinstance(v, list):
+            return "; ".join(str(item) for item in v)
+        return str(v)
 
 
 class AssemblerConflict(BaseModel):
@@ -56,7 +74,7 @@ class AssemblerAgentOutput(BaseModel):
         default_factory=list,
         description="Identified risks with mitigations",
     )
-    qa_handoff: list[dict[str, list[str]]] = Field(
+    qa_handoff: list[QAHandoffItem] = Field(
         default_factory=list,
         description="Acceptance criteria mapped to validation steps",
     )

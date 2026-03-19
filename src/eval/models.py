@@ -56,6 +56,9 @@ class EvalResult:
     duration_ms: int = 0
     error: str = ""
 
+    # Custom dimension scores (for non-intent agents: intake, context, routing)
+    custom_scores: dict[str, float] = field(default_factory=dict)
+
     # Parsed output for downstream use
     parsed: Any = None
 

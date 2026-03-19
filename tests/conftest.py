@@ -14,9 +14,11 @@ def _order_key(item: pytest.Item) -> tuple[int, str]:
         return (2, path)
     if "/docker/" in path or "\\docker\\" in path:
         return (3, path)
-    if "/playwright/" in path or "\\playwright\\" in path:
+    if "/p0/" in path or "\\p0\\" in path:
         return (4, path)
-    return (5, path)
+    if "/playwright/" in path or "\\playwright\\" in path:
+        return (5, path)
+    return (6, path)
 
 
 def pytest_collection_modifyitems(session: pytest.Session, config: pytest.Config, items: list[pytest.Item]) -> None:

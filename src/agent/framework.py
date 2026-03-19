@@ -349,6 +349,7 @@ class AgentRunner:
             "complexity": context.complexity,
             "risk_flags": context.risk_flags,
             "labels": context.labels,
+            "overlays": context.overlays,
         }
         fmt.update(context.extra)
 

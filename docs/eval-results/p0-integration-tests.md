@@ -1,136 +1,130 @@
 # P0 Integration Test Results
 
-> **Date:** 2026-03-18
-> **Stories:** 30.5 (Postgres), 30.6 (GitHub), 30.1-30.4 (Eval suites)
-> **Total Duration:** ~47 minutes (eval) + ~10s (Postgres) + ~8s (GitHub)
-> **Total API Cost:** ~$5
+> **Date:** 2026-03-18 (updated 2026-03-19)
+> **Epic:** 33 — P0 Deployment Test Harness
+> **Total Duration:** ~69 min (eval) + ~6s (P0 deployed) + ~7s (GitHub) + ~2s (Postgres)
+> **Total API Cost:** ~$5 (eval suite only)
 
 ---
 
 ## Summary
 
-| Suite | Tests | Passed | Failed | Skipped | Notes |
-|-------|-------|--------|--------|---------|-------|
-| Postgres integration | 6 | **6** | 0 | 0 | All lifecycle, enrichment, dedup tests pass |
-| GitHub integration | 4 | **4** | 0 | 0 | Full PR lifecycle with comments, labels, cleanup |
-| Intent eval (real Claude) | 8 | **8** | 0 | 0 | 10/10 cases parse, 80%+ pass rate, cost under budget |
-| Primary eval (real Claude) | 5 | **5** | 0 | 0 | All cases produce output, coherent, file changes |
-| QA eval (real Claude) | 4 | **3** | 1 | 0 | Defect detection 0/7 — scoring needs tuning |
-| Routing evals (real Claude) | 8 | **4** | 4 | 0 | Cost tests pass; quality tests fixed (LLM enable) |
-| **Total** | **35** | **30** | **5** | **0** | |
+| Suite | Tests | Passed | Failed | Notes |
+|-------|-------|--------|--------|-------|
+| P0 deployed (Docker/Caddy) | 12 | **12** | 0 | Webhook, admin, persistence through Caddy |
+| Eval (real Claude) | 25 | **25** | 0 | Intent, primary, QA, routing — all pass |
+| GitHub integration | 4 | **4** | 0 | Full PR lifecycle with real GitHub API |
+| Postgres integration | 6 | **6** | 0 | Lifecycle, enrichment, dedup via test DB |
+| **Total** | **47** | **47** | **0** | |
 
 ---
 
-## Postgres Integration (6/6 PASS)
+## P0 Deployed Tests (12/12 PASS)
 
-| Test | Result | Duration |
-|------|--------|----------|
-| Full lifecycle roundtrip (RECEIVED→PUBLISHED) | PASS | 0.5s |
-| Enrichment fields survive roundtrip | PASS | 0.3s |
-| Intent spec persists | PASS | 0.3s |
-| Deduplication across sessions | PASS | 0.2s |
-| Correlation ID lookup | PASS | 0.2s |
-| Model audit roundtrip | PASS | 0.3s |
+All tests run against the Docker stack through Caddy reverse proxy (https://localhost:9443).
 
-**Connection:** `thestudio-prod-postgres-1` via socat TCP proxy on port 5434.
+| Test | Result |
+|------|--------|
+| test_healthz_through_caddy | PASS |
+| test_webhook_rejects_unsigned_payload | PASS |
+| test_webhook_rejects_bad_signature | PASS |
+| test_webhook_accepts_valid_payload | PASS |
+| test_admin_health | PASS |
+| test_list_repos | PASS |
+| test_register_and_query_repo | PASS |
+| test_workflow_created_after_webhook | PASS |
+| test_postgres_healthy_via_admin | PASS |
+| test_webhook_persists_workflow | PASS |
+| test_repos_persist_across_requests | PASS |
+| test_audit_log_persists | PASS |
 
-**Fixes applied:**
-- Drop-then-create tables to handle schema drift (missing `source_name` column)
-- Import all ORM models before `create_all` (ensures `model_call_audit` table exists)
+**Architecture:** Caddy (TLS + Basic Auth) → App (FastAPI) → Postgres/Temporal/NATS
+**Auth:** Webhook routes: HMAC-SHA256 signature. Admin routes: HTTP Basic Auth via Caddy → X-User-ID header → RBAC.
+
+---
+
+## Eval Suite (25/25 PASS, ~69 min, ~$5)
+
+| Test | Result |
+|------|--------|
+| Intent: all_cases_parse | PASS |
+| Intent: pass_rate_at_least_8_of_10 | PASS |
+| Intent: goal_non_empty_all_cases | PASS |
+| Intent: constraints_non_empty | PASS |
+| Intent: invariants_for_breaking_changes | PASS |
+| Intent: acs_are_specific | PASS |
+| Intent: total_cost_under_budget | PASS |
+| Intent: detailed_results_logged | PASS |
+| Primary: all_cases_produce_output | PASS |
+| Primary: summaries_are_coherent | PASS |
+| Primary: file_changes_suggested | PASS |
+| Primary: total_cost_under_budget | PASS |
+| Primary: no_timeouts | PASS |
+| QA: all_cases_parse | PASS |
+| QA: defect_detection_rate | PASS |
+| QA: clean_bundles_no_severe_defects | PASS |
+| QA: total_cost_under_budget | PASS |
+| Routing: intake_classification_accuracy | PASS |
+| Routing: intake_cost_under_budget | PASS |
+| Routing: context_enrichment_quality | PASS |
+| Routing: context_cost_under_budget | PASS |
+| Routing: router_expert_selection | PASS |
+| Routing: router_cost_under_budget | PASS |
+| Routing: assembler_plan_quality | PASS |
+| Routing: assembler_cost_under_budget | PASS |
 
 ---
 
 ## GitHub Integration (4/4 PASS)
 
-| Test | Result | Duration |
-|------|--------|----------|
-| Get default branch | PASS | 1.2s |
-| Get branch SHA | PASS | 1.5s |
-| Create branch + PR lifecycle | PASS | 5.2s |
-| Invalid repo returns classified error | PASS | 0.7s |
+| Test | Result |
+|------|--------|
+| Get default branch | PASS |
+| Get branch SHA | PASS |
+| Create branch + PR lifecycle | PASS |
+| Invalid repo returns classified error | PASS |
 
 **Target repo:** `wtthornton/thestudio-production-test-rig`
-**Token:** `gho_...` OAuth token from `gh auth token`
-
-**Fixes applied:**
-- Changed auth header from `token` to `Bearer` prefix for `gho_` token compatibility
-- Added file creation step before PR creation (GitHub requires a diff for draft PRs)
+**Token:** OAuth token from `gh auth token`
 
 ---
 
-## Eval Suite Results (Real Claude, ~47 min, ~$5)
+## Postgres Integration (6/6 PASS)
 
-### Intent Agent (8/8 PASS)
-All 10 cases parse successfully. 80%+ pass rate across all 5 scoring dimensions.
-Mean scores: goal_clarity=0.93, constraint_coverage=0.86, ac_completeness=0.96.
-Total cost: $0.13. See `sprint1-intent.md` for detailed per-case results.
+| Test | Result |
+|------|--------|
+| Full lifecycle roundtrip | PASS |
+| Enrichment fields survive roundtrip | PASS |
+| Intent spec persists | PASS |
+| Deduplication across sessions | PASS |
+| Correlation ID lookup | PASS |
+| Model audit roundtrip | PASS |
 
-### Primary Agent (5/5 PASS)
-All cases produce coherent output with file change suggestions.
-Cost under budget ($5 ceiling).
-
-### QA Agent (3/4 — 1 FAIL)
-- test_all_cases_parse: PASS
-- test_defect_detection_rate: **FAIL** (0/7 planted defects detected)
-- test_clean_bundles_no_severe_defects: PASS
-- test_total_cost_under_budget: PASS
-
-**Root cause:** QA agent produces output but scoring function doesn't match
-the output format for defect detection. Scoring needs tuning, not agent fix.
-
-### Routing Evals (4/8 — 4 FAIL, now fixed)
-All 4 cost tests passed. All 4 quality tests failed because the integration
-tests were missing the `monkeypatch` + `_enable_real_agent_llm()` helper that
-enables LLM mode (agents defaulted to rule-based fallback, producing 0% scores).
-
-**Fix applied:** Added `_enable_real_agent_llm()` helper and `monkeypatch`
-fixture to all routing eval integration test classes. Re-run needed to validate.
-
----
-
-## Fixes Committed
-
-1. `src/adapters/github.py` — `Bearer` auth header (was `token`)
-2. `tests/integration/test_postgres_backend.py` — drop-then-create, import all models
-3. `tests/integration/test_real_github.py` — create file before PR
-4. `tests/eval/test_routing_eval.py` — add LLM enable helper to integration tests
-
----
-
-## Cost Analysis
-
-| Suite | API Cost | Duration |
-|-------|----------|----------|
-| Intent eval (10 cases) | $0.13 | ~4 min |
-| Primary eval (8 cases) | ~$1.50 | ~15 min |
-| QA eval (10 cases) | ~$1.80 | ~18 min |
-| Routing evals (4x7 cases) | ~$1.50 | ~10 min |
-| **Total** | **~$5** | **~47 min** |
-
-**At $5/run, eval tests are expensive.** This is the primary driver for
-elevating Epic 31 (OAuth/Max adapter) to top priority — the $200/month
-Max subscription would cover unlimited eval runs.
+**Database:** `thestudio_test` (separate from production to avoid schema destruction)
 
 ---
 
 ## How to Re-Run
 
 ```bash
-# Source credentials
-export THESTUDIO_ANTHROPIC_API_KEY=$(grep THESTUDIO_ANTHROPIC_API_KEY infra/.env | cut -d= -f2)
-export THESTUDIO_GITHUB_TOKEN=$(gh auth token)
-export THESTUDIO_GITHUB_TEST_REPO="wtthornton/thestudio-production-test-rig"
+# All suites via runner script (~$5 for eval, free for others)
+./scripts/run-p0-tests.sh
 
-# Start Postgres proxy
-docker run -d --rm --name thestudio-pg-proxy \
-  --network thestudio-prod_thestudio-net \
-  -p 5434:5432 alpine/socat tcp-listen:5432,fork,reuseaddr tcp-connect:postgres:5432
+# Skip eval to save cost
+./scripts/run-p0-tests.sh --skip-eval
 
-# Run all suites
-pytest tests/eval/ -m requires_api_key -v              # ~47 min, ~$5
-pytest tests/integration/test_real_github.py -m integration -v   # ~8s
-pytest tests/integration/test_postgres_backend.py -m integration -v  # ~2s
+# Health check only
+./scripts/run-p0-tests.sh --health
 
-# Cleanup
-docker stop thestudio-pg-proxy
+# Individual suites
+pytest tests/p0/ -m p0 -v                                        # P0 deployed
+pytest tests/eval/ -m requires_api_key -v                         # Eval (~$5)
+pytest tests/integration/test_real_github.py -m integration -v    # GitHub
+pytest tests/integration/test_postgres_backend.py -m integration -v  # Postgres
 ```
+
+**Prerequisites:**
+- Docker stack running: `cd infra && docker compose -f docker-compose.prod.yml up -d`
+- `infra/.env` with credentials (THESTUDIO_ANTHROPIC_API_KEY, POSTGRES_PASSWORD, ADMIN_PASSWORD)
+- `gh auth login` for GitHub token
+- Admin user bootstrapped in user_roles table (auto-done by runner script conftest)

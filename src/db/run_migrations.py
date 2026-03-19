@@ -41,6 +41,14 @@ MIGRATIONS = [
     "src.db.migrations.016_audit_log",
     "src.db.migrations.017_repo_profile_poll",
     "src.db.migrations.018_audit_event_repo_profile_updated",
+    "src.db.migrations.019_reputation_weight_history",
+    "src.db.migrations.020_repo_profile_merge_method",
+    "src.db.migrations.021_repo_profile_poll_last_run_at",
+    "src.db.migrations.022_taskpacket_source_name",
+    "src.db.migrations.023_taskpacket_rejected_status",
+    "src.db.migrations.024_portfolio_reviews",
+    "src.db.migrations.025_taskpacket_readiness",
+    "src.db.migrations.026_repo_profile_poll_headers",
 ]
 
 

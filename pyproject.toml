@@ -71,10 +71,11 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 asyncio_default_test_loop_scope = "function"
 testpaths = ["tests"]
-addopts = "-m 'not integration and not docker'"
+addopts = "-m 'not integration and not docker and not p0'"
 markers = [
     "integration: marks tests requiring external services (PostgreSQL, Temporal, etc.)",
     "docker: marks tests requiring the full Docker Compose stack (opt-in locally, mandatory in CI)",
+    "p0: marks deployment-mode P0 tests that exercise the running Docker stack through Caddy",
     "playwright: marks browser tests requiring Playwright and a running app (e.g. Docker stack)",
     "order: execution order for tests (pytest-order; used in Docker lifecycle tests)",
 ]

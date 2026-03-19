@@ -72,7 +72,7 @@ class TestAssemblerAgentOutput:
                 }
             ],
             "risks": ["Cache invalidation complexity"],
-            "qa_handoff": [{"Pagination works": ["Test page 1"]}],
+            "qa_handoff": [{"criterion": "Pagination works", "validation_steps": ["Test page 1"]}],
             "provenance_decisions": [
                 {"decision": "Use DB cache", "source": "security", "rationale": "Data must persist across restarts"}
             ],

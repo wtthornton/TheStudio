@@ -265,14 +265,27 @@ async def _run_single(
     scores = score(agent_result.parsed_output, case)
 
     # Weighted average to determine pass/fail
-    weights = {
+    # Use intent-specific weights when score_fn returns intent dimensions,
+    # otherwise use equal weights across whatever dimensions the score_fn returns.
+    _intent_weights = {
         "goal_clarity": 0.30,
         "constraint_coverage": 0.20,
         "ac_completeness": 0.25,
         "invariant_presence": 0.15,
         "non_goal_specificity": 0.10,
     }
+    if scores.keys() <= _intent_weights.keys():
+        # Intent-style dimensions — use calibrated weights
+        weights = _intent_weights
+    else:
+        # Custom dimensions (intake, context, routing, etc.) — equal weights
+        n = len(scores) or 1
+        w = 1.0 / n
+        weights = dict.fromkeys(scores, w)
     weighted_score = sum(scores.get(dim, 0.0) * w for dim, w in weights.items())
+
+    # Store custom scores for non-intent agents
+    custom = {k: v for k, v in scores.items() if k not in _intent_weights}
 
     return EvalResult(
         case_id=case.case_id,
@@ -283,6 +296,7 @@ async def _run_single(
         ac_completeness=scores.get("ac_completeness", 0.0),
         invariant_presence=scores.get("invariant_presence", 0.0),
         non_goal_specificity=scores.get("non_goal_specificity", 0.0),
+        custom_scores=custom,
         parse_success=parse_success,
         raw_output=agent_result.raw_output,
         cost_usd=agent_result.cost_estimated,
