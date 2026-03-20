@@ -324,44 +324,54 @@ async def intake_activity(params: IntakeInput) -> IntakeOutput:
     Falls back to rule-based evaluate_eligibility() when LLM is disabled.
     """
     from src.agent.framework import AgentContext, AgentRunner
+    from src.dashboard.events_publisher import emit_stage_enter, emit_stage_exit
     from src.intake.intake_config import INTAKE_AGENT_CONFIG
 
-    context = AgentContext(
-        repo=params.repo,
-        issue_title=params.issue_title,
-        issue_body=params.issue_body,
-        labels=params.labels,
-        extra={
-            "repo_registered": params.repo_registered,
-            "repo_paused": params.repo_paused,
-            "has_active_workflow": params.has_active_workflow,
-            "event_id": params.event_id,
-        },
-    )
-
-    runner = AgentRunner(INTAKE_AGENT_CONFIG)
-    result = await runner.run(context)
-
-    # Parse from AgentResult
-    if result.parsed_output is not None:
-        output = result.parsed_output
-        return IntakeOutput(
-            accepted=output.accepted,
-            rejection_reason=output.rejection_reason or None,
-            base_role=output.base_role if output.accepted else None,
-            overlays=output.overlays if output.accepted else [],
+    task_id = params.event_id
+    await emit_stage_enter("intake", task_id)
+    success = False
+    try:
+        context = AgentContext(
+            repo=params.repo,
+            issue_title=params.issue_title,
+            issue_body=params.issue_body,
+            labels=params.labels,
+            extra={
+                "repo_registered": params.repo_registered,
+                "repo_paused": params.repo_paused,
+                "has_active_workflow": params.has_active_workflow,
+                "event_id": params.event_id,
+            },
         )
 
-    # Fallback produced raw JSON
-    import json
-    data = json.loads(result.raw_output) if result.raw_output else {}
-    accepted = data.get("accepted", False)
-    return IntakeOutput(
-        accepted=accepted,
-        rejection_reason=data.get("rejection_reason") or None,
-        base_role=data.get("base_role") if accepted else None,
-        overlays=data.get("overlays", []) if accepted else [],
-    )
+        runner = AgentRunner(INTAKE_AGENT_CONFIG)
+        result = await runner.run(context)
+
+        # Parse from AgentResult
+        if result.parsed_output is not None:
+            output = result.parsed_output
+            intake_out = IntakeOutput(
+                accepted=output.accepted,
+                rejection_reason=output.rejection_reason or None,
+                base_role=output.base_role if output.accepted else None,
+                overlays=output.overlays if output.accepted else [],
+            )
+        else:
+            # Fallback produced raw JSON
+            import json
+            data = json.loads(result.raw_output) if result.raw_output else {}
+            accepted = data.get("accepted", False)
+            intake_out = IntakeOutput(
+                accepted=accepted,
+                rejection_reason=data.get("rejection_reason") or None,
+                base_role=data.get("base_role") if accepted else None,
+                overlays=data.get("overlays", []) if accepted else [],
+            )
+
+        success = True
+        return intake_out
+    finally:
+        await emit_stage_exit("intake", task_id, success=success)
 
 
 @activity.defn
@@ -374,35 +384,45 @@ async def context_activity(params: ContextInput) -> ContextOutput:
     """
     from src.agent.framework import AgentContext, AgentRunner
     from src.context.context_config import CONTEXT_AGENT_CONFIG
+    from src.dashboard.events_publisher import emit_stage_enter, emit_stage_exit
 
-    context = AgentContext(
-        repo=params.repo,
-        issue_title=params.issue_title,
-        issue_body=params.issue_body,
-        labels=params.labels,
-        extra={"taskpacket_id": params.taskpacket_id},
-    )
-
-    runner = AgentRunner(CONTEXT_AGENT_CONFIG)
-    result = await runner.run(context)
-
-    if result.parsed_output is not None:
-        output = result.parsed_output
-        return ContextOutput(
-            scope={"type": "feature", "summary": output.scope_summary},
-            risk_flags=output.risk_flags,
-            complexity_index="medium" if output.risk_flags else "low",
-            context_packs=[],
+    task_id = params.taskpacket_id
+    await emit_stage_enter("context", task_id)
+    success = False
+    try:
+        context = AgentContext(
+            repo=params.repo,
+            issue_title=params.issue_title,
+            issue_body=params.issue_body,
+            labels=params.labels,
+            extra={"taskpacket_id": params.taskpacket_id},
         )
 
-    import json
-    data = json.loads(result.raw_output) if result.raw_output else {}
-    return ContextOutput(
-        scope={"type": "feature", "summary": data.get("scope_summary", "")},
-        risk_flags=data.get("risk_flags", {}),
-        complexity_index=data.get("complexity_index", "low"),
-        context_packs=[],
-    )
+        runner = AgentRunner(CONTEXT_AGENT_CONFIG)
+        result = await runner.run(context)
+
+        if result.parsed_output is not None:
+            output = result.parsed_output
+            ctx_out = ContextOutput(
+                scope={"type": "feature", "summary": output.scope_summary},
+                risk_flags=output.risk_flags,
+                complexity_index="medium" if output.risk_flags else "low",
+                context_packs=[],
+            )
+        else:
+            import json
+            data = json.loads(result.raw_output) if result.raw_output else {}
+            ctx_out = ContextOutput(
+                scope={"type": "feature", "summary": data.get("scope_summary", "")},
+                risk_flags=data.get("risk_flags", {}),
+                complexity_index=data.get("complexity_index", "low"),
+                context_packs=[],
+            )
+
+        success = True
+        return ctx_out
+    finally:
+        await emit_stage_exit("context", task_id, success=success)
 
 
 @activity.defn
@@ -475,61 +495,69 @@ async def intent_activity(params: IntentInput) -> IntentOutput:
     rule-based build_intent() when LLM is disabled.
     """
     from src.agent.framework import AgentContext, AgentRunner
+    from src.dashboard.events_publisher import emit_stage_enter, emit_stage_exit
     from src.intent.intent_config import INTENT_AGENT_CONFIG
 
-    context = AgentContext(
-        repo="",
-        issue_title=params.issue_title,
-        issue_body=params.issue_body,
-        risk_flags=params.risk_flags,
-        extra={"taskpacket_id": params.taskpacket_id},
-    )
-
-    runner = AgentRunner(INTENT_AGENT_CONFIG)
-    result = await runner.run(context)
-
-    if result.parsed_output is not None:
-        output = result.parsed_output
-        goal = output.goal
-        acceptance_criteria = output.acceptance_criteria
-    else:
-        import json
-        data = json.loads(result.raw_output) if result.raw_output else {}
-        goal = data.get("goal", params.issue_title)
-        acceptance_criteria = data.get("acceptance_criteria", [])
-
-    # Persist intent spec to DB for downstream stages (Publisher needs it)
-    intent_spec_id = ""
+    task_id = params.taskpacket_id
+    await emit_stage_enter("intent", task_id)
+    success = False
     try:
-        from uuid import UUID
-
-        from src.db.connection import get_async_session
-        from src.intent.intent_crud import create_intent
-        from src.intent.intent_spec import IntentSpecCreate
-
-        async with get_async_session() as session:
-            spec = await create_intent(
-                session,
-                IntentSpecCreate(
-                    taskpacket_id=UUID(params.taskpacket_id),
-                    version=1,
-                    goal=goal,
-                    acceptance_criteria=acceptance_criteria,
-                ),
-            )
-            intent_spec_id = str(spec.id)
-    except Exception:
-        import logging
-        logging.getLogger("thestudio.intent").exception(
-            "Failed to persist intent spec for taskpacket=%s", params.taskpacket_id
+        context = AgentContext(
+            repo="",
+            issue_title=params.issue_title,
+            issue_body=params.issue_body,
+            risk_flags=params.risk_flags,
+            extra={"taskpacket_id": params.taskpacket_id},
         )
 
-    return IntentOutput(
-        intent_spec_id=intent_spec_id,
-        version=1,
-        goal=goal,
-        acceptance_criteria=acceptance_criteria,
-    )
+        runner = AgentRunner(INTENT_AGENT_CONFIG)
+        result = await runner.run(context)
+
+        if result.parsed_output is not None:
+            output = result.parsed_output
+            goal = output.goal
+            acceptance_criteria = output.acceptance_criteria
+        else:
+            import json
+            data = json.loads(result.raw_output) if result.raw_output else {}
+            goal = data.get("goal", params.issue_title)
+            acceptance_criteria = data.get("acceptance_criteria", [])
+
+        # Persist intent spec to DB for downstream stages (Publisher needs it)
+        intent_spec_id = ""
+        try:
+            from uuid import UUID
+
+            from src.db.connection import get_async_session
+            from src.intent.intent_crud import create_intent
+            from src.intent.intent_spec import IntentSpecCreate
+
+            async with get_async_session() as session:
+                spec = await create_intent(
+                    session,
+                    IntentSpecCreate(
+                        taskpacket_id=UUID(params.taskpacket_id),
+                        version=1,
+                        goal=goal,
+                        acceptance_criteria=acceptance_criteria,
+                    ),
+                )
+                intent_spec_id = str(spec.id)
+        except Exception:
+            import logging
+            logging.getLogger("thestudio.intent").exception(
+                "Failed to persist intent spec for taskpacket=%s", params.taskpacket_id
+            )
+
+        success = True
+        return IntentOutput(
+            intent_spec_id=intent_spec_id,
+            version=1,
+            goal=goal,
+            acceptance_criteria=acceptance_criteria,
+        )
+    finally:
+        await emit_stage_exit("intent", task_id, success=success)
 
 
 @activity.defn
