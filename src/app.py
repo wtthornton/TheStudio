@@ -17,6 +17,7 @@ from src.admin.ui_router import ui_router
 from src.api.approval import router as approval_router
 from src.approval.chat_router import router as chat_router
 from src.compliance.router import router as compliance_router
+from src.dashboard.router import router as dashboard_router
 from src.ingress.webhook_handler import router as ingress_router
 from src.observability.middleware import CorrelationMiddleware
 from src.observability.tracing import init_tracing
@@ -128,6 +129,7 @@ app.include_router(platform_router)
 app.include_router(ui_router)
 app.include_router(approval_router)
 app.include_router(chat_router)
+app.include_router(dashboard_router)
 
 
 @app.get("/healthz")

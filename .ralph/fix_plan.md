@@ -3,12 +3,41 @@
 > Epic details: `docs/epics/epic-34-phase0-sse-poc.md` and `docs/epics/epic-35-phase1-pipeline-visibility.md`
 > Sprint plan: `docs/sprints/session-prompt-epic34-s1.md`
 
+## Time Tracking
+
+**Instructions:** Ralph updates `actual_loops` and `actual_min` after completing each story. After Epic 34 completes, compute the calibration ratio (actual/estimated) and apply it to Epic 35 estimates.
+
+### Run 1: Epic 34 (Calibration Run)
+
+| Story | Est. Loops | Est. Min | Actual Loops | Actual Min | Notes |
+|-------|-----------|---------|-------------|-----------|-------|
+| B-0.1 | 1 | 8 | | | |
+| B-0.2a | 1 | 12 | | | |
+| B-0.2b | 2 | 25 | | | Highest risk — NATS in SSE |
+| B-0.3 | 1 | 15 | | | |
+| B-0.4a | 1 | 12 | | | |
+| B-0.4b | 1 | 12 | | | |
+| B-0.5 | 1 | 10 | | | |
+| F-0.1 | 1 | 15 | | | |
+| F-0.2 | 1 | 15 | | | |
+| F-0.3a | 1 | 12 | | | |
+| F-0.3b | 1 | 10 | | | |
+| B-0.7 | 1 | 10 | | | Compressible |
+| B-0.6 | 1 | 8 | | | Compressible |
+| F-0.4 | 1 | 6 | | | |
+| **Total** | **15** | **170 min** | | | **Est: ~3 hrs** |
+
+**Start time:** _______________
+**End time:** _______________
+**Wall clock total:** _______________
+**Calibration ratio:** actual_min / 170 = _______________
+
 ---
 
 ## Epic 34 — Phase 0: SSE PoC + Frontend Scaffolding
 
 ### Slice 1: Backend Foundation
-- [ ] B-0.1: Create `src/dashboard/` package with FastAPI router at `/api/v1/dashboard/`, health endpoint, register in `src/app.py`. Test: `GET /api/v1/dashboard/health` returns `{"status": "ok"}`.
+- [x] B-0.1: Create `src/dashboard/` package with FastAPI router at `/api/v1/dashboard/`, health endpoint, register in `src/app.py`. Test: `GET /api/v1/dashboard/health` returns `{"status": "ok"}`.
 
 ### Slice 2: SSE Endpoint
 - [ ] B-0.2a: SSE endpoint with hardcoded test events. Create `src/dashboard/events.py` with `GET /api/v1/dashboard/events/stream` returning `StreamingResponse` with `text/event-stream`. Heartbeat every 15s. Test: curl the endpoint, verify event-stream content type and heartbeat events arrive.
@@ -38,6 +67,23 @@
 ---
 
 ## Epic 35 — Phase 1: Pipeline Visibility
+
+> **Load after Epic 34 completes.** Apply calibration ratio to adjust estimates below.
+> **Estimated runtime:** ~20-28 hrs single instance. With parallelism: ~8-12 hrs.
+
+### Time Tracking — Run 2+
+
+| Slice | Stories | Est. Loops | Est. Min | Actual Loops | Actual Min |
+|-------|---------|-----------|---------|-------------|-----------|
+| S1 Backend | 5 | 6 | 70 | | |
+| S1 Frontend | 9 | 10 | 110 | | |
+| S2 Backend | 6 | 7 | 80 | | |
+| S2 Frontend | 12 | 14 | 150 | | |
+| S3 Backend | 4 | 5 | 55 | | |
+| S3 Frontend | 11 | 13 | 140 | | |
+| S4 Backend | 1 | 1 | 10 | | |
+| S4 Frontend | 14 | 16 | 170 | | |
+| **Total** | **63** | **72** | **785 min** | | |
 
 ### Slice 1: Pipeline Rail
 
