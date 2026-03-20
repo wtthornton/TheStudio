@@ -67,7 +67,61 @@ All flags default to safe/mock mode. Existing tests are unaffected regardless of
 - `sk-ant-api03-*` → standard `x-api-key` header
 - `sk-ant-oat01-*` → OAuth `Authorization: Bearer` header + `anthropic-beta: oauth-2025-04-20`
 
-**OAuth tokens (development only):** Anthropic restricts OAuth to first-party tools (Claude Code, Claude Desktop). Do not use OAuth tokens for production standalone servers. See Epic 31 for full TOS analysis.
+**OAuth tokens (development only):** Anthropic restricts OAuth to first-party tools (Claude Code, Claude Desktop). Do not use OAuth tokens for production standalone servers. See the Authentication Modes section below for full details.
+
+### Authentication Modes (Epic 31)
+
+TheStudio supports two authentication modes for the Anthropic API:
+
+#### API Key Mode (Production)
+
+Standard Anthropic API keys (`sk-ant-api03-...`) are sent via the `x-api-key` header. This is the default, supported, and recommended mode for all environments.
+
+```bash
+THESTUDIO_ANTHROPIC_API_KEY=sk-ant-api03-...
+THESTUDIO_ANTHROPIC_AUTH_MODE=auto   # or explicitly: api_key
+```
+
+#### OAuth Bearer Mode (Development Only)
+
+Claude Max subscription OAuth tokens (`sk-ant-oat01-...`) are sent via `Authorization: Bearer` with the `anthropic-beta: oauth-2025-04-20` header. Usage is billed against subscription quota, not per-token.
+
+```bash
+THESTUDIO_ANTHROPIC_API_KEY=sk-ant-oat01-...
+THESTUDIO_ANTHROPIC_AUTH_MODE=auto   # auto-detects from prefix; or explicitly: oauth
+```
+
+**Token refresh:** OAuth tokens expire after 8 hours. The adapter automatically refreshes on 401 using the refresh token. Configure:
+
+```bash
+THESTUDIO_ANTHROPIC_REFRESH_TOKEN=sk-ant-ort01-...   # Refresh token
+THESTUDIO_ANTHROPIC_OAUTH_CLIENT_ID=9d1c250a-...     # Default provided; override if needed
+```
+
+Refresh rotates the access token (and optionally the refresh token). If refresh fails, the adapter raises an error — there is no silent fallback.
+
+**How to obtain tokens:** Run `claude setup-token` or extract tokens during `claude login`.
+
+#### TOS Limitations and Production Recommendation
+
+Anthropic restricts OAuth token usage to first-party tools (Claude Code, Claude Desktop). Third-party applications using OAuth have received legal requests to remove support. Specifically:
+
+- **First-party use** (Claude Code, Claude Desktop): Supported — OAuth is the default auth.
+- **Third-party use** (standalone servers, custom apps): Not sanctioned. Anthropic has sent legal requests to third-party tools (OpenClaw, OpenCode) removing OAuth support.
+- **1M context window** is unavailable with OAuth tokens (200k max).
+
+**Recommendation:** Use API keys for production. Use OAuth only for local development and testing where cost savings from the Max subscription are beneficial. Monitor Anthropic's official API docs for any sanctioned third-party OAuth path.
+
+#### Cost Comparison
+
+| Method | Per-Issue Cost (6 agents) | Monthly (10 issues/day) | Monthly (50 issues/day) | Notes |
+|--------|--------------------------|------------------------|------------------------|-------|
+| **API Keys (Haiku + Sonnet)** | ~$0.087 | ~$39 | ~$195 | Recommended for production |
+| **API Keys (Sonnet only)** | ~$0.12 | ~$54 | ~$270 | No model routing |
+| **Max Subscription (OAuth)** | $0 marginal | $200 flat | $200 flat | Dev only; TOS risk for standalone servers |
+| **API Keys + Cost Optimization** | ~$0.044 | ~$20 | ~$98 | Routing + caching + batch (Epic 32) |
+
+Cost optimization (Epic 32) reduces API key costs by ~50% through model routing (cheap agents → Haiku), prompt caching, and batch API for async agents. This is the recommended cost reduction strategy for production.
 
 ### Per-Agent LLM Toggles (Epic 23)
 
@@ -363,6 +417,8 @@ Deploy TheStudio on a single Linux host with Docker Compose. This section covers
 **Shared Docker host:** The stack uses Compose project name `thestudio-prod` and host ports **9080** (HTTP) and **9443** (HTTPS) by default so it can run alongside other production systems using 80/443. Admin UI: **https://localhost:9443/admin/ui/** — health: **https://localhost:9443/healthz**. To bind 80/443 exclusively, edit the `caddy` service ports in `docker-compose.prod.yml`. Full URL reference: **docs/URLs.md**.
 
 **Production test rig (multi-repo):** A dedicated repo runs tests against this deployment without starting Docker. See `docs/production-test-rig-contract.md` and the scaffold in `thestudio-production-test-rig/`.
+
+**Sprint milestone narrative:** For a dated, issue-specific account of one real end-to-end production-style run (infra checklist, code touchpoints, and follow-ups), see [docs/sprints/production-deployment-summary.md](sprints/production-deployment-summary.md).
 
 ## Prerequisites
 
