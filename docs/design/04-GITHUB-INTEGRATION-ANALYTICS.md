@@ -420,7 +420,7 @@ Bridges GitHub webhook events into TheStudio's real-time event stream so that ex
 
 ```
 GitHub Webhook Events
-    → POST /api/v1/webhooks/github (existing: src/ingress/webhook_handler.py)
+    → POST /webhook/github (existing: src/ingress/webhook_handler.py)
     → Parse event type and payload
     → Publish to NATS JetStream (subject: github.event.*)
     → FastAPI SSE handler includes github events in the stream

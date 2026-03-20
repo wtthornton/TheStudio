@@ -104,6 +104,7 @@ This vision is broken into five detailed design specifications:
 | [03-INTERACTIVE-CONTROLS.md](03-INTERACTIVE-CONTROLS.md) | Trust tier configuration, pipeline steering (pause/retry/redirect/abort), budget governance, reputation dashboard | Steering the pipeline without micromanaging |
 | [04-GITHUB-INTEGRATION-ANALYTICS.md](04-GITHUB-INTEGRATION-ANALYTICS.md) | Bidirectional GitHub Projects sync, PR evidence explorer, issue import, analytics dashboards, webhook real-time bridge | Deep GitHub integration and operational metrics |
 | [05-TECHNOLOGY-ARCHITECTURE.md](05-TECHNOLOGY-ARCHITECTURE.md) | Frontend stack, real-time data flow, API contracts, component architecture, deployment model, migration path from current admin panel | How to build it |
+| [06-BACKEND-REQUIREMENTS.md](06-BACKEND-REQUIREMENTS.md) | All backend work required to power the frontend: SSE/NATS bridge, event emission, dashboard API, Temporal signals, data model changes | What the backend needs to build (83 stories) |
 
 ---
 
@@ -145,37 +146,62 @@ This vision is broken into five detailed design specifications:
 
 ## 8. Phasing Strategy
 
-### Phase 1: Pipeline Visibility (Foundation)
-- Pipeline Rail with real-time stage status
-- TaskPacket list with basic filtering
-- Gate result cards
-- SSE/WebSocket infrastructure for live updates
+> **Note:** Each phase includes both frontend AND backend work. Backend requirements are tracked in [06-BACKEND-REQUIREMENTS.md](06-BACKEND-REQUIREMENTS.md) (83 stories). Backend and frontend for each phase run mostly in series for a solo developer.
 
-### Phase 2: Planning Experience
-- Issue intake with structured forms
-- Intent Specification editor (view + edit)
-- Complexity/risk dashboard
-- Expert routing preview
+### Phase 0: Frontend Scaffolding + SSE Proof-of-Concept (~2-3 weeks)
+- Vite + React + Zustand + Tailwind project scaffolding
+- SSE-over-NATS bridge (backend: 7 stories)
+- Minimal pipeline status page that proves real-time events work end-to-end
+- **Exit criteria:** Browser displays live stage transitions from a real Temporal workflow
+- **This phase validates the entire architecture. Do not proceed to Phase 1 without it.**
 
-### Phase 3: Interactive Controls
-- Trust tier configuration UI
-- Pipeline steering (pause, retry, redirect, abort)
-- Budget dashboard with alerts
+### Phase 1: Pipeline Visibility (~8-10 weeks incl. backend)
+- **MVP:** Pipeline Rail with real-time stage status + TaskPacket list + Gate result cards
+- **Full:** TaskPacket Timeline, Live Activity Stream, Loopback Visualization, Minimap
+- Backend: SSE events from all stages, dashboard API, activity persistence (14 stories)
 
-### Phase 4: GitHub Deep Integration
-- Bidirectional GitHub Projects sync
-- PR evidence explorer
-- Issue import/triage view
+### Phase 2: Planning Experience (~8-10 weeks incl. backend)
+- **MVP:** Triage queue (accept/reject) + Intent Spec viewer (read-only, approve/reject)
+- **Full:** Intent editor, complexity dashboard, expert routing preview, backlog board, manual task creation
+- Backend: Triage status, intent API, workflow wait points, routing API (18 stories)
 
-### Phase 5: Analytics & Learning
-- Cost analytics with projections
-- Reputation dashboard
-- Outcome tracking visualization
-- Historical trend analysis
+### Phase 3: Interactive Controls (~10-12 weeks incl. backend)
+- **MVP:** Pause/abort actions + budget dashboard (read-only)
+- **Full:** Trust tier rule builder, retry/redirect, budget alerts, notifications
+- Backend: Temporal signal handlers, trust rule engine, budget config, notifications (24 stories)
+
+### Phase 4: GitHub Deep Integration (~5-7 weeks incl. backend)
+- **MVP:** Issue import + PR evidence viewer
+- **Full:** Bidirectional GitHub Projects sync, pipeline comments on issues, webhook bridge
+- Backend: GitHub APIs, project sync, comment generation (12 stories)
+
+### Phase 5: Analytics & Learning (~4-5 weeks incl. backend)
+- **MVP:** Throughput chart + stage bottleneck analysis
+- **Full:** Category breakdown, failure analysis, reputation dashboard, drift detection
+- Backend: Analytics queries, drift computation (8 stories)
+
+**Total estimated calendar time:** ~38-47 weeks (~9-12 months) for a solo developer. This is the full scope — MVP-only cuts per phase reduce this significantly.
 
 ---
 
-## 9. Open Questions
+## 9. Non-Goals (Explicit Exclusions)
+
+These items are intentionally OUT OF SCOPE for this initiative:
+
+1. **Mobile app.** The dashboard is desktop-first. Responsive tablet support is a stretch goal. A native mobile app is out of scope.
+2. **Multi-repo management.** The dashboard manages one TheStudio instance connected to one primary repo. Multi-repo switching is deferred to Phase 5+ at earliest.
+3. **Multi-user RBAC.** Phases 1-3 use the same single-user auth as the existing admin panel. Role-based access control is out of scope until Phase 4+.
+4. **Admin panel replacement.** The existing Jinja-based admin panel continues to operate at `/admin/*`. The new dashboard runs at `/dashboard/*`. No admin features are removed or migrated.
+5. **Data migration.** No existing data is migrated between systems. The dashboard reads the same PostgreSQL database the admin panel uses.
+6. **External notification integrations.** Slack, Discord, email, or webhook notifications are Phase 4+ considerations, not committed scope.
+7. **Custom themes.** The dashboard ships with dark mode (primary) and light mode (secondary). No custom theme builder.
+8. **Plugin/extension system.** No plugin architecture for third-party dashboard extensions.
+9. **Real-time collaboration.** No multi-user cursors, presence indicators, or shared editing. Single-user dashboard.
+10. **GitLab support.** GitHub only. GitLab integration is a separate future initiative.
+
+---
+
+## 10. Open Questions
 
 1. **SPA vs enhanced templates?** Current admin uses Jinja + HTMX. A rich pipeline UI likely needs React/Vite SPA. Do we replace the admin or run them side-by-side? → See [05-TECHNOLOGY-ARCHITECTURE.md](05-TECHNOLOGY-ARCHITECTURE.md)
 
@@ -189,7 +215,7 @@ This vision is broken into five detailed design specifications:
 
 ---
 
-## 10. References
+## 11. References
 
 ### Competitor Documentation
 - [Devin Interactive Planning](https://docs.devin.ai/work-with-devin/interactive-planning)

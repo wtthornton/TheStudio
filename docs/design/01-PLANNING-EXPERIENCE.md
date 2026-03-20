@@ -575,8 +575,9 @@ The board syncs bidirectionally with GitHub Projects v2:
 - S7: View switcher (Kanban / Priority / Timeline)
 - S8: Filtering and sorting controls
 - S9: Column preferences (width, collapse, lock)
-- S10: GitHub Projects v2 bidirectional sync
-- S11: "New Task" button (manual task creation without GitHub issue)
+- S10: "New Task" button (manual task creation without GitHub issue)
+
+> **Note:** GitHub Projects v2 bidirectional sync is tracked in [04-GITHUB-INTEGRATION-ANALYTICS.md](04-GITHUB-INTEGRATION-ANALYTICS.md) as a Phase 4 feature (9 stories). It is NOT part of Phase 2.
 
 ---
 
@@ -671,8 +672,8 @@ Modal dialog with form fields:
 | Intent Specification Editor | 9 | Phase 2 |
 | Complexity & Risk Dashboard | 6 | Phase 2 |
 | Expert Routing Preview | 6 | Phase 2 |
-| Roadmap & Backlog Board | 11 | Phase 2 |
+| Roadmap & Backlog Board | 10 | Phase 2 |
 | Manual Task Creation | 6 | Phase 2 |
-| **Total** | **45** | |
+| **Total** | **44** | |
 
 All features in this document belong to **Phase 2: Planning Experience** of the phasing strategy defined in the master vision document.

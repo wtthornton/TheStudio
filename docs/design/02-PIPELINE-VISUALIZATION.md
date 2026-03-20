@@ -655,17 +655,130 @@ Temporal Workflow Activities
 
 ---
 
-## 9. Summary: Story Count by Feature
+## 9. Error States & Empty States
 
-| Feature | Stories | Priority |
-|---------|---------|----------|
-| Pipeline Rail | 11 | Phase 1 |
-| TaskPacket Timeline | 11 | Phase 1 |
-| Live Agent Activity Stream | 11 | Phase 1 |
-| Gate Inspector | 8 | Phase 1 |
-| Loopback Visualization | 5 | Phase 1 |
-| Active TaskPacket Minimap | 5 | Phase 1 |
-| Real-Time Infrastructure (SSE) | (cross-cutting, in S4/S5 of Pipeline Rail) | Phase 1 |
-| **Total** | **51** | |
+Every view must handle disconnection, failure, and emptiness gracefully. These are real UI stories, not afterthoughts.
 
-All features in this document belong to **Phase 1: Pipeline Visibility** of the phasing strategy. This is the foundation — everything else builds on visible pipeline state.
+### 9.1 SSE Disconnection
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  PIPELINE                                    ⚠ Reconnecting... │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌────────┐   ┌────────┐   ┌────────┐   ┌────────┐           │
+│  │INTAKE  │──▶│CONTEXT │──▶│ INTENT │──▶│ ROUTER │ ...       │
+│  │  ░ ?   │   │  ░ ?   │   │  ░ ?   │   │  ░ ?   │           │
+│  │ stale  │   │ stale  │   │ stale  │   │ stale  │           │
+│  └────────┘   └────────┘   └────────┘   └────────┘           │
+│                                                                 │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │  Connection lost. Retrying... (attempt 3 of 10)          │  │
+│  │  Data shown may be stale. Last update: 45s ago.          │  │
+│  │  [ Retry Now ]                                           │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Behavior:**
+- Stage nodes show "stale" state (gray with `?` instead of count)
+- Banner at bottom with retry status and "Retry Now" button
+- Last-known data remains visible (not cleared)
+- On reconnect: full state refresh via `system.full_state` event, then resume SSE
+- Toast notification: "Connection restored" on successful reconnect
+
+### 9.2 API Call Failure
+
+```
+┌──────────────────────────────────────┐
+│  IMPLEMENT STAGE              ✕ close│
+├──────────────────────────────────────┤
+│                                      │
+│  ┌──────────────────────────────┐   │
+│  │  ❌ Failed to load stage data │   │
+│  │                              │   │
+│  │  Could not reach the server. │   │
+│  │  [ Retry ]  [ Dismiss ]     │   │
+│  └──────────────────────────────┘   │
+│                                      │
+└──────────────────────────────────────┘
+```
+
+**Behavior:**
+- Error card replaces content in the affected panel only (not full-page)
+- Rest of the UI remains functional
+- "Retry" re-fetches the failed request
+- Toast for transient errors that auto-recover
+
+### 9.3 Empty States
+
+**Pipeline Rail — No Active Tasks:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  PIPELINE                                     0 active · $0.00  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌────────┐   ┌────────┐   ... (all nodes show ○ 0, idle)     │
+│                                                                 │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │  No tasks in the pipeline.                                │  │
+│  │  Import issues from GitHub or create a task manually.     │  │
+│  │  [ Import Issues ]  [ Create Task ]                       │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Activity Stream — No Entries Yet:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  ACTIVITY — #142 Implement Stage              ● Live            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│                    Agent is starting up...                      │
+│                    Waiting for first activity.                  │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Gate Inspector — No Gates Yet:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  GATE INSPECTOR                                                 │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  No gate events recorded yet.                                  │
+│  Gates will appear here as TaskPackets flow through the         │
+│  pipeline. Start by creating or importing a task.              │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 9.4 Stories for Error/Empty States
+
+- S12: SSE disconnection banner with retry logic and stale indicators
+- S13: API error cards (per-panel, not full-page)
+- S14: Empty state for Pipeline Rail (no active tasks + action buttons)
+- S15: Empty state for Activity Stream, Gate Inspector, and Minimap
+- S16: SSE reconnection with full state refresh
+
+---
+
+## 10. Summary: Story Count by Feature
+
+| Feature | Stories | Priority | MVP? |
+|---------|---------|----------|------|
+| Pipeline Rail | 11 | Phase 1 | S1-S5, S8 are MVP (static rail + SSE + header) |
+| TaskPacket Timeline | 11 | Phase 1 | S1-S3, S9 are MVP (static timeline + gates + header) |
+| Live Agent Activity Stream | 11 | Phase 1 | S1-S2, S5-S6 are MVP (basic stream + SSE + auto-scroll) |
+| Gate Inspector | 8 | Phase 1 | S1-S2 are MVP (list + detail) |
+| Loopback Visualization | 5 | Phase 1 | S1-S2 are MVP (arc + timeline entries) |
+| Active TaskPacket Minimap | 5 | Phase 1 | S1-S3 are MVP (bar + cards + click-nav) |
+| Error & Empty States | 5 | Phase 1 | All are MVP |
+| Real-Time Infrastructure (SSE) | (cross-cutting, in S4/S5 of Pipeline Rail) | Phase 0 | All are MVP |
+| **Total** | **56** | | **~28 MVP stories** |
+
+All features in this document belong to **Phase 1: Pipeline Visibility** (SSE infrastructure is Phase 0). The MVP subset (~28 stories) delivers a usable pipeline view without all the polish. Full scope adds hover tooltips, animations, keyboard nav, virtual scrolling, and advanced filtering.
+
+> **Backend dependency:** Phase 1 requires 14 backend stories from [06-BACKEND-REQUIREMENTS.md](06-BACKEND-REQUIREMENTS.md) (dashboard API, event emission, gate persistence, activity logging).

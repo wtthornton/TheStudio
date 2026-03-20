@@ -756,24 +756,45 @@ Phase 4+: Consider OAuth2 / session-based auth if multi-user access is needed
 
 ## 12. Summary: Total Story Count Across All Documents
 
-| Document | Features | Stories | Phase |
-|----------|----------|---------|-------|
-| 01 — Planning Experience | 6 | 45 | Phase 2 |
-| 02 — Pipeline Visualization | 6 | 51 | Phase 1 |
-| 03 — Interactive Controls | 5 | 44 | Phase 3, 5 |
-| 04 — GitHub Integration | 6 | 45 | Phase 4, 5 |
-| 05 — Technology (this doc) | Infrastructure | (cross-cutting) | Phase 0-1 |
-| **Total** | **23 features** | **~185 stories** | |
+### Frontend Stories
 
-### Phase Ordering
+| Document | Features | Stories | MVP Stories | Phase |
+|----------|----------|---------|-------------|-------|
+| 01 — Planning Experience | 6 | 44 | ~18 | Phase 2 |
+| 02 — Pipeline Visualization | 7 | 56 | ~28 | Phase 0-1 |
+| 03 — Interactive Controls | 5 | 44 | ~16 | Phase 3, 5 |
+| 04 — GitHub Integration | 6 | 45 | ~15 | Phase 4, 5 |
+| 05 — Technology (this doc) | Infrastructure | (cross-cutting) | — | Phase 0-1 |
+| **Frontend Total** | **24 features** | **~189 stories** | **~77 MVP** | |
+
+### Backend Stories (from [06-BACKEND-REQUIREMENTS.md](06-BACKEND-REQUIREMENTS.md))
+
+| Phase | Backend Stories | Estimated Effort |
+|-------|----------------|------------------|
+| Phase 0 (SSE PoC) | 7 | ~2 weeks |
+| Phase 1 | 14 | ~4-5 weeks |
+| Phase 2 | 18 | ~5-6 weeks |
+| Phase 3 | 24 | ~7-8 weeks |
+| Phase 4 | 12 | ~3-4 weeks |
+| Phase 5 | 8 | ~2-3 weeks |
+| **Backend Total** | **83 stories** | **~23-28 weeks** |
+
+### Combined Total: **~272 stories** (189 frontend + 83 backend)
+
+### Phase Ordering (Calendar Time for Solo Developer)
 
 ```
-Phase 0: Frontend scaffolding (Vite + React + Zustand + Tailwind + SSE infrastructure)
-Phase 1: Pipeline Visibility (51 stories) — the foundation
-Phase 2: Planning Experience (45 stories) — the differentiator
-Phase 3: Interactive Controls (36 stories) — steering and governance
-Phase 4: GitHub Integration (37 stories) — ecosystem connectivity
-Phase 5: Analytics & Learning (16 stories) — long-term intelligence
+Phase 0: SSE PoC + frontend scaffolding          ~2-3 weeks    (7 backend + scaffolding)
+Phase 1: Pipeline Visibility                      ~8-10 weeks   (14 backend + 56 frontend, ~28 MVP)
+Phase 2: Planning Experience                      ~8-10 weeks   (18 backend + 44 frontend, ~18 MVP)
+Phase 3: Interactive Controls                     ~10-12 weeks  (24 backend + 44 frontend, ~16 MVP)
+Phase 4: GitHub Integration                       ~5-7 weeks    (12 backend + 45 frontend, ~15 MVP)
+Phase 5: Analytics & Learning                     ~4-5 weeks    (8 backend + 16 frontend)
+                                                  ────────────
+Total (full scope):                               ~38-47 weeks (~9-12 months)
+Total (MVP only per phase):                       ~24-30 weeks (~6-8 months)
 ```
 
-Each phase produces a usable increment. Phase 1 alone gives the developer a visible pipeline. Phase 2 adds planning. Phase 3 adds control. Phases 4 and 5 deepen integration and intelligence.
+Each phase produces a usable increment. Phase 0 validates the architecture. Phase 1 alone gives the developer a visible pipeline. Phase 2 adds planning. Phase 3 adds control. Phases 4 and 5 deepen integration and intelligence.
+
+**MVP-first strategy:** Within each phase, build the MVP subset first (marked in each doc's story table). Full polish (animations, keyboard nav, virtual scrolling, advanced filtering) follows if time permits before moving to the next phase.
