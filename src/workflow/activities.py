@@ -115,6 +115,7 @@ class RouterInput:
     base_role: str
     overlays: list[str]
     risk_flags: dict[str, bool] = field(default_factory=dict)
+    taskpacket_id: str = ""
 
 
 @dataclass
@@ -569,44 +570,54 @@ async def router_activity(params: RouterInput) -> RouterOutput:
     Falls back to pure algorithmic routing when LLM is disabled.
     """
     from src.agent.framework import AgentContext, AgentRunner
+    from src.dashboard.events_publisher import emit_stage_enter, emit_stage_exit
     from src.routing.router_config import ROUTER_AGENT_CONFIG
 
-    context = AgentContext(
-        risk_flags=params.risk_flags,
-        overlays=params.overlays,
-        extra={
-            "base_role": params.base_role,
-            "required_classes": ",".join(
-                k for k, v in params.risk_flags.items() if v
-            ),
-        },
-    )
-
-    runner = AgentRunner(ROUTER_AGENT_CONFIG)
-    result = await runner.run(context)
-
-    if result.parsed_output is not None:
-        output = result.parsed_output
-        return RouterOutput(
-            selections=[
-                {
-                    "expert_class": s.expert_class,
-                    "pattern": s.pattern,
-                    "rationale": s.rationale,
-                }
-                for s in output.selections
-            ],
-            recruiter_requests=[],
-            rationale=output.adjustments or "LLM-augmented routing",
+    task_id = params.taskpacket_id
+    await emit_stage_enter("router", task_id)
+    success = False
+    try:
+        context = AgentContext(
+            risk_flags=params.risk_flags,
+            overlays=params.overlays,
+            extra={
+                "base_role": params.base_role,
+                "required_classes": ",".join(
+                    k for k, v in params.risk_flags.items() if v
+                ),
+            },
         )
 
-    import json
-    data = json.loads(result.raw_output) if result.raw_output else {}
-    return RouterOutput(
-        selections=data.get("selections", []),
-        recruiter_requests=data.get("recruiter_requests", []),
-        rationale=data.get("adjustments", ""),
-    )
+        runner = AgentRunner(ROUTER_AGENT_CONFIG)
+        result = await runner.run(context)
+
+        if result.parsed_output is not None:
+            output = result.parsed_output
+            router_out = RouterOutput(
+                selections=[
+                    {
+                        "expert_class": s.expert_class,
+                        "pattern": s.pattern,
+                        "rationale": s.rationale,
+                    }
+                    for s in output.selections
+                ],
+                recruiter_requests=[],
+                rationale=output.adjustments or "LLM-augmented routing",
+            )
+        else:
+            import json
+            data = json.loads(result.raw_output) if result.raw_output else {}
+            router_out = RouterOutput(
+                selections=data.get("selections", []),
+                recruiter_requests=data.get("recruiter_requests", []),
+                rationale=data.get("adjustments", ""),
+            )
+
+        success = True
+        return router_out
+    finally:
+        await emit_stage_exit("router", task_id, success=success)
 
 
 @activity.defn
@@ -621,58 +632,76 @@ async def assembler_activity(params: AssemblerInput) -> AssemblerOutput:
 
     from src.agent.framework import AgentContext, AgentRunner
     from src.assembler.assembler_config import ASSEMBLER_AGENT_CONFIG
+    from src.dashboard.events_publisher import emit_stage_enter, emit_stage_exit
 
-    context = AgentContext(
-        taskpacket_id=UUID(params.taskpacket_id) if params.taskpacket_id else None,
-        expert_outputs=params.expert_outputs,
-        extra={
-            "intent_goal": params.intent_goal,
-            "intent_constraints": params.intent_constraints,
-            "acceptance_criteria": params.acceptance_criteria,
-            "expert_count": str(len(params.expert_outputs)),
-            "intent_version": 1,
-        },
-    )
-
-    runner = AgentRunner(ASSEMBLER_AGENT_CONFIG)
-    result = await runner.run(context)
-
-    if result.parsed_output is not None:
-        output = result.parsed_output
-        return AssemblerOutput(
-            plan_steps=[s.description for s in output.plan_steps],
-            conflicts=[
-                {
-                    "expert_a": c.expert_a,
-                    "expert_b": c.expert_b,
-                    "description": c.description,
-                    "resolution": c.resolution,
-                }
-                for c in output.conflicts
-            ],
-            qa_handoff=[
-                {"criterion": h.criterion, "validation_steps": ",".join(h.validation_steps)}
-                for h in output.qa_handoff
-            ],
-            provenance={"taskpacket_id": params.taskpacket_id},
-            needs_intent_refinement=any(c.resolved_by == "unresolved" for c in output.conflicts),
+    task_id = params.taskpacket_id or ""
+    await emit_stage_enter("assembler", task_id)
+    success = False
+    try:
+        context = AgentContext(
+            taskpacket_id=UUID(params.taskpacket_id) if params.taskpacket_id else None,
+            expert_outputs=params.expert_outputs,
+            extra={
+                "intent_goal": params.intent_goal,
+                "intent_constraints": params.intent_constraints,
+                "acceptance_criteria": params.acceptance_criteria,
+                "expert_count": str(len(params.expert_outputs)),
+                "intent_version": 1,
+            },
         )
 
-    import json
-    data = json.loads(result.raw_output) if result.raw_output else {}
-    # Coerce validation_steps from list to str for Temporal wire format
-    raw_handoff = data.get("qa_handoff", [])
-    coerced_handoff = []
-    for h in raw_handoff:
-        vs = h.get("validation_steps", "")
-        if isinstance(vs, list):
-            vs = ",".join(str(s) for s in vs)
-        coerced_handoff.append({"criterion": h.get("criterion", ""), "validation_steps": vs})
-    return AssemblerOutput(
-        plan_steps=[s.get("description", "") for s in data.get("plan_steps", [{"description": "implement_changes"}])],
-        qa_handoff=coerced_handoff,
-        provenance={"taskpacket_id": params.taskpacket_id},
-    )
+        runner = AgentRunner(ASSEMBLER_AGENT_CONFIG)
+        result = await runner.run(context)
+
+        if result.parsed_output is not None:
+            output = result.parsed_output
+            assembler_out = AssemblerOutput(
+                plan_steps=[s.description for s in output.plan_steps],
+                conflicts=[
+                    {
+                        "expert_a": c.expert_a,
+                        "expert_b": c.expert_b,
+                        "description": c.description,
+                        "resolution": c.resolution,
+                    }
+                    for c in output.conflicts
+                ],
+                qa_handoff=[
+                    {"criterion": h.criterion, "validation_steps": ",".join(h.validation_steps)}
+                    for h in output.qa_handoff
+                ],
+                provenance={"taskpacket_id": params.taskpacket_id},
+                needs_intent_refinement=any(
+                    c.resolved_by == "unresolved" for c in output.conflicts
+                ),
+            )
+        else:
+            import json
+            data = json.loads(result.raw_output) if result.raw_output else {}
+            # Coerce validation_steps from list to str for Temporal wire format
+            raw_handoff = data.get("qa_handoff", [])
+            coerced_handoff = []
+            for h in raw_handoff:
+                vs = h.get("validation_steps", "")
+                if isinstance(vs, list):
+                    vs = ",".join(str(s) for s in vs)
+                coerced_handoff.append({
+                    "criterion": h.get("criterion", ""),
+                    "validation_steps": vs,
+                })
+            assembler_out = AssemblerOutput(
+                plan_steps=[
+                    s.get("description", "")
+                    for s in data.get("plan_steps", [{"description": "implement_changes"}])
+                ],
+                qa_handoff=coerced_handoff,
+                provenance={"taskpacket_id": params.taskpacket_id},
+            )
+
+        success = True
+        return assembler_out
+    finally:
+        await emit_stage_exit("assembler", task_id, success=success)
 
 
 @activity.defn
@@ -735,22 +764,33 @@ async def implement_activity(params: ImplementInput) -> ImplementOutput:
     if Docker is unavailable; Execute tier fails closed.
     """
     from src.agent.isolation_policy import IsolationMode, resolve_isolation
+    from src.dashboard.events_publisher import emit_stage_enter, emit_stage_exit
     from src.settings import settings
 
-    repo_tier = getattr(params, "repo_tier", "observe")
+    task_id = params.taskpacket_id
+    await emit_stage_enter("implement", task_id)
+    success = False
+    try:
+        repo_tier = getattr(params, "repo_tier", "observe")
 
-    # Resolve isolation mode based on settings and Docker availability
-    if settings.agent_isolation == "container":
-        from src.agent.container_manager import ContainerManager
+        # Resolve isolation mode based on settings and Docker availability
+        if settings.agent_isolation == "container":
+            from src.agent.container_manager import ContainerManager
 
-        container_available = ContainerManager.is_docker_available()
-        decision = resolve_isolation(repo_tier, container_available)
+            container_available = ContainerManager.is_docker_available()
+            decision = resolve_isolation(repo_tier, container_available)
 
-        if decision.mode == IsolationMode.CONTAINER:
-            return await _implement_container(params, decision)
+            if decision.mode == IsolationMode.CONTAINER:
+                result = await _implement_container(params, decision)
+                success = True
+                return result
 
-    # In-process mode (default or fallback)
-    return await _implement_in_process(params, repo_tier)
+        # In-process mode (default or fallback)
+        result = await _implement_in_process(params, repo_tier)
+        success = True
+        return result
+    finally:
+        await emit_stage_exit("implement", task_id, success=success)
 
 
 async def _implement_container(params: ImplementInput, decision) -> ImplementOutput:
@@ -1027,31 +1067,41 @@ async def verify_activity(params: VerifyInput) -> VerifyOutput:
     """
     import logging
 
+    from src.dashboard.events_publisher import emit_stage_enter, emit_stage_exit
+
     logger = logging.getLogger("thestudio.verify")
+    task_id = params.taskpacket_id
+    await emit_stage_enter("verify", task_id)
+    success = False
+    try:
+        if not params.changed_files:
+            logger.warning("verify.no_files taskpacket=%s", params.taskpacket_id)
+            verify_out = VerifyOutput(
+                passed=False,
+                loopback_triggered=True,
+                exhausted=False,
+                checks=[{"name": "files_exist", "passed": "false", "detail": "No files changed"}],
+            )
+        else:
+            checks = [
+                {
+                    "name": "files_exist",
+                    "passed": "true",
+                    "detail": f"{len(params.changed_files)} file(s) pushed to branch",
+                },
+            ]
 
-    if not params.changed_files:
-        logger.warning("verify.no_files taskpacket=%s", params.taskpacket_id)
-        return VerifyOutput(
-            passed=False,
-            loopback_triggered=True,
-            exhausted=False,
-            checks=[{"name": "files_exist", "passed": "false", "detail": "No files changed"}],
-        )
+            logger.info(
+                "verify.passed taskpacket=%s files=%d",
+                params.taskpacket_id,
+                len(params.changed_files),
+            )
+            verify_out = VerifyOutput(passed=True, checks=checks)
 
-    checks = [
-        {
-            "name": "files_exist",
-            "passed": "true",
-            "detail": f"{len(params.changed_files)} file(s) pushed to branch",
-        },
-    ]
-
-    logger.info(
-        "verify.passed taskpacket=%s files=%d",
-        params.taskpacket_id,
-        len(params.changed_files),
-    )
-    return VerifyOutput(passed=True, checks=checks)
+        success = True
+        return verify_out
+    finally:
+        await emit_stage_exit("verify", task_id, success=success)
 
 
 @activity.defn
@@ -1063,52 +1113,62 @@ async def qa_activity(params: QAInput) -> QAOutput:
     validate() when LLM is disabled.
     """
     from src.agent.framework import AgentContext, AgentRunner
+    from src.dashboard.events_publisher import emit_stage_enter, emit_stage_exit
     from src.qa.qa_config import QA_AGENT_CONFIG
 
-    # Build evidence summary for the LLM prompt
-    evidence_lines = []
-    for k, v in (params.evidence or {}).items():
-        evidence_lines.append(f"- **{k}**: {v}")
-    evidence_summary = "\n".join(evidence_lines) if evidence_lines else "No evidence provided"
+    task_id = params.taskpacket_id
+    await emit_stage_enter("qa", task_id)
+    success = False
+    try:
+        # Build evidence summary for the LLM prompt
+        evidence_lines = []
+        for k, v in (params.evidence or {}).items():
+            evidence_lines.append(f"- **{k}**: {v}")
+        evidence_summary = "\n".join(evidence_lines) if evidence_lines else "No evidence provided"
 
-    context = AgentContext(
-        evidence=params.evidence,
-        extra={
-            "taskpacket_id": params.taskpacket_id,
-            "acceptance_criteria": params.acceptance_criteria,
-            "qa_handoff": params.qa_handoff,
-            "evidence_keys": ",".join(params.evidence.keys()) if params.evidence else "",
-            "evidence_summary": evidence_summary,
-        },
-    )
-
-    runner = AgentRunner(QA_AGENT_CONFIG)
-    result = await runner.run(context)
-
-    if result.parsed_output is not None:
-        output = result.parsed_output
-        all_passed = all(cr.passed for cr in output.criteria_results)
-        has_intent_gap = len(output.intent_gaps) > 0
-        return QAOutput(
-            passed=all_passed and not has_intent_gap,
-            has_intent_gap=has_intent_gap,
-            defect_count=len(output.defects),
-            needs_loopback=not all_passed,
-            needs_intent_refinement=has_intent_gap,
+        context = AgentContext(
+            evidence=params.evidence,
+            extra={
+                "taskpacket_id": params.taskpacket_id,
+                "acceptance_criteria": params.acceptance_criteria,
+                "qa_handoff": params.qa_handoff,
+                "evidence_keys": ",".join(params.evidence.keys()) if params.evidence else "",
+                "evidence_summary": evidence_summary,
+            },
         )
 
-    import json
-    data = json.loads(result.raw_output) if result.raw_output else {}
-    criteria = data.get("criteria_results", [])
-    all_passed = all(cr.get("passed", False) for cr in criteria) if criteria else True
-    intent_gaps = data.get("intent_gaps", [])
-    return QAOutput(
-        passed=all_passed and not intent_gaps,
-        has_intent_gap=bool(intent_gaps),
-        defect_count=len(data.get("defects", [])),
-        needs_loopback=not all_passed,
-        needs_intent_refinement=bool(intent_gaps),
-    )
+        runner = AgentRunner(QA_AGENT_CONFIG)
+        result = await runner.run(context)
+
+        if result.parsed_output is not None:
+            output = result.parsed_output
+            all_passed = all(cr.passed for cr in output.criteria_results)
+            has_intent_gap = len(output.intent_gaps) > 0
+            qa_out = QAOutput(
+                passed=all_passed and not has_intent_gap,
+                has_intent_gap=has_intent_gap,
+                defect_count=len(output.defects),
+                needs_loopback=not all_passed,
+                needs_intent_refinement=has_intent_gap,
+            )
+        else:
+            import json
+            data = json.loads(result.raw_output) if result.raw_output else {}
+            criteria = data.get("criteria_results", [])
+            all_passed = all(cr.get("passed", False) for cr in criteria) if criteria else True
+            intent_gaps = data.get("intent_gaps", [])
+            qa_out = QAOutput(
+                passed=all_passed and not intent_gaps,
+                has_intent_gap=bool(intent_gaps),
+                defect_count=len(data.get("defects", [])),
+                needs_loopback=not all_passed,
+                needs_intent_refinement=bool(intent_gaps),
+            )
+
+        success = True
+        return qa_out
+    finally:
+        await emit_stage_exit("qa", task_id, success=success)
 
 
 @activity.defn
@@ -1125,30 +1185,39 @@ async def publish_activity(params: PublishInput) -> PublishOutput:
     from datetime import UTC, datetime
 
     from src.admin.operational_targets import TimingEvent, record_timing
+    from src.dashboard.events_publisher import emit_stage_enter, emit_stage_exit
     from src.settings import settings
 
     logger = logging.getLogger("thestudio.publish")
     now = datetime.now(UTC)
+    task_id = params.taskpacket_id
+    await emit_stage_enter("publish", task_id)
+    success = False
+    try:
+        if settings.github_provider == "real":
+            publish_out = await _publish_real(params, logger, now)
+        else:
+            # Stub mode: record timing with placeholder values
+            record_timing(
+                TimingEvent(
+                    repo_id=params.taskpacket_id,
+                    intake_created_at=now,
+                    pr_opened_at=now,
+                    merge_ready_at=now if params.qa_passed else None,
+                )
+            )
 
-    if settings.github_provider == "real":
-        return await _publish_real(params, logger, now)
+            publish_out = PublishOutput(
+                pr_number=0,
+                pr_url="",
+                created=False,
+                marked_ready=False,
+            )
 
-    # Stub mode: record timing with placeholder values
-    record_timing(
-        TimingEvent(
-            repo_id=params.taskpacket_id,
-            intake_created_at=now,
-            pr_opened_at=now,
-            merge_ready_at=now if params.qa_passed else None,
-        )
-    )
-
-    return PublishOutput(
-        pr_number=0,
-        pr_url="",
-        created=False,
-        marked_ready=False,
-    )
+        success = True
+        return publish_out
+    finally:
+        await emit_stage_exit("publish", task_id, success=success)
 
 
 async def _publish_real(

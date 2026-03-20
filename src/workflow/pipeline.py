@@ -448,6 +448,7 @@ class TheStudioPipelineWorkflow:
                 base_role=base_role,
                 overlays=overlays,
                 risk_flags=context_result.risk_flags,
+                taskpacket_id=params.taskpacket_id,
             ),
             start_to_close_timeout=router_policy.timeout,
             retry_policy=router_policy.to_retry_policy(),

@@ -48,7 +48,7 @@
 
 ### Slice 4: Pipeline Event Emission
 - [x] B-0.4a: Create `src/dashboard/events_publisher.py` with fire-and-forget NATS publish helper. Instrument first 3 stages (intake, context, intent) with `pipeline.stage.enter`/`exit` events. Create `THESTUDIO_PIPELINE` JetStream stream on startup. Test: mock NATS, run activity, verify publish called.
-- [ ] B-0.4b: Instrument remaining 6 stages (router, assembler, implement, verify, qa, publish). Integration test: full pipeline run emits 9/9 stage enter/exit events.
+- [x] B-0.4b: Instrument remaining 6 stages (router, assembler, implement, verify, qa, publish). Integration test: full pipeline run emits 9/9 stage enter/exit events.
 - [ ] B-0.5: Extend `src/verification/signals.py` and `src/qa/signals.py` to publish `pipeline.gate.pass`/`fail` to `THESTUDIO_PIPELINE`. Existing streams unchanged. Test: trigger verification, observe gate event in SSE.
 
 ### Slice 5: Frontend Scaffolding
