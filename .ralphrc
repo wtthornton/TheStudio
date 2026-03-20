@@ -1,0 +1,66 @@
+# .ralphrc - Ralph project configuration
+# Documentation: https://github.com/frankbria/ralph-claude-code
+
+# =============================================================================
+# PROJECT IDENTIFICATION
+# =============================================================================
+
+PROJECT_NAME="TheStudio"
+PROJECT_TYPE="python"
+
+# =============================================================================
+# LOOP SETTINGS
+# =============================================================================
+
+MAX_CALLS_PER_HOUR=50
+CLAUDE_TIMEOUT_MINUTES=15
+CLAUDE_OUTPUT_FORMAT="json"
+
+# =============================================================================
+# TOOL PERMISSIONS
+# =============================================================================
+
+# Granular Bash permissions — prevents destructive git commands (git clean, git rm, git reset)
+ALLOWED_TOOLS="Write,Read,Edit,Glob,Grep,TodoWrite,Bash(git add *),Bash(git commit *),Bash(git diff *),Bash(git log *),Bash(git status),Bash(git status *),Bash(git push *),Bash(git pull *),Bash(git fetch *),Bash(git checkout *),Bash(git branch *),Bash(git stash *),Bash(git merge *),Bash(git tag *),Bash(pip *),Bash(pytest *),Bash(pytest),Bash(ruff *),Bash(mypy *),Bash(npm *),Bash(npx *),Bash(node *)"
+
+# =============================================================================
+# SESSION MANAGEMENT
+# =============================================================================
+
+SESSION_CONTINUITY=false
+SESSION_EXPIRY_HOURS=24
+
+# =============================================================================
+# TASK SOURCES
+# =============================================================================
+
+TASK_SOURCES="github,local"
+GITHUB_TASK_LABEL="ralph-task"
+BEADS_FILTER="status:open"
+
+# =============================================================================
+# CIRCUIT BREAKER THRESHOLDS
+# =============================================================================
+
+# Trip after 3 loops with no file changes (was 10 — too permissive)
+CB_NO_PROGRESS_THRESHOLD=3
+
+# Trip after 5 loops with the same error
+CB_SAME_ERROR_THRESHOLD=5
+
+# Trip if output declines by more than 70%
+CB_OUTPUT_DECLINE_THRESHOLD=70
+
+# Cooldown before retry (minutes)
+CB_COOLDOWN_MINUTES=30
+
+# Do NOT auto-reset — let the cooldown work
+CB_AUTO_RESET=false
+
+# =============================================================================
+# ADVANCED SETTINGS
+# =============================================================================
+
+CLAUDE_AUTO_UPDATE=true
+CLAUDE_MIN_VERSION="2.0.76"
+RALPH_VERBOSE=false
