@@ -14,7 +14,7 @@
 
 **Objective:** Deliver a working vertical slice from Temporal workflow activity through NATS JetStream through FastAPI SSE endpoint to a React browser page. When complete, a developer opens a browser tab, triggers a pipeline run, and watches stage transitions appear in real time. If the tab is closed and reopened, it reconnects and catches up with zero missed events.
 
-**Test:** After all 10 stories (B-0.1 through B-0.7 + F-0.1 through F-0.3) are complete:
+**Test:** After all 14 stories (B-0.1, B-0.2a/b, B-0.3, B-0.4a/b, B-0.5, F-0.1, F-0.2, F-0.3a/b, B-0.7, B-0.6, F-0.4) are complete:
 
 1. `GET /api/v1/dashboard/health` returns `{"status": "ok"}` (B-0.1).
 2. `GET /api/v1/dashboard/events/stream` returns `Content-Type: text/event-stream` and delivers events published to `pipeline.>` within 200ms (B-0.2).
@@ -34,22 +34,28 @@
 
 ## What's In / What's Out
 
-**In this sprint (10 stories, ~44 estimated hours):**
+**In this sprint (14 stories, ~44 estimated hours):**
 
-| # | Story | Size | Est. Hours |
-|---|-------|------|-----------|
-| B-0.1 | Dashboard API Package | S | 2 |
-| B-0.2 | SSE Endpoint with NATS JetStream Bridge | M | 6 |
-| B-0.3 | Last-Event-ID Reconnection Support | M | 4 |
-| B-0.4 | Emit Pipeline Stage Events from Temporal Activities | M | 6 |
-| B-0.5 | Emit Gate Pass/Fail Events | S | 3 |
-| F-0.1 | Frontend Project Scaffolding | M | 5 |
-| F-0.2 | SSE Hook and Pipeline Store | M | 5 |
-| F-0.3 | Minimal Pipeline Status Page | M | 5 |
-| B-0.7 | Auth Token Support on SSE Endpoint | S | 3 |
-| B-0.6 | FastAPI Static Mount for Frontend | S | 2 |
-| | **Total estimated** | | **41 hours** |
-| | **Slack (to 46 allocated)** | | **5 hours** |
+Stories B-0.2, B-0.4, and F-0.3 were split to fit Ralph's 15-minute loop budget (one meaningful task per loop).
+
+| # | Story | Size | Est. Hours | Ralph Loops |
+|---|-------|------|-----------|-------------|
+| B-0.1 | Dashboard API Package | S | 2 | 1 |
+| B-0.2a | SSE Endpoint with hardcoded test events | S | 3 | 1 |
+| B-0.2b | Wire SSE to NATS JetStream subscription | M | 4 | 1 |
+| B-0.3 | Last-Event-ID Reconnection Support | M | 4 | 1 |
+| B-0.4a | Events publisher + instrument first 3 stages | M | 3 | 1 |
+| B-0.4b | Instrument remaining 6 stages + integration test | M | 3 | 1 |
+| B-0.5 | Emit Gate Pass/Fail Events | S | 3 | 1 |
+| F-0.1 | Frontend Project Scaffolding | M | 5 | 1 |
+| F-0.2 | SSE Hook and Pipeline Store | M | 5 | 1 |
+| F-0.3a | PipelineStatus + StageNode components | M | 3 | 1 |
+| F-0.3b | ConnectionIndicator + EventLog + dark styling | S | 2 | 1 |
+| B-0.7 | Auth Token Support on SSE Endpoint | S | 3 | 1 |
+| B-0.6 | FastAPI Static Mount for Frontend | S | 2 | 1 |
+| F-0.4 | Frontend CI Pipeline | S | 1 | 1 |
+| | **Total estimated** | | **43 hours** | **14 loops** |
+| | **Slack (to 46 allocated)** | | **3 hours** | |
 
 **Out of scope:**
 - Full Pipeline Rail UI (animations, tooltips, drill-down panels) -- Phase 1
@@ -119,15 +125,16 @@ The backend and frontend chains are independent until F-0.2, which needs the SSE
 
 **Why this order:** B-0.1 is the skeleton everything hangs on. F-0.1 can run in parallel because it has zero backend dependencies. B-0.2 is the architectural proof point -- if the SSE-NATS bridge does not work, the entire epic pivots. Front-loading it de-risks the sprint.
 
-1. **Day 1 (Mon):** B-0.1 + F-0.1 in parallel
-   - **B-0.1 (2h):** Create `src/dashboard/` package, health endpoint, register router in `src/app.py`. This is mechanical wiring -- low risk, high unblock value.
-   - **F-0.1 (5h):** Scaffold `frontend/` with Vite + React + TypeScript + Zustand + Tailwind. Confirm `npm run dev`, `npm run build`, `npm run typecheck` all pass. Verify Vite proxy to FastAPI works with the health endpoint from B-0.1.
+1. **Day 1 (Mon):** B-0.1 + F-0.1 (Ralph loops 1-2)
+   - **B-0.1 (2h, 1 loop):** Create `src/dashboard/` package, health endpoint, register router in `src/app.py`. Mechanical wiring -- low risk, high unblock value.
+   - **F-0.1 (5h, 1 loop):** Scaffold `frontend/` with Vite + React + TypeScript + Zustand + Tailwind. Confirm `npm run dev`, `npm run build`, `npm run typecheck` all pass. Verify Vite proxy to FastAPI works with the health endpoint from B-0.1.
 
-2. **Day 2 (Tue):** B-0.2
-   - **B-0.2 (6h):** SSE endpoint with NATS JetStream bridge. This is the highest-risk story in the sprint. The async generator pattern, NATS subscription lifecycle, heartbeat timer, and client disconnect cleanup are all novel to this codebase. Allocate a full day. Write the integration test (publish to NATS, verify SSE client receives) as the acceptance gate.
+2. **Day 2 (Tue):** B-0.2a + B-0.2b (Ralph loops 3-4)
+   - **B-0.2a (3h, 1 loop):** SSE endpoint with hardcoded heartbeat events. Prove `StreamingResponse` + async generator pattern works. Test: curl endpoint, verify event-stream content type and heartbeat.
+   - **B-0.2b (4h, 1 loop):** Wire SSE to NATS JetStream. Subscribe to `pipeline.>`, replace hardcoded events with NATS messages, add disconnect cleanup. This is the highest-risk story. Integration test: publish to NATS, verify SSE client receives within 200ms.
 
-3. **Day 3 (Wed):** B-0.3
-   - **B-0.3 (4h):** Last-Event-ID reconnection. Extends B-0.2 with `DeliverPolicy.BY_START_SEQUENCE`. The integration test (connect, receive, disconnect, reconnect, verify gap-free replay) is the durability proof. If this passes, the real-time architecture is validated.
+3. **Day 3 (Wed):** B-0.3 (Ralph loop 5)
+   - **B-0.3 (4h, 1 loop):** Last-Event-ID reconnection. Extends B-0.2b with `DeliverPolicy.BY_START_SEQUENCE`. If this passes, the real-time architecture is validated.
    - **Remaining time:** Begin F-0.2 (SSE hook) if B-0.3 completes early.
 
 **Checkpoint (end of Day 3):** SSE-NATS bridge works with reconnection. This is the "architecture validated" gate. If we are here by Wednesday, the sprint is on track. If not, invoke the 3rd week buffer.
@@ -136,12 +143,13 @@ The backend and frontend chains are independent until F-0.2, which needs the SSE
 
 **Why this order:** B-0.4 instruments all 9 pipeline stages. B-0.5 extends existing signal modules -- smaller, depends on B-0.4's stream and publisher helper. These two stories make the SSE endpoint useful (it now has real events to deliver, not just test pings).
 
-4. **Day 4 (Thu):** B-0.4
-   - **B-0.4 (6h):** Create `THESTUDIO_PIPELINE` stream. Build `events_publisher.py` helper. Instrument all 9 stage activities in `src/workflow/activities.py` with enter/exit events. Fire-and-forget pattern (errors logged, never block the activity). There are 14 `@activity.defn` in activities.py -- each needs a publish call at entry and exit. Mechanical but requires care to avoid regressions.
+4. **Day 4 (Thu):** B-0.4a + B-0.4b (Ralph loops 6-7)
+   - **B-0.4a (3h, 1 loop):** Create `events_publisher.py` helper + `THESTUDIO_PIPELINE` stream. Instrument first 3 stages (intake, context, intent) with enter/exit events. Fire-and-forget pattern. Unit test with mock NATS.
+   - **B-0.4b (3h, 1 loop):** Instrument remaining 6 stages (router through publish). Integration test: run full pipeline, verify 9/9 stages emit events.
 
-5. **Day 5 (Fri):** B-0.5 + F-0.2
-   - **B-0.5 (3h):** Extend `src/verification/signals.py` and `src/qa/signals.py` to also publish gate events to `THESTUDIO_PIPELINE`. Small delta on existing code.
-   - **F-0.2 (remaining ~3h, continue Day 6):** Begin SSE hook and Zustand pipeline store. Write store tests first (state transition logic), then the `useSSE` hook with mock EventSource.
+5. **Day 5 (Fri):** B-0.5 + F-0.2 (Ralph loops 8-9)
+   - **B-0.5 (3h, 1 loop):** Extend `src/verification/signals.py` and `src/qa/signals.py` to also publish gate events to `THESTUDIO_PIPELINE`. Small delta on existing code.
+   - **F-0.2 (3h start, continue Day 6, 1 loop):** Begin SSE hook and Zustand pipeline store. Write store tests first (state transition logic), then the `useSSE` hook with mock EventSource.
 
 **Checkpoint (end of Day 5 / Week 1):** All backend event emission is complete. SSE endpoint streams real pipeline events. Backend is "done" except for auth (B-0.7) and static mount (B-0.6). Frontend scaffolding exists and hook development is underway.
 
@@ -149,17 +157,19 @@ The backend and frontend chains are independent until F-0.2, which needs the SSE
 
 **Why this order:** F-0.2 and F-0.3 are the frontend stories that consume what the backend now produces. B-0.7 (auth) is sequenced after the frontend hook exists so the token-passing logic can be implemented in the same pass.
 
-6. **Day 6 (Mon):** F-0.2 (complete)
-   - **F-0.2 (remaining 2h + testing):** Complete the SSE hook, pipeline store, and Vitest tests. Verify that connecting to the live SSE endpoint from the Vite dev server works (proxy test).
+6. **Day 6 (Mon):** F-0.2 complete + F-0.3a (Ralph loops 10-11)
+   - **F-0.2 (2h, completing loop 9):** Complete the SSE hook, pipeline store, and Vitest tests. Verify live SSE connection from Vite dev server works.
+   - **F-0.3a (3h, 1 loop):** PipelineStatus + StageNode components. 9 stage nodes in horizontal rail, color-coded by status from store. Component test with mocked state.
 
-7. **Day 7 (Tue):** F-0.3
-   - **F-0.3 (5h):** Build the minimal Pipeline Status Page. 9 stage nodes in a horizontal rail, color-coded by status, gate indicators, connection status, and a debug event log (last 20 events). Dark mode only. Tailwind styling. Component test with mocked store state.
+7. **Day 7 (Tue):** F-0.3b + B-0.7 (Ralph loops 12-13)
+   - **F-0.3b (2h, 1 loop):** ConnectionIndicator + EventLog (last 20 events). Wire into App.tsx. Dark mode Tailwind styling.
+   - **B-0.7 (3h, 1 loop):** Add auth token validation to SSE endpoint (query parameter). Update `useSSE` hook to pass token. Unit tests for 401/200 behavior.
 
-8. **Day 8 (Wed):** B-0.7 + B-0.6
-   - **B-0.7 (3h):** Add auth token validation to SSE endpoint (query parameter). Update `useSSE` hook to pass token. Unit tests for 401/200 behavior.
-   - **B-0.6 (2h):** Conditional static mount in `src/app.py`. When `frontend/dist/` exists, serve at `/dashboard/`. SPA catch-all routing. Graceful skip when dist is missing.
+8. **Day 8 (Wed):** B-0.6 + F-0.4 (Ralph loop 14)
+   - **B-0.6 (2h, 1 loop):** Conditional static mount in `src/app.py`. SPA catch-all routing. Graceful skip when dist is missing.
+   - **F-0.4 (1h, 1 loop):** Frontend CI workflow for GitHub Actions.
 
-**Checkpoint (end of Day 8):** All 10 stories are code-complete. Integration testing begins.
+**Checkpoint (end of Day 8):** All 14 stories are code-complete. Integration testing begins.
 
 ### Phase D: Integration and Validation (Days 9-10)
 
@@ -277,7 +287,7 @@ If both are cut, 5 hours are recovered. The sprint still delivers the core proof
 
 ## Definition of Done (Sprint-Level)
 
-- [ ] All 10 stories implemented and passing their individual acceptance criteria
+- [ ] All 14 stories implemented and passing their individual acceptance criteria
 - [ ] Backend: `pytest` passes (1783+ tests, zero regressions)
 - [ ] Backend: `ruff check .` clean, `ruff format .` clean
 - [ ] Frontend: `npm run typecheck` passes with zero errors
@@ -294,18 +304,18 @@ If both are cut, 5 hours are recovered. The sprint still delivers the core proof
 
 ## Day-by-Day Summary
 
-| Day | Date | Stories | Hours | Cumulative |
-|-----|------|---------|-------|------------|
-| 1 | Mon 3/24 | B-0.1 + F-0.1 | 7h | 7h |
-| 2 | Tue 3/25 | B-0.2 (+ Spike 1) | 6h | 13h |
-| 3 | Wed 3/26 | B-0.3 (+ start F-0.2) | 5h | 18h |
-| 4 | Thu 3/27 | B-0.4 | 6h | 24h |
-| 5 | Fri 3/28 | B-0.5 + F-0.2 (partial) | 6h | 30h |
-| 6 | Mon 3/31 | F-0.2 (complete) | 3h | 33h |
-| 7 | Tue 4/1 | F-0.3 | 5h | 38h |
-| 8 | Wed 4/2 | B-0.7 + B-0.6 | 5h | 43h |
-| 9 | Thu 4/3 | E2E validation | 5h | 48h |
-| 10 | Fri 4/4 | Regression + cleanup + Meridian review request | 4h | 52h |
+| Day | Date | Stories | Ralph Loops | Hours | Cumulative |
+|-----|------|---------|-------------|-------|------------|
+| 1 | Mon 3/24 | B-0.1 + F-0.1 | 2 | 7h | 7h |
+| 2 | Tue 3/25 | B-0.2a + B-0.2b (+ Spike 1) | 2 | 7h | 14h |
+| 3 | Wed 3/26 | B-0.3 (+ start F-0.2) | 1 | 5h | 19h |
+| 4 | Thu 3/27 | B-0.4a + B-0.4b | 2 | 6h | 25h |
+| 5 | Fri 3/28 | B-0.5 + F-0.2 (partial) | 2 | 6h | 31h |
+| 6 | Mon 3/31 | F-0.2 (complete) + F-0.3a | 2 | 5h | 36h |
+| 7 | Tue 4/1 | F-0.3b + B-0.7 | 2 | 5h | 41h |
+| 8 | Wed 4/2 | B-0.6 + F-0.4 | 1 | 3h | 44h |
+| 9 | Thu 4/3 | E2E validation | — | 5h | 49h |
+| 10 | Fri 4/4 | Regression + cleanup | — | 4h | 53h |
 
 **Note:** Days 9-10 use buffer hours. If stories complete faster than estimated (likely for the S-sized stories), validation starts sooner.
 

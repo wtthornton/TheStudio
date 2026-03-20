@@ -1,6 +1,6 @@
 # Epic Status Tracker
 
-> Consolidated status of all epics as of 2026-03-19.
+> Consolidated status of all epics as of 2026-03-20.
 > Source of truth for epic status is each epic's own file. This tracker is a rollup view.
 
 ---
@@ -12,9 +12,9 @@
 | Total epics | 34 (0-33) |
 | Complete | 34 (Epics 0-26, 28-33) |
 | In Progress | 0 |
-| Top Priority | Production deployment — process first real GitHub issue at Observe tier |
+| Milestone | **First real GitHub issue processed end-to-end** (2026-03-20) — Issue #19 → Draft PR #20 |
 | Deferred | 1 (Epic 27) |
-| Tests passing | 1,850+ unit (zero failures), 9 E2E pipeline, ~244 integration, 23 P0 harness |
+| Tests passing | 2,011 unit (zero failures), 9 E2E pipeline, ~244 integration, 23 P0 harness |
 | Eval tests | 20/25 passed with real Claude (~$5/run) |
 | Coverage | 84% |
 
@@ -107,18 +107,36 @@
 | 31 | Anthropic Max OAuth Adapter | **Complete (2026-03-19)** | All stories 31.0-31.6 delivered. Research, cost estimation fix, auth mode detection, token refresh, 31 unit tests, Docker validation, deployment docs. Meridian review: PASS (2026-03-20). |
 | 32 | Model Routing & Cost Optimization | **Slices 1-5 Complete** | All 18 stories (32.0-32.17) delivered across 5 slices. Cost baselines, feature flags, eval suites, comparison mode, routing rules, cost routing gate, budget controls, admin UI, prompt caching, cache tracking, per-repo/per-day aggregation, cost dashboard, budget utilization widget, Batch API, batch eligibility, batch cost discount. F9 fixed. |
 
-## Phase 8 — Production Deployment & Operational Readiness (In Progress)
+## Phase 8 — Production Deployment & Operational Readiness (Complete, 2026-03-20)
 
 | Epic | Title | Status | Notes |
 |------|-------|--------|-------|
 | 33 | P0 Deployment Test Harness | **Complete** | All 8 ACs delivered across 2 sprints. Health gate (8 tests), eval preflight guard (8 tests), deployment-mode GitHub/Postgres tests (14 P0 deployed), runner script with cost tracking and results persistence, false-pass validation (7 tests), credential guard. 23 new tests in Sprint 2. |
 
-### Deployment Readiness Fixes (2026-03-20)
+### Pipeline Wiring (2026-03-20)
 
 | Fix | Status | Impact |
 |-----|--------|--------|
-| Wire `publish_activity` to real publisher | **Complete** | Critical: PR creation now works when `github_provider=real`. 6 new tests. |
-| Add migration auto-run to app lifespan | **Complete** | Critical: DB schema created on first deploy when `store_backend=postgres`. 4 new tests. |
+| Wire `implement_activity` with real LLM + GitHub push | **Complete** | Critical: LLM generates code, pushed to branch via GitHub Contents API. |
+| Wire `verify_activity` with file-existence check | **Complete** | Validates files were pushed to branch. |
+| Wire `publish_activity` to real publisher | **Complete** | PR creation works when `github_provider=real`. Branch handling, evidence comment, labels. |
+| Add migration auto-run to app lifespan | **Complete** | DB schema created on first deploy when `store_backend=postgres`. |
+| Persist intent spec to DB in intent_activity | **Complete** | Publisher can now load intent for evidence comment. |
+| Add missing methods to ResilientGitHubClient | **Complete** | `find_pr_by_head`, `create_or_update_file`, `mark_ready_for_review`, `enable_auto_merge`. |
+| Fix TaskPacket status transition for publish | **Complete** | Advance through required status chain before publishing. |
+
+### First Real Issue Milestone (2026-03-20)
+
+| Metric | Value |
+|--------|-------|
+| Issue | [#19 — Add reverse_string to text.py](https://github.com/wtthornton/thestudio-production-test-rig/issues/19) |
+| PR | [#20 — Draft PR](https://github.com/wtthornton/thestudio-production-test-rig/pull/20) |
+| Pipeline duration | ~2 minutes |
+| Loopbacks | 0 verification, 0 QA |
+| Cost | ~$0.30 |
+| Files generated | `text.py` (function + docstring), `test_text.py` (4 tests) |
+| Labels | `agent:done`, `tier:observe` |
+| Evidence comment | Full evidence with intent, acceptance criteria, verification |
 
 ---
 
@@ -127,8 +145,11 @@
 ```
 Phase 8 — COMPLETE (2026-03-20)
   Epic 33 complete (2 sprints, all 8 ACs). P0 deployment test harness delivered.
-  Two critical deployment blockers fixed.
-  Publisher activity wired to real GitHubClient. Migration auto-run on startup.
+  All 9 pipeline activities wired to real providers.
+  First real GitHub issue → Draft PR: Issue #19 → PR #20 (2 min, 0 loopbacks).
+  Implement: LLM generates code + pushes to GitHub via Contents API.
+  Verify: File-existence validation on branch.
+  Publish: Draft PR with evidence comment, lifecycle labels.
 
 Phase 6 — COMPLETE (2026-03-18)
   All epics closed. Both Phase 6 epics delivered.
