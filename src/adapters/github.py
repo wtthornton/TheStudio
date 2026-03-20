@@ -164,9 +164,12 @@ class ResilientGitHubClient:
     async def remove_label(
         self, owner: str, repo: str, pr_number: int, label: str,
     ) -> None:
-        resp = await self._request_with_retry(
+        """Remove a label from a PR (ignores 404 — label may not exist)."""
+        resp = await self._client.request(
             "DELETE", f"/repos/{owner}/{repo}/issues/{pr_number}/labels/{label}",
         )
+        if resp.status_code != 404:
+            resp.raise_for_status()
 
     async def update_comment(
         self, owner: str, repo: str, comment_id: int, body: str,
@@ -175,6 +178,112 @@ class ResilientGitHubClient:
             "PATCH",
             f"/repos/{owner}/{repo}/issues/comments/{comment_id}",
             json={"body": body},
+        )
+
+
+    async def find_pr_by_head(
+        self, owner: str, repo: str, head_branch: str
+    ) -> dict[str, Any] | None:
+        """Find an existing PR by head branch (for idempotency)."""
+        resp = await self._client.request(
+            "GET",
+            f"/repos/{owner}/{repo}/pulls",
+            params={"head": f"{owner}:{head_branch}", "state": "open"},
+        )
+        resp.raise_for_status()
+        prs = resp.json()
+        if prs:
+            return prs[0]  # type: ignore[no-any-return]
+        return None
+
+    async def mark_ready_for_review(
+        self, owner: str, repo: str, pr_number: int
+    ) -> None:
+        """Mark a draft PR as ready for review using the GraphQL API."""
+        pr_data = await self._request_json("GET", f"/repos/{owner}/{repo}/pulls/{pr_number}")
+        node_id = pr_data["node_id"]
+        mutation = """
+            mutation($pullRequestId: ID!) {
+                markPullRequestReadyForReview(input: {pullRequestId: $pullRequestId}) {
+                    pullRequest { number }
+                }
+            }
+        """
+        resp = await self._client.request(
+            "POST",
+            "https://api.github.com/graphql",
+            json={"query": mutation, "variables": {"pullRequestId": node_id}},
+        )
+        resp.raise_for_status()
+
+    async def enable_auto_merge(
+        self, owner: str, repo: str, pr_number: int, merge_method: str = "SQUASH"
+    ) -> None:
+        """Enable auto-merge on a PR using the GitHub GraphQL API."""
+        pr_data = await self._request_json("GET", f"/repos/{owner}/{repo}/pulls/{pr_number}")
+        node_id = pr_data["node_id"]
+        method_upper = merge_method.upper()
+        mutation = """
+            mutation($pullRequestId: ID!, $mergeMethod: PullRequestMergeMethod!) {
+                enablePullRequestAutoMerge(input: {
+                    pullRequestId: $pullRequestId,
+                    mergeMethod: $mergeMethod
+                }) {
+                    pullRequest { number autoMergeRequest { enabledAt } }
+                }
+            }
+        """
+        resp = await self._client.request(
+            "POST",
+            "https://api.github.com/graphql",
+            json={
+                "query": mutation,
+                "variables": {"pullRequestId": node_id, "mergeMethod": method_upper},
+            },
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        if "errors" in data:
+            error_msgs = [e.get("message", "") for e in data["errors"]]
+            raise RuntimeError(f"GraphQL errors enabling auto-merge: {error_msgs}")
+
+    async def get_file_content(
+        self, owner: str, repo: str, path: str, ref: str | None = None
+    ) -> dict[str, Any] | None:
+        """Get file content and SHA from a repo. Returns None if file doesn't exist."""
+        params = {}
+        if ref:
+            params["ref"] = ref
+        resp = await self._client.request(
+            "GET", f"/repos/{owner}/{repo}/contents/{path}", params=params
+        )
+        if resp.status_code == 404:
+            return None
+        resp.raise_for_status()
+        return resp.json()  # type: ignore[no-any-return]
+
+    async def create_or_update_file(
+        self,
+        owner: str,
+        repo: str,
+        path: str,
+        content_b64: str,
+        message: str,
+        branch: str,
+        sha: str | None = None,
+    ) -> dict[str, Any]:
+        """Create or update a file via the GitHub Contents API."""
+        payload: dict[str, Any] = {
+            "message": message,
+            "content": content_b64,
+            "branch": branch,
+        }
+        if sha is not None:
+            payload["sha"] = sha
+        return await self._request_json(
+            "PUT",
+            f"/repos/{owner}/{repo}/contents/{path}",
+            json=payload,
         )
 
 

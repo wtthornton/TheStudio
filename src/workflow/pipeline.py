@@ -551,6 +551,7 @@ class TheStudioPipelineWorkflow:
         verification_loopbacks = 0
         qa_loopbacks = 0
         qa_passed = False
+        qa_feedback = ""
 
         while True:
             # Step 6: Implementation
@@ -562,6 +563,13 @@ class TheStudioPipelineWorkflow:
                     repo_path=params.repo_path,
                     loopback_attempt=verification_loopbacks + qa_loopbacks,
                     repo_tier=params.repo_tier,
+                    repo=params.repo,
+                    issue_title=params.issue_title,
+                    issue_body=params.issue_body,
+                    intent_goal=intent_result.goal,
+                    acceptance_criteria=intent_result.acceptance_criteria,
+                    plan_steps=assembler_result.plan_steps,
+                    qa_feedback=qa_feedback if (verification_loopbacks + qa_loopbacks) > 0 else "",
                 ),
                 start_to_close_timeout=impl_policy.timeout,
                 retry_policy=impl_policy.to_retry_policy(),
@@ -603,7 +611,10 @@ class TheStudioPipelineWorkflow:
                     taskpacket_id=params.taskpacket_id,
                     acceptance_criteria=intent_result.acceptance_criteria,
                     qa_handoff=assembler_result.qa_handoff,
-                    evidence={"files_changed": ",".join(impl_result.files_changed)},
+                    evidence={
+                        "files_changed": ",".join(impl_result.files_changed),
+                        "agent_summary": impl_result.agent_summary,
+                    },
                 ),
                 start_to_close_timeout=qa_policy.timeout,
                 retry_policy=qa_policy.to_retry_policy(),
@@ -620,6 +631,7 @@ class TheStudioPipelineWorkflow:
 
             qa_loopbacks += 1
             output.qa_loopbacks = qa_loopbacks
+            qa_feedback = f"QA failed: defects={qa_result.defect_count}, intent_gap={qa_result.has_intent_gap}"
             # Loop back to implementation for QA rework
 
         # Step 8.5: Approval Wait (Suggest/Execute tier only)
@@ -735,6 +747,8 @@ class TheStudioPipelineWorkflow:
                 taskpacket_id=params.taskpacket_id,
                 repo_tier=params.repo_tier,
                 qa_passed=qa_passed,
+                files_changed=impl_result.files_changed,
+                agent_summary=impl_result.agent_summary,
             ),
             start_to_close_timeout=publish_policy.timeout,
             retry_policy=publish_policy.to_retry_policy(),

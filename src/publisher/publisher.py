@@ -203,10 +203,15 @@ async def publish(
                 auto_merge_enabled=auto_merge_enabled,
             )
 
-        # Create new branch and PR
+        # Create new branch and PR (branch may already exist from implement step)
         default_branch = await github.get_default_branch(owner, repo_name)
-        base_sha = await github.get_branch_sha(owner, repo_name, default_branch)
-        await github.create_branch(owner, repo_name, branch, base_sha)
+        try:
+            base_sha = await github.get_branch_sha(owner, repo_name, default_branch)
+            await github.create_branch(owner, repo_name, branch, base_sha)
+        except Exception as exc:
+            if "Reference already exists" not in str(exc):
+                raise
+            logger.info("Branch %s already exists (created by implement step)", branch)
 
         # Create draft PR
         comment_body = format_evidence_comment(evidence, intent, verification)

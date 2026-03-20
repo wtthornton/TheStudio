@@ -7,7 +7,8 @@ per-tier resource limits (Story 25.6) flow through correctly.
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+import json
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -20,6 +21,12 @@ def _make_impl_input(**overrides) -> ImplementInput:
         "repo_path": "/tmp/test-repo",
         "loopback_attempt": 0,
         "repo_tier": "observe",
+        "repo": "test-owner/test-repo",
+        "issue_title": "Add hello_world function",
+        "issue_body": "Create a hello_world() function in utils.py",
+        "intent_goal": "Add hello_world function to utils.py",
+        "acceptance_criteria": ["hello_world() returns 'Hello, World!'"],
+        "plan_steps": ["Create utils.py with hello_world function"],
     }
     defaults.update(overrides)
     return ImplementInput(**defaults)
@@ -45,24 +52,126 @@ def _mock_settings(**overrides):
         "agent_container_timeout_seconds",
         {"observe": 300, "suggest": 600, "execute": 1200},
     )
+    s.intake_poll_token = "fake-token"
     return s
 
 
+def _mock_llm_response(files: list[dict]) -> MagicMock:
+    """Create a mock LLM response with JSON file output."""
+    response = MagicMock()
+    response.content = json.dumps({"files": files, "summary": "Test implementation"})
+    response.tokens_in = 100
+    response.tokens_out = 200
+    return response
+
+
+def _mock_github_client():
+    """Create a mock GitHub client with async methods."""
+    client = AsyncMock()
+    client.get_default_branch.return_value = "main"
+    client.get_branch_sha.return_value = "abc123sha"
+    client.create_branch.return_value = None
+    client.get_file_content.return_value = None  # File doesn't exist yet
+    client.create_or_update_file.return_value = {"content": {"sha": "new_sha"}}
+    client.close.return_value = None
+    return client
+
+
 class TestImplementActivityProcessMode:
-    """In-process mode (default) — existing behavior."""
+    """In-process mode (default) — generates code via LLM and pushes to GitHub."""
 
     @pytest.mark.asyncio
-    async def test_process_mode_default(self):
-        """Default agent_isolation='process' runs in-process."""
+    async def test_process_mode_generates_code(self):
+        """Default agent_isolation='process' calls LLM and pushes to GitHub."""
         params = _make_impl_input()
         mock_s = _mock_settings(agent_isolation="process")
+        mock_github = _mock_github_client()
 
-        with patch("src.settings.settings", mock_s):
+        files = [{"path": "utils.py", "content": "def hello_world():\n    return 'Hello, World!'\n", "action": "create"}]
+        mock_resp = _mock_llm_response(files)
+        mock_adapter = AsyncMock()
+        mock_adapter.complete.return_value = mock_resp
+
+        mock_provider = MagicMock()
+        mock_provider.provider = "anthropic"
+        mock_provider.model_id = "claude-sonnet-4-5-20250514"
+        mock_provider.estimate_cost.return_value = 0.01
+
+        with (
+            patch("src.settings.settings", mock_s),
+            patch("src.adapters.llm.get_llm_adapter", return_value=mock_adapter),
+            patch("src.adapters.github.get_github_client", return_value=mock_github),
+            patch("src.admin.model_gateway.get_model_router") as mock_router,
+            patch("src.admin.model_gateway.get_model_audit_store"),
+        ):
+            mock_router.return_value.select_model.return_value = mock_provider
             result = await _run_implement(params)
 
         assert isinstance(result, ImplementOutput)
         assert result.taskpacket_id == params.taskpacket_id
-        assert result.agent_summary == "Implementation completed via in-process stub"
+        assert result.files_changed == ["utils.py"]
+        assert result.agent_summary == "Test implementation"
+        mock_github.create_branch.assert_called_once()
+        mock_github.create_or_update_file.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_process_mode_no_token(self):
+        """Returns empty result when no GitHub token configured."""
+        params = _make_impl_input()
+        mock_s = _mock_settings(agent_isolation="process")
+        mock_s.intake_poll_token = ""
+
+        mock_resp = _mock_llm_response([{"path": "x.py", "content": "x", "action": "create"}])
+        mock_adapter = AsyncMock()
+        mock_adapter.complete.return_value = mock_resp
+
+        mock_provider = MagicMock()
+        mock_provider.provider = "anthropic"
+        mock_provider.model_id = "test"
+        mock_provider.estimate_cost.return_value = 0.0
+
+        with (
+            patch("src.settings.settings", mock_s),
+            patch("src.adapters.llm.get_llm_adapter", return_value=mock_adapter),
+            patch("src.admin.model_gateway.get_model_router") as mock_router,
+            patch("src.admin.model_gateway.get_model_audit_store"),
+        ):
+            mock_router.return_value.select_model.return_value = mock_provider
+            result = await _run_implement(params)
+
+        assert result.files_changed == []
+        assert "No GitHub token" in result.agent_summary
+
+    @pytest.mark.asyncio
+    async def test_process_mode_llm_parse_failure(self):
+        """Returns empty result when LLM output is not valid JSON."""
+        params = _make_impl_input()
+        mock_s = _mock_settings(agent_isolation="process")
+
+        mock_resp = MagicMock()
+        mock_resp.content = "This is not JSON"
+        mock_resp.tokens_in = 10
+        mock_resp.tokens_out = 10
+
+        mock_adapter = AsyncMock()
+        mock_adapter.complete.return_value = mock_resp
+
+        mock_provider = MagicMock()
+        mock_provider.provider = "anthropic"
+        mock_provider.model_id = "test"
+        mock_provider.estimate_cost.return_value = 0.0
+
+        with (
+            patch("src.settings.settings", mock_s),
+            patch("src.adapters.llm.get_llm_adapter", return_value=mock_adapter),
+            patch("src.admin.model_gateway.get_model_router") as mock_router,
+            patch("src.admin.model_gateway.get_model_audit_store"),
+        ):
+            mock_router.return_value.select_model.return_value = mock_provider
+            result = await _run_implement(params)
+
+        assert result.files_changed == []
+        assert "parsed as JSON" in result.agent_summary
 
 
 class TestImplementActivityContainerMode:
@@ -107,6 +216,18 @@ class TestImplementActivityContainerMode:
         """Observe tier falls back to in-process when Docker unavailable."""
         params = _make_impl_input(repo_tier="observe")
         mock_s = _mock_settings(agent_isolation="container")
+        mock_s.intake_poll_token = "fake-token"
+        mock_github = _mock_github_client()
+
+        files = [{"path": "utils.py", "content": "code", "action": "create"}]
+        mock_resp = _mock_llm_response(files)
+        mock_adapter = AsyncMock()
+        mock_adapter.complete.return_value = mock_resp
+
+        mock_provider = MagicMock()
+        mock_provider.provider = "anthropic"
+        mock_provider.model_id = "test"
+        mock_provider.estimate_cost.return_value = 0.0
 
         with (
             patch("src.settings.settings", mock_s),
@@ -115,11 +236,16 @@ class TestImplementActivityContainerMode:
                 ".is_docker_available",
                 return_value=False,
             ),
+            patch("src.adapters.llm.get_llm_adapter", return_value=mock_adapter),
+            patch("src.adapters.github.get_github_client", return_value=mock_github),
+            patch("src.admin.model_gateway.get_model_router") as mock_router,
+            patch("src.admin.model_gateway.get_model_audit_store"),
         ):
+            mock_router.return_value.select_model.return_value = mock_provider
             result = await _run_implement(params)
 
-        # Falls back to in-process
-        assert result.agent_summary == "Implementation completed via in-process stub"
+        # Falls back to in-process, generates code
+        assert result.files_changed == ["utils.py"]
 
     @pytest.mark.asyncio
     async def test_container_mode_execute_deny(self):

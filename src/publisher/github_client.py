@@ -144,6 +144,55 @@ class GitHubClient:
             json={"body": body},
         )
 
+    async def get_file_content(
+        self, owner: str, repo: str, path: str, ref: str | None = None
+    ) -> dict[str, Any] | None:
+        """Get file content and SHA from a repo. Returns None if file doesn't exist."""
+        params = {}
+        if ref:
+            params["ref"] = ref
+        resp = await self._client.get(
+            f"/repos/{owner}/{repo}/contents/{path}", params=params
+        )
+        if resp.status_code == 404:
+            return None
+        resp.raise_for_status()
+        return resp.json()  # type: ignore[no-any-return]
+
+    async def create_or_update_file(
+        self,
+        owner: str,
+        repo: str,
+        path: str,
+        content_b64: str,
+        message: str,
+        branch: str,
+        sha: str | None = None,
+    ) -> dict[str, Any]:
+        """Create or update a file via the GitHub Contents API.
+
+        Args:
+            owner: Repo owner.
+            repo: Repo name.
+            path: File path in the repo.
+            content_b64: Base64-encoded file content.
+            message: Commit message.
+            branch: Target branch.
+            sha: Current file SHA (required for updates, omit for creates).
+        """
+        payload: dict[str, Any] = {
+            "message": message,
+            "content": content_b64,
+            "branch": branch,
+        }
+        if sha is not None:
+            payload["sha"] = sha
+        return await self._request(
+            "PUT",
+            f"/repos/{owner}/{repo}/contents/{path}",
+            json=payload,
+        )
+
     async def mark_ready_for_review(
         self, owner: str, repo: str, pr_number: int
     ) -> None:

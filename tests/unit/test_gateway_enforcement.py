@@ -167,6 +167,11 @@ class TestToolHubEnforcement:
 
     @pytest.mark.asyncio
     async def test_verify_activity_checks_tool_access(self):
-        """verify_activity checks code-quality suite access."""
+        """verify_activity fails with no files, passes with files."""
         result = await verify_activity(VerifyInput(taskpacket_id="tp-1"))
+        assert result.passed is False
+
+        result = await verify_activity(
+            VerifyInput(taskpacket_id="tp-1", changed_files=["src/fix.py"])
+        )
         assert result.passed is True
