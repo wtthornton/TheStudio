@@ -212,12 +212,26 @@ THESTUDIO_STORE_BACKEND=postgres
 
 ---
 
+## Session Outcome (2026-03-20)
+
+**SUCCESS.** TheStudio processed its first real GitHub issue end-to-end.
+
+- **Issue:** [#19 — Add reverse_string to text.py](https://github.com/wtthornton/thestudio-production-test-rig/issues/19)
+- **PR:** [#20 — Draft PR](https://github.com/wtthornton/thestudio-production-test-rig/pull/20)
+- **Duration:** ~2 minutes
+- **Cost:** ~$0.30
+- **Loopbacks:** 0 verification, 0 QA
+- **Files:** `text.py` (function + docstring), `test_text.py` (4 tests)
+- **Labels:** `agent:done`, `tier:observe`
+
+5 iterations were needed to wire the full pipeline (implement activity was a stub, publisher missing methods, status transitions, intent persistence, label handling). Full iteration log in [first-real-issue.md](../eval-results/first-real-issue.md).
+
 ## After This Session
 
-If the first real issue is processed successfully:
+The first real issue was processed successfully. Next milestones:
 
-1. **Process a harder issue** — multi-file change, test generation, or bug fix
+1. **Process harder issues** — multi-file changes, bug fixes, refactoring tasks
 2. **Onboard a second repo** — test multi-repo support
-3. **Review Observe tier metrics** — intent quality, verification pass rate, QA defect detection
+3. **Wire remote verification** — run ruff/pytest on target repo via GitHub Actions or container
 4. **Plan Execute tier promotion** — when ready for auto-merge (with human approval gates)
 5. **Production monitoring** — set up alerts for pipeline failures, cost anomalies, API rate limits

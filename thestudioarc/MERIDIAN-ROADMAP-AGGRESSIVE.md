@@ -333,11 +333,11 @@ The arc is **buildable and measurable**. It’s enough to set an aggressive road
 
 ---
 
-## Phase 7 — Real Provider Validation + Cost Model (In Progress, 2026-03-18 to TBD)
+## Phase 7 — Real Provider Validation + Cost Model (Complete, 2026-03-18 to 2026-03-19)
 
 **Goal:** Flip `llm_provider`, `github_provider`, and `store_backend` from mock to real. Validate every agent against real Claude. Establish a sustainable cost model for 24/7 pipeline operations. Prove the system works on real GitHub issues against a real repository.
 
-**Status: IN PROGRESS (2026-03-18)**
+**Status: COMPLETE (2026-03-19)**
 
 | Phase | Status | Key Milestone |
 |-------|--------|---------------|
@@ -348,15 +348,15 @@ The arc is **buildable and measurable**. It’s enough to set an aggressive road
 | **4** | Complete | Tool Hub, Model Gateway, compliance, full Admin UI, production hardening |
 | **5** | Complete | Agent framework, container isolation, chat approval, real repo onboarding |
 | **6** | Complete | Preflight plan review gate, Projects v2 sync, Meridian portfolio review |
-| **7** | **In Progress** | Real provider validation, cost model, OAuth research, deployment runbook |
+| **7** | **Complete** | Real provider validation, cost model, OAuth adapter, deployment runbook |
 
 **Phase 7 Epics:**
 
 | Epic | Title | Status | Priority | Notes |
 |------|-------|--------|----------|-------|
 | 30 | Real Provider Integration & Validation | **Complete (3 Sprints)** | P0 | Sprint 1: eval harness, 6 agent eval suites, Postgres 6/6, GitHub 4/4. Sprint 2: Docker pipeline validation, failure catalog (9 modes). Sprint 3: Suggest tier validation (16 tests), gateway audit fix (9/9), approval bypass (20 tests). 1783/1783 unit tests passing. |
-| 31 | Anthropic Max OAuth Adapter | **TOP MUST** | P0 | Research complete. Eval tests cost ~$5/run — OAuth/Max critical for sustainable testing. Elevated 2026-03-18. |
-| 32 | Model Routing & Cost Optimization | **Slice 1 Partial** | P1 | Stories 32.0/32.1/32.5 complete (cost routing gate, feature-flagged). Stories 32.2-32.4 remaining. Slice 2 (budget controls) next. |
+| 31 | Anthropic Max OAuth Adapter | **Complete** | P0 | All 7 stories (31.0-31.6). Auth mode detection, token refresh, Docker validation, deployment docs. Meridian: PASS. |
+| 32 | Model Routing & Cost Optimization | **Complete (5 Slices)** | P1 | All 18 stories (32.0-32.17). Cost routing, budget controls, prompt caching, cost dashboard, Batch API. |
 
 ### Cost Model Findings (Epic 30 Sprint 1)
 
@@ -387,20 +387,8 @@ The arc is **buildable and measurable**. It’s enough to set an aggressive road
 
 ```
 Epic 30 (All 3 Sprints) ✅ COMPLETE (2026-03-19)
-  - Sprint 1: Eval harness, 6 agent eval suites, Postgres 6/6, GitHub 4/4
-  - Sprint 2: Docker pipeline validation, failure catalog (9 modes)
-  - Sprint 3: Suggest tier validation, gateway audit, approval bypass
-  - 1783/1783 unit tests passing, zero failures
-
-Epic 31 Story 31.0 (OAuth Research) ✅ COMPLETE
-Epic 31 Story 31.1 (Fix cost estimation) ✅ COMPLETE
-Epic 32 Slice 1 (Cost routing gate) ✅ PARTIAL (32.0/32.1/32.5 done, 32.2-32.4 remaining)
-    ↓
-Epic 32 Slice 2 (Budget controls — Stories 32.6-32.8) ← NEXT
-    ↓
-Epic 32 Slice 1 remaining (Stories 32.3-32.4 — eval comparison, routing rules)
-    ↓
-Epic 31 Stories 31.2-31.5 (OAuth adapter) ← TOP MUST (eval costs $5/run)
+Epic 31 (All 7 Stories) ✅ COMPLETE (2026-03-19)
+Epic 32 (All 5 Slices)  ✅ COMPLETE (2026-03-19)
 ```
 
 **Phase 7 Success Criteria (Meridian bar):**
@@ -412,10 +400,65 @@ Epic 31 Stories 31.2-31.5 (OAuth adapter) ← TOP MUST (eval costs $5/run)
 | Primary agent produces valid output for 3/3 simple issues | **Met** — 5/5 primary eval tests pass with real Claude |
 | Postgres integration tests pass against real DB | **Met** — 6/6 (lifecycle, enrichment, intent, dedup, correlation, audit) |
 | GitHub integration tests pass against real repo | **Met** — 4/4 (branch, SHA, PR lifecycle with comments/labels, error classification) |
-| Full pipeline processes real GitHub issue into draft PR | Pending (Sprint 2) |
-| Cost model documented with accurate estimates | **Met** — Cost estimation fixed, eval costs ~$5/run documented |
-| Deployment runbook enables cold start | Pending (Sprint 3) |
-| OAuth adapter available for development use | **TOP MUST** — eval costs $5/run, Epic 31 elevated to top priority |
+| Full pipeline processes real GitHub issue into draft PR | **Met** — Issue #19 → PR #20, all 9 stages, 0 loopbacks (2026-03-20) |
+| Cost model documented with accurate estimates | **Met** — Cost estimation fixed, eval costs ~$5/run, per-issue ~$0.30 documented |
+| Deployment runbook enables cold start | **Met** — docs/deployment.md complete |
+| OAuth adapter available for development use | **Met** — Epic 31 complete, auth mode detection + token refresh |
+
+---
+
+## Phase 8 — Production Deployment & First Real Issue (Complete, 2026-03-20)
+
+**Goal:** Deploy the full stack with real providers, wire the remaining stub activities (implement, verify, publish) to real code generation and GitHub operations, and process the first real GitHub issue end-to-end into a draft PR.
+
+**Status: COMPLETE (2026-03-20)**
+
+| Phase | Status | Key Milestone |
+|-------|--------|---------------|
+| **0** | Complete | One repo, Observe tier, issue → draft PR with evidence |
+| **1** | Complete | Full flow + experts, Suggest tier, signal stream |
+| **2** | Complete | Learning loop, multi-repo, Admin UI, Execute tier for 1 repo |
+| **3** | Complete | Evals, expert classes, context packs, quality metrics |
+| **4** | Complete | Tool Hub, Model Gateway, compliance, full Admin UI, production hardening |
+| **5** | Complete | Agent framework, container isolation, chat approval, real repo onboarding |
+| **6** | Complete | Preflight plan review gate, Projects v2 sync, Meridian portfolio review |
+| **7** | Complete | Real provider validation, cost model, OAuth adapter, deployment runbook |
+| **8** | **Complete** | P0 test harness, pipeline wiring, **first real issue → draft PR** |
+
+**Phase 8 Epic:**
+
+| Epic | Title | Status | Notes |
+|------|-------|--------|-------|
+| 33 | P0 Deployment Test Harness | **Complete (2 Sprints + Pipeline Wiring)** | Sprint 1: health gate, P0 tests, runner script. Sprint 2: eval preflight, results persistence, credential guard. Pipeline wiring: implement (LLM + GitHub push), verify (file check), publish (PR + evidence). |
+
+**Key Achievement:** On 2026-03-20, TheStudio processed its first real GitHub issue ([#19](https://github.com/wtthornton/thestudio-production-test-rig/issues/19)) through the complete 9-stage pipeline and created [Draft PR #20](https://github.com/wtthornton/thestudio-production-test-rig/pull/20) — with LLM-generated code, tests, evidence comment, and lifecycle labels — in approximately 2 minutes with zero loopbacks.
+
+**Phase 8 Success Criteria (Meridian bar):**
+
+| Criterion | Status |
+|-----------|--------|
+| P0 tests detect Docker service failures before test execution | **Met** — Health gate blocks on any service down |
+| Implement activity generates real code via LLM | **Met** — Calls Claude, parses JSON, pushes files to GitHub branch |
+| Verify activity validates implementation produced output | **Met** — File-existence check on branch |
+| Publish activity creates draft PR with evidence | **Met** — PR #20 with full evidence comment, labels |
+| Full pipeline processes real GitHub issue into draft PR | **Met** — Issue #19 → PR #20, 2 min, 0 loopbacks |
+| Cost per issue within budget | **Met** — $0.30 per issue (budget was $0.50) |
+
+**Codebase Metrics (2026-03-20):**
+- 2,011 unit tests passing, 84% coverage
+- 9 E2E pipeline tests, ~244 integration tests, 23 P0 harness tests
+- All 9 pipeline stages wired to real providers
+
+**What Comes Next:**
+
+| Priority | Milestone | Description |
+|----------|-----------|-------------|
+| P0 | Process harder issues | Multi-file changes, bug fixes, refactoring |
+| P1 | Onboard second repo | Validate multi-repo support with real issues |
+| P1 | Wire remote verification | Run ruff/pytest on target repo (GitHub Actions or container) |
+| P2 | Execute tier promotion | Auto-merge with human approval gates |
+| P2 | Production monitoring | Alerts for pipeline failures, cost anomalies, API rate limits |
+| P3 | Fix intake agent Haiku parsing | Tune prompt or route to Sonnet |
 
 ---
 

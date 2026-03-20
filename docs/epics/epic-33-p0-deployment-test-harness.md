@@ -2,7 +2,7 @@
 
 > **Status:** Complete
 > **Epic Owner:** Primary Developer
-> **Duration:** 2 sprints (2026-03-20)
+> **Duration:** 2 sprints + pipeline wiring (2026-03-20)
 > **Created:** 2026-03-18
 > **Meridian Review:** Round 1: Conditional Pass (gaps resolved)
 
@@ -100,6 +100,22 @@ The runner script validates that critical environment variables (`THESTUDIO_ANTH
 | AC 6: Results Persistence | **Delivered (Sprint 2)** | Runner generates `docs/eval-results/p0-{timestamp}.md` with per-suite test counts, pass/fail/skip, duration, cost, git SHA/branch/dirty state, failure details. Latest pointer at `docs/eval-results/latest.md`. |
 | AC 7: Env File Parsing | **Delivered (Sprint 1)** | Runner uses `set -a; source infra/.env; set +a` — handles comments correctly. |
 | AC 8: Credential Guard | **Delivered (Sprint 1 + Sprint 2)** | Runner validates API key (sk-ant- prefix), PG password (not placeholder), admin user/password, webhook secret. `tests/p0/credential_guard.py` + `tests/p0/test_false_pass.py` — 7 tests prove guards reject bad credentials. |
+
+### Pipeline Wiring (2026-03-20, post-Sprint 2)
+
+After the P0 test harness was complete, the remaining pipeline stub activities were wired to real providers. This work was done in the same session as the first real issue processing.
+
+| Component | Change | Files |
+|-----------|--------|-------|
+| Implement activity | Calls Claude to generate code; pushes files to GitHub branch via Contents API | `src/workflow/activities.py`, `src/adapters/github.py`, `src/publisher/github_client.py` |
+| Verify activity | Validates implement produced actual file changes (not a stub) | `src/workflow/activities.py` |
+| Publish activity | Handles pre-existing branches, advances TaskPacket status chain | `src/publisher/publisher.py`, `src/workflow/activities.py` |
+| Intent persistence | `intent_activity` now persists intent spec to DB | `src/workflow/activities.py` |
+| ResilientGitHubClient | Added `find_pr_by_head`, `create_or_update_file`, `get_file_content`, `mark_ready_for_review`, `enable_auto_merge`; fixed `remove_label` 404 handling | `src/adapters/github.py` |
+| Pipeline context flow | ImplementInput expanded with repo, issue, intent, plan, QA feedback | `src/workflow/activities.py`, `src/workflow/pipeline.py` |
+| QA evidence | QA agent now receives evidence summary (not just filenames) | `src/qa/qa_config.py`, `src/workflow/pipeline.py` |
+
+**Result:** Issue [#19](https://github.com/wtthornton/thestudio-production-test-rig/issues/19) → [Draft PR #20](https://github.com/wtthornton/thestudio-production-test-rig/pull/20). Full 9-stage pipeline, 2 minutes, 0 loopbacks, ~$0.30.
 
 ---
 

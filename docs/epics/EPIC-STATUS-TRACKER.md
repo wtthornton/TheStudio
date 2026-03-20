@@ -227,4 +227,8 @@ Phase 5 — COMPLETE (2026-03-17)
 22. ~~**Deployment blockers fixed**~~ — **Complete** (2026-03-20). Publisher activity wired to real GitHubClient. Migration auto-run on startup. 10 new tests.
 23. ~~**Epic 33 Sprint 1**~~ — **Complete** (2026-03-20). Health gate (8 tests), deployment-mode GitHub/Postgres tests (14 P0), runner script, credential guards.
 24. ~~**Epic 33 Sprint 2**~~ — **Complete** (2026-03-20). Eval preflight guard (8 tests), results persistence with cost/git/failures, false-pass validation (7 tests), documentation.
-25. **Production deployment** — Deploy full stack, process one real GitHub issue at Observe tier.
+25. ~~**Production deployment**~~ — **Complete** (2026-03-20). First real GitHub issue processed: Issue #19 → Draft PR #20. All 9 pipeline stages pass. 2 minutes, 0 loopbacks.
+26. **Process harder issues** — Multi-file changes, bug fixes, refactoring tasks.
+27. **Onboard second repo** — Test multi-repo support with real issues.
+28. **Wire remote verification** — Run ruff/pytest on target repo via GitHub Actions or container.
+29. **Execute tier promotion** — When ready for auto-merge with approval gates.
