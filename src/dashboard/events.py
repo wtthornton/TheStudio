@@ -7,9 +7,10 @@ import time
 from collections.abc import AsyncGenerator
 
 import nats
-from fastapi import APIRouter
+from fastapi import APIRouter, Header
 from fastapi.responses import StreamingResponse
 from nats.js import JetStreamContext
+from nats.js.api import ConsumerConfig, DeliverPolicy
 
 from src.settings import settings
 
@@ -20,6 +21,7 @@ router = APIRouter()
 STREAM_NAME = "THESTUDIO_PIPELINE"
 SUBJECT_PATTERN = "pipeline.>"
 _HEARTBEAT_INTERVAL_S = 15
+_MAX_REPLAY_GAP = 1000
 
 
 async def ensure_stream(js: JetStreamContext) -> None:
@@ -51,9 +53,36 @@ def _format_heartbeat() -> str:
     return f": heartbeat {int(time.time())}\n\n"
 
 
-async def _nats_event_generator() -> AsyncGenerator[str, None]:
-    """Generate SSE events from NATS JetStream pipeline messages."""
-    event_id = 0
+def _parse_last_event_id(raw: str | None) -> int | None:
+    """Parse Last-Event-ID header into a stream sequence number, or None."""
+    if not raw:
+        return None
+    try:
+        seq = int(raw.strip())
+        return seq if seq > 0 else None
+    except (ValueError, TypeError):
+        return None
+
+
+async def _get_stream_last_seq(js: JetStreamContext) -> int:
+    """Return the last sequence number in the pipeline stream, or 0."""
+    try:
+        info = await js.stream_info(STREAM_NAME)
+        return info.state.last_seq
+    except Exception:
+        return 0
+
+
+async def _nats_event_generator(
+    last_event_id: int | None = None,
+) -> AsyncGenerator[str, None]:
+    """Generate SSE events from NATS JetStream pipeline messages.
+
+    If *last_event_id* is set the subscription resumes from that stream
+    sequence.  When the gap between the requested sequence and the current
+    stream head exceeds _MAX_REPLAY_GAP a ``system.full_state`` marker is
+    emitted and the subscription starts from the latest message instead.
+    """
     nc = None
     sub = None
 
@@ -62,11 +91,47 @@ async def _nats_event_generator() -> AsyncGenerator[str, None]:
         js = nc.jetstream()
         await ensure_stream(js)
 
+        # Determine subscription start position
+        config: ConsumerConfig | None = None
+        if last_event_id is not None:
+            current_last = await _get_stream_last_seq(js)
+            gap = current_last - last_event_id
+
+            if gap > _MAX_REPLAY_GAP:
+                # Gap too large — skip replay, notify client
+                logger.info(
+                    "SSE reconnect gap %d exceeds max %d, sending full_state",
+                    gap,
+                    _MAX_REPLAY_GAP,
+                )
+                yield _format_sse(
+                    "system.full_state",
+                    {"reason": "gap_exceeded", "missed": gap},
+                    current_last,
+                )
+                # Start from latest
+                config = ConsumerConfig(
+                    deliver_policy=DeliverPolicy.LAST,
+                )
+            else:
+                # Replay from the message after the last one the client saw
+                resume_seq = last_event_id + 1
+                logger.info(
+                    "SSE reconnect: replaying from seq %d (gap=%d)",
+                    resume_seq,
+                    gap,
+                )
+                config = ConsumerConfig(
+                    deliver_policy=DeliverPolicy.BY_START_SEQUENCE,
+                    opt_start_seq=resume_seq,
+                )
+
         # Push-based subscription: messages arrive via asyncio iterator
         sub = await js.subscribe(
             SUBJECT_PATTERN,
             stream=STREAM_NAME,
             ordered_consumer=True,
+            config=config,
         )
         logger.info("SSE client connected, subscribed to %s", SUBJECT_PATTERN)
 
@@ -80,7 +145,10 @@ async def _nats_event_generator() -> AsyncGenerator[str, None]:
                 payload = json.loads(msg.data.decode())
                 event_type = payload.get("type", msg.subject)
                 event_data = payload.get("data", payload)
-                event_id += 1
+
+                # Use NATS stream sequence as SSE event ID for reconnection
+                meta = msg.metadata
+                event_id = meta.sequence.stream if meta else 0
                 yield _format_sse(event_type, event_data, event_id)
             except TimeoutError:
                 yield _format_heartbeat()
@@ -89,7 +157,6 @@ async def _nats_event_generator() -> AsyncGenerator[str, None]:
                 yield _format_heartbeat()
     except Exception:
         logger.exception("Failed to connect to NATS for SSE stream")
-        # Yield an error event so the client knows
         yield _format_sse("system.error", {"message": "NATS connection failed"}, 1)
     finally:
         if sub:
@@ -106,10 +173,16 @@ async def _nats_event_generator() -> AsyncGenerator[str, None]:
 
 
 @router.get("/events/stream")
-async def event_stream() -> StreamingResponse:
-    """SSE endpoint streaming pipeline events from NATS JetStream."""
+async def event_stream(
+    last_event_id: str | None = Header(None, alias="Last-Event-ID"),
+) -> StreamingResponse:
+    """SSE endpoint streaming pipeline events from NATS JetStream.
+
+    Supports reconnection via the standard ``Last-Event-ID`` header.
+    """
+    parsed_id = _parse_last_event_id(last_event_id)
     return StreamingResponse(
-        _nats_event_generator(),
+        _nats_event_generator(last_event_id=parsed_id),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

@@ -1,4 +1,4 @@
-"""Tests for dashboard SSE event streaming (B-0.2a, B-0.2b)."""
+"""Tests for dashboard SSE event streaming (B-0.2a, B-0.2b, B-0.3)."""
 
 import asyncio
 import json
@@ -12,6 +12,7 @@ from src.dashboard.events import (
     _format_heartbeat,
     _format_sse,
     _nats_event_generator,
+    _parse_last_event_id,
     ensure_stream,
 )
 
@@ -45,7 +46,7 @@ async def test_event_stream_returns_streaming_response():
     """event_stream() returns a StreamingResponse with correct media type."""
     from src.dashboard.events import event_stream
 
-    resp = await event_stream()
+    resp = await event_stream(last_event_id=None)
     assert resp.media_type == "text/event-stream"
     assert resp.headers.get("Cache-Control") == "no-cache"
 
@@ -77,6 +78,20 @@ async def test_ensure_stream_skips_when_exists():
     js.add_stream.assert_not_awaited()
 
 
+def _make_mock_msg(payload: dict, subject: str, stream_seq: int = 1) -> AsyncMock:
+    """Create a mock NATS JetStream message with metadata."""
+    mock_msg = AsyncMock()
+    mock_msg.data = json.dumps(payload).encode()
+    mock_msg.subject = subject
+    seq_pair = MagicMock()
+    seq_pair.stream = stream_seq
+    seq_pair.consumer = stream_seq
+    meta = MagicMock()
+    meta.sequence = seq_pair
+    mock_msg.metadata = meta
+    return mock_msg
+
+
 @pytest.mark.asyncio
 async def test_nats_generator_yields_events_from_messages():
     """Generator yields SSE events from NATS messages."""
@@ -84,9 +99,7 @@ async def test_nats_generator_yields_events_from_messages():
         "type": "pipeline.stage.enter",
         "data": {"stage": "intake", "task_id": "t-001"},
     }
-    mock_msg = AsyncMock()
-    mock_msg.data = json.dumps(payload).encode()
-    mock_msg.subject = "pipeline.stage.enter"
+    mock_msg = _make_mock_msg(payload, "pipeline.stage.enter", stream_seq=42)
 
     mock_sub = AsyncMock()
     call_count = 0
@@ -123,7 +136,8 @@ async def test_nats_generator_yields_events_from_messages():
     assert len(events) >= 1
     assert "pipeline.stage.enter" in events[0]
     assert "intake" in events[0]
-    assert "id: 1" in events[0]
+    # SSE event ID should be the NATS stream sequence
+    assert "id: 42" in events[0]
 
 
 @pytest.mark.asyncio
@@ -208,3 +222,180 @@ async def test_nats_generator_error_event_on_connection_failure():
     assert len(events) == 1
     assert "system.error" in events[0]
     assert "NATS connection failed" in events[0]
+
+
+# --- B-0.3: Last-Event-ID reconnection ---
+
+
+class TestParseLastEventId:
+    """Tests for _parse_last_event_id helper."""
+
+    def test_none(self):
+        assert _parse_last_event_id(None) is None
+
+    def test_empty(self):
+        assert _parse_last_event_id("") is None
+
+    def test_valid_int(self):
+        assert _parse_last_event_id("42") == 42
+
+    def test_with_whitespace(self):
+        assert _parse_last_event_id("  100  ") == 100
+
+    def test_zero(self):
+        assert _parse_last_event_id("0") is None
+
+    def test_negative(self):
+        assert _parse_last_event_id("-5") is None
+
+    def test_non_numeric(self):
+        assert _parse_last_event_id("abc") is None
+
+
+@pytest.mark.asyncio
+async def test_reconnect_replays_from_last_event_id():
+    """Reconnect with Last-Event-ID subscribes with BY_START_SEQUENCE."""
+    from nats.js.api import DeliverPolicy
+
+    payload = {
+        "type": "pipeline.stage.enter",
+        "data": {"stage": "context"},
+    }
+    mock_msg = _make_mock_msg(payload, "pipeline.stage.enter", stream_seq=55)
+
+    mock_sub = AsyncMock()
+    call_count = 0
+
+    async def _next_msg(timeout=None):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return mock_msg
+        raise asyncio.CancelledError()
+
+    mock_sub.next_msg = _next_msg
+    mock_sub.unsubscribe = AsyncMock()
+
+    # Stream info says last_seq is 60, client says 50 → gap=10, within limit
+    stream_state = MagicMock()
+    stream_state.last_seq = 60
+    stream_info = MagicMock()
+    stream_info.state = stream_state
+
+    mock_js = AsyncMock()
+    mock_js.subscribe.return_value = mock_sub
+    mock_js.find_stream_name_by_subject.return_value = STREAM_NAME
+    mock_js.stream_info.return_value = stream_info
+
+    mock_nc = AsyncMock()
+    mock_nc.jetstream = MagicMock(return_value=mock_js)
+    mock_nc.is_connected = True
+
+    with patch("src.dashboard.events.nats") as mock_nats:
+        mock_nats.connect = AsyncMock(return_value=mock_nc)
+
+        events = []
+        gen = _nats_event_generator(last_event_id=50)
+        try:
+            async for event in gen:
+                events.append(event)
+        except asyncio.CancelledError:
+            pass
+
+    # Should have subscribed with BY_START_SEQUENCE config
+    call_args = mock_js.subscribe.call_args
+    config = call_args.kwargs.get("config")
+    assert config is not None
+    assert config.deliver_policy == DeliverPolicy.BY_START_SEQUENCE
+    assert config.opt_start_seq == 51  # last_event_id + 1
+
+    # Should have received the event
+    assert len(events) >= 1
+    assert "context" in events[0]
+
+
+@pytest.mark.asyncio
+async def test_reconnect_full_state_on_large_gap():
+    """Gap > _MAX_REPLAY_GAP sends system.full_state and starts from LAST."""
+    from nats.js.api import DeliverPolicy
+
+    # No real messages needed — we just check the full_state event
+    mock_sub = AsyncMock()
+    mock_sub.next_msg = AsyncMock(side_effect=asyncio.CancelledError())
+    mock_sub.unsubscribe = AsyncMock()
+
+    stream_state = MagicMock()
+    stream_state.last_seq = 5000
+    stream_info = MagicMock()
+    stream_info.state = stream_state
+
+    mock_js = AsyncMock()
+    mock_js.subscribe.return_value = mock_sub
+    mock_js.find_stream_name_by_subject.return_value = STREAM_NAME
+    mock_js.stream_info.return_value = stream_info
+
+    mock_nc = AsyncMock()
+    mock_nc.jetstream = MagicMock(return_value=mock_js)
+    mock_nc.is_connected = True
+
+    with patch("src.dashboard.events.nats") as mock_nats:
+        mock_nats.connect = AsyncMock(return_value=mock_nc)
+
+        events = []
+        # last_event_id=100, current=5000 → gap=4900 > 1000
+        gen = _nats_event_generator(last_event_id=100)
+        try:
+            async for event in gen:
+                events.append(event)
+        except asyncio.CancelledError:
+            pass
+
+    # First event should be system.full_state
+    assert len(events) >= 1
+    assert "system.full_state" in events[0]
+    assert "gap_exceeded" in events[0]
+
+    # Subscription should use LAST deliver policy
+    call_args = mock_js.subscribe.call_args
+    config = call_args.kwargs.get("config")
+    assert config is not None
+    assert config.deliver_policy == DeliverPolicy.LAST
+
+
+@pytest.mark.asyncio
+async def test_reconnect_no_header_subscribes_normally():
+    """No Last-Event-ID → no config passed (default ordered consumer)."""
+    mock_sub = AsyncMock()
+    mock_sub.next_msg = AsyncMock(side_effect=asyncio.CancelledError())
+    mock_sub.unsubscribe = AsyncMock()
+
+    mock_js = AsyncMock()
+    mock_js.subscribe.return_value = mock_sub
+    mock_js.find_stream_name_by_subject.return_value = STREAM_NAME
+
+    mock_nc = AsyncMock()
+    mock_nc.jetstream = MagicMock(return_value=mock_js)
+    mock_nc.is_connected = True
+
+    with patch("src.dashboard.events.nats") as mock_nats:
+        mock_nats.connect = AsyncMock(return_value=mock_nc)
+
+        gen = _nats_event_generator(last_event_id=None)
+        try:
+            async for _ in gen:
+                pass
+        except asyncio.CancelledError:
+            pass
+
+    call_args = mock_js.subscribe.call_args
+    config = call_args.kwargs.get("config")
+    assert config is None
+
+
+@pytest.mark.asyncio
+async def test_event_stream_passes_last_event_id():
+    """event_stream endpoint parses Last-Event-ID header."""
+    from src.dashboard.events import event_stream
+
+    resp = await event_stream(last_event_id="42")
+    assert resp.media_type == "text/event-stream"

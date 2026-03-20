@@ -44,7 +44,7 @@
 - [x] B-0.2b: Wire SSE endpoint to NATS JetStream. Subscribe to `pipeline.>` subject on `THESTUDIO_PIPELINE` stream (create stream if not exists). Replace hardcoded events with NATS messages. Add disconnect cleanup. Test: publish to NATS, verify SSE client receives within 200ms.
 
 ### Slice 3: Reconnection
-- [ ] B-0.3: Add `Last-Event-ID` reconnection support. Parse header, use `DeliverPolicy.BY_START_SEQUENCE` to replay missed events. If gap >1000, send `system.full_state`. Test: disconnect, reconnect with Last-Event-ID, verify zero missed events.
+- [x] B-0.3: Add `Last-Event-ID` reconnection support. Parse header, use `DeliverPolicy.BY_START_SEQUENCE` to replay missed events. If gap >1000, send `system.full_state`. Test: disconnect, reconnect with Last-Event-ID, verify zero missed events.
 
 ### Slice 4: Pipeline Event Emission
 - [ ] B-0.4a: Create `src/dashboard/events_publisher.py` with fire-and-forget NATS publish helper. Instrument first 3 stages (intake, context, intent) with `pipeline.stage.enter`/`exit` events. Create `THESTUDIO_PIPELINE` JetStream stream on startup. Test: mock NATS, run activity, verify publish called.
