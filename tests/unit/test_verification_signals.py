@@ -150,6 +150,13 @@ class TestGetJetstream:
 # ---------------------------------------------------------------------------
 
 
+@pytest.fixture(autouse=True)
+def _mock_pipeline_gate():
+    """Prevent pipeline gate calls from interfering with verification signal tests."""
+    with patch("src.verification.signals.get_pipeline_jetstream", AsyncMock(return_value=AsyncMock())):
+        yield
+
+
 class TestEmitVerificationPassed:
     async def test_publishes_correct_subject(self) -> None:
         mock_js = AsyncMock()
@@ -231,3 +238,72 @@ class TestEmitVerificationExhausted:
             await emit_verification_exhausted(TASK_ID, CORR_ID, 0, [])
 
         assert "verification_exhausted" in caplog.text
+
+
+# ---------------------------------------------------------------------------
+# Pipeline gate event tests
+# ---------------------------------------------------------------------------
+
+
+class TestPipelineGateEvents:
+    """Verify that emit_* functions also publish pipeline.gate.pass/fail."""
+
+    async def test_passed_emits_gate_pass(self) -> None:
+        mock_js = AsyncMock()
+        pipeline_js = AsyncMock()
+
+        with (
+            patch("src.verification.signals.get_jetstream", return_value=mock_js),
+            patch("src.verification.signals.get_pipeline_jetstream", AsyncMock(return_value=pipeline_js)),
+        ):
+            await emit_verification_passed(TASK_ID, CORR_ID, 0, [])
+
+        pipeline_js.publish.assert_awaited_once()
+        subject = pipeline_js.publish.call_args[0][0]
+        assert subject == "pipeline.gate.pass"
+        payload = json.loads(pipeline_js.publish.call_args[0][1])
+        assert payload["type"] == "pipeline.gate.pass"
+        assert payload["data"]["stage"] == "verify"
+        assert payload["data"]["taskpacket_id"] == str(TASK_ID)
+
+    async def test_failed_emits_gate_fail(self) -> None:
+        mock_js = AsyncMock()
+        pipeline_js = AsyncMock()
+
+        with (
+            patch("src.verification.signals.get_jetstream", return_value=mock_js),
+            patch("src.verification.signals.get_pipeline_jetstream", AsyncMock(return_value=pipeline_js)),
+        ):
+            await emit_verification_failed(TASK_ID, CORR_ID, 1, [])
+
+        pipeline_js.publish.assert_awaited_once()
+        subject = pipeline_js.publish.call_args[0][0]
+        assert subject == "pipeline.gate.fail"
+
+    async def test_exhausted_emits_gate_fail(self) -> None:
+        mock_js = AsyncMock()
+        pipeline_js = AsyncMock()
+
+        with (
+            patch("src.verification.signals.get_jetstream", return_value=mock_js),
+            patch("src.verification.signals.get_pipeline_jetstream", AsyncMock(return_value=pipeline_js)),
+        ):
+            await emit_verification_exhausted(TASK_ID, CORR_ID, 5, [])
+
+        subject = pipeline_js.publish.call_args[0][0]
+        assert subject == "pipeline.gate.fail"
+
+    async def test_gate_failure_does_not_break_emit(self) -> None:
+        """Pipeline gate publish failure must not affect verification signal."""
+        mock_js = AsyncMock()
+        pipeline_js = AsyncMock()
+        pipeline_js.publish.side_effect = Exception("NATS down")
+
+        with (
+            patch("src.verification.signals.get_jetstream", return_value=mock_js),
+            patch("src.verification.signals.get_pipeline_jetstream", AsyncMock(return_value=pipeline_js)),
+        ):
+            await emit_verification_passed(TASK_ID, CORR_ID, 0, [])
+
+        # Original verification signal still published
+        mock_js.publish.assert_awaited_once()

@@ -178,6 +178,13 @@ class TestGetJetstream:
 # ---------------------------------------------------------------------------
 
 
+@pytest.fixture(autouse=True)
+def _mock_pipeline_gate():
+    """Prevent pipeline gate calls from interfering with QA signal tests."""
+    with patch("src.qa.signals.get_pipeline_jetstream", AsyncMock(return_value=AsyncMock())):
+        yield
+
+
 class TestEmitQAPassed:
     """Tests for emit_qa_passed."""
 
@@ -266,3 +273,70 @@ class TestEmitQARework:
         mock_logger.info.assert_called_once()
         log_msg = mock_logger.info.call_args[0][0]
         assert "qa_rework" in log_msg
+
+
+# ---------------------------------------------------------------------------
+# Pipeline gate event tests
+# ---------------------------------------------------------------------------
+
+
+class TestQAPipelineGateEvents:
+    """Verify that QA emit_* functions also publish pipeline.gate.pass/fail."""
+
+    async def test_passed_emits_gate_pass(self) -> None:
+        mock_js = AsyncMock()
+        pipeline_js = AsyncMock()
+
+        with (
+            patch("src.qa.signals.get_jetstream", AsyncMock(return_value=mock_js)),
+            patch("src.qa.signals.get_pipeline_jetstream", AsyncMock(return_value=pipeline_js)),
+        ):
+            await emit_qa_passed(TP_ID, CORR_ID)
+
+        pipeline_js.publish.assert_awaited_once()
+        subject = pipeline_js.publish.call_args[0][0]
+        assert subject == "pipeline.gate.pass"
+        payload = json.loads(pipeline_js.publish.call_args[0][1])
+        assert payload["type"] == "pipeline.gate.pass"
+        assert payload["data"]["stage"] == "qa"
+
+    async def test_defect_emits_gate_fail(self) -> None:
+        mock_js = AsyncMock()
+        pipeline_js = AsyncMock()
+
+        with (
+            patch("src.qa.signals.get_jetstream", AsyncMock(return_value=mock_js)),
+            patch("src.qa.signals.get_pipeline_jetstream", AsyncMock(return_value=pipeline_js)),
+        ):
+            await emit_qa_defect(TP_ID, CORR_ID, [_make_defect()])
+
+        subject = pipeline_js.publish.call_args[0][0]
+        assert subject == "pipeline.gate.fail"
+
+    async def test_rework_emits_gate_fail(self) -> None:
+        mock_js = AsyncMock()
+        pipeline_js = AsyncMock()
+
+        with (
+            patch("src.qa.signals.get_jetstream", AsyncMock(return_value=mock_js)),
+            patch("src.qa.signals.get_pipeline_jetstream", AsyncMock(return_value=pipeline_js)),
+        ):
+            await emit_qa_rework(TP_ID, CORR_ID, [_make_defect()])
+
+        subject = pipeline_js.publish.call_args[0][0]
+        assert subject == "pipeline.gate.fail"
+
+    async def test_gate_failure_does_not_break_emit(self) -> None:
+        """Pipeline gate publish failure must not affect QA signal."""
+        mock_js = AsyncMock()
+        pipeline_js = AsyncMock()
+        pipeline_js.publish.side_effect = Exception("NATS down")
+
+        with (
+            patch("src.qa.signals.get_jetstream", AsyncMock(return_value=mock_js)),
+            patch("src.qa.signals.get_pipeline_jetstream", AsyncMock(return_value=pipeline_js)),
+        ):
+            await emit_qa_passed(TP_ID, CORR_ID)
+
+        # Original QA signal still published
+        mock_js.publish.assert_awaited_once()

@@ -12,6 +12,7 @@ from uuid import UUID
 import nats
 from nats.js import JetStreamContext
 
+from src.dashboard.events_publisher import get_pipeline_jetstream
 from src.settings import settings
 from src.verification.runners.base import CheckResult
 
@@ -66,6 +67,31 @@ def _build_payload(
     }).encode()
 
 
+async def _emit_pipeline_gate(
+    passed: bool,
+    taskpacket_id: UUID,
+    correlation_id: UUID,
+    stage: str = "verify",
+) -> None:
+    """Fire-and-forget gate event to THESTUDIO_PIPELINE stream."""
+    try:
+        js = await get_pipeline_jetstream()
+        result = "pass" if passed else "fail"
+        payload = json.dumps({
+            "type": f"pipeline.gate.{result}",
+            "data": {
+                "stage": stage,
+                "taskpacket_id": str(taskpacket_id),
+                "correlation_id": str(correlation_id),
+                "timestamp": datetime.now(UTC).isoformat(),
+            },
+        }).encode()
+        await js.publish(f"pipeline.gate.{result}", payload)
+        logger.debug("Emitted pipeline.gate.%s for verify task=%s", result, taskpacket_id)
+    except Exception:
+        logger.debug("Failed to emit pipeline gate event for verify", exc_info=True)
+
+
 async def emit_verification_passed(
     taskpacket_id: UUID,
     correlation_id: UUID,
@@ -80,6 +106,7 @@ async def emit_verification_passed(
     subject = f"{SUBJECT_PREFIX}.{taskpacket_id}"
     await js.publish(subject, payload)
     logger.info("Emitted verification_passed for %s", taskpacket_id)
+    await _emit_pipeline_gate(True, taskpacket_id, correlation_id)
 
 
 async def emit_verification_failed(
@@ -96,6 +123,7 @@ async def emit_verification_failed(
     subject = f"{SUBJECT_PREFIX}.{taskpacket_id}"
     await js.publish(subject, payload)
     logger.info("Emitted verification_failed for %s (loopback=%d)", taskpacket_id, loopback_count)
+    await _emit_pipeline_gate(False, taskpacket_id, correlation_id)
 
 
 async def emit_verification_exhausted(
@@ -112,3 +140,4 @@ async def emit_verification_exhausted(
     subject = f"{SUBJECT_PREFIX}.{taskpacket_id}"
     await js.publish(subject, payload)
     logger.info("Emitted verification_exhausted for %s", taskpacket_id)
+    await _emit_pipeline_gate(False, taskpacket_id, correlation_id)
