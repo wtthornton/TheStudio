@@ -66,7 +66,8 @@ RECOMMENDATION: <one line summary>
 
 ### EXIT_SIGNAL rules
 - `EXIT_SIGNAL: true` ONLY when **every item** in fix_plan.md is checked `[x]`.
-- `STATUS: COMPLETE` when the current loop's task is done (not all work).
+- `STATUS: IN_PROGRESS` when the current loop's task is done but unchecked items remain in fix_plan.md. **NEVER use STATUS: COMPLETE unless EXIT_SIGNAL is also true.**
+- `STATUS: COMPLETE` ONLY when ALL items are checked `[x]` AND EXIT_SIGNAL is true.
 
 ## Exit Scenarios (Specification by Example)
 
@@ -90,12 +91,18 @@ RECOMMENDATION: <one line summary>
 **Then**: Set `EXIT_SIGNAL: true`, `STATUS: COMPLETE`.
 **Ralph's Action**: Exits loop immediately.
 
-### Scenario 5: Making Progress
-**Given**: Tasks remain, implementation underway, files being modified, tests passing.
+### Scenario 5: Task Completed, More Work Remains (MOST COMMON)
+**Given**: Current task is done and checked off `[x]`, but unchecked `[ ]` items remain in fix_plan.md.
+**Then**: Set `STATUS: IN_PROGRESS`, `EXIT_SIGNAL: false`, `TASKS_COMPLETED_THIS_LOOP: 1`.
+**Ralph's Action**: Continues loop with next unchecked item.
+**CRITICAL**: This is NOT STATUS: COMPLETE. COMPLETE means ALL work is done.
+
+### Scenario 6: Making Progress (Mid-Task)
+**Given**: Currently implementing a task, files being modified, not yet done.
 **Then**: Set `STATUS: IN_PROGRESS`, `EXIT_SIGNAL: false`.
 **Ralph's Action**: Continues loop.
 
-### Scenario 6: Blocked on External Dependency
+### Scenario 7: Blocked on External Dependency
 **Given**: Task requires external API, library, or human decision.
 **Then**: Set `STATUS: BLOCKED`, `EXIT_SIGNAL: false`, `RECOMMENDATION: Blocked on [dependency]`.
 **Ralph's Action**: Logs blocker, may exit after multiple blocked loops.

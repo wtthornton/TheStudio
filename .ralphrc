@@ -12,7 +12,7 @@ PROJECT_TYPE="python"
 # LOOP SETTINGS
 # =============================================================================
 
-MAX_CALLS_PER_HOUR=50
+MAX_CALLS_PER_HOUR=100
 CLAUDE_TIMEOUT_MINUTES=15
 CLAUDE_OUTPUT_FORMAT="json"
 
@@ -46,13 +46,13 @@ BEADS_FILTER="status:open"
 CB_NO_PROGRESS_THRESHOLD=3
 
 # Trip after 5 loops with the same error
-CB_SAME_ERROR_THRESHOLD=5
+CB_SAME_ERROR_THRESHOLD=3
 
 # Trip if output declines by more than 70%
 CB_OUTPUT_DECLINE_THRESHOLD=70
 
 # Cooldown before retry (minutes)
-CB_COOLDOWN_MINUTES=30
+CB_COOLDOWN_MINUTES=10
 
 # Do NOT auto-reset — let the cooldown work
 CB_AUTO_RESET=false
