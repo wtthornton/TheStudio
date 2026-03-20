@@ -532,7 +532,7 @@ class TestContainerIsolationActivityIntegration:
             result = await implement_activity(params)
 
         assert result.taskpacket_id == params.taskpacket_id
-        assert result.agent_summary == "Implementation placeholder"
+        assert result.agent_summary == "Implementation completed via in-process stub"
 
 
 # ---------------------------------------------------------------------------

@@ -1,5 +1,6 @@
 """FastAPI application for TheStudio."""
 
+import asyncio
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -32,9 +33,22 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     import src.context.packs  # noqa: F401 — registers production context packs
     from src.ingress.poll.scheduler import start_poll_scheduler
     from src.outcome.consumer import stop_signal_consumer
+    from src.settings import settings
+
+    _logger = logging.getLogger(__name__)
+
+    # Run database migrations before any DB-dependent service starts
+    if settings.store_backend == "postgres":
+        try:
+            from src.db.run_migrations import run_all as run_migrations
+
+            await run_migrations()
+            _logger.info("Database migrations applied successfully")
+        except Exception:
+            _logger.error("Failed to run database migrations", exc_info=True)
+            raise
 
     # Scan and sync file-based experts at startup
-    _logger = logging.getLogger(__name__)
     try:
         from src.db.connection import get_async_session
         from src.experts.config import get_experts_base_path
@@ -61,6 +75,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     poll_task = start_poll_scheduler()
 
+    # Start Temporal worker (executes pipeline workflow activities)
+    worker_task = None
+    try:
+        from src.workflow.worker import start_worker_background
+
+        worker_task = await start_worker_background()
+    except Exception:
+        _logger.warning("Failed to start Temporal worker", exc_info=True)
+
     # Start JetStream signal consumer (non-blocking, logs on failure)
     consumer_task = None
     try:
@@ -75,6 +98,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     yield
 
+    if worker_task is not None:
+        worker_task.cancel()
+        try:
+            await worker_task
+        except asyncio.CancelledError:
+            pass
     if consumer_task is not None:
         await stop_signal_consumer()
     if poll_task is not None:

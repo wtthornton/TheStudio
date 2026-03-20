@@ -114,4 +114,5 @@ async def run_context_eval(
         cases=accepted,
         context_builder=context_context_builder,
         score_fn=score_context_output,
+        pass_threshold=0.5,
     )

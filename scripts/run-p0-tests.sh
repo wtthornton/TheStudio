@@ -149,6 +149,12 @@ OVERALL_EXIT=0
 declare -A SUITE_RESULTS
 declare -A SUITE_DURATIONS
 
+declare -A SUITE_TESTS_PASSED
+declare -A SUITE_TESTS_FAILED
+declare -A SUITE_TESTS_SKIPPED
+declare -A SUITE_TESTS_TOTAL
+declare -A SUITE_COSTS
+
 run_suite() {
     local name="$1"
     local cmd="$2"
@@ -170,8 +176,22 @@ run_suite() {
     SUITE_RESULTS[$name]=$exit_code
     SUITE_DURATIONS[$name]=$duration
 
+    # Parse pytest summary line: "X passed, Y failed, Z skipped"
+    local summary_line
+    summary_line=$(grep -E '(passed|failed|error|skipped)' "$output_file" | tail -1 || true)
+    SUITE_TESTS_PASSED[$name]=$(echo "$summary_line" | grep -oP '\d+(?= passed)' || echo "0")
+    SUITE_TESTS_FAILED[$name]=$(echo "$summary_line" | grep -oP '\d+(?= failed)' || echo "0")
+    SUITE_TESTS_SKIPPED[$name]=$(echo "$summary_line" | grep -oP '\d+(?= skipped)' || echo "0")
+    local p="${SUITE_TESTS_PASSED[$name]:-0}" f="${SUITE_TESTS_FAILED[$name]:-0}" s="${SUITE_TESTS_SKIPPED[$name]:-0}"
+    SUITE_TESTS_TOTAL[$name]=$(( p + f + s ))
+
+    # Extract cost from eval harness output (format: "cost=$X.XXXX")
+    local cost
+    cost=$(grep -oP 'cost=\$[\d.]+' "$output_file" | grep -oP '[\d.]+' | awk '{s+=$1} END {printf "%.4f", s}' 2>/dev/null || echo "0.0000")
+    SUITE_COSTS[$name]="$cost"
+
     if [[ $exit_code -eq 0 ]]; then
-        info "Suite ${name}: PASSED (${duration}s)"
+        info "Suite ${name}: PASSED (${duration}s, ${p} tests)"
     else
         fail "Suite ${name}: FAILED (exit ${exit_code}, ${duration}s)"
         OVERALL_EXIT=1
@@ -187,7 +207,22 @@ if [[ "$SKIP_EVAL" == "true" ]]; then
     SUITE_RESULTS[eval]="SKIPPED"
     SUITE_DURATIONS[eval]=0
 else
-    run_suite "eval" "pytest tests/eval/ -m requires_api_key -v "
+    # -- Eval preflight guard (AC 2) --
+    # Validate container LLM config before running eval tests.
+    # Eval results are meaningless if the container is using mock provider.
+    info "Running eval preflight guard..."
+    python -m tests.p0.eval_preflight
+    PREFLIGHT_EXIT=$?
+
+    if [[ $PREFLIGHT_EXIT -eq 0 ]]; then
+        info "Eval preflight OK."
+        run_suite "eval" "pytest tests/eval/ -m requires_api_key -v "
+    else
+        fail "Eval preflight guard failed — skipping eval suite."
+        SUITE_RESULTS[eval]="PREFLIGHT_FAIL"
+        SUITE_DURATIONS[eval]=0
+        OVERALL_EXIT=1
+    fi
 fi
 
 # Suite 3: GitHub integration (adapter-level with real GitHub API)
@@ -209,36 +244,100 @@ export THESTUDIO_DATABASE_URL="postgresql+asyncpg://thestudio:${POSTGRES_PASSWOR
 # ---------------------------------------------------------------------------
 info "Generating results summary..."
 
+# Collect git info
+GIT_SHA="$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")"
+GIT_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")"
+GIT_DIRTY="clean"
+if [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then
+    GIT_DIRTY="dirty"
+fi
+
+# Calculate totals
+TOTAL_DURATION=0
+TOTAL_COST="0.0000"
+TOTAL_PASSED=0
+TOTAL_FAILED=0
+for suite in "p0-deployed" "eval" "github-integration" "postgres-integration"; do
+    d="${SUITE_DURATIONS[$suite]:-0}"
+    TOTAL_DURATION=$(( TOTAL_DURATION + d ))
+    c="${SUITE_COSTS[$suite]:-0.0000}"
+    TOTAL_COST=$(awk "BEGIN {printf \"%.4f\", $TOTAL_COST + $c}")
+    TOTAL_PASSED=$(( TOTAL_PASSED + ${SUITE_TESTS_PASSED[$suite]:-0} ))
+    TOTAL_FAILED=$(( TOTAL_FAILED + ${SUITE_TESTS_FAILED[$suite]:-0} ))
+done
+
 cat > "$SUMMARY_FILE" << HEADER
 # P0 Test Results — $(date +%Y-%m-%d) ${TIMESTAMP}
 
 ## Suite Summary
 
-| Suite | Status | Duration |
-|---|---|---|
+| Suite | Status | Tests | Passed | Failed | Skipped | Duration | Cost |
+|---|---|---|---|---|---|---|---|
 HEADER
 
 for suite in "p0-deployed" "eval" "github-integration" "postgres-integration"; do
     result="${SUITE_RESULTS[$suite]:-N/A}"
     duration="${SUITE_DURATIONS[$suite]:-0}"
+    tests="${SUITE_TESTS_TOTAL[$suite]:-0}"
+    passed="${SUITE_TESTS_PASSED[$suite]:-0}"
+    failed="${SUITE_TESTS_FAILED[$suite]:-0}"
+    skipped="${SUITE_TESTS_SKIPPED[$suite]:-0}"
+    cost="${SUITE_COSTS[$suite]:-0.0000}"
     if [[ "$result" == "0" ]]; then
         status="PASS"
     elif [[ "$result" == "SKIPPED" ]]; then
         status="SKIPPED"
+    elif [[ "$result" == "PREFLIGHT_FAIL" ]]; then
+        status="PREFLIGHT_FAIL"
     else
         status="FAIL (exit $result)"
     fi
-    echo "| ${suite} | ${status} | ${duration}s |" >> "$SUMMARY_FILE"
+    echo "| ${suite} | ${status} | ${tests} | ${passed} | ${failed} | ${skipped} | ${duration}s | \$${cost} |" >> "$SUMMARY_FILE"
+done
+
+cat >> "$SUMMARY_FILE" << TOTALS
+
+**Total: ${TOTAL_PASSED} passed, ${TOTAL_FAILED} failed, ${TOTAL_DURATION}s, \$${TOTAL_COST}**
+
+## Git Info
+
+- Commit: \`${GIT_SHA}\`
+- Branch: \`${GIT_BRANCH}\`
+- Working tree: ${GIT_DIRTY}
+
+TOTALS
+
+# Failure details: extract FAILED lines from output files
+HAS_FAILURES=false
+for suite in "p0-deployed" "eval" "github-integration" "postgres-integration"; do
+    result="${SUITE_RESULTS[$suite]:-0}"
+    if [[ "$result" != "0" && "$result" != "SKIPPED" && "$result" != "PREFLIGHT_FAIL" ]]; then
+        output_file="$RESULTS_DIR/${suite}-${TIMESTAMP}.txt"
+        if [[ -f "$output_file" ]]; then
+            if [[ "$HAS_FAILURES" == "false" ]]; then
+                echo "## Failure Details" >> "$SUMMARY_FILE"
+                echo "" >> "$SUMMARY_FILE"
+                HAS_FAILURES=true
+            fi
+            echo "### ${suite}" >> "$SUMMARY_FILE"
+            echo "" >> "$SUMMARY_FILE"
+            echo '```' >> "$SUMMARY_FILE"
+            # Extract FAILED test names and first line of failure
+            grep -E '^FAILED ' "$output_file" | head -20 >> "$SUMMARY_FILE" || true
+            echo '```' >> "$SUMMARY_FILE"
+            echo "" >> "$SUMMARY_FILE"
+        fi
+    fi
 done
 
 cat >> "$SUMMARY_FILE" << FOOTER
-
 ## Environment
 
 - Timestamp: ${TIMESTAMP}
 - Caddy: https://localhost:9443
 - LLM Provider: ${THESTUDIO_LLM_PROVIDER:-unknown}
 - GitHub Test Repo: ${THESTUDIO_GITHUB_TEST_REPO}
+- Overall: $(if [[ $OVERALL_EXIT -eq 0 ]]; then echo "PASS"; else echo "FAIL"; fi)
 
 ## Raw Output Files
 

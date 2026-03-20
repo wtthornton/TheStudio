@@ -24,7 +24,7 @@ from src.admin.experts import get_expert_service
 from src.admin.merge_mode import MergeMode, get_merge_mode, set_merge_mode
 from src.admin.metrics import get_metrics_service
 from src.admin.model_gateway import get_model_router
-from src.admin.model_spend import get_spend_report
+from src.admin.model_spend import get_budget_utilization, get_spend_report
 from src.admin.operational_targets import get_targets_service
 from src.admin.rbac import ROLE_PERMISSIONS, Permission, Role, get_rbac_service
 from src.admin.router import (
@@ -724,6 +724,39 @@ async def model_spend_partial(
     return templates.TemplateResponse(request, "partials/model_spend_content.html", ctx)
 
 
+# --- Cost Dashboard Routes (Story 32.13) ---
+
+
+@ui_router.get("/cost-dashboard", response_class=HTMLResponse)
+async def cost_dashboard_page(request: Request) -> Response:
+    """Render Cost Dashboard page."""
+    ctx = _base_context(request)
+    ctx["active_page"] = "cost-dashboard"
+    return templates.TemplateResponse(request, "cost_dashboard.html", ctx)
+
+
+@ui_router.get("/partials/cost-dashboard", response_class=HTMLResponse)
+async def cost_dashboard_partial(
+    request: Request,
+    window: int = Query(24, ge=1, le=720),
+) -> Response:
+    """Render cost dashboard partial with all breakdowns."""
+    report = get_spend_report(window_hours=window)
+    ctx = {"request": request, "report": report.to_dict()}
+    return templates.TemplateResponse(request, "partials/cost_dashboard_content.html", ctx)
+
+
+@ui_router.get("/partials/budget-utilization", response_class=HTMLResponse)
+async def budget_utilization_partial(
+    request: Request,
+    window: int = Query(24, ge=1, le=720),
+) -> Response:
+    """Render budget utilization widget partial."""
+    utilization = get_budget_utilization(window_hours=window)
+    ctx = {"request": request, "utilization": [u.to_dict() for u in utilization]}
+    return templates.TemplateResponse(request, "partials/budget_utilization_content.html", ctx)
+
+
 # --- Compliance Scorecard Routes (Story 7.12) ---
 
 
@@ -1401,6 +1434,117 @@ async def partial_settings_agent_config_update(request: Request) -> Response:
         "error": error,
     }
     return templates.TemplateResponse(request, "partials/settings_agent_config.html", ctx)
+
+
+@ui_router.get("/partials/settings/budget-controls", response_class=HTMLResponse)
+async def partial_settings_budget_controls(request: Request) -> Response:
+    """Render the Budget Controls card partial (Story 32.7)."""
+    svc = get_settings_service()
+
+    async with get_async_session() as session:
+        sv = await svc.get(session, "cost_optimization_budget_tiers")
+        routing_sv = await svc.get(session, "cost_optimization_routing_enabled")
+
+    import json as _json
+
+    if sv:
+        try:
+            budget_tiers = _json.loads(sv.value) if isinstance(sv.value, str) else sv.value
+        except (ValueError, TypeError):
+            budget_tiers = {"observe": 2.00, "suggest": 5.00, "execute": 8.00}
+        source = sv.source
+    else:
+        budget_tiers = {"observe": 2.00, "suggest": 5.00, "execute": 8.00}
+        source = "env"
+
+    routing_enabled = False
+    if routing_sv:
+        routing_enabled = routing_sv.value in ("True", "true", "1", True)
+
+    ctx = {
+        "request": request,
+        "budget_tiers": budget_tiers,
+        "source": source,
+        "routing_enabled": routing_enabled,
+    }
+    return templates.TemplateResponse(request, "partials/settings_budget_controls.html", ctx)
+
+
+@ui_router.post("/partials/settings/budget-controls", response_class=HTMLResponse)
+async def partial_settings_budget_controls_update(request: Request) -> Response:
+    """Update budget tier caps and re-render (Story 32.7)."""
+    from src.admin.audit import AuditEventType, get_audit_service
+
+    import json as _json
+
+    form = await request.form()
+    user_id = request.state.user_id
+
+    svc = get_settings_service()
+    audit_svc = get_audit_service()
+    flash = None
+    error = None
+
+    tiers = {}
+    for tier in ("observe", "suggest", "execute"):
+        raw = form.get(tier, "")
+        try:
+            val = float(raw)  # type: ignore[arg-type]
+            if val < 0.50 or val > 50.00:
+                error = f"{tier.title()} tier must be between $0.50 and $50.00"
+                break
+            tiers[tier] = val
+        except (ValueError, TypeError):
+            error = f"Invalid value for {tier} tier"
+            break
+
+    if not error:
+        value_json = _json.dumps(tiers)
+        async with get_async_session() as session:
+            try:
+                old_sv = await svc.get(session, "cost_optimization_budget_tiers")
+                old_display = old_sv.display_value if old_sv else None
+                await svc.set(session, "cost_optimization_budget_tiers", value_json, user_id)
+                await audit_svc.log_event(
+                    session,
+                    user_id,
+                    AuditEventType.SETTINGS_CHANGED,
+                    "cost_optimization_budget_tiers",
+                    {"action": "update", "old_value": old_display, "new_value": value_json},
+                )
+                await session.commit()
+                flash = f"Budget caps updated: observe=${tiers['observe']:.2f}, suggest=${tiers['suggest']:.2f}, execute=${tiers['execute']:.2f}"
+            except ValueError as e:
+                error = str(e)
+
+    # Re-fetch for render
+    async with get_async_session() as session:
+        sv = await svc.get(session, "cost_optimization_budget_tiers")
+        routing_sv = await svc.get(session, "cost_optimization_routing_enabled")
+
+    if sv:
+        try:
+            budget_tiers = _json.loads(sv.value) if isinstance(sv.value, str) else sv.value
+        except (ValueError, TypeError):
+            budget_tiers = tiers or {"observe": 2.00, "suggest": 5.00, "execute": 8.00}
+        source = sv.source
+    else:
+        budget_tiers = tiers or {"observe": 2.00, "suggest": 5.00, "execute": 8.00}
+        source = "env"
+
+    routing_enabled = False
+    if routing_sv:
+        routing_enabled = routing_sv.value in ("True", "true", "1", True)
+
+    ctx = {
+        "request": request,
+        "budget_tiers": budget_tiers,
+        "source": source,
+        "routing_enabled": routing_enabled,
+        "flash": flash,
+        "error": error,
+    }
+    return templates.TemplateResponse(request, "partials/settings_budget_controls.html", ctx)
 
 
 @ui_router.get("/partials/settings/secrets", response_class=HTMLResponse)

@@ -121,4 +121,5 @@ CONTEXT_AGENT_CONFIG = AgentConfig(
     output_schema=ContextAgentOutput,
     fallback_fn=_context_fallback,
     block_on_threat=False,
+    batch_eligible=True,
 )

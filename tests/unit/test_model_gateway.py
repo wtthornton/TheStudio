@@ -154,15 +154,15 @@ class TestCostOptimizationRouting:
     """Epic 32: Cost optimization routing feature flag tests."""
 
     def test_routing_flag_off_by_default(self):
-        """When cost_routing_enabled=False, expert_routing stays BALANCED."""
+        """When cost_routing_enabled=False, routing stays BALANCED."""
         router = ModelRouter(cost_routing_enabled=False)
-        cls = router.resolve_class("expert_routing")
+        cls = router.resolve_class("routing")
         assert cls == ModelClass.BALANCED
 
-    def test_routing_flag_on_downgrades_expert_routing(self):
-        """When cost_routing_enabled=True, expert_routing drops to FAST."""
+    def test_routing_flag_on_downgrades_routing(self):
+        """When cost_routing_enabled=True, routing drops to FAST."""
         router = ModelRouter(cost_routing_enabled=True)
-        cls = router.resolve_class("expert_routing")
+        cls = router.resolve_class("routing")
         assert cls == ModelClass.FAST
 
     def test_routing_flag_on_downgrades_assembler(self):
@@ -206,7 +206,7 @@ class TestCostOptimizationRouting:
     def test_select_model_with_cost_routing(self):
         """select_model returns FAST provider when cost routing is on."""
         router = ModelRouter(cost_routing_enabled=True)
-        provider = router.select_model("expert_routing")
+        provider = router.select_model("routing")
         assert provider.model_class == ModelClass.FAST
 
     def test_tier_override_still_escalates_with_cost_routing(self):
@@ -296,6 +296,35 @@ class TestModelAuditStore:
         assert d["step"] == "intake"
         assert d["cost"] == 0.001234
         assert d["latency_ms"] == 150.5
+
+    def test_audit_cache_fields_default_zero(self):
+        a = ModelCallAudit(step="intent")
+        assert a.cache_creation_tokens == 0
+        assert a.cache_read_tokens == 0
+
+    def test_audit_cache_fields_in_dict(self):
+        a = ModelCallAudit(
+            step="intent",
+            cache_creation_tokens=1500,
+            cache_read_tokens=1200,
+        )
+        d = a.to_dict()
+        assert d["cache_creation_tokens"] == 1500
+        assert d["cache_read_tokens"] == 1200
+
+    def test_audit_batch_field_default_false(self):
+        a = ModelCallAudit(step="context")
+        assert a.batch is False
+
+    def test_audit_batch_field_in_dict(self):
+        a = ModelCallAudit(step="context", batch=True)
+        d = a.to_dict()
+        assert d["batch"] is True
+
+    def test_audit_repo_field_in_dict(self):
+        a = ModelCallAudit(step="context", repo="org/repo")
+        d = a.to_dict()
+        assert d["repo"] == "org/repo"
 
     def test_clear(self, audit_store):
         audit_store.record(ModelCallAudit(step="x"))

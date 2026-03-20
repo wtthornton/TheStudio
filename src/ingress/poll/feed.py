@@ -83,7 +83,15 @@ async def feed_issues_to_pipeline(
         )
         try:
             taskpacket = await create_taskpacket(session, task_data)
-            await start_workflow(taskpacket.id, correlation_id)
+            labels = [lbl.get("name", "") for lbl in issue.get("labels", []) if isinstance(lbl, dict)]
+            await start_workflow(
+                taskpacket.id,
+                correlation_id,
+                repo=repo_full_name,
+                issue_title=issue.get("title", ""),
+                issue_body=issue.get("body", "") or "",
+                labels=labels,
+            )
             count += 1
             otel_context.detach(token)
             logger.info(

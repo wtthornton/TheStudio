@@ -1,0 +1,211 @@
+<!-- Cost Dashboard partial — loaded via HTMX (Story 32.13) -->
+<div class="space-y-6 fade-in">
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-4 gap-4">
+        <div class="bg-white rounded-lg border border-gray-200 p-4">
+            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Spend</p>
+            <p class="text-2xl font-bold mt-1">${{ "%.4f" | format(report.total_cost) }}</p>
+            <p class="text-xs text-gray-400 mt-1">Last {{ report.window_hours }}h</p>
+        </div>
+        <div class="bg-white rounded-lg border border-gray-200 p-4">
+            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Calls</p>
+            <p class="text-2xl font-bold mt-1">{{ report.total_calls }}</p>
+            <p class="text-xs text-gray-400 mt-1">Last {{ report.window_hours }}h</p>
+        </div>
+        <div class="bg-white rounded-lg border border-gray-200 p-4">
+            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Avg Cost/Call</p>
+            <p class="text-2xl font-bold mt-1">
+                {% if report.total_calls > 0 %}
+                ${{ "%.6f" | format(report.total_cost / report.total_calls) }}
+                {% else %}
+                $0.00
+                {% endif %}
+            </p>
+            <p class="text-xs text-gray-400 mt-1">Last {{ report.window_hours }}h</p>
+        </div>
+        <div class="bg-white rounded-lg border border-gray-200 p-4">
+            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Cache Hit Rate</p>
+            <p class="text-2xl font-bold mt-1">{{ "%.1f" | format(report.cache_hit_rate * 100) }}%</p>
+            <p class="text-xs text-gray-400 mt-1">
+                {{ report.total_cache_read_tokens }} read / {{ report.total_cache_creation_tokens + report.total_cache_read_tokens }} total
+            </p>
+        </div>
+    </div>
+
+    <!-- By Day (time-series) -->
+    <div class="bg-white rounded-lg border border-gray-200 p-4">
+        <h4 class="text-sm font-semibold text-gray-700 mb-3">Spend by Day</h4>
+        {% if report.by_day %}
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-200 text-left text-xs text-gray-500 uppercase tracking-wide">
+                    <th class="pb-2 pr-4">Date</th>
+                    <th class="pb-2 pr-4">Cost</th>
+                    <th class="pb-2 pr-4">Calls</th>
+                    <th class="pb-2 pr-4">Tokens In</th>
+                    <th class="pb-2 pr-4">Tokens Out</th>
+                    <th class="pb-2">Errors</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for s in report.by_day %}
+                <tr>
+                    <td class="py-2 pr-4 font-medium">{{ s.key }}</td>
+                    <td class="py-2 pr-4">${{ "%.4f" | format(s.total_cost) }}</td>
+                    <td class="py-2 pr-4">{{ s.call_count }}</td>
+                    <td class="py-2 pr-4 text-gray-500">{{ s.total_tokens_in }}</td>
+                    <td class="py-2 pr-4 text-gray-500">{{ s.total_tokens_out }}</td>
+                    <td class="py-2">
+                        {% if s.error_count > 0 %}
+                        <span class="text-red-600">{{ s.error_count }}</span>
+                        {% else %}
+                        <span class="text-green-600">0</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-gray-400 text-sm">No spend data in window.</p>
+        {% endif %}
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+        <!-- By Provider -->
+        <div class="bg-white rounded-lg border border-gray-200 p-4">
+            <h4 class="text-sm font-semibold text-gray-700 mb-3">Spend by Provider</h4>
+            {% if report.by_provider %}
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-gray-200 text-left text-xs text-gray-500 uppercase tracking-wide">
+                        <th class="pb-2 pr-4">Provider</th>
+                        <th class="pb-2 pr-4">Cost</th>
+                        <th class="pb-2 pr-4">Calls</th>
+                        <th class="pb-2">Errors</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for s in report.by_provider %}
+                    <tr>
+                        <td class="py-2 pr-4 font-medium">{{ s.key }}</td>
+                        <td class="py-2 pr-4">${{ "%.4f" | format(s.total_cost) }}</td>
+                        <td class="py-2 pr-4">{{ s.call_count }}</td>
+                        <td class="py-2">
+                            {% if s.error_count > 0 %}
+                            <span class="text-red-600">{{ s.error_count }}</span>
+                            {% else %}
+                            <span class="text-green-600">0</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="text-gray-400 text-sm">No data.</p>
+            {% endif %}
+        </div>
+
+        <!-- By Model -->
+        <div class="bg-white rounded-lg border border-gray-200 p-4">
+            <h4 class="text-sm font-semibold text-gray-700 mb-3">Spend by Model</h4>
+            {% if report.by_model %}
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-gray-200 text-left text-xs text-gray-500 uppercase tracking-wide">
+                        <th class="pb-2 pr-4">Model</th>
+                        <th class="pb-2 pr-4">Cost</th>
+                        <th class="pb-2 pr-4">Calls</th>
+                        <th class="pb-2">Avg Latency</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for s in report.by_model %}
+                    <tr>
+                        <td class="py-2 pr-4 font-medium">{{ s.key }}</td>
+                        <td class="py-2 pr-4">${{ "%.4f" | format(s.total_cost) }}</td>
+                        <td class="py-2 pr-4">{{ s.call_count }}</td>
+                        <td class="py-2">{{ "%.0f" | format(s.avg_latency_ms) }}ms</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="text-gray-400 text-sm">No data.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+        <!-- By Step -->
+        <div class="bg-white rounded-lg border border-gray-200 p-4">
+            <h4 class="text-sm font-semibold text-gray-700 mb-3">Spend by Step</h4>
+            {% if report.by_step %}
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-gray-200 text-left text-xs text-gray-500 uppercase tracking-wide">
+                        <th class="pb-2 pr-4">Step</th>
+                        <th class="pb-2 pr-4">Cost</th>
+                        <th class="pb-2 pr-4">Calls</th>
+                        <th class="pb-2">Errors</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for s in report.by_step %}
+                    <tr>
+                        <td class="py-2 pr-4 font-medium">{{ s.key }}</td>
+                        <td class="py-2 pr-4">${{ "%.4f" | format(s.total_cost) }}</td>
+                        <td class="py-2 pr-4">{{ s.call_count }}</td>
+                        <td class="py-2">
+                            {% if s.error_count > 0 %}
+                            <span class="text-red-600">{{ s.error_count }}</span>
+                            {% else %}
+                            <span class="text-green-600">0</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="text-gray-400 text-sm">No data.</p>
+            {% endif %}
+        </div>
+
+        <!-- By Repo -->
+        <div class="bg-white rounded-lg border border-gray-200 p-4">
+            <h4 class="text-sm font-semibold text-gray-700 mb-3">Spend by Repository</h4>
+            {% if report.by_repo %}
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-gray-200 text-left text-xs text-gray-500 uppercase tracking-wide">
+                        <th class="pb-2 pr-4">Repository</th>
+                        <th class="pb-2 pr-4">Cost</th>
+                        <th class="pb-2 pr-4">Calls</th>
+                        <th class="pb-2">Errors</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for s in report.by_repo %}
+                    <tr>
+                        <td class="py-2 pr-4 font-medium">{{ s.key }}</td>
+                        <td class="py-2 pr-4">${{ "%.4f" | format(s.total_cost) }}</td>
+                        <td class="py-2 pr-4">{{ s.call_count }}</td>
+                        <td class="py-2">
+                            {% if s.error_count > 0 %}
+                            <span class="text-red-600">{{ s.error_count }}</span>
+                            {% else %}
+                            <span class="text-green-600">0</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="text-gray-400 text-sm">No data.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>

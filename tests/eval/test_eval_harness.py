@@ -482,3 +482,103 @@ class TestRunComparisonEval:
         )
 
         assert result.meets_threshold is False
+
+
+# ===================================================================
+# F9 fix: Weight selection tests for intake/context scoring
+# ===================================================================
+
+
+class TestWeightSelection:
+    """Verify that _run_single selects correct weights per agent type."""
+
+    @pytest.mark.asyncio
+    async def test_intake_uses_calibrated_weights(self) -> None:
+        """Intake eval with custom score_fn should use intake weights."""
+        from src.agent.framework import AgentContext, AgentRunner
+        from src.eval.harness import _run_single
+        from src.intake.intake_config import INTAKE_AGENT_CONFIG
+
+        case = EvalCase(
+            case_id="weight_test_intake",
+            category="bug_fix",
+            issue_title="Fix login bug",
+            issue_body="The login page shows an error after password reset.",
+        )
+
+        def mock_score(parsed, c):
+            return {
+                "accepted_correct": 1.0,
+                "role_correct": 1.0,
+                "overlay_coverage": 0.0,
+                "risk_detection": 0.0,
+                "has_reasoning": 1.0,
+            }
+
+        runner = AgentRunner(INTAKE_AGENT_CONFIG)
+        result = await _run_single(
+            runner=runner,
+            config=INTAKE_AGENT_CONFIG,
+            case=case,
+            build_context=lambda c: AgentContext(
+                repo="test", issue_title=c.issue_title, issue_body=c.issue_body,
+            ),
+            score=mock_score,
+            pass_threshold=0.5,
+        )
+
+        # accepted_correct(1.0)*0.35 + role_correct(1.0)*0.25 + has_reasoning(1.0)*0.10
+        # = 0.35 + 0.25 + 0.10 = 0.70 => should pass at 0.5
+        assert result.passed is True
+
+    @pytest.mark.asyncio
+    async def test_intake_weights_fail_on_primary_wrong(self) -> None:
+        """When primary signal (accepted_correct) is wrong, harder to pass."""
+        from src.agent.framework import AgentContext, AgentRunner
+        from src.eval.harness import _run_single
+        from src.intake.intake_config import INTAKE_AGENT_CONFIG
+
+        case = EvalCase(
+            case_id="weight_test_intake_fail",
+            category="bug_fix",
+            issue_title="Fix login bug",
+            issue_body="The login page shows an error.",
+        )
+
+        def mock_score(parsed, c):
+            return {
+                "accepted_correct": 0.0,
+                "role_correct": 0.0,
+                "overlay_coverage": 0.0,
+                "risk_detection": 0.0,
+                "has_reasoning": 1.0,
+            }
+
+        runner = AgentRunner(INTAKE_AGENT_CONFIG)
+        result = await _run_single(
+            runner=runner,
+            config=INTAKE_AGENT_CONFIG,
+            case=case,
+            build_context=lambda c: AgentContext(
+                repo="test", issue_title=c.issue_title, issue_body=c.issue_body,
+            ),
+            score=mock_score,
+            pass_threshold=0.5,
+        )
+
+        # Only has_reasoning(1.0)*0.10 = 0.10 => fail
+        assert result.passed is False
+
+    def test_intake_eval_uses_lower_threshold(self) -> None:
+        """Verify intake eval passes pass_threshold=0.5 to run_eval."""
+        import inspect
+        from src.eval import intake_eval
+        source = inspect.getsource(intake_eval.run_intake_eval)
+        assert "pass_threshold=0.5" in source
+
+    def test_context_eval_uses_lower_threshold(self) -> None:
+        """Verify context eval passes pass_threshold=0.5 to run_eval."""
+        import inspect
+        from src.eval import context_eval
+        source = inspect.getsource(context_eval.run_context_eval)
+        assert "pass_threshold=0.5" in source

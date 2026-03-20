@@ -274,11 +274,34 @@ async def _run_single(
         "invariant_presence": 0.15,
         "non_goal_specificity": 0.10,
     }
+
+    # Story 32 / F9: Calibrated weights for intake and context agents.
+    # Primary correctness signal (classification, scope) gets the highest
+    # weight; secondary signals (reasoning, questions) are lower.
+    _intake_weights = {
+        "accepted_correct": 0.35,
+        "role_correct": 0.25,
+        "overlay_coverage": 0.15,
+        "risk_detection": 0.15,
+        "has_reasoning": 0.10,
+    }
+    _context_weights = {
+        "scope_relevance": 0.30,
+        "service_coverage": 0.25,
+        "risk_enhancement": 0.15,
+        "has_complexity_rationale": 0.15,
+        "actionable_questions": 0.15,
+    }
+
+    # Pick the best matching weight map for the score dimensions
     if scores.keys() <= _intent_weights.keys():
-        # Intent-style dimensions — use calibrated weights
         weights = _intent_weights
+    elif scores.keys() <= _intake_weights.keys():
+        weights = _intake_weights
+    elif scores.keys() <= _context_weights.keys():
+        weights = _context_weights
     else:
-        # Custom dimensions (intake, context, routing, etc.) — equal weights
+        # Unknown dimensions — equal weights
         n = len(scores) or 1
         w = 1.0 / n
         weights = dict.fromkeys(scores, w)

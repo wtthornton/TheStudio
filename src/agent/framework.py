@@ -49,6 +49,20 @@ PIPELINE_BUDGET_DEFAULTS: dict[str, float] = {
 }
 
 
+def get_budget_for_tier(tier: str) -> float:
+    """Return the budget cap (USD) for a trust tier.
+
+    When cost_optimization_routing_enabled is True, uses the tighter caps
+    from settings.cost_optimization_budget_tiers.  Otherwise falls back
+    to PIPELINE_BUDGET_DEFAULTS.
+    """
+    if settings.cost_optimization_routing_enabled:
+        return settings.cost_optimization_budget_tiers.get(
+            tier, PIPELINE_BUDGET_DEFAULTS.get(tier, 5.00)
+        )
+    return PIPELINE_BUDGET_DEFAULTS.get(tier, 5.00)
+
+
 class PipelineBudget:
     """Thread-safe shared cost counter across all agents for a single TaskPacket.
 
@@ -119,6 +133,7 @@ class AgentConfig:
     block_on_threat: bool = False
     compress_threshold: float = 0.5
     compress_model_class: str = "fast"
+    batch_eligible: bool = False
 
 
 @dataclass
@@ -260,18 +275,16 @@ class AgentRunner:
                     )
                     return await self._run_fallback(context, span, start_time)
 
-            # Pipeline-wide budget check (Story 1.12)
+            # Pipeline-wide budget check (Story 1.12 / Story 32.8)
             if context.pipeline_budget is not None:
                 if not context.pipeline_budget.consume(self.config.max_budget_usd):
-                    logger.warning(
-                        "Pipeline budget exhausted for agent %s "
-                        "(remaining=%.2f, needed=%.2f), using fallback",
-                        self.config.agent_name,
-                        context.pipeline_budget.remaining,
-                        self.config.max_budget_usd,
-                    )
                     span.set_attribute("thestudio.agent.pipeline_budget_exhausted", True)
-                    return await self._run_fallback(context, span, start_time)
+                    raise BudgetExceededError(
+                        task_id=str(context.taskpacket_id or "unknown"),
+                        current_spend=context.pipeline_budget.used,
+                        limit=context.pipeline_budget.max_total_usd,
+                        step=self.config.pipeline_step,
+                    )
 
             # Build prompts
             system_prompt = self.build_system_prompt(context)
@@ -308,6 +321,8 @@ class AgentRunner:
                 tokens_in=response.tokens_in,
                 tokens_out=response.tokens_out,
                 cost=provider.estimate_cost(response.tokens_in, response.tokens_out),
+                cache_creation_tokens=response.cache_creation_tokens,
+                cache_read_tokens=response.cache_read_tokens,
             )
 
             # Parse output
@@ -416,8 +431,18 @@ class AgentRunner:
         tokens_in: int,
         tokens_out: int,
         cost: float,
+        cache_creation_tokens: int = 0,
+        cache_read_tokens: int = 0,
+        batch: bool = False,
     ) -> None:
-        """Create an audit record and record spend."""
+        """Create an audit record and record spend.
+
+        Story 32.17: When *batch* is True and cost_optimization_batch_enabled
+        is on, apply 50% discount to cost estimation.
+        """
+        if batch and settings.cost_optimization_batch_enabled:
+            cost = cost * 0.5
+
         audit = ModelCallAudit(
             correlation_id=context.correlation_id,
             task_id=context.taskpacket_id,
@@ -429,6 +454,9 @@ class AgentRunner:
             tokens_in=tokens_in,
             tokens_out=tokens_out,
             cost=cost,
+            batch=batch,
+            cache_creation_tokens=cache_creation_tokens,
+            cache_read_tokens=cache_read_tokens,
         )
         get_model_audit_store().record(audit)
 

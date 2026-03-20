@@ -1,0 +1,126 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.3, pytest-9.0.2, pluggy-1.6.0 -- C:\cursor\TheStudio\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\cursor\TheStudio
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-1.3.0, base-url-2.1.0, cov-7.0.0, order-1.3.0, playwright-0.7.2, respx-0.22.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collecting ... collected 22 items / 8 deselected / 14 selected
+
+tests/p0/test_github_deployed.py::TestWebhookDeployed::test_healthz_through_caddy PASSED [  7%]
+tests/p0/test_github_deployed.py::TestWebhookDeployed::test_webhook_rejects_unsigned_payload PASSED [ 14%]
+tests/p0/test_github_deployed.py::TestWebhookDeployed::test_webhook_rejects_bad_signature PASSED [ 21%]
+tests/p0/test_github_deployed.py::TestWebhookDeployed::test_webhook_accepts_valid_payload PASSED [ 28%]
+tests/p0/test_github_deployed.py::TestWebhookDeployed::test_webhook_through_caddy_not_bypassed PASSED [ 35%]
+tests/p0/test_github_deployed.py::TestAdminAPIDeployed::test_admin_health PASSED [ 42%]
+tests/p0/test_github_deployed.py::TestAdminAPIDeployed::test_list_repos PASSED [ 50%]
+tests/p0/test_github_deployed.py::TestAdminAPIDeployed::test_register_and_query_repo PASSED [ 57%]
+tests/p0/test_github_deployed.py::TestAdminAPIDeployed::test_workflow_created_after_webhook PASSED [ 64%]
+tests/p0/test_postgres_deployed.py::TestPostgresDeployed::test_postgres_healthy_via_admin PASSED [ 71%]
+tests/p0/test_postgres_deployed.py::TestPostgresDeployed::test_webhook_persists_workflow FAILED [ 78%]
+tests/p0/test_postgres_deployed.py::TestPostgresDeployed::test_workflow_has_expected_fields FAILED [ 85%]
+tests/p0/test_postgres_deployed.py::TestPostgresDeployed::test_repos_persist_across_requests PASSED [ 92%]
+tests/p0/test_postgres_deployed.py::TestPostgresDeployed::test_audit_log_persists PASSED [100%]
+
+================================== FAILURES ===================================
+_____________ TestPostgresDeployed.test_webhook_persists_workflow _____________
+
+self = <tests.p0.test_postgres_deployed.TestPostgresDeployed object at 0x000001A4E1732710>
+p0_client = <httpx.Client object at 0x000001A4E1493950>
+p0_base_url = 'https://localhost:9443'
+registered_test_repo = {'default_branch': 'main', 'installation_id': 99999, 'owner': 'p0-test-org', 'repo': 'p0-test-repo'}
+
+    def test_webhook_persists_workflow(
+        self,
+        p0_client: httpx.Client,
+        p0_base_url: str,
+        registered_test_repo: dict,
+    ) -> None:
+        """A webhook creates a workflow that persists in Postgres.
+    
+        Sends a webhook, waits for processing, then queries the admin API
+        to verify the workflow exists — proving Postgres persistence works
+        end-to-end through the deployed stack.
+        """
+        # Use a unique issue number to avoid dedup
+        import random
+        issue_num = random.randint(50000, 59999)
+        payload = make_issue_payload(issue_number=issue_num)
+        body = json.dumps(payload).encode()
+        headers = build_webhook_headers(body)
+    
+        r = httpx.post(
+            f"{p0_base_url}/webhook/github",
+            content=body,
+            headers=headers,
+            verify=False,
+            timeout=15,
+        )
+        assert r.status_code in (200, 201, 202, 204), (
+            f"Webhook failed: {r.status_code} {r.text}"
+        )
+    
+        # Wait for async processing
+        time.sleep(3)
+    
+        # Verify workflow is visible via admin API
+        r = p0_client.get("/admin/workflows")
+        assert r.status_code == 200
+        workflows = r.json().get("workflows", [])
+>       assert len(workflows) > 0, "Expected at least one workflow after webhook"
+E       AssertionError: Expected at least one workflow after webhook
+E       assert 0 > 0
+E        +  where 0 = len([])
+
+tests\p0\test_postgres_deployed.py:74: AssertionError
+___________ TestPostgresDeployed.test_workflow_has_expected_fields ____________
+
+self = <tests.p0.test_postgres_deployed.TestPostgresDeployed object at 0x000001A4E1728770>
+p0_client = <httpx.Client object at 0x000001A4E1493950>
+p0_base_url = 'https://localhost:9443'
+registered_test_repo = {'default_branch': 'main', 'installation_id': 99999, 'owner': 'p0-test-org', 'repo': 'p0-test-repo'}
+
+    def test_workflow_has_expected_fields(
+        self,
+        p0_client: httpx.Client,
+        p0_base_url: str,
+        registered_test_repo: dict,
+    ) -> None:
+        """Workflow records have repo_name, status, and current_step populated.
+    
+        Sends a webhook, waits, then verifies the created workflow contains
+        all required fields — proving schema-level persistence correctness.
+        """
+        import random
+        issue_num = random.randint(60000, 69999)
+        payload = make_issue_payload(issue_number=issue_num)
+        body = json.dumps(payload).encode()
+        headers = build_webhook_headers(body)
+    
+        r = httpx.post(
+            f"{p0_base_url}/webhook/github",
+            content=body,
+            headers=headers,
+            verify=False,
+            timeout=15,
+        )
+        assert r.status_code in (200, 201, 202, 204)
+    
+        time.sleep(3)
+    
+        r = p0_client.get("/admin/workflows")
+        assert r.status_code == 200
+        workflows = r.json().get("workflows", [])
+    
+        # Find a workflow for our test repo
+        matching = [w for w in workflows if "p0-test" in w.get("repo_name", "")]
+>       assert len(matching) > 0, "Expected workflow for p0-test-org/p0-test-repo"
+E       AssertionError: Expected workflow for p0-test-org/p0-test-repo
+E       assert 0 > 0
+E        +  where 0 = len([])
+
+tests\p0\test_postgres_deployed.py:110: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/p0/test_postgres_deployed.py::TestPostgresDeployed::test_webhook_persists_workflow
+FAILED tests/p0/test_postgres_deployed.py::TestPostgresDeployed::test_workflow_has_expected_fields
+================= 2 failed, 12 passed, 8 deselected in 13.67s =================

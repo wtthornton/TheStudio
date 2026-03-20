@@ -20,7 +20,15 @@ async def get_temporal_client() -> Client:
     return _client
 
 
-async def start_workflow(taskpacket_id: UUID, correlation_id: UUID) -> str:
+async def start_workflow(
+    taskpacket_id: UUID,
+    correlation_id: UUID,
+    *,
+    repo: str = "",
+    issue_title: str = "",
+    issue_body: str = "",
+    labels: list[str] | None = None,
+) -> str:
     """Start the TheStudio pipeline workflow.
 
     Uses taskpacket_id as workflow ID for idempotency — Temporal guarantees
@@ -36,6 +44,10 @@ async def start_workflow(taskpacket_id: UUID, correlation_id: UUID) -> str:
             "taskpacket_id": str(taskpacket_id),
             "correlation_id": str(correlation_id),
             "approval_auto_bypass": settings.approval_auto_bypass,
+            "repo": repo,
+            "issue_title": issue_title,
+            "issue_body": issue_body,
+            "labels": labels or [],
         },
         id=str(taskpacket_id),
         task_queue=settings.temporal_task_queue,

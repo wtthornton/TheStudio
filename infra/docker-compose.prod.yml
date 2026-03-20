@@ -62,6 +62,11 @@ services:
       THESTUDIO_MERIDIAN_PORTFOLIO_ENABLED: "${THESTUDIO_MERIDIAN_PORTFOLIO_ENABLED:-false}"
       THESTUDIO_MERIDIAN_PORTFOLIO_GITHUB_ISSUE: "${THESTUDIO_MERIDIAN_PORTFOLIO_GITHUB_ISSUE:-false}"
       THESTUDIO_MERIDIAN_PORTFOLIO_REPO: "${THESTUDIO_MERIDIAN_PORTFOLIO_REPO:-}"
+      # Per-agent LLM toggles (Epic 23)
+      THESTUDIO_AGENT_LLM_ENABLED: '{"primary_agent":true,"developer":true,"intake_agent":true,"context_agent":true,"intent_agent":true,"router_agent":true,"recruiter_agent":true,"assembler_agent":true,"qa_agent":true,"preflight_agent":true}'
+      # Cost optimization (Epic 32)
+      THESTUDIO_COST_OPTIMIZATION_ROUTING_ENABLED: "${THESTUDIO_COST_OPTIMIZATION_ROUTING_ENABLED:-false}"
+      THESTUDIO_COST_OPTIMIZATION_CACHING_ENABLED: "${THESTUDIO_COST_OPTIMIZATION_CACHING_ENABLED:-false}"
     depends_on:
       postgres:
         condition: service_healthy
@@ -71,6 +76,7 @@ services:
         condition: service_started
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./github-app.pem:/app/infra/github-app.pem:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
       interval: 10s

@@ -1,10 +1,10 @@
 # Epic 33: P0 Deployment Test Harness
 
-> **Status:** Planned
+> **Status:** Complete
 > **Epic Owner:** Primary Developer
-> **Duration:** 2-3 sprints (~4-6 weeks)
+> **Duration:** 2 sprints (2026-03-20)
 > **Created:** 2026-03-18
-> **Meridian Review:** Round 1: Pending
+> **Meridian Review:** Round 1: Conditional Pass (gaps resolved)
 
 ---
 
@@ -85,6 +85,21 @@ The `infra/.env` file is either cleaned up to remove inline comments that break 
 ### AC 8: Placeholder Credential Guard
 
 The runner script validates that critical environment variables (`THESTUDIO_ANTHROPIC_API_KEY`, `THESTUDIO_GITHUB_TOKEN`, `POSTGRES_PASSWORD`) contain real values, not placeholders or empty strings, before starting any test. Eval tests additionally verify the API key starts with `sk-ant-`.
+
+---
+
+## 4c. Delivery Evidence
+
+| AC | Status | Evidence |
+|---|---|---|
+| AC 1: Health Gate | **Delivered (Sprint 1)** | `tests/p0/health.py` — checks Caddy, App, Temporal, NATS, Postgres, pg-proxy. `tests/p0/test_health_gate.py` — 8 unit tests (mocked). |
+| AC 2: Eval Guard | **Delivered (Sprint 2)** | `tests/p0/eval_preflight.py` — validates container LLM provider + API key match. Called by runner before eval suite. `tests/p0/test_eval_preflight.py` — 8 tests. |
+| AC 3: GitHub Deploy Tests | **Delivered (Sprint 1)** | `tests/p0/test_github_deployed.py` — webhook intake through Caddy HTTPS (9443), HMAC-signed payloads, TaskPacket creation (201) + uniqueness (409). |
+| AC 4: Postgres Deploy Tests | **Delivered (Sprint 1)** | `tests/p0/test_postgres_deployed.py` — TaskPacket persistence via deployed app API through Caddy, verified via admin endpoints. |
+| AC 5: Runner Script | **Delivered (Sprint 1)** | `scripts/run-p0-tests.sh` — sources `infra/.env`, health gate, 4 suites, structured results. |
+| AC 6: Results Persistence | **Delivered (Sprint 2)** | Runner generates `docs/eval-results/p0-{timestamp}.md` with per-suite test counts, pass/fail/skip, duration, cost, git SHA/branch/dirty state, failure details. Latest pointer at `docs/eval-results/latest.md`. |
+| AC 7: Env File Parsing | **Delivered (Sprint 1)** | Runner uses `set -a; source infra/.env; set +a` — handles comments correctly. |
+| AC 8: Credential Guard | **Delivered (Sprint 1 + Sprint 2)** | Runner validates API key (sk-ant- prefix), PG password (not placeholder), admin user/password, webhook secret. `tests/p0/credential_guard.py` + `tests/p0/test_false_pass.py` — 7 tests prove guards reject bad credentials. |
 
 ---
 

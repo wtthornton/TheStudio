@@ -14,6 +14,7 @@ import pytest
 from src.adapters.llm import (
     AnthropicAdapter,
     AuthMode,
+    BatchResult,
     LLMRequest,
     LLMResponse,
     MockLLMAdapter,
@@ -375,3 +376,204 @@ class TestGetLLMAdapter:
         monkeypatch.setattr("src.adapters.llm.settings.llm_provider", "anthropic")
         adapter = get_llm_adapter()
         assert isinstance(adapter, AnthropicAdapter)
+
+
+class TestBatchResult:
+    """Epic 32, Story 32.15: BatchResult dataclass."""
+
+    def test_defaults(self):
+        r = BatchResult()
+        assert r.batch_id == ""
+        assert r.status == "pending"
+        assert r.responses == []
+        assert r.total_requests == 0
+        assert r.error is None
+
+    def test_to_dict(self):
+        r = BatchResult(
+            batch_id="batch-123", status="ended",
+            total_requests=3, completed_requests=2, failed_requests=1,
+        )
+        d = r.to_dict()
+        assert d["batch_id"] == "batch-123"
+        assert d["completed_requests"] == 2
+        assert d["failed_requests"] == 1
+
+
+class TestMockBatchSubmit:
+    """Epic 32, Story 32.15: MockLLMAdapter.batch_submit()."""
+
+    async def test_returns_all_responses(
+        self, provider: ProviderConfig,
+    ) -> None:
+        adapter = MockLLMAdapter(default_response="Batch response")
+        requests = [
+            LLMRequest(messages=[{"role": "user", "content": "Q1"}]),
+            LLMRequest(messages=[{"role": "user", "content": "Q2"}]),
+            LLMRequest(messages=[{"role": "user", "content": "Q3"}]),
+        ]
+        result = await adapter.batch_submit(provider, requests)
+        assert result.status == "ended"
+        assert result.batch_id == "mock-batch-001"
+        assert result.total_requests == 3
+        assert result.completed_requests == 3
+        assert len(result.responses) == 3
+        for resp in result.responses:
+            assert resp.content == "Batch response"
+
+    async def test_empty_batch(self, provider: ProviderConfig) -> None:
+        adapter = MockLLMAdapter()
+        result = await adapter.batch_submit(provider, [])
+        assert result.status == "ended"
+        assert result.total_requests == 0
+        assert len(result.responses) == 0
+
+    async def test_increments_call_count(
+        self, provider: ProviderConfig,
+    ) -> None:
+        adapter = MockLLMAdapter()
+        requests = [
+            LLMRequest(messages=[{"role": "user", "content": "Q1"}]),
+            LLMRequest(messages=[{"role": "user", "content": "Q2"}]),
+        ]
+        await adapter.batch_submit(provider, requests)
+        assert adapter.call_count == 2
+
+
+class TestAnthropicBatchSubmit:
+    """Epic 32, Story 32.15: AnthropicAdapter.batch_submit()."""
+
+    async def test_submits_and_polls_batch(
+        self, provider: ProviderConfig,
+    ) -> None:
+        """Simulates submit → poll (ended) → fetch results."""
+        poll_count = 0
+
+        def _batch_result_line(custom_id: str, text: str) -> str:
+            return json.dumps({
+                "custom_id": custom_id,
+                "result": {
+                    "type": "succeeded",
+                    "message": {
+                        "content": [{"type": "text", "text": text}],
+                        "model": "claude-sonnet-4-6",
+                        "stop_reason": "end_turn",
+                        "usage": {"input_tokens": 10, "output_tokens": 5},
+                    },
+                },
+            })
+
+        results_body = "\n".join([
+            _batch_result_line("req-0", "Answer 1"),
+            _batch_result_line("req-1", "Answer 2"),
+        ])
+
+        async def mock_handler(request: httpx.Request) -> httpx.Response:
+            nonlocal poll_count
+            url = str(request.url)
+
+            # Submit
+            if request.method == "POST" and "batches" in url:
+                return httpx.Response(200, json={
+                    "id": "batch-abc",
+                    "processing_status": "in_progress",
+                    "request_counts": {"succeeded": 0, "errored": 0, "total": 2},
+                })
+
+            # Poll — return ended immediately
+            if request.method == "GET" and "batch-abc" in url and "results" not in url:
+                poll_count += 1
+                return httpx.Response(200, json={
+                    "id": "batch-abc",
+                    "processing_status": "ended",
+                    "results_url": "https://api.anthropic.com/v1/messages/batches/batch-abc/results",
+                    "request_counts": {"succeeded": 2, "errored": 0, "total": 2},
+                })
+
+            # Results
+            if "results" in url:
+                return httpx.Response(200, text=results_body)
+
+            return httpx.Response(404)
+
+        transport = httpx.MockTransport(mock_handler)
+        adapter = AnthropicAdapter(api_key="test-key", auth_mode="api_key")
+        adapter._client = httpx.AsyncClient(transport=transport)
+
+        requests = [
+            LLMRequest(messages=[{"role": "user", "content": "Q1"}]),
+            LLMRequest(messages=[{"role": "user", "content": "Q2"}]),
+        ]
+        result = await adapter.batch_submit(provider, requests)
+
+        assert result.batch_id == "batch-abc"
+        assert result.status == "ended"
+        assert result.total_requests == 2
+        assert result.completed_requests == 2
+        assert len(result.responses) == 2
+        assert result.responses[0].content == "Answer 1"
+        assert result.responses[1].content == "Answer 2"
+
+    async def test_empty_batch_returns_immediately(
+        self, provider: ProviderConfig,
+    ) -> None:
+        adapter = AnthropicAdapter(api_key="test-key", auth_mode="api_key")
+        result = await adapter.batch_submit(provider, [])
+        assert result.status == "ended"
+        assert result.total_requests == 0
+
+    async def test_handles_failed_results(
+        self, provider: ProviderConfig,
+    ) -> None:
+        """Batch with one succeeded and one failed result."""
+        results_body = "\n".join([
+            json.dumps({
+                "custom_id": "req-0",
+                "result": {
+                    "type": "succeeded",
+                    "message": {
+                        "content": [{"type": "text", "text": "OK"}],
+                        "model": "claude-sonnet-4-6",
+                        "stop_reason": "end_turn",
+                        "usage": {"input_tokens": 10, "output_tokens": 3},
+                    },
+                },
+            }),
+            json.dumps({
+                "custom_id": "req-1",
+                "result": {"type": "errored", "error": {"message": "rate limit"}},
+            }),
+        ])
+
+        async def mock_handler(request: httpx.Request) -> httpx.Response:
+            url = str(request.url)
+            if request.method == "POST":
+                return httpx.Response(200, json={
+                    "id": "batch-fail",
+                    "processing_status": "ended",
+                    "results_url": "https://api.anthropic.com/v1/messages/batches/batch-fail/results",
+                    "request_counts": {"succeeded": 1, "errored": 1, "total": 2},
+                })
+            if "results" in url:
+                return httpx.Response(200, text=results_body)
+            # Poll returns ended immediately
+            return httpx.Response(200, json={
+                "id": "batch-fail",
+                "processing_status": "ended",
+                "results_url": "https://api.anthropic.com/v1/messages/batches/batch-fail/results",
+                "request_counts": {"succeeded": 1, "errored": 1, "total": 2},
+            })
+
+        transport = httpx.MockTransport(mock_handler)
+        adapter = AnthropicAdapter(api_key="test-key", auth_mode="api_key")
+        adapter._client = httpx.AsyncClient(transport=transport)
+
+        requests = [
+            LLMRequest(messages=[{"role": "user", "content": "Q1"}]),
+            LLMRequest(messages=[{"role": "user", "content": "Q2"}]),
+        ]
+        result = await adapter.batch_submit(provider, requests)
+        assert result.batch_id == "batch-fail"
+        assert len(result.responses) == 1
+        assert result.responses[0].content == "OK"
+        assert result.failed_requests >= 1

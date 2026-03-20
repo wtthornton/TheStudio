@@ -14,6 +14,7 @@ import pytest
 
 from src.adapters.llm import LLMResponse
 from src.admin.model_gateway import (
+    BudgetExceededError,
     InMemoryBudgetEnforcer,
     InMemoryModelAuditStore,
     ModelClass,
@@ -26,6 +27,7 @@ from src.agent.framework import (
     AgentContext,
     AgentRunner,
     PipelineBudget,
+    get_budget_for_tier,
 )
 
 # -- Fixtures ----------------------------------------------------------------
@@ -217,12 +219,12 @@ class TestAgentRunnerPipelineBudget:
     """Test that AgentRunner.run() checks pipeline_budget before calling LLM."""
 
     @pytest.mark.asyncio
-    async def test_pipeline_budget_exhausted_triggers_fallback(
+    async def test_pipeline_budget_exhausted_raises_error(
         self,
         mock_gateway,
         mock_llm_adapter,
     ):
-        """When pipeline budget is exhausted, agent uses fallback."""
+        """When pipeline budget is exhausted, BudgetExceededError is raised (Story 32.8)."""
         budget = PipelineBudget(max_total_usd=0.10)
         # Pre-spend most of the budget
         budget.consume(0.10)
@@ -238,10 +240,12 @@ class TestAgentRunnerPipelineBudget:
             "src.agent.framework.settings",
             agent_llm_enabled={"test_agent": True},
         ):
-            result = await runner.run(ctx)
+            with pytest.raises(BudgetExceededError) as exc_info:
+                await runner.run(ctx)
 
-        assert result.used_fallback is True
-        assert result.raw_output == "budget fallback"
+        assert exc_info.value.step == "test_step"
+        assert exc_info.value.current_spend == pytest.approx(0.10)
+        assert exc_info.value.limit == pytest.approx(0.10)
         mock_llm_adapter.complete.assert_not_called()
 
     @pytest.mark.asyncio
@@ -300,8 +304,6 @@ class TestAgentRunnerPipelineBudget:
         task_id = uuid4()
         ctx = AgentContext(taskpacket_id=task_id, pipeline_budget=budget)
 
-        from src.admin.model_gateway import BudgetExceededError
-
         with (
             patch(
                 "src.agent.framework.settings",
@@ -318,3 +320,185 @@ class TestAgentRunnerPipelineBudget:
         # Per-agent budget triggered first; pipeline budget not consumed
         assert result.used_fallback is True
         assert budget.used == pytest.approx(0.0)
+
+
+# -- Story 32.6: get_budget_for_tier tests ----------------------------------
+
+
+class TestGetBudgetForTier:
+    """Test that get_budget_for_tier returns settings caps when enabled."""
+
+    def test_returns_defaults_when_routing_disabled(self):
+        """When cost_optimization_routing_enabled=False, use PIPELINE_BUDGET_DEFAULTS."""
+        with patch(
+            "src.agent.framework.settings",
+            cost_optimization_routing_enabled=False,
+            cost_optimization_budget_tiers={"observe": 2.00, "suggest": 5.00, "execute": 8.00},
+        ):
+            assert get_budget_for_tier("observe") == pytest.approx(5.00)
+            assert get_budget_for_tier("suggest") == pytest.approx(8.50)
+            assert get_budget_for_tier("execute") == pytest.approx(10.00)
+
+    def test_returns_settings_caps_when_routing_enabled(self):
+        """When cost_optimization_routing_enabled=True, use settings budget tiers."""
+        with patch(
+            "src.agent.framework.settings",
+            cost_optimization_routing_enabled=True,
+            cost_optimization_budget_tiers={"observe": 2.00, "suggest": 5.00, "execute": 8.00},
+        ):
+            assert get_budget_for_tier("observe") == pytest.approx(2.00)
+            assert get_budget_for_tier("suggest") == pytest.approx(5.00)
+            assert get_budget_for_tier("execute") == pytest.approx(8.00)
+
+    def test_unknown_tier_returns_default_fallback(self):
+        """Unknown tier falls back to $5.00 default."""
+        with patch(
+            "src.agent.framework.settings",
+            cost_optimization_routing_enabled=True,
+            cost_optimization_budget_tiers={"observe": 2.00},
+        ):
+            assert get_budget_for_tier("unknown_tier") == pytest.approx(5.00)
+
+    def test_unknown_tier_routing_disabled(self):
+        """Unknown tier with routing disabled also falls back to $5.00."""
+        with patch(
+            "src.agent.framework.settings",
+            cost_optimization_routing_enabled=False,
+        ):
+            assert get_budget_for_tier("unknown_tier") == pytest.approx(5.00)
+
+
+# -- Story 32.8: BudgetExceededError step attribute tests -------------------
+
+
+class TestBudgetExceededErrorStep:
+    """Test that BudgetExceededError carries step information."""
+
+    def test_step_attribute(self):
+        err = BudgetExceededError("task-1", 3.50, 5.00, step="intent")
+        assert err.step == "intent"
+        assert err.task_id == "task-1"
+        assert err.current_spend == pytest.approx(3.50)
+        assert err.limit == pytest.approx(5.00)
+        assert "intent" in str(err)
+
+    def test_step_none_by_default(self):
+        err = BudgetExceededError("task-2", 1.00, 2.00)
+        assert err.step is None
+        assert "step" not in str(err)
+
+    def test_error_message_format(self):
+        err = BudgetExceededError("task-3", 4.50, 5.00, step="assembler")
+        assert "at step 'assembler'" in str(err)
+        assert "$4.5000" in str(err)
+        assert "$5.0000" in str(err)
+
+
+# -- Story 32.16: batch_eligible config flag --------------------------------
+
+
+class TestBatchEligible:
+    """Test that AgentConfig.batch_eligible defaults to False."""
+
+    def test_default_is_false(self):
+        config = AgentConfig(agent_name="test", pipeline_step="intent")
+        assert config.batch_eligible is False
+
+    def test_can_be_set_true(self):
+        config = AgentConfig(
+            agent_name="test", pipeline_step="context", batch_eligible=True,
+        )
+        assert config.batch_eligible is True
+
+    def test_context_agent_is_batch_eligible(self):
+        from src.context.context_config import CONTEXT_AGENT_CONFIG
+        assert CONTEXT_AGENT_CONFIG.batch_eligible is True
+
+    def test_interactive_agents_not_batch_eligible(self):
+        """Interactive agents (intent, primary, qa) should not be batch eligible."""
+        from src.intent.intent_config import INTENT_AGENT_CONFIG
+        from src.qa.qa_config import QA_AGENT_CONFIG
+        assert INTENT_AGENT_CONFIG.batch_eligible is False
+        assert QA_AGENT_CONFIG.batch_eligible is False
+
+
+# -- Story 32.17: Batch cost discount in audit recording --------------------
+
+
+class TestBatchCostDiscount:
+    """Test that batch calls get 50% cost discount when flag is enabled."""
+
+    def test_record_audit_batch_discount(self, mock_gateway):
+        """When batch=True and batch_enabled, cost is halved."""
+        config = _make_config()
+        runner = AgentRunner(config)
+        ctx = AgentContext()
+
+        with patch(
+            "src.agent.framework.settings",
+            cost_optimization_batch_enabled=True,
+        ):
+            runner._record_audit(
+                context=ctx,
+                provider=MOCK_PROVIDER,
+                tokens_in=100,
+                tokens_out=50,
+                cost=0.10,
+                batch=True,
+            )
+
+        audit_store = mock_gateway["audit_store"]
+        records = audit_store.query()
+        assert len(records) == 1
+        assert records[0].batch is True
+        assert records[0].cost == pytest.approx(0.05)  # 50% discount
+
+    def test_record_audit_no_discount_when_flag_off(self, mock_gateway):
+        """When batch=True but flag disabled, no discount."""
+        config = _make_config()
+        runner = AgentRunner(config)
+        ctx = AgentContext()
+
+        with patch(
+            "src.agent.framework.settings",
+            cost_optimization_batch_enabled=False,
+        ):
+            runner._record_audit(
+                context=ctx,
+                provider=MOCK_PROVIDER,
+                tokens_in=100,
+                tokens_out=50,
+                cost=0.10,
+                batch=True,
+            )
+
+        audit_store = mock_gateway["audit_store"]
+        records = audit_store.query()
+        assert len(records) == 1
+        assert records[0].batch is True
+        assert records[0].cost == pytest.approx(0.10)  # No discount
+
+    def test_record_audit_no_discount_when_not_batch(self, mock_gateway):
+        """When batch=False, no discount regardless of flag."""
+        config = _make_config()
+        runner = AgentRunner(config)
+        ctx = AgentContext()
+
+        with patch(
+            "src.agent.framework.settings",
+            cost_optimization_batch_enabled=True,
+        ):
+            runner._record_audit(
+                context=ctx,
+                provider=MOCK_PROVIDER,
+                tokens_in=100,
+                tokens_out=50,
+                cost=0.10,
+                batch=False,
+            )
+
+        audit_store = mock_gateway["audit_store"]
+        records = audit_store.query()
+        assert len(records) == 1
+        assert records[0].batch is False
+        assert records[0].cost == pytest.approx(0.10)

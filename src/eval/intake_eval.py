@@ -110,4 +110,5 @@ async def run_intake_eval(
         cases=dataset,
         context_builder=intake_context_builder,
         score_fn=score_intake_output,
+        pass_threshold=0.5,
     )

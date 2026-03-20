@@ -1,10 +1,10 @@
 # Epic 31: Anthropic Max OAuth Token Support for Pipeline API Calls
 
-> **Status:** Stories 31.2-31.5 COMPLETE (2026-03-18) — Docker-validated
+> **Status:** COMPLETE (2026-03-19) — All stories 31.0-31.6 delivered
 > **Epic Owner:** Primary Developer
 > **Duration:** 1 sprint (~1 week) once unblocked
 > **Created:** 2026-03-18
-> **Meridian Review:** Round 1: Pending
+> **Meridian Review:** Round 1: PASS (2026-03-20)
 
 ---
 
@@ -150,7 +150,7 @@ Unit tests verify that (a) an `sk-ant-oat01-` key produces Bearer + beta headers
 | Research documented | All OAuth mechanics and risks captured | Story 31.0 complete |
 | Auth mode works for dev/test | OAuth token produces 200 responses | Manual validation |
 | Zero regression | All existing tests pass unchanged | CI |
-| Cost estimation accuracy | Within 20% of actual billing | Compare AgentRunner estimates to Anthropic dashboard |
+| Cost estimation accuracy | Rates aligned to 2026 published pricing | `ProviderConfig` rates match Anthropic's published pricing ($3/M input, $15/M output for Sonnet). Not validated against live billing — requires production volume to measure. |
 | Test coverage | >= 8 new test cases | pytest count |
 
 ---
@@ -290,14 +290,14 @@ Research the Anthropic OAuth token authentication flow, document findings, and m
 
 ### Story 31.4: Unit Tests for Both Auth Paths
 
-**Status: COMPLETE (2026-03-18)** — 23 total tests passing.
+**Status: COMPLETE (2026-03-18)** — 31 total tests passing.
 
 **Implementation:**
 - `TestAuthModeDetection`: 6 tests for auto-detect and explicit override
 - `TestOAuthHeaders`: 3 tests for Bearer vs x-api-key header generation
 - `TestOAuthTokenRefresh`: 3 tests for refresh on 401
 - All existing tests pass unchanged (backward compatible)
-- Total: 23 unit tests in `tests/unit/test_llm_adapter.py`
+- Total: 31 unit tests in `tests/unit/test_llm_adapter.py` (12 new auth tests + 19 existing)
 
 ---
 
@@ -321,19 +321,21 @@ Research the Anthropic OAuth token authentication flow, document findings, and m
 
 ### Story 31.6: Documentation Update
 
+**Status: COMPLETE (2026-03-19)**
+
 **As a** developer deploying TheStudio,
 **I want** deployment docs that explain both auth modes,
 **so that** I can make an informed choice.
 
-**Details:**
-- Document `THESTUDIO_ANTHROPIC_AUTH_MODE` env var
-- Document Claude Max OAuth token usage pattern (development only)
-- Document token refresh configuration
-- Document TOS limitations and production recommendation (use API keys)
-- Add cost comparison table
+**Implementation:**
+- Added "Authentication Modes" section to `docs/deployment.md` covering:
+  - API key mode (production) with configuration examples
+  - OAuth Bearer mode (development only) with token refresh configuration
+  - TOS limitations and production recommendation
+  - Cost comparison table (API keys vs Max subscription vs cost-optimized)
+- All env vars documented: `THESTUDIO_ANTHROPIC_AUTH_MODE`, `THESTUDIO_ANTHROPIC_REFRESH_TOKEN`, `THESTUDIO_ANTHROPIC_OAUTH_CLIENT_ID`
 
-**Files to modify:** `docs/DEPLOYMENT.md`
-**Estimate:** 1 point
+**Files modified:** `docs/deployment.md`
 
 ---
 
@@ -359,10 +361,52 @@ If OAuth remains restricted to first-party tools, these strategies reduce produc
 
 ## Meridian Review Status
 
-### Round 1: Pending
+### Round 1: CONDITIONAL PASS (2026-03-19)
 
-*This epic requires Meridian review before commit. Key questions:*
-1. Is the TOS risk assessment (R3) accurately scoped?
-2. Should implementation proceed given the legal uncertainty, or should we defer to cost optimization strategies?
-3. Is the cost estimation fix (Story 31.1) correctly scoped as part of this epic vs. a separate fix?
-4. Is the "development only" stance on OAuth sufficient, or should we avoid OAuth entirely?
+**7-Question Checklist:**
+
+| # | Question | Result |
+|---|----------|--------|
+| Q1 | Goal statement specific enough to test? | PASS |
+| Q2 | Acceptance criteria testable at epic scale? | PASS (stale test count fixed, AC 7 metric clarified) |
+| Q3 | Non-goals explicit? | PASS |
+| Q4 | Dependencies identified? | PASS |
+| Q5 | Success metrics measurable? | GAP (addressed — see fixes below) |
+| Q6 | Can an AI agent implement without guessing? | PASS |
+| Q7 | Narrative compelling enough? | PASS |
+
+**Key question answers:**
+
+1. **TOS risk (R3) accurately scoped?** Yes. High likelihood / High impact is appropriate. Caveat: "Claude Code as runtime" is an interpretation, not Anthropic-confirmed.
+2. **Proceed despite legal uncertainty?** Yes. Cost estimation fix needed regardless, auth abstraction improves flexibility, research prevents re-investigation, dev/test savings are immediate.
+3. **Cost estimation fix correctly scoped here?** Yes. Small, discovered during research, directly supports cost clarity narrative.
+4. **"Development only" stance sufficient?** Yes. Multiple guardrails: WARNING comments in source, explicit non-goal, auto-default to API key, deployment docs cover the distinction.
+
+**Must-fix items (resolved):**
+- ~~Stale test count (23 → 31)~~ — Fixed in Story 31.4 section
+- ~~AC 7 metric unverified~~ — Clarified: rates aligned to published pricing, not validated against live billing
+
+### Round 2: PASS (2026-03-20) — Formal Sign-Off
+
+**Source verification:** All claims cross-referenced against codebase. AuthMode StrEnum, `_detect_auth_mode()`, `_refresh_oauth_token()`, ProviderConfig split rates, settings, docker-compose env vars, deployment docs, 31 unit tests, 8 integration tests — all confirmed present.
+
+**7-Question Checklist:**
+
+| # | Question | Verdict |
+|---|----------|---------|
+| Q1 | Goal specific enough to test? | PASS |
+| Q2 | Acceptance criteria testable at epic scale? | PASS |
+| Q3 | Non-goals explicit? | PASS |
+| Q4 | Dependencies identified with owners and dates? | PASS |
+| Q5 | Success metrics measurable? | PASS (minor gap: AC 7 cost accuracy unverifiable without production volume — epic is honest about this) |
+| Q6 | Can an AI agent implement without guessing? | PASS |
+| Q7 | Narrative compelling enough? | PASS |
+
+**Red flags:** None.
+
+**Notes (non-blocking):**
+1. OAuth env vars in `docker-compose.prod.yml` despite "do NOT use OAuth for production" — defaults are safe, docs warn against it. Acceptable.
+2. OAuth code path has zero real-API integration coverage (unit tests mock HTTP, integration tests skip without token). Known gap driven by TOS constraints.
+3. AC 7 cost accuracy is forward-looking — recommend closing the loop once production data exists.
+
+**Verdict:** PASS — Epic 31 approved for formal sign-off. Complete, well-researched, honest about limitations, delivers value regardless of OAuth viability.

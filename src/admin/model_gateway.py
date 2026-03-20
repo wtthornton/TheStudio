@@ -119,6 +119,10 @@ class ModelCallAudit:
     latency_ms: float = 0.0
     error_class: str | None = None
     fallback_chain: list[str] = field(default_factory=list)
+    repo: str = ""
+    batch: bool = False
+    cache_creation_tokens: int = 0
+    cache_read_tokens: int = 0
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     def to_dict(self) -> dict[str, Any]:
@@ -129,6 +133,8 @@ class ModelCallAudit:
             "step": self.step,
             "role": self.role,
             "overlays": self.overlays,
+            "repo": self.repo,
+            "batch": self.batch,
             "provider": self.provider,
             "model": self.model,
             "tokens_in": self.tokens_in,
@@ -137,6 +143,8 @@ class ModelCallAudit:
             "latency_ms": round(self.latency_ms, 2),
             "error_class": self.error_class,
             "fallback_chain": self.fallback_chain,
+            "cache_creation_tokens": self.cache_creation_tokens,
+            "cache_read_tokens": self.cache_read_tokens,
             "created_at": self.created_at.isoformat(),
         }
 
@@ -158,14 +166,27 @@ class BudgetSpec:
 
 
 class BudgetExceededError(Exception):
-    """Raised when a model call would exceed budget limits."""
+    """Raised when a model call would exceed budget limits.
 
-    def __init__(self, task_id: str, current_spend: float, limit: float) -> None:
+    Story 32.8: Includes optional *step* so callers can identify which
+    pipeline step triggered the budget halt.
+    """
+
+    def __init__(
+        self,
+        task_id: str,
+        current_spend: float,
+        limit: float,
+        *,
+        step: str | None = None,
+    ) -> None:
         self.task_id = task_id
         self.current_spend = current_spend
         self.limit = limit
+        self.step = step
+        step_info = f" at step '{step}'" if step else ""
         super().__init__(
-            f"Budget exceeded for task {task_id}: "
+            f"Budget exceeded for task {task_id}{step_info}: "
             f"${current_spend:.4f} spent of ${limit:.4f} limit"
         )
 
@@ -188,7 +209,7 @@ DEFAULT_ROUTING_RULES: list[RoutingRule] = [
         ModelClass.BALANCED,
         overlay_overrides={"security": ModelClass.STRONG, "compliance": ModelClass.STRONG},
     ),
-    RoutingRule("expert_routing", ModelClass.BALANCED),
+    RoutingRule("routing", ModelClass.BALANCED),
     RoutingRule(
         "assembler",
         ModelClass.BALANCED,
@@ -252,7 +273,7 @@ class ModelRouter:
     # Epic 32: Steps eligible for FAST downgrade when cost optimization is on.
     # Overlay overrides still escalate to STRONG (e.g. security overlay).
     _COST_OPTIMIZED_STEPS: ClassVar[dict[str, ModelClass]] = {
-        "expert_routing": ModelClass.FAST,
+        "routing": ModelClass.FAST,
         "assembler": ModelClass.FAST,
     }
 

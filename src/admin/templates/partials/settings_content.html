@@ -55,6 +55,20 @@
         </div>
     </div>
 
+    <!-- Budget Controls Card (Epic 32, Story 32.7) -->
+    <div class="bg-white rounded-lg shadow border border-gray-200">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900">Budget Controls</h3>
+            <p class="text-sm text-gray-500 mt-1">Per-tier pipeline budget caps (USD per issue)</p>
+        </div>
+        <div id="settings-budget-controls"
+             hx-get="/admin/ui/partials/settings/budget-controls"
+             hx-trigger="load"
+             hx-swap="innerHTML">
+            <div class="px-6 py-4 text-gray-400 text-sm">Loading...</div>
+        </div>
+    </div>
+
     <!-- Secrets Card -->
     <div class="bg-white rounded-lg shadow border border-gray-200">
         <div class="px-6 py-4 border-b border-gray-200">

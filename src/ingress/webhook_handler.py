@@ -57,10 +57,14 @@ def normalize_webhook_payload(
     else:
         issue_data = payload.get("issue", {})
 
+    raw_labels = issue_data.get("labels", [])
+    labels = [lbl.get("name", "") for lbl in raw_labels if isinstance(lbl, dict)]
+
     return {
         "issue_number": issue_data.get("number", 0),
         "issue_title": issue_data.get("title", ""),
-        "issue_body": issue_data.get("body", ""),
+        "issue_body": issue_data.get("body", "") or "",
+        "labels": labels,
         "action": action,
     }
 
@@ -174,7 +178,14 @@ async def github_webhook(
 
         # 12. Start Temporal workflow
         try:
-            await start_workflow(taskpacket.id, correlation_id)
+            await start_workflow(
+                taskpacket.id,
+                correlation_id,
+                repo=repo_full_name,
+                issue_title=issue_title,
+                issue_body=issue_body,
+                labels=normalized.get("labels", []),
+            )
         except Exception:
             logger.exception("Failed to start Temporal workflow for TaskPacket %s", taskpacket.id)
             # TaskPacket is created — workflow can be retried later

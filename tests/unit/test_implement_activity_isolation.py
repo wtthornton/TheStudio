@@ -62,7 +62,7 @@ class TestImplementActivityProcessMode:
 
         assert isinstance(result, ImplementOutput)
         assert result.taskpacket_id == params.taskpacket_id
-        assert result.agent_summary == "Implementation placeholder"
+        assert result.agent_summary == "Implementation completed via in-process stub"
 
 
 class TestImplementActivityContainerMode:
@@ -119,7 +119,7 @@ class TestImplementActivityContainerMode:
             result = await _run_implement(params)
 
         # Falls back to in-process
-        assert result.agent_summary == "Implementation placeholder"
+        assert result.agent_summary == "Implementation completed via in-process stub"
 
     @pytest.mark.asyncio
     async def test_container_mode_execute_deny(self):

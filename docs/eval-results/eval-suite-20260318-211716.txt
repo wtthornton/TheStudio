@@ -1,0 +1,36 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.3, pytest-9.0.2, pluggy-1.6.0 -- C:\cursor\TheStudio\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\cursor\TheStudio
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-1.3.0, base-url-2.1.0, cov-7.0.0, order-1.3.0, playwright-0.7.2, respx-0.22.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collecting ... collected 116 items / 91 deselected / 25 selected
+
+tests/eval/test_intent_eval.py::TestIntentEvalIntegration::test_all_cases_parse PASSED [  4%]
+tests/eval/test_intent_eval.py::TestIntentEvalIntegration::test_pass_rate_at_least_8_of_10 PASSED [  8%]
+tests/eval/test_intent_eval.py::TestIntentEvalIntegration::test_goal_non_empty_all_cases PASSED [ 12%]
+tests/eval/test_intent_eval.py::TestIntentEvalIntegration::test_constraints_non_empty PASSED [ 16%]
+tests/eval/test_intent_eval.py::TestIntentEvalIntegration::test_invariants_for_breaking_changes PASSED [ 20%]
+tests/eval/test_intent_eval.py::TestIntentEvalIntegration::test_acs_are_specific PASSED [ 24%]
+tests/eval/test_intent_eval.py::TestIntentEvalIntegration::test_total_cost_under_budget PASSED [ 28%]
+tests/eval/test_intent_eval.py::TestIntentEvalIntegration::test_detailed_results_logged PASSED [ 32%]
+tests/eval/test_primary_eval.py::TestPrimaryEvalIntegration::test_all_cases_produce_output PASSED [ 36%]
+tests/eval/test_primary_eval.py::TestPrimaryEvalIntegration::test_summaries_are_coherent PASSED [ 40%]
+tests/eval/test_primary_eval.py::TestPrimaryEvalIntegration::test_file_changes_suggested PASSED [ 44%]
+tests/eval/test_primary_eval.py::TestPrimaryEvalIntegration::test_total_cost_under_budget PASSED [ 48%]
+tests/eval/test_primary_eval.py::TestPrimaryEvalIntegration::test_no_timeouts PASSED [ 52%]
+tests/eval/test_qa_eval.py::TestQAEvalIntegration::test_all_cases_parse PASSED [ 56%]
+tests/eval/test_qa_eval.py::TestQAEvalIntegration::test_defect_detection_rate PASSED [ 60%]
+tests/eval/test_qa_eval.py::TestQAEvalIntegration::test_clean_bundles_no_severe_defects PASSED [ 64%]
+tests/eval/test_qa_eval.py::TestQAEvalIntegration::test_total_cost_under_budget PASSED [ 68%]
+tests/eval/test_routing_eval.py::TestIntakeEvalIntegration::test_intake_classification_accuracy PASSED [ 72%]
+tests/eval/test_routing_eval.py::TestIntakeEvalIntegration::test_intake_cost_under_budget PASSED [ 76%]
+tests/eval/test_routing_eval.py::TestContextEvalIntegration::test_context_enrichment_quality PASSED [ 80%]
+tests/eval/test_routing_eval.py::TestContextEvalIntegration::test_context_cost_under_budget PASSED [ 84%]
+tests/eval/test_routing_eval.py::TestRouterEvalIntegration::test_router_expert_selection PASSED [ 88%]
+tests/eval/test_routing_eval.py::TestRouterEvalIntegration::test_router_cost_under_budget PASSED [ 92%]
+tests/eval/test_routing_eval.py::TestAssemblerEvalIntegration::test_assembler_plan_quality PASSED [ 96%]
+tests/eval/test_routing_eval.py::TestAssemblerEvalIntegration::test_assembler_cost_under_budget PASSED [100%]
+
+=============== 25 passed, 91 deselected in 4142.71s (1:09:02) ================

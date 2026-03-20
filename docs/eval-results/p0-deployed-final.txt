@@ -1,0 +1,129 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.3, pytest-9.0.2, pluggy-1.6.0 -- C:\cursor\TheStudio\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\cursor\TheStudio
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-1.3.0, base-url-2.1.0, cov-7.0.0, order-1.3.0, playwright-0.7.2, respx-0.22.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collecting ... collected 12 items
+
+tests/p0/test_github_deployed.py::TestWebhookDeployed::test_healthz_through_caddy PASSED [  8%]
+tests/p0/test_github_deployed.py::TestWebhookDeployed::test_webhook_rejects_unsigned_payload PASSED [ 16%]
+tests/p0/test_github_deployed.py::TestWebhookDeployed::test_webhook_rejects_bad_signature PASSED [ 25%]
+tests/p0/test_github_deployed.py::TestWebhookDeployed::test_webhook_accepts_valid_payload FAILED [ 33%]
+tests/p0/test_github_deployed.py::TestAdminAPIDeployed::test_admin_health PASSED [ 41%]
+tests/p0/test_github_deployed.py::TestAdminAPIDeployed::test_list_repos PASSED [ 50%]
+tests/p0/test_github_deployed.py::TestAdminAPIDeployed::test_register_and_query_repo PASSED [ 58%]
+tests/p0/test_github_deployed.py::TestAdminAPIDeployed::test_workflow_created_after_webhook FAILED [ 66%]
+tests/p0/test_postgres_deployed.py::TestPostgresDeployed::test_postgres_healthy_via_admin PASSED [ 75%]
+tests/p0/test_postgres_deployed.py::TestPostgresDeployed::test_webhook_persists_workflow FAILED [ 83%]
+tests/p0/test_postgres_deployed.py::TestPostgresDeployed::test_repos_persist_across_requests PASSED [ 91%]
+tests/p0/test_postgres_deployed.py::TestPostgresDeployed::test_audit_log_persists PASSED [100%]
+
+================================== FAILURES ===================================
+___________ TestWebhookDeployed.test_webhook_accepts_valid_payload ____________
+
+self = <tests.p0.test_github_deployed.TestWebhookDeployed object at 0x0000012E28597A80>
+p0_base_url = 'https://localhost:9443'
+registered_test_repo = {'default_branch': 'main', 'installation_id': 99999, 'owner': 'p0-test-org', 'repo': 'p0-test-repo'}
+
+    def test_webhook_accepts_valid_payload(
+        self, p0_base_url: str, registered_test_repo: dict,
+    ) -> None:
+        """Webhook accepts a properly signed issues.opened payload."""
+        payload = make_issue_payload()
+        body = json.dumps(payload).encode()
+        headers = build_webhook_headers(body)
+        r = httpx.post(
+            f"{p0_base_url}/webhook/github",
+            content=body,
+            headers=headers,
+            verify=False,
+            timeout=15,
+        )
+        # 200 (processed) or 202 (accepted for async) or 204 (no content)
+>       assert r.status_code in (200, 201, 202, 204), (
+            f"Expected 200/201/202/204 for valid webhook, got {r.status_code}: {r.text}"
+        )
+E       AssertionError: Expected 200/201/202/204 for valid webhook, got 500: Internal Server Error
+E       assert 500 in (200, 201, 202, 204)
+E        +  where 500 = <Response [500 Internal Server Error]>.status_code
+
+tests\p0\test_github_deployed.py:91: AssertionError
+__________ TestAdminAPIDeployed.test_workflow_created_after_webhook ___________
+
+self = <tests.p0.test_github_deployed.TestAdminAPIDeployed object at 0x0000012E28597950>
+p0_client = <httpx.Client object at 0x0000012E28597490>
+p0_base_url = 'https://localhost:9443'
+registered_test_repo = {'default_branch': 'main', 'installation_id': 99999, 'owner': 'p0-test-org', 'repo': 'p0-test-repo'}
+
+    def test_workflow_created_after_webhook(
+        self, p0_client: httpx.Client, p0_base_url: str,
+        registered_test_repo: dict,
+    ) -> None:
+        """A webhook creates a workflow visible via admin API.
+    
+        Sends a webhook, waits briefly, then queries /admin/workflows to
+        see if a workflow was created for the test repo.
+        """
+        payload = make_issue_payload(issue_number=99999)
+        body = json.dumps(payload).encode()
+        headers = build_webhook_headers(body)
+        r = httpx.post(
+            f"{p0_base_url}/webhook/github",
+            content=body,
+            headers=headers,
+            verify=False,
+            timeout=15,
+        )
+>       assert r.status_code in (200, 201, 202, 204)
+E       assert 500 in (200, 201, 202, 204)
+E        +  where 500 = <Response [500 Internal Server Error]>.status_code
+
+tests\p0\test_github_deployed.py:143: AssertionError
+_____________ TestPostgresDeployed.test_webhook_persists_workflow _____________
+
+self = <tests.p0.test_postgres_deployed.TestPostgresDeployed object at 0x0000012E28841F90>
+p0_client = <httpx.Client object at 0x0000012E28597490>
+p0_base_url = 'https://localhost:9443'
+registered_test_repo = {'default_branch': 'main', 'installation_id': 99999, 'owner': 'p0-test-org', 'repo': 'p0-test-repo'}
+
+    def test_webhook_persists_workflow(
+        self,
+        p0_client: httpx.Client,
+        p0_base_url: str,
+        registered_test_repo: dict,
+    ) -> None:
+        """A webhook creates a workflow that persists in Postgres.
+    
+        Sends a webhook, waits for processing, then queries the admin API
+        to verify the workflow exists — proving Postgres persistence works
+        end-to-end through the deployed stack.
+        """
+        # Use a unique issue number to avoid dedup
+        import random
+        issue_num = random.randint(50000, 59999)
+        payload = make_issue_payload(issue_number=issue_num)
+        body = json.dumps(payload).encode()
+        headers = build_webhook_headers(body)
+    
+        r = httpx.post(
+            f"{p0_base_url}/webhook/github",
+            content=body,
+            headers=headers,
+            verify=False,
+            timeout=15,
+        )
+>       assert r.status_code in (200, 201, 202, 204), (
+            f"Webhook failed: {r.status_code} {r.text}"
+        )
+E       AssertionError: Webhook failed: 500 Internal Server Error
+E       assert 500 in (200, 201, 202, 204)
+E        +  where 500 = <Response [500 Internal Server Error]>.status_code
+
+tests\p0\test_postgres_deployed.py:63: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/p0/test_github_deployed.py::TestWebhookDeployed::test_webhook_accepts_valid_payload
+FAILED tests/p0/test_github_deployed.py::TestAdminAPIDeployed::test_workflow_created_after_webhook
+FAILED tests/p0/test_postgres_deployed.py::TestPostgresDeployed::test_webhook_persists_workflow
+========================= 3 failed, 9 passed in 1.04s =========================

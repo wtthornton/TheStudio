@@ -354,9 +354,9 @@ The arc is **buildable and measurable**. It’s enough to set an aggressive road
 
 | Epic | Title | Status | Priority | Notes |
 |------|-------|--------|----------|-------|
-| 30 | Real Provider Integration & Validation | **Sprint 1 Complete** | P0 | Sprint 1 delivered: eval harness, 6 agent eval suites (intent/QA/primary/intake/context/router/assembler), Postgres integration (6/6), GitHub integration (4/4), Bearer auth fix. 20/25 eval tests pass with real Claude ($5/run). Sprint 2 next. |
+| 30 | Real Provider Integration & Validation | **Complete (3 Sprints)** | P0 | Sprint 1: eval harness, 6 agent eval suites, Postgres 6/6, GitHub 4/4. Sprint 2: Docker pipeline validation, failure catalog (9 modes). Sprint 3: Suggest tier validation (16 tests), gateway audit fix (9/9), approval bypass (20 tests). 1783/1783 unit tests passing. |
 | 31 | Anthropic Max OAuth Adapter | **TOP MUST** | P0 | Research complete. Eval tests cost ~$5/run — OAuth/Max critical for sustainable testing. Elevated 2026-03-18. |
-| 32 | Model Routing & Cost Optimization | **Slice 1 Complete** | P1 | Cost routing gate (feature-flagged), comparison eval mode, Meridian Round 2 approved. Slice 2 planned 2026-03-25. |
+| 32 | Model Routing & Cost Optimization | **Slice 1 Partial** | P1 | Stories 32.0/32.1/32.5 complete (cost routing gate, feature-flagged). Stories 32.2-32.4 remaining. Slice 2 (budget controls) next. |
 
 ### Cost Model Findings (Epic 30 Sprint 1)
 
@@ -386,22 +386,21 @@ The arc is **buildable and measurable**. It’s enough to set an aggressive road
 ### Critical Path
 
 ```
-Epic 30 Sprint 1 (Stories 30.1-30.6) ✅ COMPLETE
-  - Eval harness + 6 agent eval suites
-  - Postgres integration 6/6, GitHub integration 4/4
-  - 20/25 eval tests pass with real Claude ($5/run)
+Epic 30 (All 3 Sprints) ✅ COMPLETE (2026-03-19)
+  - Sprint 1: Eval harness, 6 agent eval suites, Postgres 6/6, GitHub 4/4
+  - Sprint 2: Docker pipeline validation, failure catalog (9 modes)
+  - Sprint 3: Suggest tier validation, gateway audit, approval bypass
+  - 1783/1783 unit tests passing, zero failures
 
 Epic 31 Story 31.0 (OAuth Research) ✅ COMPLETE
 Epic 31 Story 31.1 (Fix cost estimation) ✅ COMPLETE
-Epic 32 Slice 1 (Cost routing gate) ✅ COMPLETE
+Epic 32 Slice 1 (Cost routing gate) ✅ PARTIAL (32.0/32.1/32.5 done, 32.2-32.4 remaining)
+    ↓
+Epic 32 Slice 2 (Budget controls — Stories 32.6-32.8) ← NEXT
+    ↓
+Epic 32 Slice 1 remaining (Stories 32.3-32.4 — eval comparison, routing rules)
     ↓
 Epic 31 Stories 31.2-31.5 (OAuth adapter) ← TOP MUST (eval costs $5/run)
-    ↓
-Epic 30 Sprint 2 (Stories 30.7-30.8: full pipeline + failure catalog)
-    ↓
-Epic 32 Slice 2 (Measured baselines, routing rules, caching — 2026-03-25)
-    ↓
-Epic 30 Sprint 3 (Feature flags + deployment runbook)
 ```
 
 **Phase 7 Success Criteria (Meridian bar):**
