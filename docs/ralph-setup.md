@@ -266,14 +266,12 @@ RECOMMENDATION: <one line summary of what to do next>
 ---END_RALPH_STATUS---
 ```
 
-### When to set EXIT_SIGNAL: true
-
-Set EXIT_SIGNAL to **true** when ALL of these conditions are met:
-1. All items in fix_plan.md are marked [x]
-2. All tests are passing (or no tests exist for valid reasons)
-3. No errors or warnings in the last execution
-4. All requirements from specs/ are implemented
-5. You have nothing meaningful left to implement
+### STATUS and EXIT_SIGNAL rules
+- **STATUS: IN_PROGRESS** — Use this when unchecked items remain in fix_plan.md, even if the current task succeeded. This tells Ralph to continue looping.
+- **STATUS: COMPLETE** — Use this ONLY when **every item** in fix_plan.md is checked [x]. Re-read the file to verify before using COMPLETE.
+- **EXIT_SIGNAL: true** — Set ONLY together with STATUS: COMPLETE (all work done).
+- **EXIT_SIGNAL: false** — Use in ALL other cases, including successful task completion with remaining work.
+- If your task succeeded but unchecked items remain: STATUS: IN_PROGRESS, EXIT_SIGNAL: false.
 
 ### What NOT to do:
 - Do NOT continue with busy work when EXIT_SIGNAL should be true
