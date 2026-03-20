@@ -40,7 +40,7 @@
 - [x] B-0.1: Create `src/dashboard/` package with FastAPI router at `/api/v1/dashboard/`, health endpoint, register in `src/app.py`. Test: `GET /api/v1/dashboard/health` returns `{"status": "ok"}`.
 
 ### Slice 2: SSE Endpoint
-- [ ] B-0.2a: SSE endpoint with hardcoded test events. Create `src/dashboard/events.py` with `GET /api/v1/dashboard/events/stream` returning `StreamingResponse` with `text/event-stream`. Heartbeat every 15s. Test: curl the endpoint, verify event-stream content type and heartbeat events arrive.
+- [x] B-0.2a: SSE endpoint with hardcoded test events. Create `src/dashboard/events.py` with `GET /api/v1/dashboard/events/stream` returning `StreamingResponse` with `text/event-stream`. Heartbeat every 15s. Test: curl the endpoint, verify event-stream content type and heartbeat events arrive.
 - [ ] B-0.2b: Wire SSE endpoint to NATS JetStream. Subscribe to `pipeline.>` subject on `THESTUDIO_PIPELINE` stream (create stream if not exists). Replace hardcoded events with NATS messages. Add disconnect cleanup. Test: publish to NATS, verify SSE client receives within 200ms.
 
 ### Slice 3: Reconnection
