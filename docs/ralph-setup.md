@@ -267,11 +267,13 @@ RECOMMENDATION: <one line summary of what to do next>
 ```
 
 ### STATUS and EXIT_SIGNAL rules
+
+`STATUS: COMPLETE` now explicitly requires **ALL items** in `fix_plan.md` checked `[x]`. Any remaining `- [ ]` items = `STATUS: IN_PROGRESS`.
+
 - **STATUS: IN_PROGRESS** — Use this when unchecked items remain in fix_plan.md, even if the current task succeeded. This tells Ralph to continue looping.
 - **STATUS: COMPLETE** — Use this ONLY when **every item** in fix_plan.md is checked [x]. Re-read the file to verify before using COMPLETE.
 - **EXIT_SIGNAL: true** — Set ONLY together with STATUS: COMPLETE (all work done).
 - **EXIT_SIGNAL: false** — Use in ALL other cases, including successful task completion with remaining work.
-- If your task succeeded but unchecked items remain: STATUS: IN_PROGRESS, EXIT_SIGNAL: false.
 
 ### What NOT to do:
 - Do NOT continue with busy work when EXIT_SIGNAL should be true
@@ -284,27 +286,28 @@ RECOMMENDATION: <one line summary of what to do next>
 
 Ralph's circuit breaker and response analyzer use these scenarios to detect completion.
 
-### Scenario 1: Successful Project Completion
+### Scenario 1: Task done, more work remains (most common case)
+**Given**: You completed your task, tests pass, but unchecked items remain in fix_plan.md
+**Then**: STATUS: IN_PROGRESS, EXIT_SIGNAL: false
+**CRITICAL: This is NOT STATUS: COMPLETE. COMPLETE means ALL work is done.**
+
+### Scenario 2: Successful Project Completion
 **Given**: All fix_plan.md items checked, tests passing, specs implemented
 **Then**: STATUS: COMPLETE, EXIT_SIGNAL: true
 
-### Scenario 2: Test-Only Loop Detected
+### Scenario 3: Test-Only Loop Detected
 **Given**: Last 3 loops only ran tests, no files created or modified
 **Then**: STATUS: IN_PROGRESS, EXIT_SIGNAL: false, WORK_TYPE: TESTING
 **Ralph's Action**: Exits after 3 consecutive test-only loops
 
-### Scenario 3: Stuck on Recurring Error
+### Scenario 4: Stuck on Recurring Error
 **Given**: Same error in last 5 consecutive loops, no progress
 **Then**: STATUS: BLOCKED, EXIT_SIGNAL: false
 **Ralph's Action**: Circuit breaker opens after 5 loops
 
-### Scenario 4: No Work Remaining
+### Scenario 5: No Work Remaining
 **Given**: All tasks complete, specs implemented, tests passing
 **Then**: STATUS: COMPLETE, EXIT_SIGNAL: true
-
-### Scenario 5: Making Progress
-**Given**: Tasks remain, files being modified, tests passing
-**Then**: STATUS: IN_PROGRESS, EXIT_SIGNAL: false
 
 ### Scenario 6: Blocked on External Dependency
 **Given**: Task requires external API, library, or human decision
