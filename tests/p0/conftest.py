@@ -35,18 +35,37 @@ WEBHOOK_SECRET = os.environ.get("THESTUDIO_WEBHOOK_SECRET", "")
 # ---------------------------------------------------------------------------
 # Health gate — skip all P0 tests if stack is not healthy
 # ---------------------------------------------------------------------------
-@pytest.fixture(scope="session", autouse=True)
-def require_healthy_docker_stack() -> None:
-    """Skip all P0 tests if any Docker service is unhealthy."""
-    report = check_stack_health(
-        base_url=BASE_URL,
-        admin_user=ADMIN_USER,
-        admin_password=ADMIN_PASSWORD,
-    )
-    if not report.all_healthy:
-        pytest.skip(
-            f"Docker stack not healthy — skipping P0 tests.\n{report.summary()}"
+_stack_healthy: bool | None = None
+
+
+def _check_once() -> bool:
+    """Lazy singleton: check stack health exactly once per session."""
+    global _stack_healthy  # noqa: PLW0603
+    if _stack_healthy is None:
+        report = check_stack_health(
+            base_url=BASE_URL,
+            admin_user=ADMIN_USER,
+            admin_password=ADMIN_PASSWORD,
         )
+        _stack_healthy = report.all_healthy
+        if not _stack_healthy:
+            # Store summary for skip message
+            _check_once.summary = report.summary()  # type: ignore[attr-defined]
+    return _stack_healthy
+
+
+@pytest.fixture(autouse=True)
+def _skip_p0_if_stack_down(request: pytest.FixtureRequest) -> None:
+    """Skip tests marked ``p0`` if the Docker stack is unhealthy.
+
+    Pure unit tests (no ``p0`` mark) run regardless of stack state.
+    """
+    if "p0" in [m.name for m in request.node.iter_markers()]:
+        if not _check_once():
+            summary = getattr(_check_once, "summary", "unknown")
+            pytest.skip(
+                f"Docker stack not healthy — skipping P0 test.\n{summary}"
+            )
 
 
 # ---------------------------------------------------------------------------

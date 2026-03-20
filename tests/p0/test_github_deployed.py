@@ -92,6 +92,21 @@ class TestWebhookDeployed:
             f"Expected 200/201/202/204 for valid webhook, got {r.status_code}: {r.text}"
         )
 
+    def test_webhook_through_caddy_not_bypassed(self, p0_base_url: str) -> None:
+        """Port 9443 (Caddy) is reachable, but port 8000 (app) is NOT exposed.
+
+        This proves traffic goes through Caddy's TLS and auth layers.
+        """
+        # Caddy on 9443 should be reachable
+        r = httpx.get(f"{p0_base_url}/healthz", verify=False, timeout=5)
+        assert r.status_code == 200, "Caddy (9443) should be reachable"
+
+        # App on 8000 should NOT be reachable from the host
+        with pytest.raises(
+            (httpx.ConnectError, httpx.ConnectTimeout),
+        ):
+            httpx.get("http://localhost:8000/healthz", timeout=3)
+
 
 @pytest.mark.p0
 class TestAdminAPIDeployed:

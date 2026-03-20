@@ -87,10 +87,23 @@ fi
 if [[ -z "${POSTGRES_PASSWORD:-}" ]]; then
     fail "POSTGRES_PASSWORD is empty"
     CRED_OK=false
+elif [[ "${POSTGRES_PASSWORD}" == "thestudio_dev" ]]; then
+    fail "POSTGRES_PASSWORD is the dev placeholder 'thestudio_dev' — use a real password"
+    CRED_OK=false
+fi
+
+if [[ -z "${ADMIN_USER:-}" ]]; then
+    fail "ADMIN_USER is empty"
+    CRED_OK=false
 fi
 
 if [[ -z "${ADMIN_PASSWORD:-}" ]]; then
     fail "ADMIN_PASSWORD is empty (needed for admin API tests)"
+    CRED_OK=false
+fi
+
+if [[ -z "${THESTUDIO_WEBHOOK_SECRET:-}" ]]; then
+    fail "THESTUDIO_WEBHOOK_SECRET is empty (needed for webhook HMAC tests)"
     CRED_OK=false
 fi
 

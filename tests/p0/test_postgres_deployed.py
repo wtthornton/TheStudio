@@ -71,8 +71,48 @@ class TestPostgresDeployed:
         r = p0_client.get("/admin/workflows")
         assert r.status_code == 200
         workflows = r.json().get("workflows", [])
-        # At minimum, there should be workflows in the system
-        assert len(workflows) >= 0  # Just verify the endpoint works
+        assert len(workflows) > 0, "Expected at least one workflow after webhook"
+
+    def test_workflow_has_expected_fields(
+        self,
+        p0_client: httpx.Client,
+        p0_base_url: str,
+        registered_test_repo: dict,
+    ) -> None:
+        """Workflow records have repo_name, status, and current_step populated.
+
+        Sends a webhook, waits, then verifies the created workflow contains
+        all required fields — proving schema-level persistence correctness.
+        """
+        import random
+        issue_num = random.randint(60000, 69999)
+        payload = make_issue_payload(issue_number=issue_num)
+        body = json.dumps(payload).encode()
+        headers = build_webhook_headers(body)
+
+        r = httpx.post(
+            f"{p0_base_url}/webhook/github",
+            content=body,
+            headers=headers,
+            verify=False,
+            timeout=15,
+        )
+        assert r.status_code in (200, 201, 202, 204)
+
+        time.sleep(3)
+
+        r = p0_client.get("/admin/workflows")
+        assert r.status_code == 200
+        workflows = r.json().get("workflows", [])
+
+        # Find a workflow for our test repo
+        matching = [w for w in workflows if "p0-test" in w.get("repo_name", "")]
+        assert len(matching) > 0, "Expected workflow for p0-test-org/p0-test-repo"
+
+        wf = matching[0]
+        assert wf.get("repo_name"), "repo_name must be populated"
+        assert wf.get("status"), "status must be populated"
+        assert wf.get("current_step"), "current_step must be populated"
 
     def test_repos_persist_across_requests(
         self, p0_client: httpx.Client,
