@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.dashboard.events_publisher import (
+    emit_cost_update,
     emit_stage_enter,
     emit_stage_exit,
 )
@@ -110,3 +111,45 @@ async def test_get_pipeline_jetstream_creates_stream():
         name="THESTUDIO_PIPELINE",
         subjects=["pipeline.>"],
     )
+
+
+@pytest.mark.asyncio
+async def test_emit_cost_update_publishes():
+    mock_js = _make_mock_js()
+    with patch("src.dashboard.events_publisher.get_pipeline_jetstream", return_value=mock_js):
+        await emit_cost_update(
+            task_id="task-100",
+            cost_delta=0.0025,
+            total_cost=0.015,
+            model="claude-3-5-sonnet",
+            stage="intent",
+            correlation_id="corr-9",
+        )
+
+    mock_js.publish.assert_called_once()
+    subject, payload_bytes = mock_js.publish.call_args.args
+    assert subject == "pipeline.cost_update"
+    payload = json.loads(payload_bytes)
+    assert payload["type"] == "pipeline.cost_update"
+    assert payload["data"]["task_id"] == "task-100"
+    assert payload["data"]["cost_delta"] == 0.0025
+    assert payload["data"]["total_cost"] == 0.015
+    assert payload["data"]["model"] == "claude-3-5-sonnet"
+    assert payload["data"]["stage"] == "intent"
+    assert payload["data"]["correlation_id"] == "corr-9"
+    assert "timestamp" in payload["data"]
+
+
+@pytest.mark.asyncio
+async def test_emit_cost_update_swallows_nats_error():
+    """Fire-and-forget must not raise even if NATS is down."""
+    mock_js = _make_mock_js()
+    mock_js.publish.side_effect = Exception("NATS connection refused")
+    with patch("src.dashboard.events_publisher.get_pipeline_jetstream", return_value=mock_js):
+        await emit_cost_update(
+            task_id="task-err",
+            cost_delta=0.01,
+            total_cost=0.05,
+            model="test-model",
+            stage="verify",
+        )

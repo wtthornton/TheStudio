@@ -92,3 +92,40 @@ async def emit_stage_exit(
         logger.debug("Emitted stage.exit for %s task=%s success=%s", stage, taskpacket_id, success)
     except Exception:
         logger.debug("Failed to emit stage.exit for %s", stage, exc_info=True)
+
+
+async def emit_cost_update(
+    task_id: str,
+    cost_delta: float,
+    total_cost: float,
+    model: str,
+    stage: str,
+    *,
+    correlation_id: str = "",
+) -> None:
+    """Emit a pipeline.cost_update event (fire-and-forget).
+
+    Published on each model call so the dashboard can track running costs.
+    Failures are logged but never raised — callers must not be blocked.
+    """
+    try:
+        js = await get_pipeline_jetstream()
+        payload = json.dumps({
+            "type": "pipeline.cost_update",
+            "data": {
+                "task_id": task_id,
+                "cost_delta": round(cost_delta, 6),
+                "total_cost": round(total_cost, 6),
+                "model": model,
+                "stage": stage,
+                "correlation_id": correlation_id,
+                "timestamp": datetime.now(UTC).isoformat(),
+            },
+        }).encode()
+        await js.publish("pipeline.cost_update", payload)
+        logger.debug(
+            "Emitted cost_update task=%s delta=%.4f total=%.4f stage=%s",
+            task_id, cost_delta, total_cost, stage,
+        )
+    except Exception:
+        logger.debug("Failed to emit cost_update for task=%s", task_id, exc_info=True)

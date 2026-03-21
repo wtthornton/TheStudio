@@ -31,6 +31,7 @@ from src.admin.model_gateway import (
     get_model_audit_store,
     get_model_router,
 )
+from src.dashboard.events_publisher import emit_cost_update
 from src.observability.tracing import get_tracer
 from src.settings import settings
 
@@ -315,15 +316,30 @@ class AgentRunner:
                 return await self._run_fallback(context, span, start_time)
 
             # Record audit
+            cost_delta = provider.estimate_cost(response.tokens_in, response.tokens_out)
             self._record_audit(
                 context=context,
                 provider=provider,
                 tokens_in=response.tokens_in,
                 tokens_out=response.tokens_out,
-                cost=provider.estimate_cost(response.tokens_in, response.tokens_out),
+                cost=cost_delta,
                 cache_creation_tokens=response.cache_creation_tokens,
                 cache_read_tokens=response.cache_read_tokens,
             )
+
+            # Emit cost update event (fire-and-forget, S1.B5)
+            if context.pipeline_budget is not None:
+                try:
+                    await emit_cost_update(
+                        task_id=str(context.taskpacket_id or "unknown"),
+                        cost_delta=cost_delta,
+                        total_cost=context.pipeline_budget.used,
+                        model=provider.model_id,
+                        stage=self.config.pipeline_step,
+                        correlation_id=str(context.correlation_id or ""),
+                    )
+                except Exception:
+                    logger.debug("cost_update emit failed", exc_info=True)
 
             # Parse output
             parsed = self._parse_output(response.content, span)
@@ -344,7 +360,7 @@ class AgentRunner:
                 model_used=response.model or provider.model_id,
                 tokens_in=response.tokens_in,
                 tokens_out=response.tokens_out,
-                cost_estimated=provider.estimate_cost(response.tokens_in, response.tokens_out),
+                cost_estimated=cost_delta,
                 duration_ms=elapsed_ms,
                 used_fallback=False,
             )

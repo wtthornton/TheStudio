@@ -92,7 +92,7 @@
 - [x] S1.B2: `GET /api/v1/dashboard/tasks` — List TaskPackets with pagination (offset/limit), filter by status/date/category. Returns JSON array. Auth required. (M)
 - [x] S1.B3: `GET /api/v1/dashboard/tasks/:id` — TaskPacket detail with stage timestamps, cost breakdown by stage, model per stage. 404 for unknown ID. (S)
 - [x] S1.B4: Pipeline stage metrics aggregation query — per-stage pass rate, avg duration, throughput over configurable window. `GET /api/v1/dashboard/stages/metrics`. (M)
-- [ ] S1.B5: Emit `pipeline.cost_update` events from `PipelineBudget` on each model call. Payload: task_id, cost_delta, total_cost, model, stage. Fire-and-forget. (S)
+- [x] S1.B5: Emit `pipeline.cost_update` events from `PipelineBudget` on each model call. Payload: task_id, cost_delta, total_cost, model, stage. Fire-and-forget. (S)
 
 #### Frontend
 - [ ] S1.F1: Static 9-node pipeline layout with connecting arrows. React component, two-row layout, directional SVG arrows. All 9 stages render with correct names/order. (M, MVP)
