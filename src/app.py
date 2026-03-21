@@ -1,11 +1,14 @@
 """FastAPI application for TheStudio."""
 
 import asyncio
+import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -22,6 +25,7 @@ from src.ingress.webhook_handler import router as ingress_router
 from src.observability.middleware import CorrelationMiddleware
 from src.observability.tracing import init_tracing
 
+_FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
 
 
@@ -130,6 +134,52 @@ app.include_router(ui_router)
 app.include_router(approval_router)
 app.include_router(chat_router)
 app.include_router(dashboard_router)
+
+# Conditional static mount: serve frontend/dist/ at /dashboard/ when built
+_dashboard_logger = logging.getLogger("thestudio.dashboard")
+if _FRONTEND_DIST.is_dir() and (_FRONTEND_DIST / "index.html").is_file():
+    _dashboard_index = (_FRONTEND_DIST / "index.html").read_text()
+
+    # Mount static assets (JS, CSS, images) under /dashboard/assets etc.
+    app.mount(
+        "/dashboard/assets",
+        StaticFiles(directory=str(_FRONTEND_DIST / "assets")),
+        name="dashboard-assets",
+    )
+    # Serve other static files (favicon, icons) at /dashboard/ level
+    app.mount(
+        "/dashboard/static",
+        StaticFiles(directory=str(_FRONTEND_DIST)),
+        name="dashboard-static",
+    )
+
+    # Serve favicon.svg and icons.svg directly
+    @app.get("/dashboard/favicon.svg", include_in_schema=False)
+    async def _dashboard_favicon() -> HTMLResponse:
+        favicon_path = _FRONTEND_DIST / "favicon.svg"
+        return HTMLResponse(content=favicon_path.read_text(), media_type="image/svg+xml")
+
+    @app.get("/dashboard/icons.svg", include_in_schema=False)
+    async def _dashboard_icons() -> HTMLResponse:
+        icons_path = _FRONTEND_DIST / "icons.svg"
+        if icons_path.is_file():
+            return HTMLResponse(content=icons_path.read_text(), media_type="image/svg+xml")
+        return HTMLResponse(content="", status_code=404)
+
+    # SPA catch-all: any /dashboard/* route returns index.html for client-side routing
+    @app.get("/dashboard/{rest_of_path:path}", include_in_schema=False)
+    async def _dashboard_spa(rest_of_path: str) -> HTMLResponse:
+        return HTMLResponse(content=_dashboard_index)
+
+    _dashboard_logger.info("Dashboard UI mounted at /dashboard/", extra={
+        "frontend_dist": str(_FRONTEND_DIST),
+    })
+else:
+    _dashboard_logger.warning(
+        "Frontend dist not found — /dashboard/ UI will not be served. "
+        "Run 'cd frontend && npm run build' to generate it.",
+        extra={"expected_path": str(_FRONTEND_DIST)},
+    )
 
 
 @app.get("/healthz")

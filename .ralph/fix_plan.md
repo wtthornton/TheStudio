@@ -59,7 +59,7 @@
 
 ### Slice 6: Auth + Serving
 - [x] B-0.7: Auth token on SSE endpoint via `?token=` query param, matching admin auth. Test: 401 without, 200 with valid token. (COMPRESSIBLE)
-- [ ] B-0.6: Conditional static mount in `src/app.py` — serve `frontend/dist/` at `/dashboard/` when exists, skip with warning when missing. SPA catch-all. (COMPRESSIBLE)
+- [x] B-0.6: Conditional static mount in `src/app.py` — serve `frontend/dist/` at `/dashboard/` when exists, skip with warning when missing. SPA catch-all. (COMPRESSIBLE)
 
 ### Slice 7: CI
 - [ ] F-0.4: GitHub Actions frontend CI workflow. `npm ci`, `npm run typecheck`, `npm run lint`, `npm test`. Node.js 22, cache node_modules.
