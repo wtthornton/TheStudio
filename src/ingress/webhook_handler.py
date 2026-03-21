@@ -25,6 +25,7 @@ from src.observability.conventions import (
 from src.observability.correlation import attach_correlation_id, generate_correlation_id
 from src.observability.tracing import get_tracer
 from src.repo.repo_profile_crud import get_webhook_secret
+from src.settings import settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -173,7 +174,42 @@ async def github_webhook(
             issue_id=issue_id,
             delivery_id=x_github_delivery,
             correlation_id=correlation_id,
+            issue_title=issue_title,
+            issue_body=issue_body,
         )
+
+        # 11b. Triage mode: create in TRIAGE status, skip workflow start
+        if settings.triage_mode_enabled:
+            from src.context.prescan import prescan_issue
+
+            enrichment = prescan_issue(
+                issue_title, issue_body, normalized.get("labels", []),
+            )
+            task_data.triage_enrichment = enrichment
+
+            taskpacket = await create_taskpacket(
+                session, task_data, initial_status=TaskPacketStatus.TRIAGE,
+            )
+
+            # Emit SSE event for real-time triage queue updates
+            from src.dashboard.events_publisher import emit_triage_created
+
+            await emit_triage_created(
+                str(taskpacket.id), issue_title, issue_id, repo_full_name,
+            )
+
+            from opentelemetry import context as otel_context
+
+            otel_context.detach(token)
+            span.set_attribute(ATTR_OUTCOME, "triage_created")
+            logger.info(
+                "TaskPacket %s created in TRIAGE mode (issue #%d)",
+                taskpacket.id,
+                issue_id,
+            )
+            return Response(status_code=201, content="TaskPacket created in triage")
+
+        # 11c. Normal mode: create in RECEIVED status
         taskpacket = await create_taskpacket(session, task_data)
 
         # 12. Start Temporal workflow
@@ -187,7 +223,10 @@ async def github_webhook(
                 labels=normalized.get("labels", []),
             )
         except Exception:
-            logger.exception("Failed to start Temporal workflow for TaskPacket %s", taskpacket.id)
+            logger.exception(
+                "Failed to start Temporal workflow for TaskPacket %s",
+                taskpacket.id,
+            )
             # TaskPacket is created — workflow can be retried later
             span.set_attribute(ATTR_OUTCOME, "workflow_start_failed")
             return Response(status_code=201, content="TaskPacket created, workflow pending")

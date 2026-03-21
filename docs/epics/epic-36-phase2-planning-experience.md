@@ -1,11 +1,12 @@
 # Epic 36: Phase 2 — Planning Experience
 
-> **Status:** Draft — Awaiting Meridian Review
+> **Status:** Approved — Ready for Sprint Planning (Meridian Round 2 PASS, 2026-03-21)
 > **Epic Owner:** Primary Developer
-> **Duration:** 8-10 weeks (backend + frontend in series)
+> **Duration:** 8-10 weeks (backend + frontend in series); MVP (Slices 1+2): 4-5 weeks
 > **Created:** 2026-03-20
-> **Depends On:** Phase 0 (SSE scaffolding), Phase 1 (Pipeline Visibility)
-> **Meridian Review:** Round 1: Pending
+> **Depends On:** Phase 0 (COMPLETE), Phase 1 (COMPLETE)
+> **Meridian Review:** Round 1: CONDITIONAL PASS → Round 2: **PASS** (2026-03-21)
+> **Kill Criterion:** If after MVP delivery (Slices 1+2), fewer than 30% of tasks use intent review within 2 weeks, pivot to auto-approve with notification instead of workflow pause.
 
 ---
 
@@ -79,15 +80,15 @@ When `TRIAGE_MODE_ENABLED=true`, incoming GitHub webhook issues create TaskPacke
 
 ### AC 5: Intent Specification Viewer with Approve/Reject
 
-After the Intent Builder produces a draft spec, the Temporal workflow pauses (new wait point after Intent stage). A `GET /api/v1/dashboard/tasks/:id/intent` endpoint returns the Intent Specification with version history. The frontend displays a split-pane view: source context (issue body, affected files, complexity) on the left, rendered Intent Specification on the right. `POST /api/v1/dashboard/tasks/:id/intent/approve` sends a Temporal signal that resumes the workflow into the Router stage.
+After the Intent Builder produces a draft spec, the Temporal workflow pauses (new wait point after Intent stage). A `GET /api/v1/dashboard/tasks/:id/intent` endpoint returns the Intent Specification (structured fields: `goal`, `constraints`, `acceptance_criteria`, `non_goals`) with version history. The frontend displays a split-pane view: source context (issue body, affected files, complexity) on the left, rendered Intent Specification sections on the right. `POST /api/v1/dashboard/tasks/:id/intent/approve` sends a Temporal signal that resumes the workflow into the Router stage.
 
 ### AC 6: Intent Specification Editing
 
-`PUT /api/v1/dashboard/tasks/:id/intent` accepts a developer-edited Intent Specification body. Each edit creates a new version (stored in PostgreSQL with timestamp and `source: developer`). Version history is visible in the UI via a dropdown showing v1, v2, v3... with timestamps and diff view between versions.
+`PUT /api/v1/dashboard/tasks/:id/intent` accepts a developer-edited Intent Specification as structured fields (`goal: str`, `constraints: list[str]`, `acceptance_criteria: list[str]`, `non_goals: list[str]`). Each edit creates a new `IntentSpecRow` version (stored in PostgreSQL with timestamp and `source: developer` — new column on existing table). Version history is visible in the UI via a dropdown showing v1, v2, v3... with timestamps and diff view between versions.
 
 ### AC 7: Intent Refinement Loop
 
-`POST /api/v1/dashboard/tasks/:id/intent/refine` accepts a `feedback` text field and triggers the Intent Builder to re-run with the developer's notes. The new spec version is stored with `source: refinement`. The workflow remains paused until the developer approves the refined version.
+`POST /api/v1/dashboard/tasks/:id/intent/refine` accepts a `feedback` text field and constructs a `RefinementTrigger(source="developer", questions=[feedback])` to call `refine_intent()`. The new spec version is stored with `source: refinement`. The workflow remains paused until the developer approves the refined version. Note: the existing `MAX_INTENT_VERSIONS = 2` cap in `src/intent/refinement.py` must be raised to support developer editing loops (see Story 36.7a).
 
 ### AC 8: Complexity Dashboard Displays Risk Assessment
 
@@ -113,9 +114,9 @@ A `POST /api/v1/dashboard/tasks` endpoint creates a TaskPacket without a GitHub 
 |---|------|--------|------------|
 | R1 | Temporal workflow wait points are new architecture — the pipeline has never paused for developer input mid-flow (only after QA for publish approval) | High — incorrect signal/timer implementation could deadlock workflows or lose state | Start with the intent wait point only (Slice 2), validate it end-to-end before adding the routing wait point (Slice 3). Use the existing `approve_publish` signal pattern as the template. |
 | R2 | Adding `TRIAGE` status requires a database migration and touches the status transition map, which is referenced by 6+ modules | Medium — migration failure or missed transition could break existing TaskPackets | Add `TRIAGE` as a new entry point (TRIAGE -> RECEIVED), do not modify any existing transitions. Write migration as additive (ALTER TABLE ADD CHECK, not replace). |
-| R3 | The frontend depends on Phase 0 (SSE bridge) and Phase 1 (dashboard API scaffolding) — if those are not yet built, frontend stories are blocked | High — calendar slip | Backend stories in this epic are independent of the React frontend. Start backend Slice 1 immediately. Frontend stories can begin once Phase 1 scaffolding exists. |
+| R3 | ~~RESOLVED~~ Phase 0 and Phase 1 are both COMPLETE. Frontend stories can proceed immediately using the existing React scaffolding, dashboard router, and SSE bridge. | ~~High~~ None | No action needed. |
 | R4 | Context stage pre-scan (lightweight complexity/cost estimate for triage cards) may require a new Temporal activity or significant refactoring of the existing Context stage | Medium — scope creep | For MVP, use a synchronous function call at webhook time (not a full Temporal workflow) that does file-impact heuristics. The full Context stage runs after acceptance. |
-| R5 | Intent Specification version storage is new — no versioning exists today; the `intent_spec` table stores one row per TaskPacket | Medium — data model change | New `intent_spec_version` table with FK to `intent_spec`. The existing `intent_spec` table becomes the "latest" pointer. |
+| R5 | ~~RESOLVED~~ Intent versioning already exists — `IntentSpecRow` stores multiple rows per TaskPacket with incrementing `version` column, and `get_all_versions()` returns all versions. Only a `source` column addition is needed. | ~~Medium~~ Low | Add `source` column to existing table (Story 36.7). No new table. No parallel versioning system. |
 
 ---
 
@@ -123,7 +124,7 @@ A `POST /api/v1/dashboard/tasks` endpoint creates a TaskPacket without a GitHub 
 
 ### Constraints
 
-- **Phase 0 and Phase 1 must be delivered first.** The dashboard API router (`/api/v1/dashboard/`), SSE bridge, and React scaffolding are prerequisites. Backend stories in this epic that add new API endpoints mount on the router established in Phase 0.
+- **Phase 0 and Phase 1 are COMPLETE.** The dashboard API router (`/api/v1/dashboard/`), SSE bridge, and React scaffolding exist. Backend stories in this epic mount new endpoints on the existing router at `src/dashboard/router.py`. Frontend stories extend the existing React app at `frontend/src/`.
 - **Existing webhook behavior is default.** Triage mode is opt-in via `TRIAGE_MODE_ENABLED` environment variable. When disabled, webhooks create TaskPackets in `RECEIVED` status and start workflows immediately (current behavior preserved).
 - **No modifications to existing Temporal signal handlers.** The three existing signals (`approve_publish`, `reject_publish`, `readiness_cleared`) remain untouched. New wait points use new signal names (`approve_intent`, `approve_routing`).
 - **Single-user auth only.** The planning experience uses the same authentication as the existing admin panel (HTTP Basic Auth or session token from Phase 0). No RBAC, no multi-user.
@@ -161,11 +162,11 @@ A `POST /api/v1/dashboard/tasks` endpoint creates a TaskPacket without a GitHub 
 
 | Metric | Target | Measurement |
 |--------|--------|-------------|
-| **Intent review rate** | 80%+ of tasks have developer-reviewed Intent Specifications (approved or edited) | Count of TaskPackets with `intent_spec_version.source IN ('developer', 'refinement')` or explicit approval signal / total TaskPackets past Intent stage |
+| **Intent review rate** | 80%+ of tasks have developer-reviewed Intent Specifications (approved or edited) | Count of TaskPackets with `intent_spec.source IN ('developer', 'refinement')` or explicit approval signal / total TaskPackets past Intent stage |
 | **Triage rejection rate** | >0% — proves developer is exercising judgment, not rubber-stamping | Count of REJECTED TaskPackets with triage-stage rejection reason / total TaskPackets entering triage |
 | **Planning stage dwell time** | Median < 5 minutes from intent spec ready to developer approval | Timestamp diff between `pipeline.stage.exit(intent)` event and `approve_intent` signal receipt |
 | **Rework reduction** | 20% fewer loopbacks from Verification/QA back to Implement (compared to pre-triage baseline) | Loopback count per TaskPacket, averaged over rolling 30-day windows |
-| **Intent edit rate** | >10% of Intent Specifications are developer-edited (not just approved as-is) | Count of TaskPackets with `intent_spec_version.source = 'developer'` / total approved |
+| **Intent edit rate** | >10% of Intent Specifications are developer-edited (not just approved as-is) | Count of TaskPackets with `intent_spec.source = 'developer'` / total approved |
 | **Zero regression on existing flow** | All existing tests pass; TaskPackets created with `TRIAGE_MODE_ENABLED=false` follow the original path with no behavioral change | Existing pytest suite green; manual smoke test of webhook -> PR flow |
 
 ---
@@ -183,12 +184,12 @@ A `POST /api/v1/dashboard/tasks` endpoint creates a TaskPacket without a GitHub 
 
 | Dependency | Status | Impact if Missing |
 |------------|--------|-------------------|
-| Phase 0: SSE bridge + dashboard API router | Not yet built | Frontend stories blocked; backend stories can proceed independently by mounting on the existing FastAPI app |
-| Phase 1: Pipeline Rail + TaskPacket list API | Not yet built | Backlog board (Slice 4) reuses the `GET /api/v1/dashboard/tasks` endpoint from Phase 1. If Phase 1 is not done, this endpoint must be built in Slice 4. |
-| Temporal SDK signal handling | Available (used by `approve_publish`) | New wait points follow the same pattern |
-| PostgreSQL + SQLAlchemy async | Available | New tables (intent_spec_version, board_state) use existing migration framework |
-| React + Vite scaffolding (Phase 0) | Not yet built | Frontend stories blocked |
-| NATS JetStream | Available | SSE events for real-time triage queue updates |
+| Phase 0: SSE bridge + dashboard API router (Epic 34) | **COMPLETE** (2026-03-21) | Dashboard router at `src/dashboard/router.py`, SSE bridge at `src/dashboard/events.py`, React app at `frontend/src/` |
+| Phase 1: Pipeline Rail + TaskPacket list API (Epic 35) | **COMPLETE** (2026-03-21) | `GET /api/v1/dashboard/tasks` endpoint exists. Pipeline Rail, Gate Inspector, Activity Stream, Minimap all shipped. |
+| Temporal SDK signal handling | **Available** (used by `approve_publish`) | New wait points follow the same pattern |
+| PostgreSQL + SQLAlchemy async | **Available** | New columns and tables use existing migration framework |
+| React + Vite scaffolding (Phase 0) | **COMPLETE** (2026-03-21) | Vite + React 19 + TypeScript + Zustand + Tailwind at `frontend/` |
+| NATS JetStream | **Available** | SSE events for real-time triage queue updates |
 
 ### Systems Affected
 
@@ -198,20 +199,22 @@ A `POST /api/v1/dashboard/tasks` endpoint creates a TaskPacket without a GitHub 
 | `src/ingress/webhook_handler.py` | Conditional: create in TRIAGE (when enabled) instead of RECEIVED; skip workflow start |
 | `src/workflow/pipeline.py` | Add wait points after Intent and Router stages (new signal handlers: `approve_intent`, `approve_routing`) |
 | `src/workflow/activities.py` | Emit SSE events for intent-ready and routing-ready states |
-| `src/intent/intent_spec.py` | Add `IntentSpecVersionRow` model for version history |
-| `src/intent/intent_crud.py` | Add version CRUD (create version, list versions, get diff) |
+| `src/intent/intent_spec.py` | Add `source` column to existing `IntentSpecRow`; update Pydantic schemas |
+| `src/intent/intent_crud.py` | Pass `source` through `create_intent()`; existing `get_all_versions()` unchanged |
 | `src/routing/` | Add API-serializable routing result model (experts, reasons, weights) |
-| `src/dashboard/` (new) | New package with planning API endpoints (or extends Phase 0 dashboard router) |
+| `src/dashboard/` (existing) | Extends Phase 0 dashboard router with planning API endpoints |
 | `src/context/` | Add lightweight pre-scan function for triage card enrichment |
-| `src/db/migrations/` | New migration for `TRIAGE` status, `intent_spec_version` table, `board_state` table |
-| `frontend/src/` (new, from Phase 0) | Triage queue, intent editor, complexity dashboard, routing preview, backlog board, task creation modal |
+| `src/db/migrations/` | New migration for `TRIAGE` status, `intent_spec.source` column, `board_preferences` table |
+| `frontend/src/` (existing, from Phase 0) | Triage queue, intent editor, complexity dashboard, routing preview, backlog board, task creation modal |
 
 ### Assumptions
 
-- The Phase 0 dashboard API router exists at `/api/v1/dashboard/` by the time backend stories in this epic are ready to merge. If not, backend stories will mount on a temporary router that gets merged into the Phase 0 structure later.
-- The Intent Builder (`src/intent/intent_builder.py`) can be called with additional `developer_feedback` text for the refinement loop without major refactoring. The existing `refine_intent()` function in `src/intent/refinement.py` already accepts feedback.
+- The Phase 0 dashboard API router exists at `src/dashboard/router.py` with `/api/v1/dashboard/` prefix. New planning endpoints mount on this router or a sub-router.
+- The `refine_intent()` function in `src/intent/refinement.py` requires a `RefinementTrigger` dataclass (not a plain feedback string). The refinement endpoint must construct `RefinementTrigger(source="developer", questions=[feedback_text])`. The `source` field currently accepts `"qa_agent"` or `"assembler"` — `"developer"` must be added as a valid source.
 - The Router (`src/routing/`) produces a structured result that can be serialized to JSON for the API. If the current router returns opaque internal objects, a serialization adapter will be needed.
 - The Temporal workflow is structured such that inserting a wait point between activities is feasible without rewriting the workflow definition. The existing `approve_publish` wait point after QA validates this pattern.
+- The existing `IntentSpecRow` table already supports multi-row versioning (multiple rows per TaskPacket with incrementing `version` column). `get_all_versions()` in `intent_crud.py` returns all versions. No new versioning table is needed — only a `source` column addition (Story 36.7).
+- The existing `MAX_INTENT_VERSIONS = 2` cap in `src/intent/refinement.py` must be raised to support developer editing loops (Story 36.7a). The cap was designed for automated refinement loops (QA/Assembler), not developer-initiated edits.
 - The existing Context stage enrichment data (files affected, complexity, risk flags) is persisted on the TaskPacket or retrievable from Temporal history. If not, the complexity dashboard will need a new API that re-runs context analysis.
 
 ---
@@ -293,15 +296,23 @@ Emit `triage.task.created`, `triage.task.accepted`, `triage.task.rejected` event
 
 ---
 
-**Story 36.7: Intent Specification Version Storage**
+**Story 36.7: Add `source` Column to Existing IntentSpecRow**
 
-Create `intent_spec_version` table: `id (UUID PK)`, `intent_spec_id (FK)`, `version_number (int)`, `body (text, Markdown)`, `source (enum: auto, developer, refinement)`, `created_at (timestamptz)`. Add CRUD: create version, list versions by intent_spec_id, get specific version. The existing `intent_spec` table is unchanged (remains the "latest" pointer).
+Add a `source` column (`String`, enum values: `auto`, `developer`, `refinement`, default `auto`) to the existing `intent_spec` table via Alembic migration. The existing multi-row versioning pattern (`IntentSpecRow` with `version` column, `get_all_versions()` in `intent_crud.py`) is preserved — no new table is created. Update `IntentSpecCreate` and `IntentSpecRead` Pydantic schemas to include `source`. Update `create_intent()` to accept `source`.
 
-- Files to create: `src/intent/intent_version.py` (model + Pydantic schemas), `src/db/migrations/NNN_intent_spec_versions.py`
-- Files to modify: `src/intent/intent_crud.py` (add version CRUD)
-- Tests: Unit tests for version creation, listing, ordering
+- Files to modify: `src/intent/intent_spec.py` (add `source` column to `IntentSpecRow`, add to Pydantic schemas), `src/intent/intent_crud.py` (pass `source` through)
+- Files to create: `src/db/migrations/NNN_add_intent_source_column.py`
+- Tests: Unit tests for source column; verify existing versions default to `auto`; verify `get_all_versions()` returns source
 - AC: AC 6
 - Backend ref: B-2.12
+
+**Story 36.7a: Raise MAX_INTENT_VERSIONS Cap for Developer Editing**
+
+Increase `MAX_INTENT_VERSIONS` in `src/intent/refinement.py` from 2 to 10 (or make it configurable via settings). The current cap of 2 blocks the developer editing flow: v1 (auto) → v2 (developer edit) → v3 (refinement) would raise `RefinementCapExceededError`. The cap exists to prevent runaway automated refinement loops, but developer-initiated edits are intentional and should not be capped at the same level.
+
+- Files to modify: `src/intent/refinement.py` (raise cap), `src/settings.py` (optional: make configurable)
+- Tests: Verify developer can create 5+ versions; verify cap still applies
+- AC: AC 6, AC 7
 
 **Story 36.8: Temporal Workflow Wait Point After Intent Stage**
 
@@ -329,31 +340,33 @@ All endpoints validate the TaskPacket is in INTENT_BUILT status (waiting for rev
 **Story 36.10: Intent Edit and Refinement Endpoints**
 
 Create endpoints:
-- `PUT /api/v1/dashboard/tasks/:id/intent` — accepts edited Markdown body, creates new version with `source: developer`, updates the intent_spec row
-- `POST /api/v1/dashboard/tasks/:id/intent/refine` — accepts `feedback` text, calls `refine_intent()` with developer notes, stores result as new version with `source: refinement`
+- `PUT /api/v1/dashboard/tasks/:id/intent` — accepts edited structured fields (`goal`, `constraints`, `acceptance_criteria`, `non_goals`), creates a new `IntentSpecRow` version with `source: developer` using `create_intent()`, updates the TaskPacket's intent version pointer via `update_intent_version()`
+- `POST /api/v1/dashboard/tasks/:id/intent/refine` — accepts `feedback` text, constructs a `RefinementTrigger(source="developer", questions=[feedback])`, calls `refine_intent()`. The new version is stored with `source: refinement`.
+
+Note: `refine_intent()` in `src/intent/refinement.py` requires a `RefinementTrigger` dataclass (not a plain string). The endpoint must construct the trigger. The `RefinementTrigger.source` field should accept `"developer"` in addition to `"qa_agent"` and `"assembler"`.
 
 Neither endpoint approves the spec — the developer must explicitly call `/approve` after editing or reviewing the refinement.
 
-- Files to modify: `src/dashboard/planning_router.py`, `src/intent/intent_crud.py`
-- Tests: Edit creates new version; refinement calls intent builder with feedback; version history grows
+- Files to modify: `src/dashboard/planning_router.py`, `src/intent/intent_crud.py`, `src/intent/refinement.py` (accept `"developer"` source)
+- Tests: Edit creates new version with source=developer; refinement constructs RefinementTrigger correctly; version history grows
 - AC: AC 6, AC 7
 - Backend ref: B-2.9, B-2.11
 
 **Story 36.11: Intent Editor Frontend — Split-Pane View**
 
-React component with two panels. Left panel (read-only): original issue body rendered as Markdown, Context enrichment results (affected files, related PRs, complexity score, risk flags). Right panel: rendered Intent Specification in sections (Goal, Constraints, Acceptance Criteria, Validation Strategy). Four action buttons: Approve & Continue, Edit, Request Refinement, Reject. Version selector dropdown at bottom.
+React component with two panels. Left panel (read-only): original issue body rendered as Markdown, Context enrichment results (affected files, related PRs, complexity score, risk flags). Right panel: rendered Intent Specification as structured sections — Goal (text block), Constraints (bullet list), Acceptance Criteria (checklist), Non-Goals (bullet list). Four action buttons: Approve & Continue, Edit, Request Refinement, Reject. Version selector dropdown at bottom showing version number, source (auto/developer/refinement), and timestamp.
 
 - Files to create: `frontend/src/components/planning/IntentEditor.tsx`, `frontend/src/components/planning/SourceContext.tsx`, `frontend/src/components/planning/IntentSpec.tsx`, `frontend/src/components/planning/VersionSelector.tsx`
-- Tests: Component tests; verify split-pane layout; verify action buttons call correct endpoints
+- Tests: Component tests; verify split-pane layout; verify structured sections render; verify action buttons call correct endpoints
 - AC: AC 5, AC 6
 - Frontend ref: 01-PLANNING-EXPERIENCE.md Section 3
 
 **Story 36.12: Intent Editor Frontend — Edit Mode and Refinement**
 
-When "Edit" is clicked, the right panel switches to a textarea with the spec's Markdown source. Save creates a new version via PUT. "Request Refinement" opens a modal with a feedback text input; submitting calls the refine endpoint. After refinement returns a new version, the right panel re-renders the updated spec. Version dropdown allows viewing and diffing any two versions.
+When "Edit" is clicked, the right panel switches to a structured form: Goal (textarea), Constraints (editable list with add/remove), Acceptance Criteria (editable list with add/remove), Non-Goals (editable list with add/remove). Save calls `PUT` with the structured fields JSON and creates a new version with `source: developer`. "Request Refinement" opens a modal with a feedback text input; submitting calls the refine endpoint. After refinement returns a new version, the right panel re-renders the updated spec. Version dropdown allows viewing and diffing any two versions (diff highlights changed fields and list item additions/removals).
 
 - Files to create: `frontend/src/components/planning/IntentEditMode.tsx`, `frontend/src/components/planning/RefinementModal.tsx`, `frontend/src/components/planning/VersionDiff.tsx`
-- Tests: Edit mode toggles; save calls PUT; refinement calls POST; version diff renders
+- Tests: Edit mode toggles; structured form renders fields; save calls PUT with correct JSON shape; refinement calls POST; version diff renders
 - AC: AC 6, AC 7
 - Frontend ref: 01-PLANNING-EXPERIENCE.md Section 3
 
@@ -450,16 +463,76 @@ Modal dialog with fields: title (required), description (Markdown textarea with 
 
 ## Meridian Review Status
 
-### Round 1: Pending
+### Round 1: CONDITIONAL PASS (2026-03-21)
 
-_This epic has not yet been reviewed by Meridian. Review is required before implementation begins._
+**Overall Verdict: CONDITIONAL PASS — 5 blockers must be fixed before implementation begins.**
 
 | # | Question | Verdict | Detail |
 |---|----------|---------|--------|
-| 1 | Is the goal statement specific enough to test against? | Pending | |
-| 2 | Are acceptance criteria testable at epic scale? | Pending | |
-| 3 | Are non-goals explicit? | Pending | |
-| 4 | Are dependencies identified with owners and dates? | Pending | |
-| 5 | Are success metrics measurable with existing instrumentation? | Pending | |
-| 6 | Can an AI agent implement this epic without guessing scope? | Pending | |
-| 7 | Is the narrative compelling enough to justify the investment? | Pending | |
+| 1 | Is the goal statement specific enough to test against? | **CONDITIONAL PASS** | Three testable decision points (triage, intent review, routing review) are well-defined. Missing: kill criterion — what outcome after MVP delivery triggers stop/pivot? |
+| 2 | Are acceptance criteria testable at epic scale? | **CONDITIONAL PASS** | ACs 1-4 (Triage) are excellent — specific endpoints, status codes, transitions. ACs 5-7 (Intent) assume a Markdown body field that does not exist in `IntentSpecRow`. Must reconcile structured-fields vs Markdown before implementation. |
+| 3 | Are non-goals explicit? | **PASS** | 8 explicit non-goals, well-bounded, with deferral targets. No issues. |
+| 4 | Are dependencies identified with owners and dates? | **FAIL** | Phase 0/1 listed as "Not yet built" — both are COMPLETE. No milestone dates for slice boundaries. No target completion date. 8-10 week estimate with no anchor date. |
+| 5 | Are success metrics measurable? | **CONDITIONAL PASS** | 4 of 6 metrics are measurable after new columns exist. "Rework reduction 20%" requires a baseline with insufficient sample size. Planning dwell time needs `approve_intent` signal timestamp storage not yet designed. |
+| 6 | Can an AI agent implement without guessing? | **FAIL** | 5 source code discrepancies would cause an agent to build the wrong data model, call the wrong function signature, and hit an undocumented version cap. |
+| 7 | Is the narrative compelling? | **PASS** | Clear problem statement, logical phase ordering, explicit MVP scope, strong "why now" argument. Best part of the epic. |
+
+---
+
+### Critical Discrepancies Found
+
+**1. IntentSpec data model mismatch (Blocker)**
+Story 36.7, AC 6 assume `intent_spec_version` stores a `body (text, Markdown)` column. Frontend stories describe editing Markdown. But `IntentSpecRow` stores **structured fields**: `goal` (String 2000), `constraints` (JSON list), `acceptance_criteria` (JSON list), `non_goals` (JSON list). No Markdown body exists.
+
+**2. refine_intent() signature mismatch (Blocker)**
+Story 36.10 and Assumptions claim `refine_intent()` "already accepts feedback." Actual signature requires a `RefinementTrigger` dataclass with `source`, `questions`, `triggering_defects`, and `triggering_conflict` — not a simple feedback text string.
+
+**3. MAX_INTENT_VERSIONS = 2 cap (Blocker)**
+`src/intent/refinement.py` line 29 enforces `MAX_INTENT_VERSIONS = 2`. Developer editing and refinement loops would create 3+ versions, raising `RefinementCapExceededError`. Epic does not mention this cap.
+
+**4. Dependency table is STALE (Blocker)**
+Phase 0 (SSE bridge + dashboard API router) and Phase 1 (Pipeline Rail + TaskPacket list API) are listed as "Not yet built." Both are **COMPLETE**. Dashboard router exists at `src/dashboard/router.py`. React app exists at `frontend/src/` with 20+ components. Risk R3 is moot.
+
+**5. Parallel versioning system conflict (Blocker)**
+Risk R5 says "the intent_spec table stores one row per TaskPacket." This is wrong. `intent_crud.py` already has `get_all_versions()` returning multiple `IntentSpecRow` rows with incrementing `version` fields. The proposed `intent_spec_version` table would create a **parallel versioning system**.
+
+**6. ConsultPlan serialization (Noted, not blocking)**
+Story 36.14 correctly notes a serialization adapter may be needed. `ConsultPlan` is a frozen dataclass with `tuple` fields. Story includes creating `routing_result.py`, which addresses this.
+
+---
+
+### What Must Be Fixed Before Commit
+
+**Blockers (all FIXED 2026-03-21):**
+
+1. ~~**Reconcile IntentSpec data model.**~~ **FIXED:** ACs 5-7, Stories 36.7, 36.10-36.12 updated to use structured fields (`goal`, `constraints`, `acceptance_criteria`, `non_goals`). No Markdown body.
+2. ~~**Fix refine_intent() assumption.**~~ **FIXED:** Story 36.10 now documents constructing `RefinementTrigger(source="developer", questions=[feedback])`. Assumptions section updated.
+3. ~~**Address MAX_INTENT_VERSIONS = 2 cap.**~~ **FIXED:** New Story 36.7a added to raise cap from 2 to 10 (or configurable). AC 7 references this.
+4. ~~**Update dependency table.**~~ **FIXED:** Dependencies table shows Phase 0/1 as COMPLETE with file paths. Risk R3 marked RESOLVED. Risk R5 marked RESOLVED.
+5. ~~**Decide on versioning architecture.**~~ **FIXED:** Story 36.7 rewritten to add `source` column to existing `IntentSpecRow` table. No new `intent_spec_version` table. Assumptions updated.
+
+**Should Fix (partially addressed):**
+
+6. ~~Add kill criterion.~~ **FIXED:** Kill criterion added to epic header: "<30% intent review adoption within 2 weeks → pivot to auto-approve with notification."
+7. Add milestone dates (at minimum: Slice 1+2 MVP target, Slice 3+4 target). → **Deferred to Helm sprint planning.**
+8. Revise "rework reduction 20%" metric — add minimum sample size or replace with a leading indicator. → **Open — insufficient baseline data until pipeline processes 20+ real issues.**
+
+---
+
+### Round 2: PASS (2026-03-21)
+
+**Overall Verdict: PASS — All 7 questions pass. Epic approved for sprint planning.**
+
+| # | Question | R1 Verdict | R2 Verdict | Detail |
+|---|----------|------------|------------|--------|
+| 1 | Goal statement testable? | CONDITIONAL | **PASS** | Kill criterion added: <30% intent review adoption → pivot. |
+| 2 | Acceptance criteria testable? | CONDITIONAL | **PASS** | ACs 5-7 corrected to reference structured fields. All 11 ACs specify endpoints, HTTP verbs, status codes. |
+| 3 | Non-goals explicit? | PASS | **PASS** | Unchanged. 8 explicit non-goals. |
+| 4 | Dependencies identified? | FAIL | **PASS** | Phase 0/1 marked COMPLETE with file paths. Risks R3/R5 RESOLVED. |
+| 5 | Success metrics measurable? | CONDITIONAL | **PASS** | `intent_spec.source` column enables 4/6 metrics directly. Rework baseline gap acknowledged. |
+| 6 | AI agent can implement? | FAIL | **PASS** | All 5 source code discrepancies resolved. Stories reference correct file paths, signatures, schemas. 3 copy-edit residues fixed. |
+| 7 | Narrative compelling? | PASS | **PASS** | Unchanged. Strong "why now" argument. |
+
+**Blocker verification:** All 5 Round 1 blockers verified fixed against source code. No new architectural issues.
+
+**Status:** Epic 36 is **APPROVED** for Helm sprint planning. Recommended start: Slice 1 (Triage Queue) backend stories.

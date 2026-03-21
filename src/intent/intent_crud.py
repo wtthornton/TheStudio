@@ -17,6 +17,7 @@ async def create_intent(session: AsyncSession, data: IntentSpecCreate) -> Intent
         constraints=data.constraints,
         acceptance_criteria=data.acceptance_criteria,
         non_goals=data.non_goals,
+        source=data.source,
     )
     session.add(row)
     await session.commit()

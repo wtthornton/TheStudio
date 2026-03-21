@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { usePipelineStore } from '../stores/pipeline-store'
+import { useTriageStore } from '../stores/triage-store'
 import type { StageId } from '../lib/constants'
 import { PIPELINE_STAGES } from '../lib/constants'
 
@@ -92,6 +93,13 @@ export function useSSE(): void {
         costUpdate(data.task_id, data.cost_delta ?? 0, data.total_cost ?? 0)
       } else if (eventType === 'system.full_state') {
         reset()
+      } else if (eventType === 'pipeline.triage.created' && data.task_id) {
+        // Reload triage queue when a new task enters triage
+        void useTriageStore.getState().loadTasks()
+      } else if (eventType === 'pipeline.triage.accepted' && data.task_id) {
+        useTriageStore.getState().removeTask(data.task_id)
+      } else if (eventType === 'pipeline.triage.rejected' && data.task_id) {
+        useTriageStore.getState().removeTask(data.task_id)
       }
     }
 

@@ -44,6 +44,7 @@ async def start_workflow(
             "taskpacket_id": str(taskpacket_id),
             "correlation_id": str(correlation_id),
             "approval_auto_bypass": settings.approval_auto_bypass,
+            "intent_review_enabled": settings.intent_review_enabled,
             "repo": repo,
             "issue_title": issue_title,
             "issue_body": issue_body,

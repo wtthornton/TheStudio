@@ -13,8 +13,7 @@ from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import JSON, String, func, select, text
-from sqlalchemy.dialects.postgresql import TIMESTAMPTZ
+from sqlalchemy import JSON, DateTime, String, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -46,7 +45,9 @@ class GateEvidenceRow(Base):
     checks: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     defect_category: Mapped[str | None] = mapped_column(String(100), nullable=True)
     evidence_artifact: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(TIMESTAMPTZ, server_default=text("now()"))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"),
+    )
 
 
 # ---------------------------------------------------------------------------

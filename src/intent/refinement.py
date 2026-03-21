@@ -21,12 +21,13 @@ from src.observability.conventions import (
     SPAN_INTENT_REFINE,
 )
 from src.observability.tracing import get_tracer
+from src.settings import settings
 
 logger = logging.getLogger(__name__)
 tracer = get_tracer("thestudio.intent")
 
-# Maximum intent versions per workflow (version 1 = original, version 2 = refinement)
-MAX_INTENT_VERSIONS = 2
+# Maximum intent versions per workflow (configurable via settings)
+MAX_INTENT_VERSIONS = settings.max_intent_versions
 
 
 class RefinementCapExceededError(Exception):

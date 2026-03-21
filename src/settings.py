@@ -100,6 +100,11 @@ class Settings(BaseSettings):
     # Approval auto-bypass (Story 30.14)
     approval_auto_bypass: bool = False  # Skip approval gate for ALL tiers when True
 
+    # Triage mode (Epic 36 — Planning Experience)
+    triage_mode_enabled: bool = False  # When True, webhooks create TRIAGE instead of RECEIVED
+    intent_review_enabled: bool = False  # When True, workflow pauses after Intent stage
+    max_intent_versions: int = 10  # Cap on intent spec versions per workflow (was 2)
+
     # Dashboard SSE auth (Epic 34 — B-0.7)
     dashboard_token: str = ""  # Token for SSE endpoint; empty = dev mode (no auth)
 

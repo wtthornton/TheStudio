@@ -37,7 +37,7 @@ def _make_taskpacket(
     )
 
 
-def _make_intent(taskpacket_id=None, version=1) -> IntentSpecRead:
+def _make_intent(taskpacket_id=None, version=1, source="auto") -> IntentSpecRead:
     from datetime import UTC, datetime
     return IntentSpecRead(
         id=uuid4(),
@@ -47,6 +47,7 @@ def _make_intent(taskpacket_id=None, version=1) -> IntentSpecRead:
         constraints=["Must include tests"],
         acceptance_criteria=["Auth works after fix"],
         non_goals=["No UI changes"],
+        source=source,
         created_at=datetime.now(UTC),
     )
 
@@ -143,13 +144,13 @@ class TestPriorVersionPreserved:
 
 
 class TestRefinementCap:
-    """Version cap at 2 per workflow."""
+    """Version cap at 10 per workflow (configurable via settings)."""
 
     @pytest.mark.asyncio
     async def test_cap_exceeded_raises(self) -> None:
         tp_id = uuid4()
-        tp = _make_taskpacket(taskpacket_id=tp_id, intent_version=2)
-        current_intent = _make_intent(taskpacket_id=tp_id, version=2)
+        tp = _make_taskpacket(taskpacket_id=tp_id, intent_version=10)
+        current_intent = _make_intent(taskpacket_id=tp_id, version=10)
 
         trigger = RefinementTrigger(
             source="qa_agent",
@@ -164,11 +165,35 @@ class TestRefinementCap:
             with pytest.raises(RefinementCapExceededError) as exc_info:
                 await refine_intent(session, tp_id, trigger)
 
-        assert exc_info.value.current_version == 2
+        assert exc_info.value.current_version == 10
         assert exc_info.value.taskpacket_id == tp_id
 
     def test_max_versions_constant(self) -> None:
-        assert MAX_INTENT_VERSIONS == 2
+        assert MAX_INTENT_VERSIONS == 10
+
+    @pytest.mark.asyncio
+    async def test_five_versions_no_error(self) -> None:
+        """Developer editing creates 5+ versions without hitting cap."""
+        tp_id = uuid4()
+        tp = _make_taskpacket(taskpacket_id=tp_id, intent_version=5)
+        current_intent = _make_intent(taskpacket_id=tp_id, version=5)
+        new_intent = _make_intent(taskpacket_id=tp_id, version=6)
+
+        trigger = RefinementTrigger(
+            source="developer",
+            questions=["Clarify scope"],
+        )
+
+        session = AsyncMock()
+        with (
+            patch("src.intent.refinement.get_by_id", return_value=tp),
+            patch("src.intent.refinement.get_latest_for_taskpacket", return_value=current_intent),
+            patch("src.intent.refinement.create_intent", return_value=new_intent),
+            patch("src.intent.refinement.update_intent_version", return_value=tp),
+        ):
+            result = await refine_intent(session, tp_id, trigger)
+
+        assert result.version == 6
 
 
 class TestRefinementProvenance:

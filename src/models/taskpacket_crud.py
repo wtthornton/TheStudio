@@ -25,19 +25,30 @@ class InvalidStatusTransitionError(Exception):
         self.target = target
 
 
-async def create(session: AsyncSession, data: TaskPacketCreate) -> TaskPacketRead:
+async def create(
+    session: AsyncSession,
+    data: TaskPacketCreate,
+    initial_status: TaskPacketStatus = TaskPacketStatus.RECEIVED,
+) -> TaskPacketRead:
     """Create a TaskPacket. Returns existing record if (delivery_id, repo) already exists."""
     # Use INSERT ... ON CONFLICT DO NOTHING for atomic dedupe
+    values: dict[str, Any] = {
+        "repo": data.repo,
+        "issue_id": data.issue_id,
+        "delivery_id": data.delivery_id,
+        "correlation_id": data.correlation_id,
+        "source_name": data.source_name,
+        "status": initial_status,
+    }
+    if data.issue_title is not None:
+        values["issue_title"] = data.issue_title
+    if data.issue_body is not None:
+        values["issue_body"] = data.issue_body
+    if data.triage_enrichment is not None:
+        values["triage_enrichment"] = data.triage_enrichment
     stmt = (
         pg_insert(TaskPacketRow)
-        .values(
-            repo=data.repo,
-            issue_id=data.issue_id,
-            delivery_id=data.delivery_id,
-            correlation_id=data.correlation_id,
-            source_name=data.source_name,
-            status=TaskPacketStatus.RECEIVED,
-        )
+        .values(**values)
         .on_conflict_do_nothing(index_elements=["delivery_id", "repo"])
         .returning(TaskPacketRow)
     )

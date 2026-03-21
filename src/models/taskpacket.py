@@ -22,6 +22,7 @@ from src.db.base import Base
 class TaskPacketStatus(enum.StrEnum):
     """Valid status values for a TaskPacket."""
 
+    TRIAGE = "triage"
     RECEIVED = "received"
     ENRICHED = "enriched"
     CLARIFICATION_REQUESTED = "clarification_requested"
@@ -39,6 +40,11 @@ class TaskPacketStatus(enum.StrEnum):
 
 # Allowed status transitions. Key = current status, value = set of valid next statuses.
 ALLOWED_TRANSITIONS: dict[TaskPacketStatus, set[TaskPacketStatus]] = {
+    TaskPacketStatus.TRIAGE: {
+        TaskPacketStatus.RECEIVED,
+        TaskPacketStatus.REJECTED,
+        TaskPacketStatus.FAILED,
+    },
     TaskPacketStatus.RECEIVED: {TaskPacketStatus.ENRICHED, TaskPacketStatus.FAILED},
     TaskPacketStatus.ENRICHED: {
         TaskPacketStatus.CLARIFICATION_REQUESTED,
@@ -140,6 +146,12 @@ class TaskPacketRow(Base):
     # Null for historical records that predate this migration.
     stage_timings: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
 
+    # Triage fields (Epic 36 — Planning Experience)
+    issue_title: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    issue_body: Mapped[str | None] = mapped_column(String(65535), nullable=True)
+    triage_enrichment: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    rejection_reason: Mapped[str | None] = mapped_column(String(50), nullable=True)
+
     # Verification fields (Story 0.6 — Verification Gate)
     loopback_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
@@ -157,6 +169,9 @@ class TaskPacketCreate(BaseModel):
     delivery_id: str
     correlation_id: UUID = Field(default_factory=uuid4)
     source_name: str = "github"
+    issue_title: str | None = None
+    issue_body: str | None = None
+    triage_enrichment: dict[str, Any] | None = None
 
 
 class TaskPacketRead(BaseModel):
@@ -183,6 +198,10 @@ class TaskPacketRead(BaseModel):
     readiness_score: float | None = None
     readiness_miss: bool = False
     stage_timings: dict[str, Any] | None = None
+    issue_title: str | None = None
+    issue_body: str | None = None
+    triage_enrichment: dict[str, Any] | None = None
+    rejection_reason: str | None = None
     loopback_count: int = 0
     created_at: datetime
     updated_at: datetime

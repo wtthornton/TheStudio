@@ -757,3 +757,136 @@ class TestActivityCallCount:
             await wf.run(_default_params())
 
         assert mock_exec.call_count == 12
+
+
+class TestIntentReviewWaitPoint:
+    """Step 3.5: Intent review wait point (Story 36.8)."""
+
+    async def test_intent_review_disabled_by_default(self) -> None:
+        """When intent_review_enabled=False (default), workflow skips wait point."""
+        activity_returns = [
+            _intake_accepted(),
+            _context_output(),
+            _intent_output(),
+            _ROUTER_OUTPUT,
+            _assembler_output(),
+            _impl_output(),
+            _verify_passed(),
+            _qa_passed(),
+            _publish_output(),
+        ]
+
+        with patch(
+            "temporalio.workflow.execute_activity",
+            new_callable=AsyncMock,
+            side_effect=activity_returns,
+        ):
+            wf = TheStudioPipelineWorkflow()
+            result = await wf.run(_default_params())
+
+        assert result.success is True
+        assert result.intent_approved_by is None
+
+    async def test_intent_review_approve_continues_to_router(self) -> None:
+        """Approve signal resumes workflow to Router and beyond."""
+        activity_returns = [
+            _intake_accepted(),
+            _context_output(),
+            _intent_output(),
+            _ROUTER_OUTPUT,
+            _assembler_output(),
+            _impl_output(),
+            _verify_passed(),
+            _qa_passed(),
+            _publish_output(),
+        ]
+        mock_exec = AsyncMock(side_effect=activity_returns)
+
+        wf = TheStudioPipelineWorkflow()
+
+        async def mock_wait_condition(fn, *, timeout=None):
+            """Simulate immediate intent approval."""
+            wf._intent_approved = True
+            wf._intent_approved_by = "developer-user"
+
+        with (
+            patch("temporalio.workflow.execute_activity", mock_exec),
+            patch("temporalio.workflow.wait_condition", mock_wait_condition),
+        ):
+            result = await wf.run(
+                _default_params(intent_review_enabled=True),
+            )
+
+        assert result.success is True
+        assert result.intent_approved_by == "developer-user"
+        assert result.step_reached == WorkflowStep.PUBLISH
+
+    async def test_intent_review_reject_terminates(self) -> None:
+        """Reject signal terminates workflow with reason."""
+        activity_returns = [
+            _intake_accepted(),
+            _context_output(),
+            _intent_output(),
+        ]
+        mock_exec = AsyncMock(side_effect=activity_returns)
+
+        wf = TheStudioPipelineWorkflow()
+
+        async def mock_wait_condition(fn, *, timeout=None):
+            """Simulate intent rejection."""
+            wf._intent_rejected = True
+            wf._intent_rejected_by = "developer-user"
+            wf._intent_rejection_reason = "Goal is too vague"
+
+        with (
+            patch("temporalio.workflow.execute_activity", mock_exec),
+            patch("temporalio.workflow.wait_condition", mock_wait_condition),
+        ):
+            result = await wf.run(
+                _default_params(intent_review_enabled=True),
+            )
+
+        assert result.success is False
+        assert "Intent rejected" in result.rejection_reason
+        assert "Goal is too vague" in result.rejection_reason
+
+    async def test_intent_review_timeout_escalates(self) -> None:
+        """30-day timeout terminates workflow without auto-approve."""
+        activity_returns = [
+            _intake_accepted(),
+            _context_output(),
+            _intent_output(),
+        ]
+        mock_exec = AsyncMock(side_effect=activity_returns)
+
+        async def mock_wait_condition(fn, *, timeout=None):
+            raise TimeoutError("30-day timeout")
+
+        with (
+            patch("temporalio.workflow.execute_activity", mock_exec),
+            patch("temporalio.workflow.wait_condition", mock_wait_condition),
+            patch("temporalio.workflow.logger"),
+        ):
+            wf = TheStudioPipelineWorkflow()
+            result = await wf.run(
+                _default_params(intent_review_enabled=True),
+            )
+
+        assert result.success is False
+        assert result.rejection_reason == "intent_review_timeout"
+
+    async def test_approve_signal_idempotent(self) -> None:
+        """Calling approve_intent twice is harmless."""
+        wf = TheStudioPipelineWorkflow()
+        await wf.approve_intent("user-1")
+        await wf.approve_intent("user-2")
+        assert wf._intent_approved is True
+        # Second call overwrites approver (idempotent, not an error)
+        assert wf._intent_approved_by == "user-2"
+
+    async def test_reject_signal_idempotent(self) -> None:
+        """Calling reject_intent twice is harmless."""
+        wf = TheStudioPipelineWorkflow()
+        await wf.reject_intent("user-1", "reason-1")
+        await wf.reject_intent("user-2", "reason-2")
+        assert wf._intent_rejected is True

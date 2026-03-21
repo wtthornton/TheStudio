@@ -215,3 +215,236 @@ class TestWebhookEndpoint:
             },
         )
         assert response.status_code == 200
+
+
+class TestTriageMode:
+    """Tests for Epic 36 — triage mode in webhook handler."""
+
+    @pytest.fixture
+    def webhook_secret(self) -> str:
+        return "test-webhook-secret"
+
+    @pytest.fixture
+    def valid_payload(self) -> dict:
+        return {
+            "action": "opened",
+            "issue": {
+                "number": 42,
+                "title": "Test issue",
+                "body": "Fix this bug please",
+                "labels": [],
+            },
+            "repository": {"full_name": "owner/repo"},
+        }
+
+    def _sign(self, payload: bytes, secret: str) -> str:
+        return "sha256=" + hmac.new(
+            secret.encode(), payload, hashlib.sha256,
+        ).hexdigest()
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from src.app import app
+
+        return TestClient(app)
+
+    @patch("src.ingress.webhook_handler.settings")
+    @patch("src.ingress.webhook_handler.get_webhook_secret", new_callable=AsyncMock)
+    @patch("src.ingress.webhook_handler.is_duplicate", new_callable=AsyncMock)
+    @patch("src.ingress.webhook_handler.create_taskpacket", new_callable=AsyncMock)
+    def test_triage_mode_creates_in_triage_status(
+        self,
+        mock_create: AsyncMock,
+        mock_dedupe: AsyncMock,
+        mock_secret: AsyncMock,
+        mock_settings,
+        client: TestClient,
+        valid_payload: dict,
+        webhook_secret: str,
+    ) -> None:
+        from datetime import datetime
+
+        from src.models.taskpacket import TaskPacketRead, TaskPacketStatus
+
+        mock_settings.triage_mode_enabled = True
+        mock_secret.return_value = webhook_secret
+        mock_dedupe.return_value = False
+        mock_create.return_value = TaskPacketRead(
+            id=uuid4(),
+            repo="owner/repo",
+            issue_id=42,
+            delivery_id="test",
+            correlation_id=uuid4(),
+            status=TaskPacketStatus.TRIAGE,
+            issue_title="Test issue",
+            issue_body="Fix this bug please",
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+
+        body = json.dumps(valid_payload).encode()
+        response = client.post(
+            "/webhook/github",
+            content=body,
+            headers={
+                "X-GitHub-Delivery": str(uuid4()),
+                "X-Hub-Signature-256": self._sign(body, webhook_secret),
+                "X-GitHub-Event": "issues",
+                "Content-Type": "application/json",
+            },
+        )
+        assert response.status_code == 201
+        assert "triage" in response.text.lower()
+        mock_create.assert_called_once()
+        # Verify initial_status=TRIAGE was passed
+        call_kwargs = mock_create.call_args
+        assert call_kwargs.kwargs.get("initial_status") == TaskPacketStatus.TRIAGE
+
+    @patch("src.ingress.webhook_handler.settings")
+    @patch("src.ingress.webhook_handler.start_workflow", new_callable=AsyncMock)
+    @patch("src.ingress.webhook_handler.get_webhook_secret", new_callable=AsyncMock)
+    @patch("src.ingress.webhook_handler.is_duplicate", new_callable=AsyncMock)
+    @patch("src.ingress.webhook_handler.create_taskpacket", new_callable=AsyncMock)
+    def test_triage_mode_does_not_start_workflow(
+        self,
+        mock_create: AsyncMock,
+        mock_dedupe: AsyncMock,
+        mock_secret: AsyncMock,
+        mock_workflow: AsyncMock,
+        mock_settings,
+        client: TestClient,
+        valid_payload: dict,
+        webhook_secret: str,
+    ) -> None:
+        from datetime import datetime
+
+        from src.models.taskpacket import TaskPacketRead, TaskPacketStatus
+
+        mock_settings.triage_mode_enabled = True
+        mock_secret.return_value = webhook_secret
+        mock_dedupe.return_value = False
+        mock_create.return_value = TaskPacketRead(
+            id=uuid4(),
+            repo="owner/repo",
+            issue_id=42,
+            delivery_id="test",
+            correlation_id=uuid4(),
+            status=TaskPacketStatus.TRIAGE,
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+
+        body = json.dumps(valid_payload).encode()
+        client.post(
+            "/webhook/github",
+            content=body,
+            headers={
+                "X-GitHub-Delivery": str(uuid4()),
+                "X-Hub-Signature-256": self._sign(body, webhook_secret),
+                "X-GitHub-Event": "issues",
+                "Content-Type": "application/json",
+            },
+        )
+        # Workflow should NOT be started in triage mode
+        mock_workflow.assert_not_called()
+
+    @patch("src.ingress.webhook_handler.settings")
+    @patch("src.ingress.webhook_handler.start_workflow", new_callable=AsyncMock)
+    @patch("src.ingress.webhook_handler.get_webhook_secret", new_callable=AsyncMock)
+    @patch("src.ingress.webhook_handler.is_duplicate", new_callable=AsyncMock)
+    @patch("src.ingress.webhook_handler.create_taskpacket", new_callable=AsyncMock)
+    def test_default_mode_starts_workflow(
+        self,
+        mock_create: AsyncMock,
+        mock_dedupe: AsyncMock,
+        mock_secret: AsyncMock,
+        mock_workflow: AsyncMock,
+        mock_settings,
+        client: TestClient,
+        valid_payload: dict,
+        webhook_secret: str,
+    ) -> None:
+        from datetime import datetime
+
+        from src.models.taskpacket import TaskPacketRead, TaskPacketStatus
+
+        mock_settings.triage_mode_enabled = False
+        mock_secret.return_value = webhook_secret
+        mock_dedupe.return_value = False
+        mock_create.return_value = TaskPacketRead(
+            id=uuid4(),
+            repo="owner/repo",
+            issue_id=42,
+            delivery_id="test",
+            correlation_id=uuid4(),
+            status=TaskPacketStatus.RECEIVED,
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+        mock_workflow.return_value = "run-id-123"
+
+        body = json.dumps(valid_payload).encode()
+        response = client.post(
+            "/webhook/github",
+            content=body,
+            headers={
+                "X-GitHub-Delivery": str(uuid4()),
+                "X-Hub-Signature-256": self._sign(body, webhook_secret),
+                "X-GitHub-Event": "issues",
+                "Content-Type": "application/json",
+            },
+        )
+        assert response.status_code == 201
+        assert "workflow started" in response.text.lower()
+        mock_workflow.assert_called_once()
+
+    @patch("src.ingress.webhook_handler.settings")
+    @patch("src.ingress.webhook_handler.get_webhook_secret", new_callable=AsyncMock)
+    @patch("src.ingress.webhook_handler.is_duplicate", new_callable=AsyncMock)
+    @patch("src.ingress.webhook_handler.create_taskpacket", new_callable=AsyncMock)
+    def test_triage_mode_passes_issue_metadata(
+        self,
+        mock_create: AsyncMock,
+        mock_dedupe: AsyncMock,
+        mock_secret: AsyncMock,
+        mock_settings,
+        client: TestClient,
+        valid_payload: dict,
+        webhook_secret: str,
+    ) -> None:
+        from datetime import datetime
+
+        from src.models.taskpacket import TaskPacketRead, TaskPacketStatus
+
+        mock_settings.triage_mode_enabled = True
+        mock_secret.return_value = webhook_secret
+        mock_dedupe.return_value = False
+        mock_create.return_value = TaskPacketRead(
+            id=uuid4(),
+            repo="owner/repo",
+            issue_id=42,
+            delivery_id="test",
+            correlation_id=uuid4(),
+            status=TaskPacketStatus.TRIAGE,
+            issue_title="Test issue",
+            issue_body="Fix this bug please",
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+
+        body = json.dumps(valid_payload).encode()
+        client.post(
+            "/webhook/github",
+            content=body,
+            headers={
+                "X-GitHub-Delivery": str(uuid4()),
+                "X-Hub-Signature-256": self._sign(body, webhook_secret),
+                "X-GitHub-Event": "issues",
+                "Content-Type": "application/json",
+            },
+        )
+        # Verify issue_title and issue_body were passed to create
+        call_args = mock_create.call_args
+        task_data = call_args.args[1]  # session is args[0], data is args[1]
+        assert task_data.issue_title == "Test issue"
+        assert task_data.issue_body == "Fix this bug please"

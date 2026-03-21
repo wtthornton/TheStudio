@@ -10,9 +10,8 @@ import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel, ConfigDict
-from sqlalchemy import JSON, String, Text, func, select, text
-from sqlalchemy.dialects.postgresql import TIMESTAMPTZ
+from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import JSON, DateTime, String, Text, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -44,8 +43,10 @@ class ActivityEntryRow(Base):
     subphase: Mapped[str] = mapped_column(String(100), default="")
     content: Mapped[str] = mapped_column(Text)
     detail: Mapped[str] = mapped_column(Text, default="")
-    metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(TIMESTAMPTZ, server_default=text("now()"))
+    extra_metadata: Mapped[dict | None] = mapped_column("metadata", JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -56,7 +57,7 @@ class ActivityEntryRow(Base):
 class ActivityEntryRead(BaseModel):
     """Serialised activity entry."""
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     id: uuid.UUID
     task_id: uuid.UUID
@@ -65,7 +66,7 @@ class ActivityEntryRead(BaseModel):
     subphase: str
     content: str
     detail: str
-    metadata: dict | None = None
+    metadata: dict | None = Field(None, alias="extra_metadata", validation_alias="extra_metadata")
     created_at: datetime
 
 

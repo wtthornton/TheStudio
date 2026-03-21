@@ -78,6 +78,9 @@ APPROVAL_REQUIRED_TIERS = frozenset({"suggest", "execute"})
 # Durable wait timeout — hard policy, not configurable
 APPROVAL_TIMEOUT = timedelta(days=7)
 
+# Intent review safety timeout — 30 days, escalates (does NOT auto-approve)
+INTENT_REVIEW_TIMEOUT = timedelta(days=30)
+
 # Readiness re-evaluation wait timeout
 READINESS_REEVALUATION_TIMEOUT = timedelta(days=7)
 
@@ -98,6 +101,7 @@ class WorkflowStep(StrEnum):
     IMPLEMENT = "implement"
     VERIFY = "verify"
     QA = "qa"
+    AWAITING_INTENT_REVIEW = "awaiting_intent_review"
     AWAITING_APPROVAL = "awaiting_approval"
     PUBLISH = "publish"
     PROJECTS_V2_SYNC = "projects_v2_sync"
@@ -158,6 +162,9 @@ STEP_POLICIES: dict[WorkflowStep, StepPolicy] = {
     WorkflowStep.QA: StepPolicy(
         timeout=timedelta(minutes=30), max_retries=2,
     ),
+    WorkflowStep.AWAITING_INTENT_REVIEW: StepPolicy(
+        timeout=timedelta(days=30), max_retries=0,  # safety timeout, not auto-approve
+    ),
     WorkflowStep.AWAITING_APPROVAL: StepPolicy(
         timeout=timedelta(days=7), max_retries=0,  # managed by workflow.wait_condition
     ),
@@ -199,6 +206,7 @@ class PipelineInput:
     projects_v2_enabled: bool = False
     project_item_id: str = ""  # Populated after item is added to project
     approval_auto_bypass: bool = False
+    intent_review_enabled: bool = False
 
 
 @dataclass
@@ -220,6 +228,7 @@ class PipelineOutput:
     readiness_escalated: bool = False
     preflight_approved: bool | None = None
     preflight_summary: str = ""
+    intent_approved_by: str | None = None
 
 
 @workflow.defn
@@ -250,6 +259,12 @@ class TheStudioPipelineWorkflow:
         self._readiness_cleared = False
         self._updated_issue_title: str = ""
         self._updated_issue_body: str = ""
+        # Intent review state
+        self._intent_approved = False
+        self._intent_approved_by: str | None = None
+        self._intent_rejected = False
+        self._intent_rejected_by: str | None = None
+        self._intent_rejection_reason: str | None = None
 
     @workflow.signal
     async def approve_publish(self, approved_by: str, approval_source: str) -> None:
@@ -270,6 +285,25 @@ class TheStudioPipelineWorkflow:
         self._rejected = True
         self._rejected_by = rejected_by
         self._rejection_reason = reason
+
+    @workflow.signal
+    async def approve_intent(self, approved_by: str) -> None:
+        """Signal handler — developer approves the intent spec.
+
+        Idempotent: calling twice is harmless (flag stays True).
+        """
+        self._intent_approved = True
+        self._intent_approved_by = approved_by
+
+    @workflow.signal
+    async def reject_intent(self, rejected_by: str, reason: str) -> None:
+        """Signal handler — developer rejects the intent spec.
+
+        Idempotent: calling twice is harmless (flag stays True).
+        """
+        self._intent_rejected = True
+        self._intent_rejected_by = rejected_by
+        self._intent_rejection_reason = reason
 
     @workflow.signal
     async def readiness_cleared(self, issue_title: str = "", issue_body: str = "") -> None:
@@ -439,6 +473,34 @@ class TheStudioPipelineWorkflow:
 
         # Projects v2: sync INTENT_BUILT → In Progress
         await self._sync_project_status(params, "INTENT_BUILT")
+
+        # Step 3.5: Intent Review (feature-flagged)
+        if params.intent_review_enabled:
+            output.step_reached = WorkflowStep.AWAITING_INTENT_REVIEW
+
+            try:
+                await workflow.wait_condition(
+                    lambda: self._intent_approved or self._intent_rejected,
+                    timeout=INTENT_REVIEW_TIMEOUT,
+                )
+            except TimeoutError:
+                # 30-day safety timeout — escalate, do NOT auto-approve
+                workflow.logger.warning(
+                    "intent_review.timeout",
+                    extra={"taskpacket_id": params.taskpacket_id},
+                )
+                output.rejection_reason = "intent_review_timeout"
+                return output
+
+            if self._intent_rejected:
+                output.rejection_reason = (
+                    f"Intent rejected by {self._intent_rejected_by}: "
+                    f"{self._intent_rejection_reason}"
+                )
+                return output
+
+            # Approved — record approver
+            output.intent_approved_by = self._intent_approved_by
 
         # Step 4: Expert Routing
         router_policy = STEP_POLICIES[WorkflowStep.ROUTER]

@@ -28,6 +28,9 @@ class IntentSpecRow(Base):
     constraints: Mapped[list[str]] = mapped_column(JSON, nullable=False)
     acceptance_criteria: Mapped[list[str]] = mapped_column(JSON, nullable=False)
     non_goals: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    source: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="auto", server_default="auto"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -46,6 +49,7 @@ class IntentSpecCreate(BaseModel):
     constraints: list[str] = Field(default_factory=list)
     acceptance_criteria: list[str] = Field(default_factory=list)
     non_goals: list[str] = Field(default_factory=list)
+    source: str = "auto"
 
 
 class IntentSpecRead(BaseModel):
@@ -60,4 +64,5 @@ class IntentSpecRead(BaseModel):
     constraints: list[str]
     acceptance_criteria: list[str]
     non_goals: list[str]
+    source: str = "auto"
     created_at: datetime

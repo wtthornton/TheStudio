@@ -187,6 +187,75 @@ async def emit_loopback_start(
         logger.debug("Failed to emit loopback.start for task=%s", task_id, exc_info=True)
 
 
+async def emit_triage_created(
+    task_id: str,
+    issue_title: str,
+    issue_id: int,
+    repo: str,
+) -> None:
+    """Emit a pipeline.triage.created event (fire-and-forget).
+
+    Published when a new TaskPacket enters TRIAGE status.
+    """
+    try:
+        js = await get_pipeline_jetstream()
+        payload = json.dumps(
+            {
+                "type": "pipeline.triage.created",
+                "data": {
+                    "task_id": task_id,
+                    "issue_title": issue_title,
+                    "issue_id": issue_id,
+                    "repo": repo,
+                    "timestamp": datetime.now(UTC).isoformat(),
+                },
+            }
+        ).encode()
+        await js.publish("pipeline.triage.created", payload)
+        logger.debug("Emitted triage.created task=%s", task_id)
+    except Exception:
+        logger.debug("Failed to emit triage.created for task=%s", task_id, exc_info=True)
+
+
+async def emit_triage_accepted(task_id: str) -> None:
+    """Emit a pipeline.triage.accepted event (fire-and-forget)."""
+    try:
+        js = await get_pipeline_jetstream()
+        payload = json.dumps(
+            {
+                "type": "pipeline.triage.accepted",
+                "data": {
+                    "task_id": task_id,
+                    "timestamp": datetime.now(UTC).isoformat(),
+                },
+            }
+        ).encode()
+        await js.publish("pipeline.triage.accepted", payload)
+        logger.debug("Emitted triage.accepted task=%s", task_id)
+    except Exception:
+        logger.debug("Failed to emit triage.accepted for task=%s", task_id, exc_info=True)
+
+
+async def emit_triage_rejected(task_id: str, reason: str) -> None:
+    """Emit a pipeline.triage.rejected event (fire-and-forget)."""
+    try:
+        js = await get_pipeline_jetstream()
+        payload = json.dumps(
+            {
+                "type": "pipeline.triage.rejected",
+                "data": {
+                    "task_id": task_id,
+                    "reason": reason,
+                    "timestamp": datetime.now(UTC).isoformat(),
+                },
+            }
+        ).encode()
+        await js.publish("pipeline.triage.rejected", payload)
+        logger.debug("Emitted triage.rejected task=%s reason=%s", task_id, reason)
+    except Exception:
+        logger.debug("Failed to emit triage.rejected for task=%s", task_id, exc_info=True)
+
+
 async def emit_loopback_resolve(
     task_id: str,
     from_stage: str,

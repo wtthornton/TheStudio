@@ -72,6 +72,19 @@ export interface ActivityEntry {
   created_at: string
 }
 
+export interface TriageTask extends TaskPacketRead {
+  issue_title: string | null
+  issue_body: string | null
+  triage_enrichment: {
+    file_count_estimate: number
+    complexity_hint: 'low' | 'medium' | 'high'
+    cost_estimate_range: { min: number; max: number }
+  } | null
+  rejection_reason: string | null
+}
+
+export type RejectionReason = 'duplicate' | 'out_of_scope' | 'needs_info' | 'wont_fix'
+
 // --- API Functions ---
 
 export async function fetchTasks(params: {
@@ -142,6 +155,47 @@ export async function fetchGateMetrics(windowHours = 24): Promise<GateMetrics> {
   const url = withToken(`${API_BASE}/gates/metrics?window_hours=${windowHours}`)
   const res = await fetch(url)
   if (!res.ok) throw new Error(`Failed to fetch gate metrics: ${res.status}`)
+  return res.json()
+}
+
+// --- Triage API (Epic 36) ---
+
+export async function fetchTriageTasks(): Promise<{ items: TriageTask[]; total: number }> {
+  const url = withToken(`${API_BASE}/tasks?status=triage&limit=100`)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Failed to fetch triage tasks: ${res.status}`)
+  return res.json()
+}
+
+export async function acceptTriageTask(taskId: string): Promise<{ task: TriageTask; workflow_started: boolean }> {
+  const url = withToken(`${API_BASE}/tasks/${taskId}/accept`)
+  const res = await fetch(url, { method: 'POST' })
+  if (!res.ok) throw new Error(`Failed to accept task: ${res.status}`)
+  return res.json()
+}
+
+export async function rejectTriageTask(taskId: string, reason: RejectionReason): Promise<TriageTask> {
+  const url = withToken(`${API_BASE}/tasks/${taskId}/reject`)
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason }),
+  })
+  if (!res.ok) throw new Error(`Failed to reject task: ${res.status}`)
+  return res.json()
+}
+
+export async function editTriageTask(taskId: string, fields: {
+  issue_title?: string
+  issue_body?: string
+}): Promise<TriageTask> {
+  const url = withToken(`${API_BASE}/tasks/${taskId}`)
+  const res = await fetch(url, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(fields),
+  })
+  if (!res.ok) throw new Error(`Failed to edit task: ${res.status}`)
   return res.json()
 }
 
