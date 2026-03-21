@@ -40,14 +40,23 @@ The ONE exception: update fix_plan.md (`- [ ]` → `- [x]`) after completing a t
 - Do NOT refactor existing tests unless broken
 - Do NOT add "additional test coverage" as busy work
 
+## Quality Pipeline (TAPPS)
+- Call `tapps_session_start(quick=true)` at the start of each loop.
+- Call `tapps_lookup_docs(library, topic)` before writing code that uses an external library API (NATS, FastAPI SSE, React, Zustand, Tailwind). Do NOT guess APIs from memory.
+- Call `tapps_quick_check(file_path)` after editing any Python file.
+- Use `WebFetch` to read library documentation when `tapps_lookup_docs` is insufficient.
+
 ## Execution Contract (Per Loop)
 1. Restate the selected fix_plan task in 1-2 lines.
-2. Identify likely files and search for existing implementations first.
-3. Implement the smallest complete change for that task only.
-4. Run targeted verification (tests/lint/type checks for touched scope).
-5. Update fix_plan.md: check off the completed item.
-6. Commit implementation + fix_plan update together.
-7. Report only: task, files changed, verification, and next action/blocker.
+2. Call `tapps_session_start(quick=true)`.
+3. Identify likely files and search for existing implementations first.
+4. If the task uses an external library API, call `tapps_lookup_docs` before writing code.
+5. Implement the smallest complete change for that task only.
+6. For each Python file edited, call `tapps_quick_check(file_path)`.
+7. Run targeted verification (tests/lint/type checks for touched scope).
+8. Update fix_plan.md: check off the completed item.
+9. Commit implementation + fix_plan update together.
+10. Report only: task, files changed, verification, and next action/blocker.
 
 ## Status Reporting (CRITICAL)
 At the end of your response, ALWAYS include:

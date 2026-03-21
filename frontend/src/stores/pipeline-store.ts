@@ -12,10 +12,21 @@ export interface StageState {
   activeTasks: string[] // taskpacket IDs currently in this stage
 }
 
+export interface EventEntry {
+  id: number
+  type: string
+  stage?: string
+  taskpacketId?: string
+  timestamp: number // Date.now()
+}
+
+const MAX_EVENTS = 20
+
 export interface PipelineState {
   stages: Record<StageId, StageState>
   lastEventId: number | null
   connected: boolean
+  events: EventEntry[]
 }
 
 export interface PipelineActions {
@@ -29,6 +40,8 @@ export interface PipelineActions {
   setLastEventId: (id: number) => void
   /** Update connection status. */
   setConnected: (connected: boolean) => void
+  /** Push a raw event to the log (keeps last 20). */
+  pushEvent: (type: string, stage?: string, taskpacketId?: string) => void
   /** Reset all stages to idle (e.g. after full_state). */
   reset: () => void
 }
@@ -46,6 +59,7 @@ export const usePipelineStore = create<PipelineState & PipelineActions>()(
     stages: initialStages(),
     lastEventId: null,
     connected: false,
+    events: [],
 
     stageEnter: (stage, taskpacketId) =>
       set((state) => {
@@ -97,6 +111,18 @@ export const usePipelineStore = create<PipelineState & PipelineActions>()(
 
     setLastEventId: (id) => set({ lastEventId: id }),
     setConnected: (connected) => set({ connected }),
-    reset: () => set({ stages: initialStages(), lastEventId: null }),
+    pushEvent: (type, stage, taskpacketId) =>
+      set((state) => {
+        const entry: EventEntry = {
+          id: (state.lastEventId ?? 0) + 1,
+          type,
+          stage,
+          taskpacketId,
+          timestamp: Date.now(),
+        }
+        const events = [entry, ...state.events].slice(0, MAX_EVENTS)
+        return { events }
+      }),
+    reset: () => set({ stages: initialStages(), lastEventId: null, events: [] }),
   }),
 )

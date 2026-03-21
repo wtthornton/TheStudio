@@ -54,6 +54,8 @@ pytest
 uvicorn src.app:app --reload
 ```
 
+**WSL / Bash on Windows:** Do not `source` the Windows `.venv\Scripts\activate` with a `c:/...` path — use `/mnt/c/...` paths and a Linux venv instead. See [docs/WSL.md](docs/WSL.md).
+
 ### Docker Deployment
 
 ```bash
