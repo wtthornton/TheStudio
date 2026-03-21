@@ -1,6 +1,6 @@
 """Dashboard task list API — paginated TaskPacket listing with filters."""
 
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -130,4 +130,130 @@ async def get_task(
         **base.model_dump(),
         cost_by_stage=cost_by_stage,
         total_cost=total_cost,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Stage metrics aggregation (S1.B4)
+# ---------------------------------------------------------------------------
+
+PIPELINE_STAGES = [
+    "intake",
+    "context",
+    "intent",
+    "router",
+    "assembler",
+    "implement",
+    "verify",
+    "qa",
+    "publish",
+]
+
+# Statuses that indicate a task completed successfully past verification.
+_PASS_STATUSES = {
+    TaskPacketStatus.VERIFICATION_PASSED,
+    TaskPacketStatus.PUBLISHED,
+    TaskPacketStatus.AWAITING_APPROVAL,
+}
+
+
+class StageMetric(BaseModel):
+    """Metrics for a single pipeline stage."""
+
+    stage: str
+    pass_rate: float | None = None  # 0.0-1.0, None when no data
+    avg_duration_seconds: float | None = None
+    throughput: int = 0  # tasks that entered this stage in the window
+
+
+class StageMetricsResponse(BaseModel):
+    """Aggregate pipeline stage metrics over a time window."""
+
+    window_hours: int
+    stages: list[StageMetric]
+
+
+def _compute_stage_metrics(
+    rows: list[Any],
+    stages: list[str] | None = None,
+) -> list[StageMetric]:
+    """Compute per-stage pass rate, avg duration, and throughput from rows.
+
+    Each row must expose ``stage_timings`` (dict | None) and ``status``.
+    """
+    stages = stages or PIPELINE_STAGES
+    # Accumulators per stage
+    counts: dict[str, int] = dict.fromkeys(stages, 0)
+    durations: dict[str, list[float]] = {s: [] for s in stages}
+    passes: dict[str, int] = dict.fromkeys(stages, 0)
+
+    for row in rows:
+        timings = row.stage_timings
+        if not timings or not isinstance(timings, dict):
+            continue
+        status = row.status
+        for stage in stages:
+            sdata = timings.get(stage)
+            if not isinstance(sdata, dict) or "start" not in sdata:
+                continue
+            counts[stage] += 1
+            # Duration
+            start_str = sdata.get("start")
+            end_str = sdata.get("end")
+            if start_str and end_str:
+                try:
+                    start_dt = datetime.fromisoformat(start_str)
+                    end_dt = datetime.fromisoformat(end_str)
+                    dur = (end_dt - start_dt).total_seconds()
+                    if dur >= 0:
+                        durations[stage].append(dur)
+                except (ValueError, TypeError):
+                    pass
+            # Pass rate: count as pass if task status is a success status
+            if status in _PASS_STATUSES:
+                passes[stage] += 1
+
+    result: list[StageMetric] = []
+    for stage in stages:
+        total = counts[stage]
+        dur_list = durations[stage]
+        result.append(
+            StageMetric(
+                stage=stage,
+                pass_rate=passes[stage] / total if total > 0 else None,
+                avg_duration_seconds=(
+                    sum(dur_list) / len(dur_list) if dur_list else None
+                ),
+                throughput=total,
+            )
+        )
+    return result
+
+
+@router.get("/stages/metrics")
+async def stage_metrics(
+    token: str | None = Query(None),
+    window_hours: int = Query(24, ge=1, le=720),
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+) -> StageMetricsResponse:
+    """Per-stage pass rate, avg duration, and throughput over a configurable window.
+
+    Query params:
+    - ``window_hours``: lookback window in hours (default 24, max 720).
+    - ``token``: auth token (required when dashboard_token is configured).
+    """
+    _verify_token(token)
+
+    cutoff = datetime.now(UTC) - timedelta(hours=window_hours)
+    stmt = (
+        select(TaskPacketRow)
+        .where(TaskPacketRow.stage_timings.isnot(None))
+        .where(TaskPacketRow.created_at >= cutoff)
+    )
+    result = await session.execute(stmt)
+    rows = result.scalars().all()
+
+    return StageMetricsResponse(
+        window_hours=window_hours,
+        stages=_compute_stage_metrics(rows),
     )

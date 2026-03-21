@@ -247,3 +247,110 @@ async def test_get_task_requires_auth(monkeypatch):
     ) as client:
         resp = await client.get(f"/api/v1/dashboard/tasks/{uuid4()}")
     assert resp.status_code == 401
+
+
+# --- GET /api/v1/dashboard/stages/metrics ---
+
+
+def _mock_metrics_session(rows: list):
+    """Return a mock AsyncSession for the stage metrics endpoint (single query)."""
+    session = AsyncMock()
+
+    async def _execute(stmt):
+        result = MagicMock()
+        result.scalars.return_value.all.return_value = rows
+        return result
+
+    session.execute = _execute
+    return session
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("_no_auth")
+async def test_stage_metrics_empty():
+    """Returns all 9 stages with zero throughput when no data."""
+    session = _mock_metrics_session(rows=[])
+    app.dependency_overrides[get_session] = lambda: session
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.get("/api/v1/dashboard/stages/metrics")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["window_hours"] == 24
+        assert len(body["stages"]) == 9
+        for stage in body["stages"]:
+            assert stage["throughput"] == 0
+            assert stage["pass_rate"] is None
+            assert stage["avg_duration_seconds"] is None
+    finally:
+        app.dependency_overrides.pop(get_session, None)
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("_no_auth")
+async def test_stage_metrics_with_data():
+    """Computes pass rate, avg duration, and throughput from stage_timings."""
+    timings = {
+        "intake": {
+            "start": "2026-03-21T10:00:00+00:00",
+            "end": "2026-03-21T10:00:10+00:00",
+        },
+        "context": {
+            "start": "2026-03-21T10:00:10+00:00",
+            "end": "2026-03-21T10:00:30+00:00",
+        },
+    }
+    rows = [
+        _make_row(
+            stage_timings=timings,
+            status=TaskPacketStatus.PUBLISHED,
+        ),
+        _make_row(
+            stage_timings={
+                "intake": {
+                    "start": "2026-03-21T11:00:00+00:00",
+                    "end": "2026-03-21T11:00:05+00:00",
+                },
+            },
+            status=TaskPacketStatus.FAILED,
+        ),
+    ]
+    session = _mock_metrics_session(rows=rows)
+    app.dependency_overrides[get_session] = lambda: session
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.get("/api/v1/dashboard/stages/metrics?window_hours=48")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["window_hours"] == 48
+
+        stages = {s["stage"]: s for s in body["stages"]}
+        # Intake: 2 tasks entered, 1 passed (PUBLISHED), avg duration = (10+5)/2 = 7.5
+        assert stages["intake"]["throughput"] == 2
+        assert stages["intake"]["pass_rate"] == pytest.approx(0.5)
+        assert stages["intake"]["avg_duration_seconds"] == pytest.approx(7.5)
+        # Context: 1 task entered, 1 passed
+        assert stages["context"]["throughput"] == 1
+        assert stages["context"]["pass_rate"] == pytest.approx(1.0)
+        assert stages["context"]["avg_duration_seconds"] == pytest.approx(20.0)
+        # Router: no data
+        assert stages["router"]["throughput"] == 0
+    finally:
+        app.dependency_overrides.pop(get_session, None)
+
+
+@pytest.mark.asyncio
+async def test_stage_metrics_requires_auth(monkeypatch):
+    """Returns 401 when dashboard_token is set and no token provided."""
+    from src import settings as settings_mod
+
+    monkeypatch.setattr(settings_mod.settings, "dashboard_token", "secret123")
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        resp = await client.get("/api/v1/dashboard/stages/metrics")
+    assert resp.status_code == 401
