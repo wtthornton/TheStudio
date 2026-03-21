@@ -23,7 +23,7 @@ interface SSEEventData {
 
 export function useSSE(): void {
   const esRef = useRef<EventSource | null>(null)
-  const { stageEnter, stageExit, gateResult, setLastEventId, setConnected, reset } =
+  const { stageEnter, stageExit, gateResult, setLastEventId, setConnected, pushEvent, reset } =
     usePipelineStore()
 
   useEffect(() => {
@@ -63,6 +63,9 @@ export function useSSE(): void {
       const stage = data.stage
       const taskId = data.taskpacket_id ?? ''
 
+      // Log every parsed event for the EventLog component
+      pushEvent(eventType, stage ?? undefined, taskId || undefined)
+
       if (eventType === 'pipeline.stage.enter' && stage && isStageId(stage)) {
         stageEnter(stage, taskId)
       } else if (eventType === 'pipeline.stage.exit' && stage && isStageId(stage)) {
@@ -80,5 +83,5 @@ export function useSSE(): void {
       es.close()
       esRef.current = null
     }
-  }, [stageEnter, stageExit, gateResult, setLastEventId, setConnected, reset])
+  }, [stageEnter, stageExit, gateResult, setLastEventId, setConnected, pushEvent, reset])
 }
