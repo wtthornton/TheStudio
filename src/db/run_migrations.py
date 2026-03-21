@@ -49,6 +49,7 @@ MIGRATIONS = [
     "src.db.migrations.024_portfolio_reviews",
     "src.db.migrations.025_taskpacket_readiness",
     "src.db.migrations.026_repo_profile_poll_headers",
+    "src.db.migrations.027_taskpacket_stage_timings",
 ]
 
 

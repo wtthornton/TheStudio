@@ -135,6 +135,11 @@ class TaskPacketRow(Base):
     readiness_score: Mapped[float | None] = mapped_column(nullable=True)
     readiness_miss: Mapped[bool] = mapped_column(nullable=False, default=False)
 
+    # Stage timing fields (Epic 35 S1.B1 — Pipeline Visibility)
+    # JSONB dict mapping stage name to {"start": iso_ts, "end": iso_ts|null}
+    # Null for historical records that predate this migration.
+    stage_timings: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+
     # Verification fields (Story 0.6 — Verification Gate)
     loopback_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
@@ -177,6 +182,7 @@ class TaskPacketRead(BaseModel):
     readiness_hold_comment_id: str | None = None
     readiness_score: float | None = None
     readiness_miss: bool = False
+    stage_timings: dict[str, Any] | None = None
     loopback_count: int = 0
     created_at: datetime
     updated_at: datetime

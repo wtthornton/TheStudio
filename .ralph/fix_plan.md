@@ -88,7 +88,7 @@
 ### Slice 1: Pipeline Rail
 
 #### Backend
-- [ ] S1.B1: Add stage timing fields to TaskPacket model (start/end timestamp per stage). Alembic migration. Nulls for historical records. (M)
+- [x] S1.B1: Add stage timing fields to TaskPacket model (start/end timestamp per stage). Alembic migration. Nulls for historical records. (M)
 - [ ] S1.B2: `GET /api/v1/dashboard/tasks` — List TaskPackets with pagination (offset/limit), filter by status/date/category. Returns JSON array. Auth required. (M)
 - [ ] S1.B3: `GET /api/v1/dashboard/tasks/:id` — TaskPacket detail with stage timestamps, cost breakdown by stage, model per stage. 404 for unknown ID. (S)
 - [ ] S1.B4: Pipeline stage metrics aggregation query — per-stage pass rate, avg duration, throughput over configurable window. `GET /api/v1/dashboard/stages/metrics`. (M)
