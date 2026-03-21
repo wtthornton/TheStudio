@@ -7,7 +7,7 @@ import time
 from collections.abc import AsyncGenerator
 
 import nats
-from fastapi import APIRouter, Header
+from fastapi import APIRouter, Header, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from nats.js import JetStreamContext
 from nats.js.api import ConsumerConfig, DeliverPolicy
@@ -172,14 +172,27 @@ async def _nats_event_generator(
         logger.info("SSE client disconnected, cleaned up NATS resources")
 
 
+def _verify_token(token: str | None) -> None:
+    """Raise 401 if dashboard_token is configured and the supplied token does not match."""
+    required = settings.dashboard_token
+    if not required:
+        # No token configured — dev mode, allow all
+        return
+    if not token or token != required:
+        raise HTTPException(status_code=401, detail="Invalid or missing dashboard token")
+
+
 @router.get("/events/stream")
 async def event_stream(
     last_event_id: str | None = Header(None, alias="Last-Event-ID"),
+    token: str | None = Query(None),
 ) -> StreamingResponse:
     """SSE endpoint streaming pipeline events from NATS JetStream.
 
     Supports reconnection via the standard ``Last-Event-ID`` header.
+    Requires ``?token=`` query param when ``dashboard_token`` is set.
     """
+    _verify_token(token)
     parsed_id = _parse_last_event_id(last_event_id)
     return StreamingResponse(
         _nats_event_generator(last_event_id=parsed_id),

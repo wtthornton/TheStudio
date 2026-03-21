@@ -5,6 +5,7 @@ import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from fastapi import HTTPException
 
 from src.dashboard.events import (
     STREAM_NAME,
@@ -46,7 +47,7 @@ async def test_event_stream_returns_streaming_response():
     """event_stream() returns a StreamingResponse with correct media type."""
     from src.dashboard.events import event_stream
 
-    resp = await event_stream(last_event_id=None)
+    resp = await event_stream(last_event_id=None, token=None)
     assert resp.media_type == "text/event-stream"
     assert resp.headers.get("Cache-Control") == "no-cache"
 
@@ -397,5 +398,55 @@ async def test_event_stream_passes_last_event_id():
     """event_stream endpoint parses Last-Event-ID header."""
     from src.dashboard.events import event_stream
 
-    resp = await event_stream(last_event_id="42")
+    resp = await event_stream(last_event_id="42", token=None)
     assert resp.media_type == "text/event-stream"
+
+
+# --- B-0.7: Auth token on SSE endpoint ---
+
+
+class TestSSEAuth:
+    """Tests for ?token= query param authentication on the SSE endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_no_token_required_when_dashboard_token_empty(self):
+        """No auth needed when dashboard_token is not configured."""
+        from src.dashboard.events import event_stream
+
+        resp = await event_stream(last_event_id=None, token=None)
+        assert resp.media_type == "text/event-stream"
+
+    @pytest.mark.asyncio
+    async def test_401_without_token_when_configured(self):
+        """Returns 401 when dashboard_token is set but no token provided."""
+        from src.dashboard.events import event_stream
+
+        with patch("src.dashboard.events.settings") as mock_settings:
+            mock_settings.dashboard_token = "secret-token-123"
+            mock_settings.nats_url = "nats://localhost:4222"
+            with pytest.raises(HTTPException) as exc_info:
+                await event_stream(last_event_id=None, token=None)
+            assert exc_info.value.status_code == 401  # type: ignore[union-attr]
+
+    @pytest.mark.asyncio
+    async def test_401_with_wrong_token(self):
+        """Returns 401 when token does not match dashboard_token."""
+        from src.dashboard.events import event_stream
+
+        with patch("src.dashboard.events.settings") as mock_settings:
+            mock_settings.dashboard_token = "secret-token-123"
+            mock_settings.nats_url = "nats://localhost:4222"
+            with pytest.raises(HTTPException) as exc_info:
+                await event_stream(last_event_id=None, token="wrong-token")
+            assert exc_info.value.status_code == 401  # type: ignore[union-attr]
+
+    @pytest.mark.asyncio
+    async def test_200_with_valid_token(self):
+        """Returns streaming response when valid token provided."""
+        from src.dashboard.events import event_stream
+
+        with patch("src.dashboard.events.settings") as mock_settings:
+            mock_settings.dashboard_token = "secret-token-123"
+            mock_settings.nats_url = "nats://localhost:4222"
+            resp = await event_stream(last_event_id=None, token="secret-token-123")
+            assert resp.media_type == "text/event-stream"

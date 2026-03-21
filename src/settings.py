@@ -100,6 +100,9 @@ class Settings(BaseSettings):
     # Approval auto-bypass (Story 30.14)
     approval_auto_bypass: bool = False  # Skip approval gate for ALL tiers when True
 
+    # Dashboard SSE auth (Epic 34 — B-0.7)
+    dashboard_token: str = ""  # Token for SSE endpoint; empty = dev mode (no auth)
+
     # Approval notification channels (Epic 24)
     slack_approval_webhook_url: str = ""  # Slack incoming webhook for approvals
 
