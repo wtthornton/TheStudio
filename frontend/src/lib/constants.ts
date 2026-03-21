@@ -20,6 +20,7 @@ export const STAGE_COUNT = PIPELINE_STAGES.length // 9
 export const STATUS_COLORS = {
   idle: '#4b5563',     // gray-600
   active: '#3b82f6',   // blue-500
+  review: '#f59e0b',   // amber-500
   passed: '#10b981',   // emerald-500
   failed: '#ef4444',   // red-500
 } as const

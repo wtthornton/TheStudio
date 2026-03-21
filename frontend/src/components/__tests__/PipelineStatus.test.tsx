@@ -21,11 +21,10 @@ describe('PipelineStatus', () => {
     expect(screen.getByTestId('pipeline-rail')).toBeInTheDocument()
   })
 
-  it('renders 8 connecting arrows (4 row1 + 3 row2 + 1 vertical)', () => {
-    const { container } = render(<PipelineStatus />)
-    const arrows = container.querySelectorAll('svg')
-    // 4 horizontal in row 1, 3 horizontal in row 2, 1 vertical connector
-    expect(arrows).toHaveLength(8)
+  it('renders idle icons for all stages by default', () => {
+    render(<PipelineStatus />)
+    const idleIcons = screen.getAllByTestId('icon-idle')
+    expect(idleIcons).toHaveLength(9)
   })
 
   it('shows task count badge when stage has tasks', () => {
@@ -40,29 +39,25 @@ describe('PipelineStatus', () => {
     expect(screen.queryByTestId('stage-count-intake')).not.toBeInTheDocument()
   })
 
-  it('reflects active status from store', () => {
+  it('shows active icon when stage has active tasks', () => {
     usePipelineStore.getState().stageEnter('context', 'task-2')
     render(<PipelineStatus />)
-    const dot = screen.getByTestId('stage-dot-context')
-    // active status → blue-500 (#3b82f6)
-    expect(dot.style.backgroundColor).toBe('rgb(59, 130, 246)')
+    expect(screen.getByTestId('icon-active')).toBeInTheDocument()
+    // Other 8 stages still idle
+    expect(screen.getAllByTestId('icon-idle')).toHaveLength(8)
   })
 
-  it('reflects failed status from store', () => {
+  it('shows failed icon when stage fails', () => {
     usePipelineStore.getState().stageEnter('verify', 'task-3')
     usePipelineStore.getState().stageExit('verify', 'task-3', false)
     render(<PipelineStatus />)
-    const dot = screen.getByTestId('stage-dot-verify')
-    // failed status → red-500 (#ef4444)
-    expect(dot.style.backgroundColor).toBe('rgb(239, 68, 68)')
+    expect(screen.getByTestId('icon-failed')).toBeInTheDocument()
   })
 
-  it('reflects passed status from store', () => {
+  it('shows passed icon when stage passes', () => {
     usePipelineStore.getState().stageEnter('qa', 'task-4')
     usePipelineStore.getState().stageExit('qa', 'task-4', true)
     render(<PipelineStatus />)
-    const dot = screen.getByTestId('stage-dot-qa')
-    // passed status → emerald-500 (#10b981)
-    expect(dot.style.backgroundColor).toBe('rgb(16, 185, 129)')
+    expect(screen.getByTestId('icon-passed')).toBeInTheDocument()
   })
 })

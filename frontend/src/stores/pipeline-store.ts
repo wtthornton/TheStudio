@@ -4,7 +4,7 @@ import { create } from 'zustand'
 import type { StageId } from '../lib/constants'
 import { PIPELINE_STAGES } from '../lib/constants'
 
-export type StageStatus = 'idle' | 'active' | 'passed' | 'failed'
+export type StageStatus = 'idle' | 'active' | 'review' | 'passed' | 'failed'
 
 export interface StageState {
   status: StageStatus
