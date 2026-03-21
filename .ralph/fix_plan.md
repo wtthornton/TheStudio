@@ -53,7 +53,7 @@
 
 ### Slice 5: Frontend Scaffolding
 - [x] F-0.1: Scaffold `frontend/` with Vite + React 19 + TypeScript strict + Zustand 5 + Tailwind CSS v4. Vite proxy `/api/*` to localhost:8000. Pipeline stage colors in `src/lib/constants.ts`. Test: `npm run build` < 50KB gzipped, `npm run typecheck` passes.
-- [ ] F-0.2: Create `useSSE` hook (`frontend/src/hooks/useSSE.ts`) and Zustand pipeline store (`frontend/src/stores/pipeline-store.ts`). Store tracks 9 stages with status/taskCount/activeTasks. Hook connects via EventSource, dispatches to store. Vitest tests with mock EventSource.
+- [x] F-0.2: Create `useSSE` hook (`frontend/src/hooks/useSSE.ts`) and Zustand pipeline store (`frontend/src/stores/pipeline-store.ts`). Store tracks 9 stages with status/taskCount/activeTasks. Hook connects via EventSource, dispatches to store. Vitest tests with mock EventSource.
 - [ ] F-0.3a: Create `PipelineStatus.tsx` and `StageNode.tsx`. Render 9 stage nodes in horizontal rail, color-coded by status from store, with task count. Component test with mocked store.
 - [ ] F-0.3b: Create `ConnectionIndicator.tsx` and `EventLog.tsx` (last 20 events). Wire into App.tsx. Dark mode Tailwind styling. Component test for disconnected state.
 
