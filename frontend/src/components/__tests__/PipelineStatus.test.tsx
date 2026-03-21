@@ -21,9 +21,10 @@ describe('PipelineStatus', () => {
     expect(screen.getByTestId('pipeline-rail')).toBeInTheDocument()
   })
 
-  it('renders 8 connecting arrows between 9 stages', () => {
+  it('renders 8 connecting arrows (4 row1 + 3 row2 + 1 vertical)', () => {
     const { container } = render(<PipelineStatus />)
     const arrows = container.querySelectorAll('svg')
+    // 4 horizontal in row 1, 3 horizontal in row 2, 1 vertical connector
     expect(arrows).toHaveLength(8)
   })
 

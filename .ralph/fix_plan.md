@@ -95,7 +95,7 @@
 - [x] S1.B5: Emit `pipeline.cost_update` events from `PipelineBudget` on each model call. Payload: task_id, cost_delta, total_cost, model, stage. Fire-and-forget. (S)
 
 #### Frontend
-- [ ] S1.F1: Static 9-node pipeline layout with connecting arrows. React component, two-row layout, directional SVG arrows. All 9 stages render with correct names/order. (M, MVP)
+- [x] S1.F1: Static 9-node pipeline layout with connecting arrows. React component, two-row layout, directional SVG arrows. All 9 stages render with correct names/order. (M, MVP)
 - [ ] S1.F2: Stage node status rendering — status icon (idle/active/review/passed/failed) and TaskPacket count badge from Zustand store. (M, MVP)
 - [ ] S1.F3: SSE connection for Pipeline Rail — parse stage_enter/exit and gate events, update store. Rail updates within 2s of event. (M, MVP)
 - [ ] S1.F4: Header bar — active count, queued count, running cost total. Updated via SSE cost events. Zero state: "0 active / 0 queued / $0.00". (S, MVP)
