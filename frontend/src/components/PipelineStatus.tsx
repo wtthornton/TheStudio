@@ -42,10 +42,12 @@ export function PipelineStatus() {
           return (
             <div key={stage.id} className="flex items-center gap-2">
               <StageNode
+                id={stage.id}
                 label={stage.label}
                 color={stage.color}
                 status={state.status}
                 taskCount={state.taskCount}
+                activeTasks={state.activeTasks}
               />
               {i < ROW_1.length - 1 && <HorizontalArrow />}
             </div>
@@ -65,10 +67,12 @@ export function PipelineStatus() {
           return (
             <div key={stage.id} className="flex items-center gap-2">
               <StageNode
+                id={stage.id}
                 label={stage.label}
                 color={stage.color}
                 status={state.status}
                 taskCount={state.taskCount}
+                activeTasks={state.activeTasks}
               />
               {i < ROW_2.length - 1 && <HorizontalArrow />}
             </div>

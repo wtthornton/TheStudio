@@ -1,1 +1,41 @@
 @import "tailwindcss";
+
+/* Stage pulse animation for active nodes (S1.F7) */
+@keyframes stage-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--pulse-color, rgba(59, 130, 246, 0.25)); }
+  50% { box-shadow: 0 0 12px 4px var(--pulse-color, rgba(59, 130, 246, 0.25)); }
+}
+
+.animate-stage-pulse {
+  animation: stage-pulse 2s ease-in-out infinite;
+}
+
+/* Slide-in panel from right (S1.F5a) */
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.2s ease-out;
+}
+
+/* Loopback arc dash animation (S4.F1) */
+@keyframes dash-flow {
+  to { stroke-dashoffset: -20; }
+}
+
+.animate-dash-flow {
+  animation: dash-flow 0.8s linear infinite;
+}
+
+/* Fade to green for loopback resolution (S4.F4) */
+@keyframes loopback-resolve {
+  0% { opacity: 1; stroke: #f59e0b; }
+  50% { opacity: 0.8; stroke: #10b981; }
+  100% { opacity: 0; stroke: #10b981; }
+}
+
+.animate-loopback-resolve {
+  animation: loopback-resolve 1s ease-out forwards;
+}

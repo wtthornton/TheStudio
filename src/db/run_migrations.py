@@ -50,6 +50,8 @@ MIGRATIONS = [
     "src.db.migrations.025_taskpacket_readiness",
     "src.db.migrations.026_repo_profile_poll_headers",
     "src.db.migrations.027_taskpacket_stage_timings",
+    "src.db.migrations.028_gate_evidence",
+    "src.db.migrations.029_activity_entry",
 ]
 
 
@@ -98,12 +100,14 @@ async def run_all() -> None:
 
     # Create migration tracking table if it doesn't exist
     async with engine.begin() as conn:
-        await conn.execute(text("""
+        await conn.execute(
+            text("""
             CREATE TABLE IF NOT EXISTS _migrations (
                 name VARCHAR(255) PRIMARY KEY,
                 applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
             )
-        """))
+        """)
+        )
         result = await conn.execute(text("SELECT name FROM _migrations"))
         applied = {row[0] for row in result.fetchall()}
 

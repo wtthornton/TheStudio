@@ -17,13 +17,27 @@ interface SSEEventData {
   data?: {
     stage?: string
     taskpacket_id?: string
+    task_id?: string
     success?: boolean
+    cost_delta?: number
+    total_cost?: number
+    model?: string
+    from_stage?: string
+    to_stage?: string
+    reason?: string
+    attempt?: number
+    max_attempts?: number
+    outcome?: string
+    activity_type?: string
+    content?: string
+    subphase?: string
+    detail?: string
   }
 }
 
 export function useSSE(): void {
   const esRef = useRef<EventSource | null>(null)
-  const { stageEnter, stageExit, gateResult, setLastEventId, setConnected, pushEvent, reset } =
+  const { stageEnter, stageExit, gateResult, costUpdate, setLastEventId, setConnected, pushEvent, reset } =
     usePipelineStore()
 
   useEffect(() => {
@@ -74,6 +88,8 @@ export function useSSE(): void {
         gateResult(stage, true)
       } else if (eventType === 'pipeline.gate.fail' && stage && isStageId(stage)) {
         gateResult(stage, false)
+      } else if (eventType === 'pipeline.cost_update' && data.task_id != null) {
+        costUpdate(data.task_id, data.cost_delta ?? 0, data.total_cost ?? 0)
       } else if (eventType === 'system.full_state') {
         reset()
       }
@@ -83,5 +99,5 @@ export function useSSE(): void {
       es.close()
       esRef.current = null
     }
-  }, [stageEnter, stageExit, gateResult, setLastEventId, setConnected, pushEvent, reset])
+  }, [stageEnter, stageExit, gateResult, costUpdate, setLastEventId, setConnected, pushEvent, reset])
 }

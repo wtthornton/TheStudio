@@ -27,6 +27,11 @@ export interface PipelineState {
   lastEventId: number | null
   connected: boolean
   events: EventEntry[]
+  totalCost: number
+  selectedStage: StageId | null
+  stageMetrics: Record<string, { passRate: number | null; avgDuration: number | null; throughput: number }> | null
+  tasksLoading: boolean
+  metricsLoading: boolean
 }
 
 export interface PipelineActions {
@@ -36,12 +41,21 @@ export interface PipelineActions {
   stageExit: (stage: StageId, taskpacketId: string, success: boolean) => void
   /** A gate passed or failed. */
   gateResult: (stage: StageId, passed: boolean) => void
+  /** Update running cost from SSE cost events. */
+  costUpdate: (taskId: string, costDelta: number, totalCost: number) => void
   /** Update the last-received event ID for reconnection. */
   setLastEventId: (id: number) => void
   /** Update connection status. */
   setConnected: (connected: boolean) => void
   /** Push a raw event to the log (keeps last 20). */
   pushEvent: (type: string, stage?: string, taskpacketId?: string) => void
+  /** Select a stage for the detail panel (null to close). */
+  setSelectedStage: (stage: StageId | null) => void
+  /** Set stage metrics from API response. */
+  setStageMetrics: (metrics: Record<string, { passRate: number | null; avgDuration: number | null; throughput: number }> | null) => void
+  /** Set loading states. */
+  setTasksLoading: (loading: boolean) => void
+  setMetricsLoading: (loading: boolean) => void
   /** Reset all stages to idle (e.g. after full_state). */
   reset: () => void
 }
@@ -60,6 +74,11 @@ export const usePipelineStore = create<PipelineState & PipelineActions>()(
     lastEventId: null,
     connected: false,
     events: [],
+    totalCost: 0,
+    selectedStage: null,
+    stageMetrics: null,
+    tasksLoading: false,
+    metricsLoading: false,
 
     stageEnter: (stage, taskpacketId) =>
       set((state) => {
@@ -109,6 +128,8 @@ export const usePipelineStore = create<PipelineState & PipelineActions>()(
         }
       }),
 
+    costUpdate: (_taskId, _costDelta, totalCost) => set({ totalCost }),
+
     setLastEventId: (id) => set({ lastEventId: id }),
     setConnected: (connected) => set({ connected }),
     pushEvent: (type, stage, taskpacketId) =>
@@ -123,6 +144,10 @@ export const usePipelineStore = create<PipelineState & PipelineActions>()(
         const events = [entry, ...state.events].slice(0, MAX_EVENTS)
         return { events }
       }),
-    reset: () => set({ stages: initialStages(), lastEventId: null, events: [] }),
+    setSelectedStage: (stage) => set({ selectedStage: stage }),
+    setStageMetrics: (metrics) => set({ stageMetrics: metrics }),
+    setTasksLoading: (loading) => set({ tasksLoading: loading }),
+    setMetricsLoading: (loading) => set({ metricsLoading: loading }),
+    reset: () => set({ stages: initialStages(), lastEventId: null, events: [], totalCost: 0, stageMetrics: null }),
   }),
 )

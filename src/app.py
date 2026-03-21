@@ -70,11 +70,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                 )
             async with get_async_session() as session:
                 sync_result = await sync_experts(session, scan_result.experts)
-                _logger.info("Expert sync complete", extra={
-                    "created": len(sync_result.created),
-                    "updated": len(sync_result.updated),
-                    "unchanged": len(sync_result.unchanged),
-                })
+                _logger.info(
+                    "Expert sync complete",
+                    extra={
+                        "created": len(sync_result.created),
+                        "updated": len(sync_result.updated),
+                        "unchanged": len(sync_result.unchanged),
+                    },
+                )
     except Exception:
         _logger.warning("Failed to sync experts at startup", exc_info=True)
 
@@ -101,6 +104,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
         logging.getLogger(__name__).warning("Failed to start signal consumer", exc_info=True)
 
+    # Start gate evidence consumer (non-blocking, logs on failure)
+    gate_consumer_task = None
+    try:
+        from src.dashboard.gate_consumer import start_gate_consumer
+
+        gate_consumer_task = await start_gate_consumer(settings.nats_url)
+    except Exception:
+        _logger.warning("Failed to start gate evidence consumer", exc_info=True)
+
     yield
 
     if worker_task is not None:
@@ -109,6 +121,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             await worker_task
         except asyncio.CancelledError:
             pass
+    if gate_consumer_task is not None:
+        from src.dashboard.gate_consumer import stop_gate_consumer
+
+        await stop_gate_consumer()
     if consumer_task is not None:
         await stop_signal_consumer()
     if poll_task is not None:
@@ -171,9 +187,12 @@ if _FRONTEND_DIST.is_dir() and (_FRONTEND_DIST / "index.html").is_file():
     async def _dashboard_spa(rest_of_path: str) -> HTMLResponse:
         return HTMLResponse(content=_dashboard_index)
 
-    _dashboard_logger.info("Dashboard UI mounted at /dashboard/", extra={
-        "frontend_dist": str(_FRONTEND_DIST),
-    })
+    _dashboard_logger.info(
+        "Dashboard UI mounted at /dashboard/",
+        extra={
+            "frontend_dist": str(_FRONTEND_DIST),
+        },
+    )
 else:
     _dashboard_logger.warning(
         "Frontend dist not found — /dashboard/ UI will not be served. "

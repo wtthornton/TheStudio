@@ -1,6 +1,7 @@
-"""Fire-and-forget NATS publish helper for pipeline stage events.
+"""Fire-and-forget NATS publish helper for pipeline stage and loopback events.
 
-Publishes pipeline.stage.enter / pipeline.stage.exit events to the
+Publishes pipeline.stage.enter / pipeline.stage.exit and
+pipeline.loopback.start / pipeline.loopback.resolve events to the
 THESTUDIO_PIPELINE JetStream stream for dashboard consumption.
 """
 
@@ -50,15 +51,17 @@ async def emit_stage_enter(
     """
     try:
         js = await get_pipeline_jetstream()
-        payload = json.dumps({
-            "type": "pipeline.stage.enter",
-            "data": {
-                "stage": stage,
-                "taskpacket_id": taskpacket_id,
-                "correlation_id": correlation_id,
-                "timestamp": datetime.now(UTC).isoformat(),
-            },
-        }).encode()
+        payload = json.dumps(
+            {
+                "type": "pipeline.stage.enter",
+                "data": {
+                    "stage": stage,
+                    "taskpacket_id": taskpacket_id,
+                    "correlation_id": correlation_id,
+                    "timestamp": datetime.now(UTC).isoformat(),
+                },
+            }
+        ).encode()
         await js.publish(f"{SUBJECT_PREFIX}.enter", payload)
         logger.debug("Emitted stage.enter for %s task=%s", stage, taskpacket_id)
     except Exception:
@@ -78,16 +81,18 @@ async def emit_stage_exit(
     """
     try:
         js = await get_pipeline_jetstream()
-        payload = json.dumps({
-            "type": "pipeline.stage.exit",
-            "data": {
-                "stage": stage,
-                "taskpacket_id": taskpacket_id,
-                "correlation_id": correlation_id,
-                "success": success,
-                "timestamp": datetime.now(UTC).isoformat(),
-            },
-        }).encode()
+        payload = json.dumps(
+            {
+                "type": "pipeline.stage.exit",
+                "data": {
+                    "stage": stage,
+                    "taskpacket_id": taskpacket_id,
+                    "correlation_id": correlation_id,
+                    "success": success,
+                    "timestamp": datetime.now(UTC).isoformat(),
+                },
+            }
+        ).encode()
         await js.publish(f"{SUBJECT_PREFIX}.exit", payload)
         logger.debug("Emitted stage.exit for %s task=%s success=%s", stage, taskpacket_id, success)
     except Exception:
@@ -110,22 +115,116 @@ async def emit_cost_update(
     """
     try:
         js = await get_pipeline_jetstream()
-        payload = json.dumps({
-            "type": "pipeline.cost_update",
-            "data": {
-                "task_id": task_id,
-                "cost_delta": round(cost_delta, 6),
-                "total_cost": round(total_cost, 6),
-                "model": model,
-                "stage": stage,
-                "correlation_id": correlation_id,
-                "timestamp": datetime.now(UTC).isoformat(),
-            },
-        }).encode()
+        payload = json.dumps(
+            {
+                "type": "pipeline.cost_update",
+                "data": {
+                    "task_id": task_id,
+                    "cost_delta": round(cost_delta, 6),
+                    "total_cost": round(total_cost, 6),
+                    "model": model,
+                    "stage": stage,
+                    "correlation_id": correlation_id,
+                    "timestamp": datetime.now(UTC).isoformat(),
+                },
+            }
+        ).encode()
         await js.publish("pipeline.cost_update", payload)
         logger.debug(
             "Emitted cost_update task=%s delta=%.4f total=%.4f stage=%s",
-            task_id, cost_delta, total_cost, stage,
+            task_id,
+            cost_delta,
+            total_cost,
+            stage,
         )
     except Exception:
         logger.debug("Failed to emit cost_update for task=%s", task_id, exc_info=True)
+
+
+async def emit_loopback_start(
+    task_id: str,
+    from_stage: str,
+    to_stage: str,
+    reason: str,
+    attempt: int,
+    max_attempts: int,
+    *,
+    correlation_id: str = "",
+) -> None:
+    """Emit a pipeline.loopback.start event (fire-and-forget).
+
+    Published when a pipeline loopback is initiated (e.g. verification
+    failure triggers re-entry to an earlier stage).
+    Failures are logged but never raised — callers must not be blocked.
+    """
+    try:
+        js = await get_pipeline_jetstream()
+        payload = json.dumps(
+            {
+                "type": "pipeline.loopback.start",
+                "data": {
+                    "task_id": task_id,
+                    "from_stage": from_stage,
+                    "to_stage": to_stage,
+                    "reason": reason,
+                    "attempt": attempt,
+                    "max_attempts": max_attempts,
+                    "correlation_id": correlation_id,
+                    "timestamp": datetime.now(UTC).isoformat(),
+                },
+            }
+        ).encode()
+        await js.publish("pipeline.loopback.start", payload)
+        logger.debug(
+            "Emitted loopback.start task=%s from=%s to=%s attempt=%d/%d",
+            task_id,
+            from_stage,
+            to_stage,
+            attempt,
+            max_attempts,
+        )
+    except Exception:
+        logger.debug("Failed to emit loopback.start for task=%s", task_id, exc_info=True)
+
+
+async def emit_loopback_resolve(
+    task_id: str,
+    from_stage: str,
+    to_stage: str,
+    outcome: str,
+    attempt: int,
+    *,
+    correlation_id: str = "",
+) -> None:
+    """Emit a pipeline.loopback.resolve event (fire-and-forget).
+
+    Published when a loopback completes (passed on retry, escalated, etc.).
+    Failures are logged but never raised — callers must not be blocked.
+    """
+    try:
+        js = await get_pipeline_jetstream()
+        payload = json.dumps(
+            {
+                "type": "pipeline.loopback.resolve",
+                "data": {
+                    "task_id": task_id,
+                    "from_stage": from_stage,
+                    "to_stage": to_stage,
+                    "outcome": outcome,
+                    "attempt": attempt,
+                    "correlation_id": correlation_id,
+                    "timestamp": datetime.now(UTC).isoformat(),
+                },
+            }
+        ).encode()
+        await js.publish("pipeline.loopback.resolve", payload)
+        logger.debug(
+            "Emitted loopback.resolve task=%s from=%s to=%s outcome=%s attempt=%d",
+            task_id,
+            from_stage,
+            to_stage,
+            outcome,
+            attempt,
+        )
+    except Exception:
+        logger.debug("Failed to emit loopback.resolve for task=%s", task_id, exc_info=True)
