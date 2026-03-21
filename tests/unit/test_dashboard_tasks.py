@@ -1,4 +1,4 @@
-"""Tests for GET /api/v1/dashboard/tasks endpoint."""
+"""Tests for dashboard task endpoints (list + detail)."""
 
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
@@ -147,3 +147,103 @@ async def test_list_tasks_auth_valid(monkeypatch):
         assert resp.status_code == 200
     finally:
         app.dependency_overrides.pop(get_session, None)
+
+
+# --- GET /api/v1/dashboard/tasks/:id ---
+
+
+def _mock_detail_session(row=None):
+    """Return a mock AsyncSession for the detail endpoint (session.get)."""
+    session = AsyncMock()
+    session.get = AsyncMock(return_value=row)
+    return session
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("_no_auth")
+async def test_get_task_not_found():
+    """Returns 404 for unknown task ID."""
+    session = _mock_detail_session(row=None)
+    app.dependency_overrides[get_session] = lambda: session
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.get(f"/api/v1/dashboard/tasks/{uuid4()}")
+        assert resp.status_code == 404
+        assert resp.json()["detail"] == "TaskPacket not found"
+    finally:
+        app.dependency_overrides.pop(get_session, None)
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("_no_auth")
+async def test_get_task_found():
+    """Returns task detail with empty cost breakdown when no stage_timings."""
+    task_id = uuid4()
+    row = _make_row(id=task_id, stage_timings=None)
+    session = _mock_detail_session(row=row)
+    app.dependency_overrides[get_session] = lambda: session
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.get(f"/api/v1/dashboard/tasks/{task_id}")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["id"] == str(task_id)
+        assert body["cost_by_stage"] == []
+        assert body["total_cost"] == 0.0
+    finally:
+        app.dependency_overrides.pop(get_session, None)
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("_no_auth")
+async def test_get_task_with_cost_breakdown():
+    """Returns per-stage cost and model when stage_timings include cost data."""
+    task_id = uuid4()
+    timings = {
+        "intake": {
+            "start": "2026-03-21T10:00:00Z",
+            "end": "2026-03-21T10:00:05Z",
+            "cost": 0.01,
+            "model": "haiku",
+        },
+        "context": {
+            "start": "2026-03-21T10:00:05Z",
+            "end": "2026-03-21T10:00:15Z",
+            "cost": 0.05,
+            "model": "sonnet",
+        },
+    }
+    row = _make_row(id=task_id, stage_timings=timings)
+    session = _mock_detail_session(row=row)
+    app.dependency_overrides[get_session] = lambda: session
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.get(f"/api/v1/dashboard/tasks/{task_id}")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert len(body["cost_by_stage"]) == 2
+        assert body["cost_by_stage"][0]["stage"] == "intake"
+        assert body["cost_by_stage"][0]["cost"] == 0.01
+        assert body["cost_by_stage"][0]["model"] == "haiku"
+        assert body["total_cost"] == pytest.approx(0.06)
+    finally:
+        app.dependency_overrides.pop(get_session, None)
+
+
+@pytest.mark.asyncio
+async def test_get_task_requires_auth(monkeypatch):
+    """Returns 401 when dashboard_token is set and no token provided."""
+    from src import settings as settings_mod
+
+    monkeypatch.setattr(settings_mod.settings, "dashboard_token", "secret123")
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        resp = await client.get(f"/api/v1/dashboard/tasks/{uuid4()}")
+    assert resp.status_code == 401

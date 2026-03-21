@@ -1,8 +1,11 @@
 """Dashboard task list API — paginated TaskPacket listing with filters."""
 
 from datetime import datetime
+from typing import Any
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,6 +14,21 @@ from src.db.connection import get_session
 from src.models.taskpacket import TaskPacketRead, TaskPacketRow, TaskPacketStatus
 
 router = APIRouter()
+
+
+class StageCost(BaseModel):
+    """Cost breakdown for a single pipeline stage."""
+
+    stage: str
+    cost: float = 0.0
+    model: str | None = None
+
+
+class TaskPacketDetail(TaskPacketRead):
+    """Extended TaskPacket with per-stage cost and model info."""
+
+    cost_by_stage: list[StageCost] = Field(default_factory=list)
+    total_cost: float = 0.0
 
 
 @router.get("/tasks")
@@ -64,3 +82,52 @@ async def list_tasks(
         "offset": offset,
         "limit": limit,
     }
+
+
+def _extract_cost_by_stage(stage_timings: dict[str, Any] | None) -> list[StageCost]:
+    """Build per-stage cost list from stage_timings metadata.
+
+    Stage timings may include optional ``cost`` and ``model`` keys per stage.
+    Returns an empty list when no timings are available.
+    """
+    if not stage_timings:
+        return []
+    stages: list[StageCost] = []
+    for name, data in stage_timings.items():
+        if not isinstance(data, dict):
+            continue
+        stages.append(
+            StageCost(
+                stage=name,
+                cost=data.get("cost", 0.0),
+                model=data.get("model"),
+            )
+        )
+    return stages
+
+
+@router.get("/tasks/{task_id}")
+async def get_task(
+    task_id: UUID,
+    token: str | None = Query(None),
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+) -> TaskPacketDetail:
+    """Get a single TaskPacket by ID with stage timestamps and cost breakdown.
+
+    Returns 404 when the task ID is not found.
+    """
+    _verify_token(token)
+
+    row = await session.get(TaskPacketRow, task_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="TaskPacket not found")
+
+    base = TaskPacketRead.model_validate(row)
+    cost_by_stage = _extract_cost_by_stage(row.stage_timings)
+    total_cost = sum(s.cost for s in cost_by_stage)
+
+    return TaskPacketDetail(
+        **base.model_dump(),
+        cost_by_stage=cost_by_stage,
+        total_cost=total_cost,
+    )
