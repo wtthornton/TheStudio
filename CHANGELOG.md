@@ -8,6 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Ralph v1.0.0 upgrade:** Agent mode with 5 sub-agents (ralph, ralph-explorer, ralph-tester, ralph-reviewer, ralph-bg-tester), 10 hook scripts for response analysis/command validation/file protection/error handling, 2 skills (ralph-loop, ralph-research), JSON output format, log rotation, dry-run mode, experimental team parallelism support
+- **Epic 36 — Phase 2 Planning Experience:** Triage queue, intent review, routing review decision points; planning dashboard module; prescan context module
+- **Epic 35 — Phase 1 Pipeline Visibility:** Pipeline Rail with two-row layout, stage status icons, TaskPacket Timeline, Gate Inspector, Activity Stream, Loopback, Minimap, Error States (63 stories complete)
+- **Epic 34 — Phase 0 SSE PoC:** SSE endpoint, NATS wiring, event emission, reconnection, Vite + React 19 scaffolding, useSSE hook, PipelineStatus/StageNode components, token auth, conditional static mount, CI frontend workflow (15 stories complete)
+
 - **Production deployment hardening:** Docker entrypoint with auto-migration, unified migration runner (15 migrations), user_roles migration (015), readiness probe (`/readyz`), graceful shutdown (30s), production docker-compose with resource limits
 - **Security:** UI auth enforcement on all Admin routes, encryption key validation (rejects placeholder in postgres mode), rate limiting (60/min global, 30/min webhook via slowapi), Tailwind CSS CDN fix
 - **CI:** Integration test job with PostgreSQL service container, Python version aligned to 3.12

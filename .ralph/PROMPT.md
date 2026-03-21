@@ -26,6 +26,12 @@ At the start of each session, read:
 - Commit working changes with descriptive messages
 - Keep outputs concise and implementation-focused
 
+## Bash Command Guidelines
+- Use separate Bash tool calls instead of compound commands (`&&`, `||`, `|`)
+- Instead of: `cd /path && git add file && git commit -m "msg"`
+- Use three separate Bash calls: `cd /path`, then `git add file`, then `git commit -m "msg"`
+- This avoids permission denial issues with compound command matching
+
 ## Protected Files (DO NOT MODIFY)
 The following files are Ralph's infrastructure. NEVER delete, move, rename, or overwrite:
 - .ralph/ (entire directory and all contents)
