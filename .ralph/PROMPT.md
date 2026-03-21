@@ -56,7 +56,11 @@ The ONE exception: update fix_plan.md (`- [ ]` → `- [x]`) after completing a t
 7. Run targeted verification (tests/lint/type checks for touched scope).
 8. Update fix_plan.md: check off the completed item.
 9. Commit implementation + fix_plan update together.
-10. Report only: task, files changed, verification, and next action/blocker.
+10. Output your RALPH_STATUS block.
+11. **STOP. End your response immediately after the status block.**
+    Do NOT start another task. Do NOT say "moving to the next task."
+    The Ralph harness will re-invoke you for the next item.
+    Your response MUST end with the closing ``` of the status block.
 
 ## Status Reporting (CRITICAL)
 At the end of your response, ALWAYS include:
@@ -83,45 +87,48 @@ RECOMMENDATION: <one line summary>
 ### Scenario 1: Successful Project Completion
 **Given**: All items in fix_plan.md are marked [x], tests passing, all requirements implemented.
 **Then**: Set `EXIT_SIGNAL: true`, `STATUS: COMPLETE`.
-**Ralph's Action**: Gracefully exits loop with success message.
+**Your action**: Output status block and STOP. The harness will exit gracefully.
 
 ### Scenario 2: Test-Only Loop Detected
 **Given**: Last 3 loops only executed tests, no new files created, no implementation.
 **Then**: Set `STATUS: IN_PROGRESS`, `EXIT_SIGNAL: false`, `RECOMMENDATION: All tests passing, no implementation needed`.
-**Ralph's Action**: Exits after 3 consecutive test-only loops.
+**Your action**: Output status block and STOP. The harness will detect test saturation.
 
 ### Scenario 3: Stuck on Recurring Error
 **Given**: Same error appears in last 5 consecutive loops, no progress.
 **Then**: Set `STATUS: BLOCKED`, `EXIT_SIGNAL: false`, `RECOMMENDATION: Stuck on [error] - human intervention needed`.
-**Ralph's Action**: Circuit breaker opens after 5 loops.
+**Your action**: Output status block and STOP. The harness circuit breaker will handle this.
 
 ### Scenario 4: No Work Remaining
 **Given**: All fix_plan tasks complete, specs fully implemented, tests passing.
 **Then**: Set `EXIT_SIGNAL: true`, `STATUS: COMPLETE`.
-**Ralph's Action**: Exits loop immediately.
+**Your action**: Output status block and STOP. The harness will exit the loop.
 
 ### Scenario 5: Task Completed, More Work Remains (MOST COMMON)
 **Given**: Current task is done and checked off `[x]`, but unchecked `[ ]` items remain in fix_plan.md.
 **Then**: Set `STATUS: IN_PROGRESS`, `EXIT_SIGNAL: false`, `TASKS_COMPLETED_THIS_LOOP: 1`.
-**Ralph's Action**: Continues loop with next unchecked item.
+**Your action**: STOP immediately. Output the status block and end your response. The Ralph harness will re-invoke you for the next task automatically.
 **CRITICAL**: This is NOT STATUS: COMPLETE. COMPLETE means ALL work is done.
+**CRITICAL**: Do NOT start the next task yourself. One task per response, always.
 
 ### Scenario 6: Making Progress (Mid-Task)
 **Given**: Currently implementing a task, files being modified, not yet done.
 **Then**: Set `STATUS: IN_PROGRESS`, `EXIT_SIGNAL: false`.
-**Ralph's Action**: Continues loop.
+**Your action**: Continue working on the current task until complete, then output status block and STOP.
 
 ### Scenario 7: Blocked on External Dependency
 **Given**: Task requires external API, library, or human decision.
 **Then**: Set `STATUS: BLOCKED`, `EXIT_SIGNAL: false`, `RECOMMENDATION: Blocked on [dependency]`.
-**Ralph's Action**: Logs blocker, may exit after multiple blocked loops.
+**Your action**: Output status block and STOP. The harness will log the blocker.
 
 ### What NOT to do
+- Do NOT start a second task after completing one — ONE task per response, always
 - Do NOT continue with busy work when EXIT_SIGNAL should be true
 - Do NOT run tests repeatedly without implementing new features
 - Do NOT refactor code that is already working fine
 - Do NOT add features not in fix_plan.md
 - Do NOT forget to include the status block
+- Do NOT output anything after the closing ``` of the status block
 
 ## Current Task
 Read fix_plan.md. Do the FIRST unchecked item. Nothing else.
