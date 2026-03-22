@@ -68,7 +68,7 @@
 
 - [x] 36.14c: Routing review API endpoints + storage — GET `/tasks/{id}/routing`, POST `.../approve`, POST `.../override`. Add `routing_result` JSONB column to TaskPacketRow (Alembic migration). Update `router_activity()` to persist full ConsultPlan data (not reduced RouterOutput) using DB session (following intent_activity pattern). Files: planning.py, activities.py, taskpacket.py, migration. Depends on 36.14a, 36.14b. (M, 4h)
 
-- [ ] 36.14d: Routing backend tests — `test_routing_result.py` (Pydantic schema round-trip), `test_routing_endpoints.py` (GET 404/200, POST approve/override with mocked Temporal). Depends on 36.14a-c. (S, 2h)
+- [x] 36.14d: Routing backend tests — `test_routing_result.py` (Pydantic schema round-trip), `test_routing_endpoints.py` (GET 404/200, POST approve/override with mocked Temporal). Depends on 36.14a-c. (S, 2h)
 
 - [ ] 36.15a: Routing API client + Zustand store — add `ExpertSelectionRead`, `RoutingResultRead` interfaces and 3 API functions (fetchRouting, approveRouting, overrideRouting) to api.ts. Create `routing-store.ts` (loadRouting, approve, override, reset). Depends on 36.14c. (S, 3h)
 
