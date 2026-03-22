@@ -331,6 +331,33 @@ export async function overrideRouting(taskId: string, reason: string): Promise<R
   return res.json()
 }
 
+// --- Manual Task Creation (Epic 36, Slice 4) ---
+
+export interface ManualTaskCreate {
+  title: string
+  description: string
+  category?: string | null
+  priority?: string | null
+  acceptance_criteria?: string[] | null
+  skip_triage?: boolean
+}
+
+export interface ManualTaskCreateResponse {
+  task: TaskPacketRead
+  workflow_started: boolean
+}
+
+export async function createManualTask(body: ManualTaskCreate): Promise<ManualTaskCreateResponse> {
+  const url = withToken(`${API_BASE}/tasks`)
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) throw new Error(`Failed to create task: ${res.status}`)
+  return res.json()
+}
+
 // --- Activity API ---
 
 export async function fetchTaskActivity(taskId: string, params: {

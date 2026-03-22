@@ -1,8 +1,9 @@
 /** BacklogBoard — Kanban view with 6 columns: Triage, Planning, Building, Verify, Done, Rejected. */
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useBacklogStore, BOARD_COLUMNS, groupTasksByColumn } from '../../stores/backlog-store'
 import { BacklogCard } from './BacklogCard'
+import CreateTaskModal from './CreateTaskModal'
 
 interface BacklogBoardProps {
   /** Called when the user clicks a card — passes the task UUID up to the parent. */
@@ -11,6 +12,7 @@ interface BacklogBoardProps {
 
 export default function BacklogBoard({ onTaskClick }: BacklogBoardProps) {
   const { tasks, loading, error, loadBoard } = useBacklogStore()
+  const [showCreateModal, setShowCreateModal] = useState(false)
 
   useEffect(() => {
     void loadBoard()
@@ -58,8 +60,21 @@ export default function BacklogBoard({ onTaskClick }: BacklogBoardProps) {
           >
             {loading ? 'Refreshing…' : 'Refresh'}
           </button>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="rounded bg-blue-700 px-3 py-1.5 text-xs font-medium text-blue-100 hover:bg-blue-600 transition-colors"
+            data-testid="open-create-task"
+          >
+            + New Task
+          </button>
         </div>
       </div>
+
+      <CreateTaskModal
+        open={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onCreated={() => { void loadBoard() }}
+      />
 
       {/* Kanban columns — horizontally scrollable */}
       <div className="overflow-x-auto pb-2">
