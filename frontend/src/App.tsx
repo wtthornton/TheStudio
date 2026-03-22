@@ -17,9 +17,10 @@ import { DisconnectionBanner } from './components/ErrorStates'
 import { EmptyPipelineRail } from './components/ErrorStates'
 import { TriageQueue } from './components/planning/TriageQueue'
 import IntentEditor from './components/planning/IntentEditor'
+import RoutingPreview from './components/planning/RoutingPreview'
 import { PIPELINE_STAGES } from './lib/constants'
 
-type Tab = 'pipeline' | 'triage' | 'intent'
+type Tab = 'pipeline' | 'triage' | 'intent' | 'routing'
 
 function App() {
   useSSE()
@@ -63,6 +64,12 @@ function App() {
               className={`px-3 py-1.5 text-sm rounded ${activeTab === 'intent' ? 'bg-gray-700 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}
             >
               Intent Review
+            </button>
+            <button
+              onClick={() => setActiveTab('routing')}
+              className={`px-3 py-1.5 text-sm rounded ${activeTab === 'routing' ? 'bg-gray-700 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}
+            >
+              Routing Review
             </button>
           </nav>
         </div>
@@ -118,7 +125,7 @@ function App() {
         <div className="mx-auto max-w-4xl px-6 py-6">
           <TriageQueue />
         </div>
-      ) : (
+      ) : activeTab === 'intent' ? (
         /* Intent Review (Epic 36, Slice 2) */
         <div className="mx-auto max-w-6xl px-6 py-6">
           {selectedTaskId ? (
@@ -126,6 +133,23 @@ function App() {
           ) : (
             <div className="flex flex-col items-center justify-center py-20 text-gray-500">
               <p className="text-sm">Select a task from the Pipeline tab to review its intent specification.</p>
+              <button
+                onClick={() => setActiveTab('pipeline')}
+                className="mt-3 rounded bg-gray-700 px-3 py-1.5 text-xs text-gray-300 hover:bg-gray-600"
+              >
+                Go to Pipeline
+              </button>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* Routing Review (Epic 36, Slice 3) */
+        <div className="mx-auto max-w-6xl px-6 py-6">
+          {selectedTaskId ? (
+            <RoutingPreview taskId={selectedTaskId} />
+          ) : (
+            <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+              <p className="text-sm">Select a task from the Pipeline tab to review its expert routing.</p>
               <button
                 onClick={() => setActiveTab('pipeline')}
                 className="mt-3 rounded bg-gray-700 px-3 py-1.5 text-xs text-gray-300 hover:bg-gray-600"
