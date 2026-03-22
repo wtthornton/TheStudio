@@ -49,7 +49,7 @@
 - [x] 37.24: Notification data model — `src/dashboard/models/notification.py`. Notification (id, type enum, title, message, task_id, read, created_at). Migration.
 - [x] 37.25: Notification API endpoints — `src/dashboard/notification_router.py`. GET `/notifications` (paginated, filterable, includes unread_count), PATCH `/notifications/:id/read`, POST `/notifications/mark-all-read`.
 - [x] 37.26: Notification generation from NATS — `src/dashboard/notification_generator.py`. JetStream consumer for `pipeline.gate.fail`, `pipeline.cost_update`, `pipeline.steering.action`, `pipeline.trust_tier.assigned`. Generate Notification records. Register as background task in app lifecycle.
-- [ ] 37.27: Frontend — NotificationBell (top bar, unread count badge) + NotificationDropdown (New/Earlier sections, type icons, relative timestamps, mark-all-read) + NotificationItem (click-through to relevant view).
+- [x] 37.27: Frontend — NotificationBell (top bar, unread count badge) + NotificationDropdown (New/Earlier sections, type icons, relative timestamps, mark-all-read) + NotificationItem (click-through to relevant view).
 - [ ] 37.28: Settings activity log — SteeringActivityLog page with paginated, filterable table of all steering actions. GET `/steering/audit` endpoint.
 
 ---

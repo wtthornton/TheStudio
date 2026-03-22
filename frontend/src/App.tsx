@@ -21,6 +21,7 @@ import RoutingPreview from './components/planning/RoutingPreview'
 import BacklogBoard from './components/planning/BacklogBoard'
 import { TrustConfiguration } from './components/TrustConfiguration'
 import { BudgetDashboard } from './components/BudgetDashboard'
+import { NotificationBell } from './components/NotificationBell'
 import { PIPELINE_STAGES } from './lib/constants'
 
 type Tab = 'pipeline' | 'triage' | 'intent' | 'routing' | 'board' | 'trust' | 'budget'
@@ -38,6 +39,11 @@ function App() {
 
   const handleMinimapClick = useCallback((taskId: string) => {
     setSelectedTaskId(taskId)
+  }, [])
+
+  const handleNotificationNavigate = useCallback((tab: string, taskId?: string) => {
+    setActiveTab(tab as Tab)
+    if (taskId) setSelectedTaskId(taskId)
   }, [])
 
   return (
@@ -94,8 +100,9 @@ function App() {
             </button>
           </nav>
         </div>
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4">
           <HeaderBar />
+          <NotificationBell onNavigate={handleNotificationNavigate} />
           <ConnectionIndicator />
         </div>
       </header>

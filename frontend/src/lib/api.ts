@@ -711,3 +711,57 @@ export async function updateBudgetConfig(payload: BudgetConfigUpdate): Promise<B
   if (!res.ok) throw new Error(`Failed to update budget config: ${res.status}`)
   return res.json()
 }
+
+// --- Notification API (Epic 37 Slice 5) ---
+
+export type NotificationType = 'gate_fail' | 'cost_update' | 'steering_action' | 'trust_tier_assigned'
+
+export interface NotificationRead {
+  id: string
+  type: NotificationType
+  title: string
+  message: string
+  task_id: string | null
+  read: boolean
+  created_at: string
+}
+
+export interface NotificationListResponse {
+  items: NotificationRead[]
+  total: number
+  unread_count: number
+  limit: number
+  offset: number
+}
+
+export async function fetchNotifications(params: {
+  unread_only?: boolean
+  type?: NotificationType
+  limit?: number
+  offset?: number
+} = {}): Promise<NotificationListResponse> {
+  const query = new URLSearchParams()
+  if (params.unread_only) query.set('unread_only', 'true')
+  if (params.type) query.set('type', params.type)
+  if (params.limit != null) query.set('limit', String(params.limit))
+  if (params.offset != null) query.set('offset', String(params.offset))
+  const qs = query.toString()
+  const url = withToken(`${API_BASE}/notifications${qs ? `?${qs}` : ''}`)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Failed to fetch notifications: ${res.status}`)
+  return res.json()
+}
+
+export async function markNotificationRead(notificationId: string): Promise<NotificationRead> {
+  const url = withToken(`${API_BASE}/notifications/${notificationId}/read`)
+  const res = await fetch(url, { method: 'PATCH' })
+  if (!res.ok) throw new Error(`Failed to mark notification read: ${res.status}`)
+  return res.json()
+}
+
+export async function markAllNotificationsRead(): Promise<{ updated: number }> {
+  const url = withToken(`${API_BASE}/notifications/mark-all-read`)
+  const res = await fetch(url, { method: 'POST' })
+  if (!res.ok) throw new Error(`Failed to mark all notifications read: ${res.status}`)
+  return res.json()
+}

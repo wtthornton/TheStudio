@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react'
 import { usePipelineStore } from '../stores/pipeline-store'
 import { useTriageStore } from '../stores/triage-store'
 import { useSteeringStore } from '../stores/steering-store'
+import { useNotificationStore } from '../stores/notification-store'
 import type { StageId } from '../lib/constants'
 import { PIPELINE_STAGES } from '../lib/constants'
 
@@ -113,6 +114,16 @@ export function useSSE(): void {
           else if (action === 'resume') setSteeringStatus('running')
           else if (action === 'abort') setSteeringStatus('aborted')
         }
+      }
+
+      // Refresh notifications on events that generate them
+      if (
+        eventType === 'pipeline.gate.fail' ||
+        eventType === 'pipeline.cost_update' ||
+        eventType === 'pipeline.steering.action' ||
+        eventType === 'pipeline.trust_tier.assigned'
+      ) {
+        useNotificationStore.getState().onPipelineEvent()
       }
     }
 
