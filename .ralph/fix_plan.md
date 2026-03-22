@@ -62,7 +62,7 @@
 
 #### Track B: Routing Review (backend + frontend)
 
-- [ ] 36.14a: Routing review setting + Pydantic schema — add `routing_review_enabled: bool = False` to settings.py. Create `src/routing/routing_result.py` with `ExpertSelectionRead` (7 fields: expert_id, expert_class, pattern, reputation_weight/confidence, selection_score, selection_reason) and `RoutingResultRead`. (S, 2h)
+- [x] 36.14a: Routing review setting + Pydantic schema — add `routing_review_enabled: bool = False` to settings.py. Create `src/routing/routing_result.py` with `ExpertSelectionRead` (7 fields: expert_id, expert_class, pattern, reputation_weight/confidence, selection_score, selection_reason) and `RoutingResultRead`. (S, 2h)
 
 - [ ] 36.14b: Temporal wait point after Router — `approve_routing`/`override_routing` signal handlers in pipeline.py. `AWAITING_ROUTING_REVIEW` step enum. 30-day safety timeout. Feature-flagged via `routing_review_enabled` on PipelineInput. Mirrors intent wait point pattern. Depends on 36.14a. (M, 4h)
 

@@ -103,6 +103,7 @@ class Settings(BaseSettings):
     # Triage mode (Epic 36 — Planning Experience)
     triage_mode_enabled: bool = False  # When True, webhooks create TRIAGE instead of RECEIVED
     intent_review_enabled: bool = False  # When True, workflow pauses after Intent stage
+    routing_review_enabled: bool = False  # When True, workflow pauses after Router stage
     max_intent_versions: int = 10  # Cap on intent spec versions per workflow (was 2)
 
     # Dashboard SSE auth (Epic 34 — B-0.7)
