@@ -8,8 +8,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { PIPELINE_STAGES } from '../lib/constants'
-import { fetchTaskDetail, fetchTaskGates } from '../lib/api'
-import type { TaskPacketDetail, GateEvidenceRead } from '../lib/api'
+import { fetchTaskDetail, fetchTaskGates, fetchTaskAudit } from '../lib/api'
+import type { TaskPacketDetail, GateEvidenceRead, SteeringAuditLogRead } from '../lib/api'
 import { usePipelineStore } from '../stores/pipeline-store'
 import { SteeringActionBar } from './SteeringActionBar'
 
@@ -147,10 +147,82 @@ function GateEvidence({ gate }: { gate: GateEvidenceRead }) {
   )
 }
 
+/** S1.37.7: Action label map for steering audit entries */
+const STEERING_ACTION_LABELS: Record<SteeringAuditLogRead['action'], string> = {
+  pause: 'Paused',
+  resume: 'Resumed',
+  abort: 'Aborted',
+  redirect: 'Redirected',
+  retry: 'Retried',
+}
+
+/** S1.37.7: Steering audit entry row */
+function SteeringAuditEntry({ entry }: { entry: SteeringAuditLogRead }) {
+  const label = STEERING_ACTION_LABELS[entry.action] ?? entry.action
+  const time = new Date(entry.timestamp).toLocaleTimeString('en-US', { hour12: false })
+  const date = new Date(entry.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+
+  return (
+    <div className="flex items-start gap-2 text-xs py-1 border-b border-gray-800 last:border-0" data-testid="steering-audit-entry">
+      {/* Wrench icon */}
+      <span className="mt-0.5 shrink-0 text-amber-400" title="Steering action" aria-label="steering action">
+        🔧
+      </span>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-medium text-gray-200">{label}</span>
+          {entry.from_stage && entry.to_stage && (
+            <span className="text-gray-500">
+              {entry.from_stage} → {entry.to_stage}
+            </span>
+          )}
+          {entry.actor !== 'system' && (
+            <span className="text-gray-500">by {entry.actor}</span>
+          )}
+          <span className="ml-auto shrink-0 text-gray-500 tabular-nums">
+            {date} {time}
+          </span>
+        </div>
+        {entry.reason && (
+          <p className="mt-0.5 text-gray-400 break-words">{entry.reason}</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/** S1.37.7: Collapsible steering audit entries section */
+function SteeringAuditSection({ entries }: { entries: SteeringAuditLogRead[] }) {
+  const [expanded, setExpanded] = useState(true)
+
+  if (entries.length === 0) return null
+
+  return (
+    <div className="rounded-lg border border-amber-800/40 bg-amber-900/10" data-testid="steering-audit-section">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium text-amber-300"
+      >
+        <span>🔧</span>
+        <span>Steering Actions ({entries.length})</span>
+        <span className="ml-auto text-gray-500">{expanded ? '▾' : '▸'}</span>
+      </button>
+      {expanded && (
+        <div className="px-3 pb-2">
+          {entries.map((entry) => (
+            <SteeringAuditEntry key={entry.id} entry={entry} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 /** S2.F1-F6, F11, F12: Full TaskPacket timeline */
 export function TaskTimeline({ taskId, onClose }: TaskTimelineProps) {
   const [task, setTask] = useState<TaskPacketDetail | null>(null)
   const [gates, setGates] = useState<GateEvidenceRead[]>([])
+  const [auditEntries, setAuditEntries] = useState<SteeringAuditLogRead[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const stagesState = usePipelineStore((s) => s.stages)
@@ -164,6 +236,7 @@ export function TaskTimeline({ taskId, onClose }: TaskTimelineProps) {
       // Re-fetch task detail when stage state changes
       fetchTaskDetail(taskId).then(setTask).catch(() => {})
       fetchTaskGates(taskId).then(setGates).catch(() => {})
+      fetchTaskAudit(taskId).then(setAuditEntries).catch(() => {})
     }
     prevStagesRef.current = stagesState
   }, [stagesState, task, taskId])
@@ -172,12 +245,14 @@ export function TaskTimeline({ taskId, onClose }: TaskTimelineProps) {
     setLoading(true)
     setError(null)
     try {
-      const [taskData, gateData] = await Promise.all([
+      const [taskData, gateData, auditData] = await Promise.all([
         fetchTaskDetail(taskId),
         fetchTaskGates(taskId).catch(() => [] as GateEvidenceRead[]),
+        fetchTaskAudit(taskId).catch(() => [] as SteeringAuditLogRead[]),
       ])
       setTask(taskData)
       setGates(gateData)
+      setAuditEntries(auditData)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load')
     } finally {
@@ -243,6 +318,9 @@ export function TaskTimeline({ taskId, onClose }: TaskTimelineProps) {
           style={{ width: `${progressPercent(task)}%` }}
         />
       </div>
+
+      {/* S1.37.7: Steering audit entries */}
+      <SteeringAuditSection entries={auditEntries} />
 
       {/* Timeline stages */}
       <div className="space-y-2">

@@ -360,6 +360,19 @@ export async function createManualTask(body: ManualTaskCreate): Promise<ManualTa
   return res.json()
 }
 
+// --- Steering Audit Types (Epic 37 Slice 1) ---
+
+export interface SteeringAuditLogRead {
+  id: string
+  task_id: string
+  action: 'pause' | 'resume' | 'abort' | 'redirect' | 'retry'
+  from_stage: string | null
+  to_stage: string | null
+  reason: string | null
+  timestamp: string
+  actor: string
+}
+
 // --- Steering API (Epic 37 Slice 1) ---
 
 export interface SteeringActionResponse {
@@ -390,6 +403,20 @@ export async function abortTask(taskId: string, reason?: string): Promise<Steeri
     body: JSON.stringify({ reason: reason ?? '' }),
   })
   if (!res.ok) throw new Error(`Failed to abort task: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchTaskAudit(taskId: string, params: {
+  limit?: number
+  offset?: number
+} = {}): Promise<SteeringAuditLogRead[]> {
+  const query = new URLSearchParams()
+  if (params.limit != null) query.set('limit', String(params.limit))
+  if (params.offset != null) query.set('offset', String(params.offset))
+  const qs = query.toString()
+  const url = withToken(`${API_BASE}/tasks/${taskId}/audit${qs ? `?${qs}` : ''}`)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Failed to fetch audit log: ${res.status}`)
   return res.json()
 }
 

@@ -14,10 +14,11 @@ requests (task not found, already in terminal state, wrong precondition).
 import logging
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.dashboard.models.steering_audit import SteeringAuditLogRead, list_audit_entries_for_task
 from src.db.connection import get_session
 from src.models.taskpacket import TaskPacketStatus
 from src.models.taskpacket_crud import get_by_id
@@ -180,3 +181,28 @@ async def abort_task(
         extra={"task_id": str(task_id), "reason": body.reason},
     )
     return SteeringResponse(task_id=task_id, action="abort")
+
+
+@router.get("/tasks/{task_id}/audit", response_model=list[SteeringAuditLogRead])
+async def get_task_audit(
+    task_id: UUID,
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+) -> list[SteeringAuditLogRead]:
+    """Return steering audit log entries for a specific task, newest first.
+
+    Returns:
+        200 — list of audit entries (empty if none exist)
+        404 — task not found
+    """
+    task = await get_by_id(session, task_id)
+    if task is None:
+        raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+
+    entries = await list_audit_entries_for_task(session, task_id, limit=limit, offset=offset)
+    logger.debug(
+        "audit entries fetched",
+        extra={"task_id": str(task_id), "count": len(entries)},
+    )
+    return entries
