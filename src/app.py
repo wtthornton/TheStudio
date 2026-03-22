@@ -122,6 +122,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception:
         _logger.warning("Failed to start budget checker consumer", exc_info=True)
 
+    # Start notification generator (non-blocking, logs on failure)
+    notification_generator_task = None
+    try:
+        from src.dashboard.notification_generator import start_notification_generator
+
+        notification_generator_task = await start_notification_generator(settings.nats_url)
+    except Exception:
+        _logger.warning("Failed to start notification generator", exc_info=True)
+
     yield
 
     if worker_task is not None:
@@ -138,6 +147,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         from src.dashboard.budget_checker import stop_budget_checker
 
         await stop_budget_checker()
+    if notification_generator_task is not None:
+        from src.dashboard.notification_generator import stop_notification_generator
+
+        await stop_notification_generator()
     if consumer_task is not None:
         await stop_signal_consumer()
     if poll_task is not None:
