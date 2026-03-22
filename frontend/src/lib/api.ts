@@ -406,6 +406,28 @@ export async function abortTask(taskId: string, reason?: string): Promise<Steeri
   return res.json()
 }
 
+export async function redirectTask(
+  taskId: string,
+  targetStage: string,
+  reason: string,
+): Promise<SteeringActionResponse> {
+  const url = withToken(`${API_BASE}/tasks/${taskId}/redirect`)
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ target_stage: targetStage, reason }),
+  })
+  if (!res.ok) throw new Error(`Failed to redirect task: ${res.status}`)
+  return res.json()
+}
+
+export async function retryTask(taskId: string): Promise<SteeringActionResponse> {
+  const url = withToken(`${API_BASE}/tasks/${taskId}/retry`)
+  const res = await fetch(url, { method: 'POST' })
+  if (!res.ok) throw new Error(`Failed to retry task: ${res.status}`)
+  return res.json()
+}
+
 export async function fetchTaskAudit(taskId: string, params: {
   limit?: number
   offset?: number
