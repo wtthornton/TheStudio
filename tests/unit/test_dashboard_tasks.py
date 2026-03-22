@@ -36,6 +36,10 @@ def _make_row(**overrides) -> MagicMock:
         "readiness_score": None,
         "readiness_miss": False,
         "stage_timings": None,
+        "issue_title": None,
+        "issue_body": None,
+        "triage_enrichment": None,
+        "rejection_reason": None,
         "loopback_count": 0,
     }
     defaults.update(overrides)

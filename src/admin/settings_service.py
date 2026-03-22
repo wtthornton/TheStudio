@@ -87,6 +87,12 @@ SETTING_DEFINITIONS: dict[str, dict[str, Any]] = {
     "cost_optimization_caching_enabled": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
     "cost_optimization_batch_enabled": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
     "cost_optimization_budget_tiers": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
+    # Triage / Planning (Epic 36)
+    "triage_mode_enabled": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
+    "intent_review_enabled": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
+    "max_intent_versions": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
+    # Dashboard (Epic 34)
+    "dashboard_token": {"category": SettingCategory.SECRETS, "sensitive": True},
     # Secrets
     "encryption_key": {"category": SettingCategory.SECRETS, "sensitive": True},
     "webhook_secret": {"category": SettingCategory.SECRETS, "sensitive": True},
