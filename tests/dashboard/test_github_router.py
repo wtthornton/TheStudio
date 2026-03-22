@@ -1,16 +1,20 @@
-"""Tests for GET /api/v1/dashboard/github/issues (Epic 38, Story 38.1)."""
+"""Tests for GET /api/v1/dashboard/github/issues (Epic 38, Story 38.1) and
+POST /api/v1/dashboard/github/import (Epic 38, Story 38.2)."""
 
 from __future__ import annotations
 
 import json
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
 
 from src.app import app
 from src.dashboard.github_router import _cache_clear
+from src.db.connection import get_session
+from src.models.taskpacket import TaskPacketRead, TaskPacketStatus
 
 
 # ---------------------------------------------------------------------------
@@ -463,3 +467,387 @@ class TestPagination:
         data = resp.json()
         assert data["page"] == 2
         assert data["per_page"] == 10
+
+
+# ---------------------------------------------------------------------------
+# POST /github/import tests (Story 38.2)
+# ---------------------------------------------------------------------------
+
+
+def _make_task_read(
+    task_id: str | None = None,
+    issue_number: int = 1,
+    repo: str = "owner/repo",
+    status: TaskPacketStatus = TaskPacketStatus.RECEIVED,
+) -> MagicMock:
+    """Build a minimal MagicMock that resembles a TaskPacketRead."""
+    from datetime import UTC, datetime
+    from uuid import UUID, uuid4
+
+    mock = MagicMock(spec=TaskPacketRead)
+    mock.id = UUID(task_id) if task_id else uuid4()
+    mock.correlation_id = uuid4()
+    mock.repo = repo
+    mock.issue_id = issue_number
+    mock.status = status
+    mock.delivery_id = f"dashboard_import-{repo}-{issue_number}"
+    mock.source_name = "dashboard_import"
+    mock.created_at = datetime.now(UTC)
+    mock.updated_at = datetime.now(UTC)
+    return mock
+
+
+def _import_client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
+    """TestClient with GitHub token set and dashboard auth disabled."""
+    from src import settings as settings_mod
+
+    monkeypatch.setattr(settings_mod.settings, "intake_poll_token", "test-token-abc")
+    monkeypatch.setattr(settings_mod.settings, "dashboard_token", "")
+    monkeypatch.setattr(settings_mod.settings, "triage_mode_enabled", False)
+    return TestClient(app)
+
+
+def _import_payload(
+    repo: str = "owner/repo",
+    issues: list[dict] | None = None,
+    triage_override: bool | None = None,
+) -> dict:
+    """Build a minimal import request payload."""
+    if issues is None:
+        issues = [{"number": 1, "title": "Fix login bug"}]
+    body: dict = {"repo": repo, "issues": issues}
+    if triage_override is not None:
+        body["triage_override"] = triage_override
+    return body
+
+
+def _mock_session() -> AsyncMock:
+    """Return a mock AsyncSession."""
+    session = AsyncMock()
+    session.add = MagicMock()
+    return session
+
+
+class TestImportGitHubIssues:
+    """Tests for POST /api/v1/dashboard/github/import."""
+
+    def test_happy_path_creates_task_received(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Single issue imported in RECEIVED mode starts workflow."""
+        client = _import_client(monkeypatch)
+        task = _make_task_read(issue_number=1)
+
+        session_mock = _mock_session()
+        app.dependency_overrides[get_session] = lambda: session_mock
+
+        try:
+            with (
+                patch("src.dashboard.github_router.get_by_repo_and_issue", new=AsyncMock(return_value=None)),
+                patch("src.dashboard.github_router.create_taskpacket", new=AsyncMock(return_value=task)),
+                patch("src.ingress.workflow_trigger.start_workflow", new=AsyncMock(return_value="run-id")),
+            ):
+                resp = client.post(
+                    "/api/v1/dashboard/github/import",
+                    json=_import_payload(),
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["created"] == 1
+        assert data["duplicates"] == 0
+        assert data["errors"] == 0
+        assert len(data["results"]) == 1
+        result = data["results"][0]
+        assert result["number"] == 1
+        assert result["status"] == "created"
+        assert result["task_id"] == str(task.id)
+
+    def test_happy_path_triage_mode_no_workflow(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """With triage_override=True task is created in TRIAGE; no workflow started."""
+        client = _import_client(monkeypatch)
+        task = _make_task_read(issue_number=2, status=TaskPacketStatus.TRIAGE)
+
+        app.dependency_overrides[get_session] = lambda: _mock_session()
+
+        try:
+            with (
+                patch("src.dashboard.github_router.get_by_repo_and_issue", new=AsyncMock(return_value=None)),
+                patch("src.dashboard.github_router.create_taskpacket", new=AsyncMock(return_value=task)) as mock_create,
+                patch("src.ingress.workflow_trigger.start_workflow", new=AsyncMock()) as mock_wf,
+            ):
+                resp = client.post(
+                    "/api/v1/dashboard/github/import",
+                    json=_import_payload(
+                        issues=[{"number": 2, "title": "Add feature"}],
+                        triage_override=True,
+                    ),
+                )
+                # Workflow must NOT be called when triage mode is on
+                mock_wf.assert_not_called()
+                # create_taskpacket must have been called with TRIAGE status
+                call_kwargs = mock_create.call_args
+                assert call_kwargs[1]["initial_status"] == TaskPacketStatus.TRIAGE
+        finally:
+            app.dependency_overrides.clear()
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["created"] == 1
+        result = data["results"][0]
+        assert result["status"] == "created"
+        assert result["workflow_started"] is False
+
+    def test_duplicate_issue_skipped(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Issue already in pipeline is marked duplicate; no new TaskPacket created."""
+        client = _import_client(monkeypatch)
+        existing = _make_task_read(issue_number=5)
+
+        app.dependency_overrides[get_session] = lambda: _mock_session()
+
+        try:
+            with (
+                patch("src.dashboard.github_router.get_by_repo_and_issue", new=AsyncMock(return_value=existing)),
+                patch("src.dashboard.github_router.create_taskpacket", new=AsyncMock()) as mock_create,
+            ):
+                resp = client.post(
+                    "/api/v1/dashboard/github/import",
+                    json=_import_payload(issues=[{"number": 5, "title": "Old issue"}]),
+                )
+                mock_create.assert_not_called()
+        finally:
+            app.dependency_overrides.clear()
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["duplicates"] == 1
+        assert data["created"] == 0
+        result = data["results"][0]
+        assert result["status"] == "duplicate"
+        assert result["task_id"] == str(existing.id)
+
+    def test_batch_mixed_created_and_duplicate(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Batch with 1 new + 1 duplicate returns correct counts."""
+        client = _import_client(monkeypatch)
+        new_task = _make_task_read(issue_number=10)
+        existing_task = _make_task_read(issue_number=20)
+
+        async def _get_by_repo_and_issue(session, repo, issue_number):
+            if issue_number == 20:
+                return existing_task
+            return None
+
+        app.dependency_overrides[get_session] = lambda: _mock_session()
+
+        try:
+            with (
+                patch("src.dashboard.github_router.get_by_repo_and_issue", new=_get_by_repo_and_issue),
+                patch("src.dashboard.github_router.create_taskpacket", new=AsyncMock(return_value=new_task)),
+                patch("src.ingress.workflow_trigger.start_workflow", new=AsyncMock()),
+            ):
+                resp = client.post(
+                    "/api/v1/dashboard/github/import",
+                    json=_import_payload(
+                        issues=[
+                            {"number": 10, "title": "New issue"},
+                            {"number": 20, "title": "Already imported"},
+                        ]
+                    ),
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["created"] == 1
+        assert data["duplicates"] == 1
+        statuses = {r["number"]: r["status"] for r in data["results"]}
+        assert statuses[10] == "created"
+        assert statuses[20] == "duplicate"
+
+    def test_uses_settings_triage_mode_when_no_override(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When triage_override is absent, server triage_mode_enabled is respected."""
+        from src import settings as settings_mod
+
+        monkeypatch.setattr(settings_mod.settings, "intake_poll_token", "test-token-abc")
+        monkeypatch.setattr(settings_mod.settings, "dashboard_token", "")
+        monkeypatch.setattr(settings_mod.settings, "triage_mode_enabled", True)
+
+        client = TestClient(app)
+        task = _make_task_read(issue_number=7, status=TaskPacketStatus.TRIAGE)
+
+        app.dependency_overrides[get_session] = lambda: _mock_session()
+
+        try:
+            with (
+                patch("src.dashboard.github_router.get_by_repo_and_issue", new=AsyncMock(return_value=None)),
+                patch("src.dashboard.github_router.create_taskpacket", new=AsyncMock(return_value=task)) as mock_create,
+                patch("src.ingress.workflow_trigger.start_workflow", new=AsyncMock()) as mock_wf,
+            ):
+                resp = client.post(
+                    "/api/v1/dashboard/github/import",
+                    json=_import_payload(issues=[{"number": 7, "title": "Feature X"}]),
+                )
+                mock_wf.assert_not_called()
+                assert mock_create.call_args[1]["initial_status"] == TaskPacketStatus.TRIAGE
+        finally:
+            app.dependency_overrides.clear()
+
+        assert resp.status_code == 200
+
+    def test_create_error_marked_as_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """If TaskPacket creation raises an exception the result is 'error'."""
+        client = _import_client(monkeypatch)
+
+        app.dependency_overrides[get_session] = lambda: _mock_session()
+
+        try:
+            with (
+                patch("src.dashboard.github_router.get_by_repo_and_issue", new=AsyncMock(return_value=None)),
+                patch("src.dashboard.github_router.create_taskpacket", new=AsyncMock(side_effect=RuntimeError("DB down"))),
+            ):
+                resp = client.post(
+                    "/api/v1/dashboard/github/import",
+                    json=_import_payload(issues=[{"number": 3, "title": "Broken"}]),
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["errors"] == 1
+        assert data["created"] == 0
+        result = data["results"][0]
+        assert result["status"] == "error"
+        assert "DB down" in result["error"]
+
+    def test_invalid_repo_format_returns_400(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """400 returned when repo is not in 'owner/repo' format."""
+        client = _import_client(monkeypatch)
+        resp = client.post(
+            "/api/v1/dashboard/github/import",
+            json=_import_payload(repo="badformat"),
+        )
+        assert resp.status_code == 400
+        assert "owner/repo" in resp.json()["detail"]
+
+    def test_repo_with_extra_slash_returns_400(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """400 returned when repo has extra slashes."""
+        client = _import_client(monkeypatch)
+        resp = client.post(
+            "/api/v1/dashboard/github/import",
+            json=_import_payload(repo="a/b/c"),
+        )
+        assert resp.status_code == 400
+
+    def test_empty_issues_list_rejected(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """422 returned when issues list is empty."""
+        client = _import_client(monkeypatch)
+        resp = client.post(
+            "/api/v1/dashboard/github/import",
+            json={"repo": "owner/repo", "issues": []},
+        )
+        assert resp.status_code == 422
+
+    def test_source_name_is_dashboard_import(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """TaskPacketCreate is always called with source_name='dashboard_import'."""
+        client = _import_client(monkeypatch)
+        task = _make_task_read(issue_number=1)
+
+        app.dependency_overrides[get_session] = lambda: _mock_session()
+
+        try:
+            with (
+                patch("src.dashboard.github_router.get_by_repo_and_issue", new=AsyncMock(return_value=None)),
+                patch("src.dashboard.github_router.create_taskpacket", new=AsyncMock(return_value=task)) as mock_create,
+                patch("src.ingress.workflow_trigger.start_workflow", new=AsyncMock()),
+            ):
+                client.post(
+                    "/api/v1/dashboard/github/import",
+                    json=_import_payload(),
+                )
+                call_args = mock_create.call_args
+                task_data = call_args[0][1]  # second positional arg is TaskPacketCreate
+                assert task_data.source_name == "dashboard_import"
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_workflow_failure_does_not_fail_import(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Workflow start failure is logged but import result is still 'created'."""
+        client = _import_client(monkeypatch)
+        task = _make_task_read(issue_number=1)
+
+        app.dependency_overrides[get_session] = lambda: _mock_session()
+
+        try:
+            with (
+                patch("src.dashboard.github_router.get_by_repo_and_issue", new=AsyncMock(return_value=None)),
+                patch("src.dashboard.github_router.create_taskpacket", new=AsyncMock(return_value=task)),
+                patch("src.ingress.workflow_trigger.start_workflow", new=AsyncMock(side_effect=Exception("Temporal down"))),
+            ):
+                resp = client.post(
+                    "/api/v1/dashboard/github/import",
+                    json=_import_payload(triage_override=False),
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["created"] == 1
+        result = data["results"][0]
+        assert result["status"] == "created"
+        assert result["workflow_started"] is False
+
+    def test_labels_passed_to_workflow(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Labels from the issue are forwarded to start_workflow."""
+        client = _import_client(monkeypatch)
+        task = _make_task_read(issue_number=1)
+
+        app.dependency_overrides[get_session] = lambda: _mock_session()
+
+        try:
+            with (
+                patch("src.dashboard.github_router.get_by_repo_and_issue", new=AsyncMock(return_value=None)),
+                patch("src.dashboard.github_router.create_taskpacket", new=AsyncMock(return_value=task)),
+                patch("src.ingress.workflow_trigger.start_workflow", new=AsyncMock()) as mock_wf,
+            ):
+                client.post(
+                    "/api/v1/dashboard/github/import",
+                    json=_import_payload(
+                        issues=[{
+                            "number": 1,
+                            "title": "Fix bug",
+                            "labels": ["bug", "priority-high"],
+                        }],
+                        triage_override=False,
+                    ),
+                )
+                call_kwargs = mock_wf.call_args[1]
+                assert call_kwargs["labels"] == ["bug", "priority-high"]
+        finally:
+            app.dependency_overrides.clear()

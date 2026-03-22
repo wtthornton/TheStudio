@@ -1,6 +1,7 @@
-"""GitHub Issues API router — browse repo issues for import into the pipeline.
+"""GitHub Issues API router — browse and import repo issues into the pipeline.
 
 Epic 38, Story 38.1: GET /api/v1/dashboard/github/issues
+Epic 38, Story 38.2: POST /api/v1/dashboard/github/import
 """
 
 from __future__ import annotations
@@ -10,9 +11,14 @@ import time
 from typing import Any
 
 import httpx
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.db.connection import get_session
+from src.models.taskpacket import TaskPacketCreate, TaskPacketStatus
+from src.models.taskpacket_crud import create as create_taskpacket
+from src.models.taskpacket_crud import get_by_repo_and_issue
 from src.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -236,3 +242,193 @@ async def list_github_issues(
         len(issues),
     )
     return result
+
+
+# ---------------------------------------------------------------------------
+# Import request / response models (Story 38.2)
+# ---------------------------------------------------------------------------
+
+
+class ImportIssueItem(BaseModel):
+    """A single GitHub issue to import into the pipeline."""
+
+    number: int = Field(..., ge=1, description="GitHub issue number")
+    title: str = Field(..., min_length=1, description="Issue title")
+    body: str | None = Field(None, description="Issue body (Markdown)")
+    labels: list[str] = Field(default_factory=list, description="Label names")
+
+
+class ImportRequest(BaseModel):
+    """Request body for batch-importing GitHub issues as TaskPackets."""
+
+    repo: str = Field(..., description="Repository in 'owner/repo' format")
+    issues: list[ImportIssueItem] = Field(
+        ...,
+        min_length=1,
+        max_length=50,
+        description="Issues to import (1–50 per request)",
+    )
+    triage_override: bool | None = Field(
+        None,
+        description=(
+            "Override triage mode for this import. "
+            "True=TRIAGE, False=RECEIVED+workflow, None=use server setting"
+        ),
+    )
+
+
+class ImportIssueResult(BaseModel):
+    """Per-issue result from a batch import."""
+
+    number: int
+    status: str  # "created" | "duplicate" | "error"
+    task_id: str | None = None
+    workflow_started: bool = False
+    error: str | None = None
+
+
+class ImportResponse(BaseModel):
+    """Response from POST /github/import."""
+
+    repo: str
+    created: int
+    duplicates: int
+    errors: int
+    results: list[ImportIssueResult]
+
+
+# ---------------------------------------------------------------------------
+# Import endpoint (Story 38.2)
+# ---------------------------------------------------------------------------
+
+
+@router.post("/github/import", response_model=ImportResponse)
+async def import_github_issues(
+    body: ImportRequest,
+    session: AsyncSession = Depends(get_session),
+) -> ImportResponse:
+    """Batch-import selected GitHub issues as TaskPackets.
+
+    For each issue:
+    * If a TaskPacket already exists for ``(repo, issue_number)`` the entry is
+      marked **duplicate** and skipped (no change to the existing record).
+    * Otherwise a new TaskPacket is created with ``source_name="dashboard_import"``.
+
+    Triage behaviour follows ``triage_override`` when provided; otherwise it
+    respects the server-level ``THESTUDIO_TRIAGE_MODE_ENABLED`` setting:
+    * **Triage mode on** → status = TRIAGE (held for human review)
+    * **Triage mode off** → status = RECEIVED + Temporal workflow started
+
+    At most 50 issues may be imported per request.
+    """
+    if "/" not in body.repo or body.repo.count("/") != 1:
+        raise HTTPException(
+            status_code=400,
+            detail="repo must be in 'owner/repo' format",
+        )
+
+    use_triage: bool = (
+        body.triage_override
+        if body.triage_override is not None
+        else settings.triage_mode_enabled
+    )
+
+    results: list[ImportIssueResult] = []
+    created = duplicates = errors = 0
+
+    for issue in body.issues:
+        # Deduplicate: check if any TaskPacket for this repo+issue already exists
+        existing = await get_by_repo_and_issue(session, body.repo, issue.number)
+        if existing is not None:
+            duplicates += 1
+            results.append(
+                ImportIssueResult(
+                    number=issue.number,
+                    status="duplicate",
+                    task_id=str(existing.id),
+                )
+            )
+            logger.debug(
+                "GitHub import: issue #%d already in pipeline as task %s",
+                issue.number,
+                existing.id,
+            )
+            continue
+
+        # Build a stable delivery_id for dedupe at the DB level
+        delivery_id = f"dashboard_import-{body.repo}-{issue.number}"
+        task_data = TaskPacketCreate(
+            repo=body.repo,
+            issue_id=issue.number,
+            delivery_id=delivery_id,
+            source_name="dashboard_import",
+            issue_title=issue.title,
+            issue_body=issue.body,
+        )
+
+        try:
+            initial_status = (
+                TaskPacketStatus.TRIAGE if use_triage else TaskPacketStatus.RECEIVED
+            )
+            taskpacket = await create_taskpacket(session, task_data, initial_status=initial_status)
+
+            workflow_started = False
+            if not use_triage:
+                try:
+                    from src.ingress.workflow_trigger import start_workflow
+
+                    await start_workflow(
+                        taskpacket.id,
+                        taskpacket.correlation_id,
+                        repo=body.repo,
+                        issue_title=issue.title,
+                        issue_body=issue.body or "",
+                        labels=issue.labels,
+                    )
+                    workflow_started = True
+                except Exception:
+                    logger.exception(
+                        "GitHub import: failed to start workflow for issue #%d (task %s)",
+                        issue.number,
+                        taskpacket.id,
+                    )
+
+            created += 1
+            results.append(
+                ImportIssueResult(
+                    number=issue.number,
+                    status="created",
+                    task_id=str(taskpacket.id),
+                    workflow_started=workflow_started,
+                )
+            )
+            logger.info(
+                "GitHub import: issue #%d imported as task %s (triage=%s, workflow=%s)",
+                issue.number,
+                taskpacket.id,
+                use_triage,
+                workflow_started,
+            )
+
+        except Exception as exc:
+            errors += 1
+            logger.exception(
+                "GitHub import: failed to create TaskPacket for issue #%d: %s",
+                issue.number,
+                exc,
+            )
+            results.append(
+                ImportIssueResult(
+                    number=issue.number,
+                    status="error",
+                    error=str(exc),
+                )
+            )
+
+    return ImportResponse(
+        repo=body.repo,
+        created=created,
+        duplicates=duplicates,
+        errors=errors,
+        results=results,
+    )
