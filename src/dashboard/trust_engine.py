@@ -59,6 +59,9 @@ class EvaluationResult:
 
     Attributes:
         tier: Final assigned tier after rules + safety bounds.
+        raw_tier: Tier from rule matching *before* safety bounds were applied.
+            Equals ``tier`` when no safety cap occurred.  Used by the audit
+            log to record what the rule engine originally recommended.
         matched_rule_id: UUID of the first-matching rule, or ``None`` if the
             default tier was used.
         safety_capped: ``True`` when a safety bound reduced the tier.
@@ -69,11 +72,13 @@ class EvaluationResult:
         self,
         tier: AssignedTier,
         *,
+        raw_tier: AssignedTier | None = None,
         matched_rule_id: Any | None = None,
         safety_capped: bool = False,
         reason: str = "",
     ) -> None:
         self.tier = tier
+        self.raw_tier = raw_tier if raw_tier is not None else tier
         self.matched_rule_id = matched_rule_id
         self.safety_capped = safety_capped
         self.reason = reason
@@ -81,6 +86,7 @@ class EvaluationResult:
     def __repr__(self) -> str:
         return (
             f"EvaluationResult(tier={self.tier!r}, "
+            f"raw_tier={self.raw_tier!r}, "
             f"matched_rule_id={self.matched_rule_id!r}, "
             f"safety_capped={self.safety_capped!r})"
         )
@@ -124,6 +130,10 @@ async def evaluate_trust_tier(
             )
             log.debug(match_reason)
             break
+
+    # Snapshot the rule-assigned tier before any safety-bounds cap is applied.
+    # Callers use this to distinguish "what the rule said" vs "what was enforced".
+    raw_tier: AssignedTier = matched_tier
 
     # --- Safety bounds cap -----------------------------------------------
     safety_capped = False
@@ -173,6 +183,7 @@ async def evaluate_trust_tier(
 
     return EvaluationResult(
         matched_tier,
+        raw_tier=raw_tier,
         matched_rule_id=matched_rule_id,
         safety_capped=safety_capped,
         reason=match_reason,

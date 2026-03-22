@@ -1750,6 +1750,44 @@ async def assign_trust_tier_activity(
                 },
             )
 
+        # Persist steering audit entry for trust tier assignment/override
+        from datetime import datetime, timezone
+
+        from src.dashboard.models.steering_audit import (
+            SteeringAction,
+            SteeringAuditLogCreate,
+            create_audit_entry,
+        )
+
+        if result.safety_capped:
+            audit_action = SteeringAction.TRUST_TIER_OVERRIDDEN
+            # from_stage = tier rule originally assigned (before safety cap)
+            audit_from = result.raw_tier.value
+        else:
+            audit_action = SteeringAction.TRUST_TIER_ASSIGNED
+            # from_stage = None (initial assignment has no prior tier to record)
+            audit_from = None
+
+        audit_reason_parts = []
+        if matched_rule_str:
+            audit_reason_parts.append(f"rule_id={matched_rule_str}")
+        audit_reason_parts.append(result.reason)
+
+        async with get_async_session() as session:
+            await create_audit_entry(
+                session,
+                SteeringAuditLogCreate(
+                    task_id=taskpacket_id,
+                    action=audit_action,
+                    from_stage=audit_from,
+                    to_stage=tier_value,
+                    reason="; ".join(audit_reason_parts),
+                    timestamp=datetime.now(tz=timezone.utc),
+                    actor="system",
+                ),
+            )
+            await session.commit()
+
         # Emit NATS event (fire-and-forget, outside DB session)
         await emit_trust_tier_assigned(
             task_id=params.taskpacket_id,

@@ -34,7 +34,7 @@
 - [x] 37.15: Trust tier CRUD API — GET/POST/PUT/DELETE `/trust/rules`, GET/PUT `/trust/safety-bounds`, GET/PUT `/trust/default-tier` in `src/dashboard/trust_router.py`.
 - [x] 37.16: Trust tier assignment at pipeline start — evaluate rule engine before first activity in Temporal workflow. Set `task_trust_tier` on TaskPacket. Emit `pipeline.trust_tier.assigned` event.
 - [x] 37.17: Frontend — TrustConfiguration settings panel + RuleBuilder (condition builder, tier assignment, priority, active toggle) + SafetyBoundsPanel + ActiveTierDisplay.
-- [ ] 37.18: Trust tier audit log — log `trust_tier_assigned` / `trust_tier_overridden` to steering audit with matching rule ID, original tier, final tier.
+- [x] 37.18: Trust tier audit log — log `trust_tier_assigned` / `trust_tier_overridden` to steering audit with matching rule ID, original tier, final tier.
 
 ### Slice 4: Budget Dashboard (MVP)
 

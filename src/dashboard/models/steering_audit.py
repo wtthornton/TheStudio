@@ -34,6 +34,8 @@ class SteeringAction(enum.StrEnum):
     ABORT = "abort"
     REDIRECT = "redirect"
     RETRY = "retry"
+    TRUST_TIER_ASSIGNED = "trust_tier_assigned"
+    TRUST_TIER_OVERRIDDEN = "trust_tier_overridden"
 
 
 # ---------------------------------------------------------------------------
