@@ -1506,6 +1506,18 @@ async def update_project_status_activity(
             return ProjectStatusOutput(synced=False, error="no_token")
 
         async with ProjectsV2Client(token) as client:
+            # Epic 38 story 38.13: validate token has 'project' scope before
+            # attempting any GraphQL mutations (Risk R1 mitigation).
+            scope_valid, scope_error = await client.validate_token_scopes()
+            if not scope_valid:
+                logger.warning(
+                    "projects_v2.token_scope_invalid",
+                    extra={
+                        "taskpacket_id": params.taskpacket_id,
+                        "error": scope_error,
+                    },
+                )
+                return ProjectStatusOutput(synced=False, error=scope_error or "invalid_token_scope")
             owner = settings.projects_v2_owner
             project_number = settings.projects_v2_number
 

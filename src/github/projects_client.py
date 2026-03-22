@@ -417,3 +417,46 @@ class ProjectsV2Client:
         """
         project = await self.find_project(owner, project_number)
         return set(project.fields.keys())
+
+    async def validate_token_scopes(self) -> tuple[bool, str | None]:
+        """Validate that the token has the required 'project' scope.
+
+        Epic 38 AC-3 / Risk R1: GitHub Projects v2 API requires a PAT with
+        ``project`` scope.  Standard GITHUB_TOKEN (GitHub App installation
+        tokens) does not carry OAuth scopes, so this check will surface a
+        clear error rather than silently failing mid-sync.
+
+        Returns:
+            (valid, error_message) where valid is True if the token has the
+            ``project`` scope and error_message describes the problem otherwise.
+        """
+        try:
+            resp = await self._client.get("https://api.github.com/user")
+            resp.raise_for_status()
+        except Exception as exc:
+            return False, f"token_validation_request_failed: {exc}"
+
+        scopes_header = resp.headers.get("X-OAuth-Scopes", "")
+        if not scopes_header:
+            # GitHub App installation tokens do not return X-OAuth-Scopes.
+            # They use fine-grained permissions, not classic OAuth scopes.
+            # Projects v2 GraphQL mutations require a PAT with `project` scope —
+            # installation tokens cannot access Projects v2 write endpoints.
+            return False, (
+                "token_missing_project_scope: no X-OAuth-Scopes header returned. "
+                "GitHub App installation tokens lack 'project' scope. "
+                "Use a PAT with 'project' scope for Projects v2 sync."
+            )
+
+        scopes = {s.strip() for s in scopes_header.split(",")}
+        if "project" not in scopes:
+            return False, (
+                f"token_missing_project_scope: token has scopes [{scopes_header}] "
+                "but 'project' scope is required for GitHub Projects v2 sync."
+            )
+
+        logger.info(
+            "projects_v2.token_scopes_valid",
+            extra={"scopes": scopes_header},
+        )
+        return True, None
