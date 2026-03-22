@@ -23,6 +23,7 @@ import { TrustConfiguration } from './components/TrustConfiguration'
 import { BudgetDashboard } from './components/BudgetDashboard'
 import { NotificationBell } from './components/NotificationBell'
 import { SteeringActivityLog } from './components/SteeringActivityLog'
+import ImportModal from './components/github/ImportModal'
 import { PIPELINE_STAGES } from './lib/constants'
 
 type Tab = 'pipeline' | 'triage' | 'intent' | 'routing' | 'board' | 'trust' | 'budget' | 'activity'
@@ -34,6 +35,7 @@ function App() {
   const stages = usePipelineStore((s) => s.stages)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<Tab>('pipeline')
+  const [importModalOpen, setImportModalOpen] = useState(false)
 
   // Check if pipeline has any tasks
   const hasAnyTasks = PIPELINE_STAGES.some((s) => stages[s.id].taskCount > 0)
@@ -108,6 +110,13 @@ function App() {
           </nav>
         </div>
         <div className="flex items-center gap-4">
+          {/* Epic 38 — Import GitHub Issues */}
+          <button
+            onClick={() => setImportModalOpen(true)}
+            className="rounded bg-blue-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-600"
+          >
+            ↓ Import Issues
+          </button>
           <HeaderBar />
           <NotificationBell onNavigate={handleNotificationNavigate} />
           <ConnectionIndicator />
@@ -212,6 +221,17 @@ function App() {
         /* Steering Activity Log (Epic 37, Slice 5 — 37.28) */
         <SteeringActivityLog />
       )}
+
+      {/* Epic 38, Story 38.3 — GitHub Issue Import Modal */}
+      <ImportModal
+        open={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onImported={(count) => {
+          // Refresh triage queue / pipeline if issues were created
+          if (count > 0) setActiveTab('triage')
+          setImportModalOpen(false)
+        }}
+      />
     </div>
   )
 }

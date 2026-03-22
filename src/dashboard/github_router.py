@@ -19,6 +19,7 @@ from src.db.connection import get_session
 from src.models.taskpacket import TaskPacketCreate, TaskPacketStatus
 from src.models.taskpacket_crud import create as create_taskpacket
 from src.models.taskpacket_crud import get_by_repo_and_issue
+from src.repo.repository import RepoRepository
 from src.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -28,7 +29,7 @@ GITHUB_API_BASE = "https://api.github.com"
 _CACHE_TTL_SECONDS = 300  # 5 minutes
 
 # In-memory TTL cache: key -> (expires_at, response_data)
-_cache: dict[str, tuple[float, "GitHubIssueListResponse"]] = {}
+_cache: dict[str, tuple[float, GitHubIssueListResponse]] = {}
 
 
 # ---------------------------------------------------------------------------
@@ -266,7 +267,7 @@ class ImportRequest(BaseModel):
         ...,
         min_length=1,
         max_length=50,
-        description="Issues to import (1–50 per request)",
+        description="Issues to import (1-50 per request)",
     )
     triage_override: bool | None = Field(
         None,
@@ -431,4 +432,50 @@ async def import_github_issues(
         duplicates=duplicates,
         errors=errors,
         results=results,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Registered repos endpoint (Story 38.3 — Import Modal repo selector)
+# ---------------------------------------------------------------------------
+
+
+class DashboardRepo(BaseModel):
+    """A repository registered in the admin panel."""
+
+    full_name: str
+    owner: str
+    name: str
+
+
+class DashboardRepoListResponse(BaseModel):
+    """List of registered repos for the import modal repo selector."""
+
+    repos: list[DashboardRepo]
+    total: int
+
+
+@router.get("/github/repos", response_model=DashboardRepoListResponse)
+async def list_dashboard_repos(
+    session: AsyncSession = Depends(get_session),
+) -> DashboardRepoListResponse:
+    """Return all repositories registered in the admin panel.
+
+    Used by the Import Modal frontend (Story 38.3) to populate the repo
+    selector dropdown.  Returns an empty list when no repos are registered
+    (e.g. in development) so the frontend can gracefully fall back to a
+    manual text input.
+    """
+    repo_repository = RepoRepository()
+    repos = await repo_repository.list_all(session)
+    return DashboardRepoListResponse(
+        repos=[
+            DashboardRepo(
+                full_name=f"{r.owner}/{r.repo_name}",
+                owner=r.owner,
+                name=r.repo_name,
+            )
+            for r in repos
+        ],
+        total=len(repos),
     )

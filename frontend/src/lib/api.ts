@@ -765,3 +765,106 @@ export async function markAllNotificationsRead(): Promise<{ updated: number }> {
   if (!res.ok) throw new Error(`Failed to mark all notifications read: ${res.status}`)
   return res.json()
 }
+
+// --- GitHub Import API (Epic 38) ---
+
+export interface GitHubIssue {
+  id: number
+  number: number
+  title: string
+  body: string | null
+  state: string
+  labels: string[]
+  html_url: string
+  user_login: string | null
+  created_at: string
+  updated_at: string
+  comments: number
+}
+
+export interface GitHubIssueListResponse {
+  issues: GitHubIssue[]
+  total_count: number
+  page: number
+  per_page: number
+  has_next: boolean
+}
+
+export interface ImportIssueItem {
+  number: number
+  title: string
+  body: string | null
+  labels: string[]
+}
+
+export interface ImportRequest {
+  repo: string
+  issues: ImportIssueItem[]
+  triage_override: boolean | null
+}
+
+export interface ImportIssueResult {
+  number: number
+  status: 'created' | 'duplicate' | 'error'
+  task_id: string | null
+  workflow_started: boolean
+  error: string | null
+}
+
+export interface ImportResponse {
+  repo: string
+  created: number
+  duplicates: number
+  errors: number
+  results: ImportIssueResult[]
+}
+
+export interface DashboardRepo {
+  full_name: string
+  owner: string
+  name: string
+}
+
+export interface DashboardRepoListResponse {
+  repos: DashboardRepo[]
+  total: number
+}
+
+export async function fetchDashboardRepos(): Promise<DashboardRepoListResponse> {
+  const url = withToken(`${API_BASE}/github/repos`)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Failed to fetch repos: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchGitHubIssues(params: {
+  repo: string
+  state?: string
+  labels?: string
+  search?: string
+  page?: number
+  per_page?: number
+}): Promise<GitHubIssueListResponse> {
+  const query = new URLSearchParams()
+  query.set('repo', params.repo)
+  if (params.state) query.set('state', params.state)
+  if (params.labels) query.set('labels', params.labels)
+  if (params.search) query.set('search', params.search)
+  if (params.page != null) query.set('page', String(params.page))
+  if (params.per_page != null) query.set('per_page', String(params.per_page))
+  const url = withToken(`${API_BASE}/github/issues?${query}`)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Failed to fetch GitHub issues: ${res.status}`)
+  return res.json()
+}
+
+export async function importGitHubIssues(payload: ImportRequest): Promise<ImportResponse> {
+  const url = withToken(`${API_BASE}/github/import`)
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) throw new Error(`Failed to import issues: ${res.status}`)
+  return res.json()
+}
