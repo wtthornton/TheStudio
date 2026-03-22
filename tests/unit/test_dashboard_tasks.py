@@ -41,6 +41,9 @@ def _make_row(**overrides) -> MagicMock:
         "triage_enrichment": None,
         "rejection_reason": None,
         "loopback_count": 0,
+        "routing_result": None,
+        "pr_url": None,
+        "task_trust_tier": None,
     }
     defaults.update(overrides)
     row = MagicMock(spec=TaskPacketRow)

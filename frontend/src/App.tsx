@@ -22,9 +22,10 @@ import BacklogBoard from './components/planning/BacklogBoard'
 import { TrustConfiguration } from './components/TrustConfiguration'
 import { BudgetDashboard } from './components/BudgetDashboard'
 import { NotificationBell } from './components/NotificationBell'
+import { SteeringActivityLog } from './components/SteeringActivityLog'
 import { PIPELINE_STAGES } from './lib/constants'
 
-type Tab = 'pipeline' | 'triage' | 'intent' | 'routing' | 'board' | 'trust' | 'budget'
+type Tab = 'pipeline' | 'triage' | 'intent' | 'routing' | 'board' | 'trust' | 'budget' | 'activity'
 
 function App() {
   useSSE()
@@ -97,6 +98,12 @@ function App() {
               className={`px-3 py-1.5 text-sm rounded ${activeTab === 'budget' ? 'bg-gray-700 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}
             >
               Budget
+            </button>
+            <button
+              onClick={() => setActiveTab('activity')}
+              className={`px-3 py-1.5 text-sm rounded ${activeTab === 'activity' ? 'bg-gray-700 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}
+            >
+              Activity Log
             </button>
           </nav>
         </div>
@@ -198,9 +205,12 @@ function App() {
       ) : activeTab === 'trust' ? (
         /* Trust Tier Configuration (Epic 37, Slice 3) */
         <TrustConfiguration />
-      ) : (
+      ) : activeTab === 'budget' ? (
         /* Budget Dashboard (Epic 37, Slice 4) */
         <BudgetDashboard />
+      ) : (
+        /* Steering Activity Log (Epic 37, Slice 5 — 37.28) */
+        <SteeringActivityLog />
       )}
     </div>
   )

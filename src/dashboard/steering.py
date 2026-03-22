@@ -20,7 +20,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.dashboard.models.steering_audit import SteeringAuditLogRead, list_audit_entries_for_task
+from src.dashboard.models.steering_audit import (
+    SteeringAction,
+    SteeringAuditLogRead,
+    list_all_audit_entries,
+    list_audit_entries_for_task,
+)
 from src.db.connection import get_session
 from src.models.taskpacket import TaskPacketStatus
 from src.models.taskpacket_crud import get_by_id
@@ -336,6 +341,29 @@ async def retry_task(
         extra={"task_id": str(task_id), "current_stage": current_stage, "reason": body.reason},
     )
     return SteeringResponse(task_id=task_id, action="retry")
+
+
+@router.get("/steering/audit", response_model=list[SteeringAuditLogRead])
+async def list_all_steering_audit(
+    action: SteeringAction | None = Query(None, description="Filter by steering action type"),  # noqa: B008
+    limit: int = Query(50, ge=1, le=500),  # noqa: B008
+    offset: int = Query(0, ge=0),  # noqa: B008
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+) -> list[SteeringAuditLogRead]:
+    """Return all steering audit log entries across all tasks, newest first.
+
+    Optional ``action`` filter narrows results to a specific action type.
+    Supports pagination via ``limit`` and ``offset``.
+
+    Returns:
+        200 — list of audit entries (empty if none exist)
+    """
+    entries = await list_all_audit_entries(session, action=action, limit=limit, offset=offset)
+    logger.debug(
+        "all steering audit entries fetched",
+        extra={"action_filter": action, "count": len(entries)},
+    )
+    return entries
 
 
 @router.get("/tasks/{task_id}/audit", response_model=list[SteeringAuditLogRead])
