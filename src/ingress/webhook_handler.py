@@ -37,6 +37,8 @@ _REEVALUATION_EVENTS = frozenset({"issues", "issue_comment"})
 _ISSUE_UPDATE_ACTIONS = frozenset({"edited"})
 # Actions on issue_comment that indicate new clarification response
 _COMMENT_TRIGGER_ACTIONS = frozenset({"created"})
+# Epic 38.15: Projects v2 item event type for inbound sync
+_PROJECTS_V2_ITEM_EVENT = "projects_v2_item"
 
 
 def normalize_webhook_payload(
@@ -101,6 +103,23 @@ async def github_webhook(
         # 2. Read raw body for signature validation
         body = await request.body()
         payload = await request.json()
+
+        # 2b. Epic 38.15: Handle projects_v2_item events early — these use the
+        # global webhook_secret (not per-repo) and have no ``repository`` field.
+        if x_github_event == _PROJECTS_V2_ITEM_EVENT:
+            # Validate using global webhook secret for project-level events.
+            global_secret = settings.webhook_secret
+            if global_secret and not validate_signature(body, global_secret, x_hub_signature_256):
+                span.set_attribute(ATTR_OUTCOME, "invalid_signature")
+                return Response(status_code=401, content="Invalid signature")
+
+            from src.github.projects_sync import handle_projects_v2_item_event
+
+            result = await handle_projects_v2_item_event(payload, session)
+            outcome = result.get("outcome", "unknown")
+            span.set_attribute(ATTR_OUTCOME, outcome)
+            logger.info("projects_v2_item event handled: %s", outcome)
+            return Response(status_code=200, content=outcome)
 
         # 3. Determine repo from payload
         repo_data = payload.get("repository", {})

@@ -273,3 +273,27 @@ async def increment_loopback(session: AsyncSession, task_id: UUID) -> int:
     await session.commit()
     await session.refresh(row)
     return row.loopback_count
+
+
+_TERMINAL_STATUSES = frozenset({
+    TaskPacketStatus.PUBLISHED,
+    TaskPacketStatus.FAILED,
+    TaskPacketStatus.REJECTED,
+    TaskPacketStatus.ABORTED,
+})
+
+
+async def list_active(session: AsyncSession) -> list[TaskPacketRow]:
+    """Return all non-terminal TaskPacketRows.
+
+    Epic 38.17 (force sync): Used to enumerate tasks that should be pushed
+    to the GitHub Projects v2 board. Terminal tasks (PUBLISHED, FAILED,
+    REJECTED, ABORTED) are excluded.
+    """
+    result = await session.execute(
+        select(TaskPacketRow).where(
+            TaskPacketRow.status.notin_([s.value for s in _TERMINAL_STATUSES])
+        )
+    )
+    return list(result.scalars().all())
+

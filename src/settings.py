@@ -69,6 +69,11 @@ class Settings(BaseSettings):
     projects_v2_number: int = 0  # Project number (visible in URL)
     projects_v2_token: str = ""  # Installation token (falls back to github_app_id)
 
+    # GitHub Projects v2 sync behaviors (Epic 38.16 — configurable via dashboard)
+    projects_sync_auto_add: bool = True  # Auto-add new TaskPackets to the project board
+    projects_sync_auto_close: bool = False  # Close GitHub issues when pipeline completes
+    projects_sync_respect_manual_overrides: bool = True  # Skip pipeline sync if user manually set a field
+
     # Meridian portfolio review (Epic 29 Sprint 2)
     meridian_portfolio_enabled: bool = False  # Feature flag — off by default (AC 18)
     meridian_portfolio_github_issue: bool = False  # Post review to pinned issue (AC 17)

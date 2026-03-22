@@ -479,3 +479,246 @@ async def list_dashboard_repos(
         ],
         total=len(repos),
     )
+
+
+# ---------------------------------------------------------------------------
+# Projects v2 sync config endpoints (Story 38.16)
+# ---------------------------------------------------------------------------
+
+
+class ProjectsSyncConfig(BaseModel):
+    """Configuration for GitHub Projects v2 sync (Epic 38.16)."""
+
+    enabled: bool = Field(description="Whether Projects v2 sync is active")
+    owner: str = Field(description="GitHub org or user owning the project")
+    project_number: int = Field(ge=0, description="GitHub Projects v2 number")
+    auto_add: bool = Field(description="Auto-add new TaskPackets to the project board")
+    auto_close: bool = Field(description="Close GitHub issues when pipeline completes")
+    respect_manual_overrides: bool = Field(
+        description="Skip sync if user manually changed the field on the board"
+    )
+
+
+class ProjectsSyncStatus(BaseModel):
+    """Current status returned alongside config."""
+
+    token_configured: bool
+    last_sync_error: str | None = None
+
+
+class ProjectsSyncConfigResponse(BaseModel):
+    """Response model for GET /github/projects/config."""
+
+    config: ProjectsSyncConfig
+    status: ProjectsSyncStatus
+
+
+@router.get("/github/projects/config", response_model=ProjectsSyncConfigResponse)
+async def get_projects_sync_config() -> ProjectsSyncConfigResponse:
+    """Return the current GitHub Projects v2 sync configuration.
+
+    Story 38.16: Exposes projects_v2_* settings as a readable API so the
+    frontend config UI can show the current state without restarting the server.
+    """
+    config = ProjectsSyncConfig(
+        enabled=settings.projects_v2_enabled,
+        owner=settings.projects_v2_owner,
+        project_number=settings.projects_v2_number,
+        auto_add=settings.projects_sync_auto_add,
+        auto_close=settings.projects_sync_auto_close,
+        respect_manual_overrides=settings.projects_sync_respect_manual_overrides,
+    )
+    status = ProjectsSyncStatus(
+        token_configured=bool(settings.projects_v2_token or settings.github_app_id),
+    )
+    return ProjectsSyncConfigResponse(config=config, status=status)
+
+
+@router.put("/github/projects/config", response_model=ProjectsSyncConfigResponse)
+async def update_projects_sync_config(
+    body: ProjectsSyncConfig,
+) -> ProjectsSyncConfigResponse:
+    """Update the GitHub Projects v2 sync configuration.
+
+    Story 38.16: Writes updated sync behavior flags to the in-process settings
+    object. Changes apply immediately to all subsequent sync operations without
+    a server restart.
+
+    Note: ``owner``, ``project_number``, and the token are managed via
+    environment variables (THESTUDIO_PROJECTS_V2_*). This endpoint updates the
+    runtime sync behaviour flags only.
+    """
+    settings.projects_v2_enabled = body.enabled
+    settings.projects_sync_auto_add = body.auto_add
+    settings.projects_sync_auto_close = body.auto_close
+    settings.projects_sync_respect_manual_overrides = body.respect_manual_overrides
+
+    logger.info(
+        "projects_sync_config.updated",
+        extra={
+            "enabled": body.enabled,
+            "auto_add": body.auto_add,
+            "auto_close": body.auto_close,
+        },
+    )
+
+    return await get_projects_sync_config()
+
+
+# ---------------------------------------------------------------------------
+# Force sync endpoint (Story 38.17)
+# ---------------------------------------------------------------------------
+
+
+class ForceSyncResponse(BaseModel):
+    """Response from POST /github/projects/sync."""
+
+    triggered: bool
+    active_tasks_found: int
+    errors: list[str] = Field(default_factory=list)
+    message: str
+
+
+async def _get_issue_node_id(
+    token: str,
+    owner: str,
+    repo_name: str,
+    issue_number: int,
+) -> str | None:
+    """Fetch the GitHub node ID for a repo issue via the REST API."""
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as http_client:
+            resp = await http_client.get(
+                f"{GITHUB_API_BASE}/repos/{owner}/{repo_name}/issues/{issue_number}",
+                headers=headers,
+            )
+        if resp.status_code == 200:
+            return resp.json().get("node_id")
+    except Exception:
+        pass
+    return None
+
+
+@router.post("/github/projects/sync", response_model=ForceSyncResponse)
+async def force_projects_sync(
+    session: AsyncSession = Depends(get_session),
+) -> ForceSyncResponse:
+    """Force a full re-sync of all active TaskPackets to the GitHub project board.
+
+    Story 38.17: Re-pushes Status, Trust Tier, and Complexity fields for every
+    non-terminal TaskPacket to the configured GitHub Projects v2 board.
+
+    For each active task the endpoint:
+    1. Resolves the GitHub issue node ID via the REST API.
+    2. Adds the item to the project (idempotent — already-added items are returned).
+    3. Sets Status, Automation Tier, and Complexity fields.
+
+    This is a best-effort operation. Individual item failures are collected and
+    returned in the ``errors`` list; partial success is still reported as
+    triggered=True.
+
+    Returns 503 if Projects v2 sync is not configured.
+    """
+    if not settings.projects_v2_enabled:
+        raise HTTPException(status_code=503, detail="Projects v2 sync is not enabled")
+    if not settings.projects_v2_owner or not settings.projects_v2_number:
+        raise HTTPException(status_code=503, detail="Projects v2 owner/number not configured")
+
+    token = settings.projects_v2_token or settings.github_app_id
+    if not token:
+        raise HTTPException(status_code=503, detail="Projects v2 token not configured")
+
+    from src.models.taskpacket_crud import list_active
+
+    active_tasks = await list_active(session)
+    errors: list[str] = []
+    synced = 0
+
+    from src.github.projects_client import ProjectsV2Client
+    from src.github.projects_mapping import map_complexity, map_status, map_tier
+
+    try:
+        async with ProjectsV2Client(token) as client:
+            await client.ensure_cost_and_complexity_fields(
+                settings.projects_v2_owner,
+                settings.projects_v2_number,
+            )
+            project = await client.find_project(
+                settings.projects_v2_owner,
+                settings.projects_v2_number,
+            )
+
+            for task in active_tasks:
+                try:
+                    # Resolve GitHub issue node ID via REST API
+                    if "/" not in (task.repo or ""):
+                        errors.append(f"task {task.id}: invalid repo format")
+                        continue
+                    repo_owner, repo_name = task.repo.split("/", 1)
+                    node_id = await _get_issue_node_id(token, repo_owner, repo_name, task.issue_id)
+                    if not node_id:
+                        errors.append(f"task {task.id}: could not resolve issue node_id")
+                        continue
+
+                    # Add to project (idempotent)
+                    item_id = await client.add_item(project.project_id, node_id)
+
+                    task_status = task.status.value if hasattr(task.status, "value") else str(task.status)
+                    status_value = map_status(task_status)
+                    if status_value and "Status" in project.fields:
+                        await client.set_field_value(
+                            project.project_id, item_id, project.fields["Status"], status_value,
+                        )
+
+                    if task.task_trust_tier:
+                        tier_raw = task.task_trust_tier.value if hasattr(task.task_trust_tier, "value") else str(task.task_trust_tier)
+                        tier_value = map_tier(tier_raw)
+                        if tier_value and "Automation Tier" in project.fields:
+                            await client.set_field_value(
+                                project.project_id, item_id,
+                                project.fields["Automation Tier"], tier_value,
+                            )
+
+                    if task.complexity_index and isinstance(task.complexity_index, dict):
+                        ci_val = task.complexity_index.get("level", "")
+                        complexity_value = map_complexity(ci_val) if ci_val else None
+                        if complexity_value and "Complexity" in project.fields:
+                            await client.set_field_value(
+                                project.project_id, item_id,
+                                project.fields["Complexity"], complexity_value,
+                            )
+
+                    synced += 1
+
+                except Exception as exc:
+                    errors.append(f"task {task.id}: {exc}")
+                    logger.warning(
+                        "force_sync.task_error",
+                        extra={"task_id": str(task.id), "error": str(exc)},
+                    )
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Projects v2 API error: {exc}") from exc
+
+    logger.info(
+        "projects_sync.force_sync_complete",
+        extra={
+            "active_tasks": len(active_tasks),
+            "synced": synced,
+            "errors": len(errors),
+        },
+    )
+
+    return ForceSyncResponse(
+        triggered=True,
+        active_tasks_found=len(active_tasks),
+        errors=errors,
+        message=(
+            f"Sync complete: {synced} of {len(active_tasks)} tasks synced, "
+            f"{len(errors)} failed."
+        ),
+    )

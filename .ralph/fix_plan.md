@@ -60,7 +60,7 @@
 
 > Decision point after Sprint 3: if <20% of tasks use manual import, defer and proceed to Epic 39.
 
-- [ ] 38.13-38.20: Slice 3 — GitHub Projects Sync (8 stories)
+- [x] 38.13-38.20: Slice 3 — GitHub Projects Sync (8 stories)
 - [ ] 38.21-38.27: Slice 4 — Pipeline Comments + Webhook Bridge (7 stories)
 
 ### Epic 39 — Phase 5: Analytics & Learning (Meridian PASS 2026-03-22, 24 stories)

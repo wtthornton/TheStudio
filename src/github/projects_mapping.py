@@ -2,6 +2,7 @@
 
 Epic 29 AC 2: Maps TaskPacket statuses to Projects v2 Status field values.
 Epic 29 AC 3-4: Maps trust tiers and complexity to Projects v2 fields.
+Epic 38.14: Adds Cost (number) and Complexity (single-select) field mappings.
 
 Architecture reference: docs/epics/epic-29-github-projects-v2-meridian-portfolio-review.md
 """
@@ -37,6 +38,17 @@ RISK_TIER_MAPPING: dict[str, str] = {
     "high": "High",
 }
 
+# Complexity index → Complexity single-select field value (Epic 38.14)
+COMPLEXITY_MAPPING: dict[str, str] = {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+}
+
+# Field names for custom fields added by Epic 38.14
+COST_FIELD_NAME = "Cost"
+COMPLEXITY_FIELD_NAME = "Complexity"
+
 # Required Projects v2 fields for compliance checking (AC 8)
 REQUIRED_FIELDS: frozenset[str] = frozenset({
     "Status",
@@ -64,3 +76,20 @@ def map_tier(trust_tier: str) -> str | None:
 def map_risk(complexity_index: str) -> str | None:
     """Map a complexity index to its Risk Tier field value."""
     return RISK_TIER_MAPPING.get(complexity_index.lower())
+
+
+def map_cost(cost_usd: float) -> str:
+    """Format a cost in USD as a string suitable for a number field.
+
+    Epic 38.14: Cost field stores the float value formatted to 4 decimal places.
+    """
+    return f"{cost_usd:.4f}"
+
+
+def map_complexity(complexity_index: str) -> str | None:
+    """Map a complexity index to its Complexity single-select value.
+
+    Epic 38.14: Separate from Risk Tier — this drives the custom Complexity
+    field that is auto-created on first sync.
+    """
+    return COMPLEXITY_MAPPING.get(complexity_index.lower())

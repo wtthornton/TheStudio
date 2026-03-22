@@ -27,6 +27,11 @@ logger = logging.getLogger(__name__)
 
 GITHUB_GRAPHQL_URL = "https://api.github.com/graphql"
 
+# Mutation ID marker for feedback loop detection (Epic 38.19).
+# Outbound GraphQL mutations include this as clientMutationId so incoming
+# webhooks triggered by our own writes can be detected and skipped.
+THESTUDIO_SYNC_MARKER = "thestudio-sync"
+
 
 class ProjectsV2Error(Exception):
     """Raised when a Projects v2 GraphQL operation fails."""
@@ -246,18 +251,24 @@ class ProjectsV2Client:
 
         For single-select fields, resolves the option ID from the value name.
         For text fields, sets the value directly.
+
+        Includes THESTUDIO_SYNC_MARKER as clientMutationId so inbound
+        webhook events triggered by this write can be detected and skipped
+        (Epic 38.19 feedback loop guard).
         """
         mutation = """
-        mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $value: ProjectV2FieldValue!) {
+        mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $value: ProjectV2FieldValue!, $clientMutationId: String) {
             updateProjectV2ItemFieldValue(input: {
                 projectId: $projectId,
                 itemId: $itemId,
                 fieldId: $fieldId,
-                value: $value
+                value: $value,
+                clientMutationId: $clientMutationId
             }) {
                 projectV2Item {
                     id
                 }
+                clientMutationId
             }
         }
         """
@@ -285,6 +296,7 @@ class ProjectsV2Client:
             "itemId": item_id,
             "fieldId": field.id,
             "value": field_value,
+            "clientMutationId": THESTUDIO_SYNC_MARKER,
         })
         logger.debug(
             "projects_v2.field_updated",
@@ -417,6 +429,142 @@ class ProjectsV2Client:
         """
         project = await self.find_project(owner, project_number)
         return set(project.fields.keys())
+
+    async def create_custom_field(
+        self,
+        project_id: str,
+        name: str,
+        data_type: str,
+        single_select_options: list[str] | None = None,
+    ) -> ProjectField:
+        """Create a custom field on a Projects v2 board.
+
+        Epic 38.14: Net-new GraphQL mutation capability. The client currently
+        reads fields but cannot create them. This adds support for auto-creating
+        Cost (NUMBER) and Complexity (SINGLE_SELECT) fields on first sync.
+
+        Args:
+            project_id: The project node ID.
+            name: The field name (e.g., "Cost", "Complexity").
+            data_type: "NUMBER" or "SINGLE_SELECT".
+            single_select_options: Required for SINGLE_SELECT fields.
+
+        Returns:
+            The newly created ProjectField with its ID.
+        """
+        if data_type == "SINGLE_SELECT":
+            options_input = [{"name": opt, "color": "GRAY", "description": ""} for opt in (single_select_options or [])]
+            mutation = """
+            mutation($projectId: ID!, $name: String!, $options: [ProjectV2SingleSelectFieldOptionInput!]!) {
+                createProjectV2Field(input: {
+                    projectId: $projectId,
+                    dataType: SINGLE_SELECT,
+                    name: $name,
+                    singleSelectOptions: $options
+                }) {
+                    projectV2Field {
+                        ... on ProjectV2SingleSelectField {
+                            id
+                            name
+                            dataType
+                            options {
+                                id
+                                name
+                            }
+                        }
+                    }
+                }
+            }
+            """
+            data = await self._graphql(mutation, {
+                "projectId": project_id,
+                "name": name,
+                "options": options_input,
+            })
+        else:
+            mutation = """
+            mutation($projectId: ID!, $name: String!, $dataType: ProjectV2CustomFieldType!) {
+                createProjectV2Field(input: {
+                    projectId: $projectId,
+                    dataType: $dataType,
+                    name: $name
+                }) {
+                    projectV2Field {
+                        ... on ProjectV2Field {
+                            id
+                            name
+                            dataType
+                        }
+                    }
+                }
+            }
+            """
+            data = await self._graphql(mutation, {
+                "projectId": project_id,
+                "name": name,
+                "dataType": data_type,
+            })
+
+        field_data = data.get("createProjectV2Field", {}).get("projectV2Field", {})
+        if not field_data or "id" not in field_data:
+            raise ProjectsV2Error(f"Failed to create field '{name}': no field data returned")
+
+        options = [FieldOption(id=opt["id"], name=opt["name"]) for opt in field_data.get("options", [])]
+        pf = ProjectField(
+            id=field_data["id"],
+            name=name,
+            data_type=field_data.get("dataType", data_type),
+            options=options,
+        )
+        logger.info(
+            "projects_v2.field_created",
+            extra={"project_id": project_id, "field_name": name, "data_type": data_type},
+        )
+        return pf
+
+    async def ensure_cost_and_complexity_fields(
+        self,
+        owner: str,
+        project_number: int,
+    ) -> None:
+        """Auto-create Cost and Complexity fields if they do not exist.
+
+        Epic 38.14: On first sync, check whether the project has the Cost and
+        Complexity fields. If not, create them. Updates the local cache so
+        subsequent set_field_value calls see the new fields.
+        """
+        from src.github.projects_mapping import (
+            COMPLEXITY_FIELD_NAME,
+            COMPLEXITY_MAPPING,
+            COST_FIELD_NAME,
+        )
+
+        project = await self.find_project(owner, project_number)
+        created_any = False
+
+        if COST_FIELD_NAME not in project.fields:
+            cost_field = await self.create_custom_field(
+                project.project_id, COST_FIELD_NAME, "NUMBER"
+            )
+            project.fields[COST_FIELD_NAME] = cost_field
+            created_any = True
+
+        if COMPLEXITY_FIELD_NAME not in project.fields:
+            options = list(COMPLEXITY_MAPPING.values())
+            complexity_field = await self.create_custom_field(
+                project.project_id,
+                COMPLEXITY_FIELD_NAME,
+                "SINGLE_SELECT",
+                single_select_options=options,
+            )
+            project.fields[COMPLEXITY_FIELD_NAME] = complexity_field
+            created_any = True
+
+        if created_any:
+            logger.info(
+                "projects_v2.custom_fields_ensured",
+                extra={"owner": owner, "project_number": project_number},
+            )
 
     async def validate_token_scopes(self) -> tuple[bool, str | None]:
         """Validate that the token has the required 'project' scope.
