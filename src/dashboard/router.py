@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 
 from src.dashboard.activity import router as activity_router
+from src.dashboard.board import router as board_router
 from src.dashboard.events import router as events_router
 from src.dashboard.gates import router as gates_router
 from src.dashboard.planning import router as planning_router
@@ -14,6 +15,7 @@ router.include_router(tasks_router)
 router.include_router(gates_router)
 router.include_router(activity_router)
 router.include_router(planning_router)
+router.include_router(board_router)
 
 
 @router.get("/health")
