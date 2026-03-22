@@ -114,10 +114,6 @@
           {
             "type": "command",
             "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/tapps-post-edit.ps1"
-          },
-          {
-            "type": "command",
-            "command": "bash .ralph/hooks/on-file-change.sh"
           }
         ]
       },
@@ -138,15 +134,6 @@
             "type": "command",
             "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/tapps-post-report.ps1",
             "timeout": 10
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .ralph/hooks/on-bash-command.sh"
           }
         ]
       }

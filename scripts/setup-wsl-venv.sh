@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Create a Linux-native venv for WSL (do not use Windows .venv from Bash).
-set -euo pipefail
+set -eu
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 

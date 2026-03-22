@@ -33,3 +33,10 @@ pip install -e ".[dev]"
 ```
 
 `.venv-wsl/` is gitignored. Keep using **PowerShell** with `.venv\Scripts\Activate.ps1` on Windows when you work from the Windows side.
+
+## Cursor / VS Code
+
+A **WSL (TheStudio)** terminal profile is configured in `.vscode/settings.json`. Use it to open a WSL bash session that auto-activates `.venv-wsl`:
+
+1. Run `bash scripts/setup-wsl-venv.sh` once (from a WSL terminal) to create `.venv-wsl`.
+2. In the terminal dropdown, choose **WSL (TheStudio)** instead of the default WSL profile.

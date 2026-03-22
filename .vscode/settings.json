@@ -4,5 +4,20 @@
     "titleBar.activeForeground": "#e94560",
     "titleBar.inactiveBackground": "#16213e",
     "titleBar.inactiveForeground": "#a0a0a0"
+  },
+  "terminal.integrated.profiles.windows": {
+    "PowerShell (TheStudio)": {
+      "source": "PowerShell",
+      "args": ["-NoExit", "-Command", "cd C:\\cursor\\TheStudio; if (Test-Path .venv\\Scripts\\Activate.ps1) { .venv\\Scripts\\Activate.ps1 }"]
+    },
+    "WSL (TheStudio)": {
+      "path": "wsl.exe",
+      "args": [
+        "-e",
+        "bash",
+        "-c",
+        "cd /mnt/c/cursor/TheStudio && (test -f .venv-wsl/bin/activate && source .venv-wsl/bin/activate || echo 'Run: bash scripts/setup-wsl-venv.sh') && exec bash"
+      ]
+    }
   }
 }
