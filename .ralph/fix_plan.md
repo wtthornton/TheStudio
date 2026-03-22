@@ -64,7 +64,7 @@
 
 - [x] 36.14a: Routing review setting + Pydantic schema — add `routing_review_enabled: bool = False` to settings.py. Create `src/routing/routing_result.py` with `ExpertSelectionRead` (7 fields: expert_id, expert_class, pattern, reputation_weight/confidence, selection_score, selection_reason) and `RoutingResultRead`. (S, 2h)
 
-- [ ] 36.14b: Temporal wait point after Router — `approve_routing`/`override_routing` signal handlers in pipeline.py. `AWAITING_ROUTING_REVIEW` step enum. 30-day safety timeout. Feature-flagged via `routing_review_enabled` on PipelineInput. Mirrors intent wait point pattern. Depends on 36.14a. (M, 4h)
+- [x] 36.14b: Temporal wait point after Router — `approve_routing`/`override_routing` signal handlers in pipeline.py. `AWAITING_ROUTING_REVIEW` step enum. 30-day safety timeout. Feature-flagged via `routing_review_enabled` on PipelineInput. Mirrors intent wait point pattern. Depends on 36.14a. (M, 4h)
 
 - [ ] 36.14c: Routing review API endpoints + storage — GET `/tasks/{id}/routing`, POST `.../approve`, POST `.../override`. Add `routing_result` JSONB column to TaskPacketRow (Alembic migration). Update `router_activity()` to persist full ConsultPlan data (not reduced RouterOutput) using DB session (following intent_activity pattern). Files: planning.py, activities.py, taskpacket.py, migration. Depends on 36.14a, 36.14b. (M, 4h)
 

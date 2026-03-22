@@ -12,6 +12,7 @@ Steps:
 2.5. Readiness Gate — score issue, hold/escalate/pass (feature-flagged)
 3. Intent Builder — goal, constraints, acceptance criteria
 4. Expert Router — select expert subset
+4.5. Routing Review — human review of expert selection (feature-flagged)
 5. Assembler — merge expert outputs into plan
 5.5. Preflight — plan quality gate (feature-flagged, Epic 28)
 6. Primary Agent — implement changes
@@ -81,6 +82,9 @@ APPROVAL_TIMEOUT = timedelta(days=7)
 # Intent review safety timeout — 30 days, escalates (does NOT auto-approve)
 INTENT_REVIEW_TIMEOUT = timedelta(days=30)
 
+# Routing review safety timeout — 30 days, escalates (does NOT auto-approve)
+ROUTING_REVIEW_TIMEOUT = timedelta(days=30)
+
 # Readiness re-evaluation wait timeout
 READINESS_REEVALUATION_TIMEOUT = timedelta(days=7)
 
@@ -102,6 +106,7 @@ class WorkflowStep(StrEnum):
     VERIFY = "verify"
     QA = "qa"
     AWAITING_INTENT_REVIEW = "awaiting_intent_review"
+    AWAITING_ROUTING_REVIEW = "awaiting_routing_review"
     AWAITING_APPROVAL = "awaiting_approval"
     PUBLISH = "publish"
     PROJECTS_V2_SYNC = "projects_v2_sync"
@@ -165,6 +170,9 @@ STEP_POLICIES: dict[WorkflowStep, StepPolicy] = {
     WorkflowStep.AWAITING_INTENT_REVIEW: StepPolicy(
         timeout=timedelta(days=30), max_retries=0,  # safety timeout, not auto-approve
     ),
+    WorkflowStep.AWAITING_ROUTING_REVIEW: StepPolicy(
+        timeout=timedelta(days=30), max_retries=0,  # safety timeout, not auto-approve
+    ),
     WorkflowStep.AWAITING_APPROVAL: StepPolicy(
         timeout=timedelta(days=7), max_retries=0,  # managed by workflow.wait_condition
     ),
@@ -207,6 +215,7 @@ class PipelineInput:
     project_item_id: str = ""  # Populated after item is added to project
     approval_auto_bypass: bool = False
     intent_review_enabled: bool = False
+    routing_review_enabled: bool = False
 
 
 @dataclass
@@ -229,6 +238,7 @@ class PipelineOutput:
     preflight_approved: bool | None = None
     preflight_summary: str = ""
     intent_approved_by: str | None = None
+    routing_approved_by: str | None = None
 
 
 @workflow.defn
@@ -265,6 +275,12 @@ class TheStudioPipelineWorkflow:
         self._intent_rejected = False
         self._intent_rejected_by: str | None = None
         self._intent_rejection_reason: str | None = None
+        # Routing review state
+        self._routing_approved = False
+        self._routing_approved_by: str | None = None
+        self._routing_rejected = False
+        self._routing_rejected_by: str | None = None
+        self._routing_rejection_reason: str | None = None
 
     @workflow.signal
     async def approve_publish(self, approved_by: str, approval_source: str) -> None:
@@ -304,6 +320,25 @@ class TheStudioPipelineWorkflow:
         self._intent_rejected = True
         self._intent_rejected_by = rejected_by
         self._intent_rejection_reason = reason
+
+    @workflow.signal
+    async def approve_routing(self, approved_by: str) -> None:
+        """Signal handler — developer approves the expert routing selection.
+
+        Idempotent: calling twice is harmless (flag stays True).
+        """
+        self._routing_approved = True
+        self._routing_approved_by = approved_by
+
+    @workflow.signal
+    async def override_routing(self, rejected_by: str, reason: str) -> None:
+        """Signal handler — developer overrides/rejects the expert routing selection.
+
+        Idempotent: calling twice is harmless (flag stays True).
+        """
+        self._routing_rejected = True
+        self._routing_rejected_by = rejected_by
+        self._routing_rejection_reason = reason
 
     @workflow.signal
     async def readiness_cleared(self, issue_title: str = "", issue_body: str = "") -> None:
@@ -516,6 +551,34 @@ class TheStudioPipelineWorkflow:
             retry_policy=router_policy.to_retry_policy(),
         )
         output.step_reached = WorkflowStep.ROUTER
+
+        # Step 4.5: Routing Review (feature-flagged)
+        if params.routing_review_enabled:
+            output.step_reached = WorkflowStep.AWAITING_ROUTING_REVIEW
+
+            try:
+                await workflow.wait_condition(
+                    lambda: self._routing_approved or self._routing_rejected,
+                    timeout=ROUTING_REVIEW_TIMEOUT,
+                )
+            except TimeoutError:
+                # 30-day safety timeout — escalate, do NOT auto-approve
+                workflow.logger.warning(
+                    "routing_review.timeout",
+                    extra={"taskpacket_id": params.taskpacket_id},
+                )
+                output.rejection_reason = "routing_review_timeout"
+                return output
+
+            if self._routing_rejected:
+                output.rejection_reason = (
+                    f"Routing overridden by {self._routing_rejected_by}: "
+                    f"{self._routing_rejection_reason}"
+                )
+                return output
+
+            # Approved — record approver
+            output.routing_approved_by = self._routing_approved_by
 
         # Step 5: Assembler
         assembler_policy = STEP_POLICIES[WorkflowStep.ASSEMBLER]
