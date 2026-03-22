@@ -1,8 +1,9 @@
 """Dashboard task list API — paginated TaskPacket listing with filters."""
 
+import logging
 from datetime import UTC, datetime, timedelta
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -11,8 +12,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.dashboard.events import _verify_token
 from src.db.connection import get_session
-from src.models.taskpacket import TaskPacketRead, TaskPacketRow, TaskPacketStatus
+from src.models.taskpacket import TaskPacketCreate, TaskPacketRead, TaskPacketRow, TaskPacketStatus
+from src.models.taskpacket_crud import create as create_taskpacket
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -29,6 +32,98 @@ class TaskPacketDetail(TaskPacketRead):
 
     cost_by_stage: list[StageCost] = Field(default_factory=list)
     total_cost: float = 0.0
+
+
+class ManualTaskCreate(BaseModel):
+    """Request body for manually creating a task from the dashboard."""
+
+    title: str = Field(..., min_length=1, max_length=500, description="Task title")
+    description: str = Field(..., min_length=1, description="Task description (Markdown)")
+    category: str | None = Field(None, max_length=100, description="Optional category tag")
+    priority: str | None = Field(
+        None, max_length=50, description="Optional priority (e.g. 'high', 'medium', 'low')"
+    )
+    acceptance_criteria: list[str] | None = Field(
+        None, description="Optional acceptance criteria lines"
+    )
+    skip_triage: bool = Field(
+        False, description="When True, bypasses TRIAGE and starts the workflow immediately"
+    )
+
+
+class ManualTaskCreateResponse(BaseModel):
+    """Response after manually creating a task."""
+
+    task: TaskPacketRead
+    workflow_started: bool
+
+
+@router.post("/tasks", status_code=201)
+async def create_manual_task(
+    body: ManualTaskCreate,
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+) -> ManualTaskCreateResponse:
+    """Create a task manually from the planning dashboard.
+
+    When ``skip_triage=False`` (default) the task is created in **TRIAGE** status
+    and must be accepted via ``POST /tasks/{id}/accept`` before the pipeline starts.
+
+    When ``skip_triage=True`` the task is created in **RECEIVED** status and the
+    Temporal workflow is started immediately.
+
+    Optional fields (category, priority, acceptance_criteria) are stored in
+    ``triage_enrichment`` so the triage queue UI can display them.
+    """
+    # Build triage enrichment with optional metadata
+    enrichment: dict[str, Any] = {"source": "manual"}
+    if body.category is not None:
+        enrichment["category"] = body.category
+    if body.priority is not None:
+        enrichment["priority"] = body.priority
+    if body.acceptance_criteria:
+        enrichment["acceptance_criteria"] = [ac for ac in body.acceptance_criteria if ac.strip()]
+
+    # Use a UUID-based delivery_id for uniqueness; repo="__manual__" marks origin
+    delivery_id = f"manual-{uuid4()}"
+    task_data = TaskPacketCreate(
+        repo="__manual__",
+        issue_id=0,
+        delivery_id=delivery_id,
+        source_name="manual",
+        issue_title=body.title,
+        issue_body=body.description,
+        triage_enrichment=enrichment,
+    )
+
+    workflow_started = False
+
+    if body.skip_triage:
+        # Create in RECEIVED and fire the Temporal workflow immediately
+        taskpacket = await create_taskpacket(
+            session, task_data, initial_status=TaskPacketStatus.RECEIVED
+        )
+        try:
+            from src.ingress.workflow_trigger import start_workflow
+
+            await start_workflow(
+                taskpacket.id,
+                taskpacket.correlation_id,
+                repo=taskpacket.repo,
+                issue_title=body.title,
+                issue_body=body.description,
+            )
+            workflow_started = True
+        except Exception:
+            logger.exception(
+                "Failed to start Temporal workflow for manual task %s", taskpacket.id
+            )
+    else:
+        # Create in TRIAGE for human review before pipeline entry
+        taskpacket = await create_taskpacket(
+            session, task_data, initial_status=TaskPacketStatus.TRIAGE
+        )
+
+    return ManualTaskCreateResponse(task=taskpacket, workflow_started=workflow_started)
 
 
 @router.get("/tasks")

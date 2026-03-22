@@ -80,7 +80,7 @@
 
 - [x] 36.16: Backlog board frontend — Kanban view with 6 columns (Triage, Planning, Building, Verify, Done, Rejected). Cards with issue#/title/category/complexity/cost. Click to detail.
 - [x] 36.17: Board state persistence — POST/GET `/api/v1/dashboard/board/preferences`, PostgreSQL table for column width/collapse/sort.
-- [ ] 36.18: Manual task creation endpoint — POST `/api/v1/dashboard/tasks` (title, description, optional category/priority/acceptance_criteria/skip_triage). skip_triage=true starts workflow immediately.
+- [x] 36.18: Manual task creation endpoint — POST `/api/v1/dashboard/tasks` (title, description, optional category/priority/acceptance_criteria/skip_triage). skip_triage=true starts workflow immediately.
 - [ ] 36.19: Manual task creation frontend — modal with title, Markdown description, category/priority dropdowns, acceptance criteria list, skip triage checkbox.
 - [ ] 36.20: Historical comparison query (stretch) — GET `.../comparison` returns stats from similar past TaskPackets. Only when >5 similar tasks exist.
 
