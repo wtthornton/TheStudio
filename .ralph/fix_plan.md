@@ -54,7 +54,7 @@
 
 #### Track A: Complexity Dashboard (frontend-only — all data exists on TaskPacketRead)
 
-- [ ] 36.13a: MetricCard + RiskFlags display components — `MetricCard.tsx` (label, value, icon, color), `RiskFlags.tsx` (checklist from `risk_flags` dict, red/green icons, null="pending"). Pure display, no API calls. (S, 2h)
+- [x] 36.13a: MetricCard + RiskFlags display components — `MetricCard.tsx` (label, value, icon, color), `RiskFlags.tsx` (checklist from `risk_flags` dict, red/green icons, null="pending"). Pure display, no API calls. (S, 2h)
 
 - [ ] 36.13b: FileHeatmap component — `FileHeatmap.tsx` renders `scope` data: file count, component list, file references grouped by directory with intensity bars. Null="Scope: pending". (S, 2h)
 
