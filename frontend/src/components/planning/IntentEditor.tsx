@@ -9,6 +9,7 @@ import IntentSpec from './IntentSpec'
 import IntentEditMode from './IntentEditMode'
 import VersionSelector from './VersionSelector'
 import RefinementModal from './RefinementModal'
+import VersionDiff from './VersionDiff'
 
 interface IntentEditorProps {
   taskId: string
@@ -22,6 +23,10 @@ export default function IntentEditor({ taskId }: IntentEditorProps) {
   // Reject confirmation state
   const [rejectOpen, setRejectOpen] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
+
+  // Diff mode state
+  const [diffMode, setDiffMode] = useState(false)
+  const [diffBaseVersion, setDiffBaseVersion] = useState<number | null>(null)
 
   const {
     current,
@@ -123,11 +128,50 @@ export default function IntentEditor({ taskId }: IntentEditorProps) {
     <div className="flex flex-col gap-4">
       {/* Toolbar: version selector + action buttons */}
       <div className="flex items-center justify-between">
-        <VersionSelector
-          versions={versions}
-          selectedVersion={selectedVersion}
-          onSelect={selectVersion}
-        />
+        <div className="flex items-center gap-2">
+          <VersionSelector
+            versions={versions}
+            selectedVersion={selectedVersion}
+            onSelect={selectVersion}
+          />
+          {versions.length >= 2 && (
+            <button
+              onClick={() => {
+                if (!diffMode && current) {
+                  // Default: compare previous version to current
+                  const currentIdx = versions.findIndex((v) => v.version === current.version)
+                  const prevVersion = currentIdx > 0 ? versions[currentIdx - 1] : versions[0]
+                  setDiffBaseVersion(prevVersion.version)
+                }
+                setDiffMode(!diffMode)
+              }}
+              className={`rounded px-2 py-1 text-xs font-medium ${
+                diffMode
+                  ? 'bg-amber-700 text-amber-100'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+              data-testid="compare-toggle"
+            >
+              {diffMode ? 'Hide Diff' : 'Compare Versions'}
+            </button>
+          )}
+          {diffMode && (
+            <select
+              value={diffBaseVersion ?? ''}
+              onChange={(e) => setDiffBaseVersion(Number(e.target.value))}
+              className="rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs text-gray-300 focus:border-amber-500 focus:outline-none"
+              data-testid="diff-base-selector"
+            >
+              {versions
+                .filter((v) => v.version !== (selectedVersion ?? current?.version))
+                .map((v) => (
+                  <option key={v.version} value={v.version}>
+                    v{v.version} — {v.source}
+                  </option>
+                ))}
+            </select>
+          )}
+        </div>
 
         <div className="flex items-center gap-2">
           <button
@@ -202,9 +246,15 @@ export default function IntentEditor({ taskId }: IntentEditorProps) {
           )}
         </div>
 
-        {/* Right panel: intent spec (view) or edit form */}
+        {/* Right panel: intent spec (view), edit form, or version diff */}
         <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
-          {mode === 'edit' ? (
+          {diffMode && diffBaseVersion != null ? (
+            (() => {
+              const baseSpec = versions.find((v) => v.version === diffBaseVersion)
+              if (!baseSpec) return <IntentSpec spec={current} />
+              return <VersionDiff left={baseSpec} right={current} />
+            })()
+          ) : mode === 'edit' ? (
             <IntentEditMode spec={current} />
           ) : (
             <IntentSpec spec={current} />

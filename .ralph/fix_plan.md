@@ -45,7 +45,7 @@
 
 - [x] 36.11f: Refinement modal — `RefinementModal.tsx` with backdrop overlay, feedback textarea (10-char minimum), submit/cancel/escape. Submit calls `store.requestRefine()`. File: `frontend/src/components/planning/RefinementModal.tsx`, modify IntentEditor.tsx. Depends on 36.11d. (S, 3h)
 
-- [ ] 36.11g: Version diff + component tests — `VersionDiff.tsx` with field-level comparison (Set-based exact match: added=green, removed=red, unchanged=plain). "Compare Versions" toggle in IntentEditor. `IntentEditor.test.tsx` with 15 test cases covering loading, split-pane, sections, source badge, version selector, approve, reject, edit, refine, diff. Files: `frontend/src/components/planning/VersionDiff.tsx`, `__tests__/IntentEditor.test.tsx`, modify IntentEditor.tsx. Depends on 36.11e, 36.11f. (M, 3h)
+- [x] 36.11g: Version diff + component tests — `VersionDiff.tsx` with field-level comparison (Set-based exact match: added=green, removed=red, unchanged=plain). "Compare Versions" toggle in IntentEditor. `IntentEditor.test.tsx` with 15 test cases covering loading, split-pane, sections, source badge, version selector, approve, reject, edit, refine, diff. Files: `frontend/src/components/planning/VersionDiff.tsx`, `__tests__/IntentEditor.test.tsx`, modify IntentEditor.tsx. Depends on 36.11e, 36.11f. (M, 3h)
 
 ### Slice 3: Complexity Dashboard + Expert Routing Preview (Meridian PASS 2026-03-21)
 
