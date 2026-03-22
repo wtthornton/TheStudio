@@ -24,16 +24,14 @@ argument-hint: "[task description override]"
 
 1. Read `.ralph/fix_plan.md` — find the FIRST unchecked `- [ ]` item.
    If `$ARGUMENTS` is provided, use that as the task override instead.
-2. Call `tapps_session_start(quick=true)` to initialize the quality pipeline.
-3. Search the codebase for existing implementations (use ralph-explorer agent if available).
-4. If the task uses an external library API, call `tapps_lookup_docs(library, topic)` first.
-5. Implement the smallest complete change.
-6. For each Python file edited, call `tapps_quick_check(file_path)`.
-7. Run targeted verification (lint/type/test for touched scope).
-8. Update fix_plan.md: `- [ ]` to `- [x]`.
-9. Commit with descriptive message.
-10. Report status in RALPH_STATUS block.
-11. **STOP immediately after the status block.**
+2. Search the codebase for existing implementations (use ralph-explorer agent if available).
+3. If the task uses an external library API, look up docs first.
+4. Implement the smallest complete change.
+5. Run targeted verification (lint/type/test for touched scope).
+6. Update fix_plan.md: `- [ ]` to `- [x]`.
+7. Commit with descriptive message.
+8. Report status in RALPH_STATUS block.
+9. **STOP immediately after the status block.**
 
 ## Constraints
 

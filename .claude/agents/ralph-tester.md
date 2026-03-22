@@ -32,9 +32,14 @@ Detect project type and use appropriate commands:
 - `mypy src/` — type check
 
 ### Node.js/TypeScript
-- `cd frontend && npm test` — run tests
-- `cd frontend && npm run lint` — lint
-- `cd frontend && npm run typecheck` — type check
+- `npm test` — run tests
+- `npm run lint` — lint
+- `npm run typecheck` — type check
+
+### Bash (Ralph itself)
+- `bats tests/unit/` — unit tests
+- `bats tests/integration/` — integration tests
+- `npm test` — all tests via npm
 
 ## Output Format
 
