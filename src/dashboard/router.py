@@ -10,6 +10,7 @@ from src.dashboard.gates import router as gates_router
 from src.dashboard.github_router import router as github_router
 from src.dashboard.notification_router import router as notification_router
 from src.dashboard.planning import router as planning_router
+from src.dashboard.pr_router import router as pr_router
 from src.dashboard.steering import router as steering_router
 from src.dashboard.tasks import router as tasks_router
 from src.dashboard.trust_router import router as trust_router
@@ -26,6 +27,7 @@ router.include_router(trust_router)
 router.include_router(budget_router)
 router.include_router(notification_router)
 router.include_router(github_router)
+router.include_router(pr_router)
 
 
 @router.get("/health")
