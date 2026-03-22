@@ -954,3 +954,50 @@ export async function fetchTaskEvidence(taskId: string): Promise<EvidencePayload
   if (!res.ok) throw new Error(`Failed to fetch evidence: ${res.status}`)
   return res.json()
 }
+
+// --- PR Review API (Epic 38, Stories 38.9–38.11) ---
+
+export interface PRApproveResponse {
+  task_id: string
+  pr_number: number
+  merged: boolean
+  sha: string | null
+  message: string
+}
+
+export interface PRRequestChangesResponse {
+  task_id: string
+  pr_number: number
+  review_id: number | null
+  message: string
+}
+
+/** Approve and merge the PR associated with a TaskPacket. */
+export async function approvePR(taskId: string): Promise<PRApproveResponse> {
+  const url = withToken(`${API_BASE}/tasks/${taskId}/pr/approve`)
+  const res = await fetch(url, { method: 'POST' })
+  if (!res.ok) {
+    const data: { detail?: string } = await res.json().catch(() => ({}))
+    throw new Error(data.detail ?? `Approve failed: ${res.status}`)
+  }
+  return res.json()
+}
+
+/** Post a REQUEST_CHANGES review on the PR associated with a TaskPacket. */
+export async function requestChangesPR(
+  taskId: string,
+  body: string,
+  triggerLoopback = false,
+): Promise<PRRequestChangesResponse> {
+  const url = withToken(`${API_BASE}/tasks/${taskId}/pr/request-changes`)
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ body, trigger_loopback: triggerLoopback }),
+  })
+  if (!res.ok) {
+    const data: { detail?: string } = await res.json().catch(() => ({}))
+    throw new Error(data.detail ?? `Request changes failed: ${res.status}`)
+  }
+  return res.json()
+}

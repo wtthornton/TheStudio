@@ -49,7 +49,7 @@
 - [x] 38.9: `POST /api/v1/dashboard/tasks/:id/pr/approve` — `src/dashboard/pr_router.py` (new). Approve and merge PR via GitHub REST API. Fetch TaskPacket, extract PR number, call merge endpoint. Handle 404, 409 (no PR), GitHub API errors. Tests with mocked GitHub API.
 - [x] 38.10: `POST /api/v1/dashboard/tasks/:id/pr/request-changes` — `src/dashboard/pr_router.py`. Post PR review comment via GitHub API with event="REQUEST_CHANGES". Optionally trigger loopback signal to Temporal workflow. Tests.
 - [x] 38.8: PR Evidence Explorer frontend — `frontend/src/components/pr/EvidenceExplorer.tsx`. Tabbed viewer (Evidence, Diff, Intent, Gates, Cost) consuming `GET /tasks/:id/evidence` JSON. Loading states, error handling, empty states.
-- [ ] 38.11: Reviewer action buttons frontend — `frontend/src/components/pr/ReviewerActions.tsx`. Approve & Merge (with confirmation), Request Changes (with textarea), Close PR, View on GitHub. Success/error feedback.
+- [x] 38.11: Reviewer action buttons frontend — `frontend/src/components/pr/ReviewerActions.tsx`. Approve & Merge (with confirmation), Request Changes (with textarea), Close PR, View on GitHub. Success/error feedback.
 - [ ] 38.12: Integration test — `tests/integration/test_pr_evidence_explorer.py`. Evidence JSON generated for published TaskPacket. Approve action calls GitHub merge API. Request-changes calls review API. Error cases: task not published, task has no PR.
 
 ---
