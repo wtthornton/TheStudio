@@ -31,7 +31,7 @@
 > Epic: `docs/epics/epic-38-phase4-github-integration.md` (Meridian PASS 2026-03-22)
 > Recommended sequence: 38.5 → 38.1 → 38.6 → 38.2 → 38.7 → 38.3 → 38.4
 
-- [ ] 38.5: `EvidencePayload` Pydantic model — `src/publisher/evidence_payload.py`. Structured JSON schema with sections: task_summary, intent, gate_results, cost_breakdown, provenance, files_changed. Unit tests at `tests/publisher/test_evidence_payload.py`.
+- [x] 38.5: `EvidencePayload` Pydantic model — `src/publisher/evidence_payload.py`. Structured JSON schema with sections: task_summary, intent, gate_results, cost_breakdown, provenance, files_changed. Unit tests at `tests/publisher/test_evidence_payload.py`.
 - [ ] 38.1: `GET /api/v1/dashboard/github/issues` — `src/dashboard/github_router.py` (new). List repo issues from GitHub REST API with label/status/search filters, 5-min TTL cache, paginated. Filter out pull requests. Register router in `src/dashboard/router.py`. Tests with mocked GitHub API.
 - [ ] 38.6: `format_evidence_json()` — add to `src/publisher/evidence_comment.py`. Generate `EvidencePayload` alongside existing Markdown evidence comment. Extract data from TaskPacket and related records. Handle missing data gracefully. Tests at `tests/publisher/test_evidence_json.py`.
 - [ ] 38.2: `POST /api/v1/dashboard/github/import` — `src/dashboard/github_router.py`. Batch import selected issues as TaskPackets. Check for duplicates. Set `source_name="dashboard_import"`. Respect triage mode (TRIAGE status if enabled, RECEIVED + start workflow if not). `taskpacket_crud.create()` already accepts `source_name`.
