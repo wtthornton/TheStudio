@@ -299,6 +299,50 @@ async def emit_loopback_resolve(
         logger.debug("Failed to emit loopback.resolve for task=%s", task_id, exc_info=True)
 
 
+async def emit_trust_tier_assigned(
+    task_id: str,
+    tier: str,
+    matched_rule_id: str | None,
+    *,
+    safety_capped: bool = False,
+    reason: str = "",
+) -> None:
+    """Emit a pipeline.trust_tier.assigned event (fire-and-forget).
+
+    Published after the trust rule engine assigns a tier to a TaskPacket at
+    pipeline start. Used by the notification generator and dashboard SSE stream.
+    Failures are logged but never raised — callers must not be blocked.
+    """
+    try:
+        js = await get_pipeline_jetstream()
+        payload = json.dumps(
+            {
+                "type": "pipeline.trust_tier.assigned",
+                "data": {
+                    "task_id": task_id,
+                    "tier": tier,
+                    "matched_rule_id": matched_rule_id,
+                    "safety_capped": safety_capped,
+                    "reason": reason,
+                    "timestamp": datetime.now(UTC).isoformat(),
+                },
+            }
+        ).encode()
+        await js.publish("pipeline.trust_tier.assigned", payload)
+        logger.debug(
+            "Emitted trust_tier.assigned task=%s tier=%s rule=%s",
+            task_id,
+            tier,
+            matched_rule_id,
+        )
+    except Exception:
+        logger.debug(
+            "Failed to emit trust_tier.assigned for task=%s",
+            task_id,
+            exc_info=True,
+        )
+
+
 async def emit_steering_action(
     task_id: str,
     action: str,

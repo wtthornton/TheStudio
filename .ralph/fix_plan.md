@@ -32,7 +32,7 @@
 - [x] 37.13: Task-level trust tier on TaskPacket — add `task_trust_tier` nullable field (observe/suggest/execute). Migration. Do NOT modify `src/reputation/tiers.py`.
 - [x] 37.14: Trust tier rule evaluation engine — `src/dashboard/trust_engine.py`. Evaluate conditions (equals, less_than, greater_than, contains, matches_glob) against TaskPacket metadata. First match wins. Safety bounds override. Default tier fallback.
 - [x] 37.15: Trust tier CRUD API — GET/POST/PUT/DELETE `/trust/rules`, GET/PUT `/trust/safety-bounds`, GET/PUT `/trust/default-tier` in `src/dashboard/trust_router.py`.
-- [ ] 37.16: Trust tier assignment at pipeline start — evaluate rule engine before first activity in Temporal workflow. Set `task_trust_tier` on TaskPacket. Emit `pipeline.trust_tier.assigned` event.
+- [x] 37.16: Trust tier assignment at pipeline start — evaluate rule engine before first activity in Temporal workflow. Set `task_trust_tier` on TaskPacket. Emit `pipeline.trust_tier.assigned` event.
 - [ ] 37.17: Frontend — TrustConfiguration settings panel + RuleBuilder (condition builder, tier assignment, priority, active toggle) + SafetyBoundsPanel + ActiveTierDisplay.
 - [ ] 37.18: Trust tier audit log — log `trust_tier_assigned` / `trust_tier_overridden` to steering audit with matching rule ID, original tier, final tier.
 

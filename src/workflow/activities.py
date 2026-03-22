@@ -312,6 +312,23 @@ class EscalateTimeoutOutput:
 
 
 @dataclass
+class AssignTrustTierInput:
+    """Input for the trust tier assignment activity."""
+
+    taskpacket_id: str
+
+
+@dataclass
+class AssignTrustTierOutput:
+    """Output of the trust tier assignment activity."""
+
+    tier: str = "observe"
+    matched_rule_id: str | None = None
+    safety_capped: bool = False
+    reason: str = ""
+
+
+@dataclass
 class PersistSteeringAuditInput:
     """Input for the steering audit persistence activity."""
 
@@ -1672,3 +1689,87 @@ async def persist_steering_audit_activity(
             "audit_id": audit_id,
         },
     )
+
+
+@activity.defn
+async def assign_trust_tier_activity(
+    params: AssignTrustTierInput,
+) -> AssignTrustTierOutput:
+    """Assign a trust tier to the TaskPacket before pipeline activities begin.
+
+    Loads the TaskPacket from the database, evaluates the trust rule engine
+    (``src/dashboard/trust_engine.py``) against its current fields, persists
+    the resolved tier back to ``task_trust_tier``, and emits a
+    ``pipeline.trust_tier.assigned`` NATS event for the dashboard SSE stream.
+
+    Called as the first step in the pipeline workflow, immediately after context
+    enrichment so that risk_flags and complexity_index are available for rule
+    evaluation.  Falls back to OBSERVE if the TaskPacket cannot be loaded or
+    the engine raises an unexpected error.
+    """
+    import logging
+    from uuid import UUID
+
+    from src.dashboard.events_publisher import emit_trust_tier_assigned
+    from src.dashboard.trust_engine import evaluate_trust_tier
+    from src.db.connection import get_async_session
+    from src.models.taskpacket import TaskTrustTier
+    from src.models.taskpacket_crud import get_by_id
+
+    _logger = logging.getLogger("thestudio.trust_tier")
+
+    taskpacket_id = UUID(params.taskpacket_id)
+
+    try:
+        async with get_async_session() as session:
+            packet = await get_by_id(session, taskpacket_id)
+            if packet is None:
+                _logger.error(
+                    "trust_tier.assign.packet_not_found",
+                    extra={"taskpacket_id": params.taskpacket_id},
+                )
+                return AssignTrustTierOutput(tier="observe", reason="TaskPacket not found")
+
+            result = await evaluate_trust_tier(session, packet)
+
+            # Convert AssignedTier → TaskTrustTier (same string values, different enum class)
+            tier_value: str = result.tier.value
+            packet.task_trust_tier = TaskTrustTier(tier_value)
+            await session.commit()
+
+            matched_rule_str = (
+                str(result.matched_rule_id) if result.matched_rule_id else None
+            )
+            _logger.info(
+                "trust_tier.assigned",
+                extra={
+                    "taskpacket_id": params.taskpacket_id,
+                    "tier": tier_value,
+                    "matched_rule_id": matched_rule_str,
+                    "safety_capped": result.safety_capped,
+                },
+            )
+
+        # Emit NATS event (fire-and-forget, outside DB session)
+        await emit_trust_tier_assigned(
+            task_id=params.taskpacket_id,
+            tier=tier_value,
+            matched_rule_id=matched_rule_str,
+            safety_capped=result.safety_capped,
+            reason=result.reason,
+        )
+
+        return AssignTrustTierOutput(
+            tier=tier_value,
+            matched_rule_id=matched_rule_str,
+            safety_capped=result.safety_capped,
+            reason=result.reason,
+        )
+
+    except Exception:
+        _logger.warning(
+            "trust_tier.assign.failed — falling back to observe",
+            extra={"taskpacket_id": params.taskpacket_id},
+            exc_info=True,
+        )
+        return AssignTrustTierOutput(tier="observe", reason="evaluation error — fallback")

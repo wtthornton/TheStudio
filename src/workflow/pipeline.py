@@ -36,6 +36,8 @@ with workflow.unsafe.imports_passed_through():
         ApprovalRequestInput,
         AssemblerInput,
         AssemblerOutput,
+        AssignTrustTierInput,
+        AssignTrustTierOutput,
         ContextInput,
         ContextOutput,
         EscalateTimeoutInput,
@@ -59,6 +61,7 @@ with workflow.unsafe.imports_passed_through():
         VerifyInput,
         VerifyOutput,
         assembler_activity,
+        assign_trust_tier_activity,
         context_activity,
         escalate_timeout_activity,
         implement_activity,
@@ -756,6 +759,31 @@ class TheStudioPipelineWorkflow:
         # Projects v2: sync ENRICHED → Queued (sets Risk Tier from complexity)
         await self._sync_project_status(
             params, "ENRICHED", complexity_index=context_result.complexity_index
+        )
+
+        # Step 2.3: Trust Tier Assignment — evaluate rule engine against enriched
+        # TaskPacket (risk_flags + complexity_index now populated) and persist
+        # task_trust_tier.  Emits pipeline.trust_tier.assigned for SSE.
+        _trust_tier_policy = StepPolicy(
+            timeout=timedelta(seconds=30),
+            max_retries=2,
+            initial_interval=timedelta(seconds=1),
+            backoff_coefficient=2.0,
+        )
+        _trust_tier_result: AssignTrustTierOutput = await workflow.execute_activity(
+            assign_trust_tier_activity,
+            AssignTrustTierInput(taskpacket_id=params.taskpacket_id),
+            start_to_close_timeout=_trust_tier_policy.timeout,
+            retry_policy=_trust_tier_policy.to_retry_policy(),
+        )
+        workflow.logger.info(
+            "pipeline.trust_tier.assigned",
+            extra={
+                "taskpacket_id": params.taskpacket_id,
+                "tier": _trust_tier_result.tier,
+                "matched_rule_id": _trust_tier_result.matched_rule_id,
+                "safety_capped": _trust_tier_result.safety_capped,
+            },
         )
 
         # Step 2.5: Readiness Gate (feature-flagged) with re-evaluation loop
