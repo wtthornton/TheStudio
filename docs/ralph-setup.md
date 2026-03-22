@@ -389,6 +389,13 @@ cd /mnt/c/cursor/TheStudio
 ralph --live
 ```
 
+> **Windows users:** Ralph requires a Unix shell. From PowerShell or CMD, prefix all commands with `wsl`:
+> ```powershell
+> wsl ralph --live
+> wsl ralph --version
+> ```
+> Running `ralph` directly from a native Windows shell will trigger a "Select an app to open" dialog. Use the `wsl` prefix, or install `ralph.cmd` from the Ralph repo onto your Windows PATH.
+
 ## Files to commit
 
 - `.ralphrc`
