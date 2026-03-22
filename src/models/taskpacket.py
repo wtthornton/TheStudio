@@ -19,6 +19,23 @@ from sqlalchemy.orm import Mapped, mapped_column
 from src.db.base import Base
 
 
+class TaskTrustTier(enum.StrEnum):
+    """Pipeline-level trust tier assigned to a TaskPacket.
+
+    Controls the automation contract for downstream actions:
+      * OBSERVE  — read-only; all actions require human approval
+      * SUGGEST  — agent proposes; human confirms before execution
+      * EXECUTE  — agent executes autonomously within safety bounds
+
+    Assigned by the trust rule engine (src/dashboard/trust_engine.py).
+    Distinct from the expert reputation tiers in src/reputation/tiers.py.
+    """
+
+    OBSERVE = "observe"
+    SUGGEST = "suggest"
+    EXECUTE = "execute"
+
+
 class TaskPacketStatus(enum.StrEnum):
     """Valid status values for a TaskPacket."""
 
@@ -206,6 +223,20 @@ class TaskPacketRow(Base):
     pr_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
     pr_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
+    # Trust tier (Epic 37 — Slice 3: Trust Tier Configuration)
+    # Nullable: set by trust rule engine before first pipeline activity.
+    # Allowed values: observe / suggest / execute  (TaskTrustTier enum).
+    task_trust_tier: Mapped[TaskTrustTier | None] = mapped_column(
+        Enum(
+            TaskTrustTier,
+            name="task_trust_tier_enum",
+            create_constraint=True,
+            values_callable=lambda e: [m.value for m in e],
+        ),
+        nullable=True,
+        default=None,
+    )
+
     # Verification fields (Story 0.6 — Verification Gate)
     loopback_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
@@ -260,5 +291,7 @@ class TaskPacketRead(BaseModel):
     pr_number: int | None = None
     pr_url: str | None = None
     loopback_count: int = 0
+    # Trust tier assigned by the rule engine (Epic 37 — Slice 3)
+    task_trust_tier: TaskTrustTier | None = None
     created_at: datetime
     updated_at: datetime
