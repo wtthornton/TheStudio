@@ -89,6 +89,20 @@ export function BacklogCard({ task, onClick }: BacklogCardProps) {
           <span className="text-xs text-gray-700 italic">pending</span>
         )}
       </div>
+
+      {/* Row 4: PR link (shown when published) */}
+      {task.pr_url && (
+        <a
+          href={task.pr_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="mt-2 inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 truncate"
+          title={`PR #${task.pr_number}`}
+        >
+          PR #{task.pr_number}
+        </a>
+      )}
     </button>
   )
 }

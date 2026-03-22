@@ -156,6 +156,10 @@ class TaskPacketRow(Base):
     # Full ConsultPlan stored as JSONB so the dashboard can render routing decisions.
     routing_result: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
 
+    # Published PR fields — persisted by Publisher after PR creation
+    pr_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    pr_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
     # Verification fields (Story 0.6 — Verification Gate)
     loopback_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
@@ -207,6 +211,8 @@ class TaskPacketRead(BaseModel):
     triage_enrichment: dict[str, Any] | None = None
     rejection_reason: str | None = None
     routing_result: dict[str, Any] | None = None
+    pr_number: int | None = None
+    pr_url: str | None = None
     loopback_count: int = 0
     created_at: datetime
     updated_at: datetime

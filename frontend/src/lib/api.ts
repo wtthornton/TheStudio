@@ -26,6 +26,8 @@ export interface TaskPacketRead {
   scope?: Record<string, unknown> | null
   risk_flags?: Record<string, boolean> | null
   complexity_index?: Record<string, unknown> | null
+  pr_number?: number | null
+  pr_url?: string | null
 }
 
 export interface TaskPacketDetail extends TaskPacketRead {

@@ -252,6 +252,14 @@ async def publish(
                 github, owner, repo_name, pr_number, merge_method
             )
 
+        # Persist PR metadata on TaskPacket
+        from src.models.taskpacket import TaskPacketRow
+
+        tp_row = await session.get(TaskPacketRow, taskpacket_id)
+        if tp_row is not None:
+            tp_row.pr_number = pr_number
+            tp_row.pr_url = pr_url
+
         # Transition status
         await update_status(session, taskpacket_id, TaskPacketStatus.PUBLISHED)
 
