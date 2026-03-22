@@ -442,6 +442,145 @@ export async function fetchTaskAudit(taskId: string, params: {
   return res.json()
 }
 
+// --- Trust Tier API ---
+
+export type ConditionOperator =
+  | 'equals'
+  | 'not_equals'
+  | 'less_than'
+  | 'greater_than'
+  | 'contains'
+  | 'matches_glob'
+
+export type AssignedTier = 'observe' | 'suggest' | 'execute'
+
+export interface RuleCondition {
+  field: string
+  op: ConditionOperator
+  value: string | number | boolean
+}
+
+export interface TrustTierRuleRead {
+  id: string
+  priority: number
+  conditions: RuleCondition[]
+  assigned_tier: AssignedTier
+  active: boolean
+  description: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface TrustTierRuleCreate {
+  priority: number
+  conditions: RuleCondition[]
+  assigned_tier: AssignedTier
+  active: boolean
+  description?: string | null
+}
+
+export interface TrustTierRuleUpdate {
+  priority?: number
+  conditions?: RuleCondition[]
+  assigned_tier?: AssignedTier
+  active?: boolean
+  description?: string | null
+}
+
+export interface SafeBoundsRead {
+  max_auto_merge_lines: number | null
+  max_auto_merge_cost: number | null
+  max_loopbacks: number | null
+  mandatory_review_patterns: string[]
+  default_tier: string
+  updated_at: string
+}
+
+export interface SafeBoundsUpdate {
+  max_auto_merge_lines?: number | null
+  max_auto_merge_cost?: number | null
+  max_loopbacks?: number | null
+  mandatory_review_patterns?: string[] | null
+}
+
+export interface DefaultTierRead {
+  default_tier: AssignedTier
+}
+
+export async function fetchTrustRules(activeOnly = false): Promise<TrustTierRuleRead[]> {
+  const url = withToken(`${API_BASE}/trust/rules${activeOnly ? '?active_only=true' : ''}`)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Failed to fetch trust rules: ${res.status}`)
+  return res.json()
+}
+
+export async function createTrustRule(body: TrustTierRuleCreate): Promise<TrustTierRuleRead> {
+  const url = withToken(`${API_BASE}/trust/rules`)
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) throw new Error(`Failed to create trust rule: ${res.status}`)
+  return res.json()
+}
+
+export async function updateTrustRule(
+  ruleId: string,
+  body: TrustTierRuleUpdate,
+): Promise<TrustTierRuleRead> {
+  const url = withToken(`${API_BASE}/trust/rules/${ruleId}`)
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) throw new Error(`Failed to update trust rule: ${res.status}`)
+  return res.json()
+}
+
+export async function deleteTrustRule(ruleId: string): Promise<void> {
+  const url = withToken(`${API_BASE}/trust/rules/${ruleId}`)
+  const res = await fetch(url, { method: 'DELETE' })
+  if (!res.ok) throw new Error(`Failed to delete trust rule: ${res.status}`)
+}
+
+export async function fetchSafetyBounds(): Promise<SafeBoundsRead> {
+  const url = withToken(`${API_BASE}/trust/safety-bounds`)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Failed to fetch safety bounds: ${res.status}`)
+  return res.json()
+}
+
+export async function updateSafetyBounds(body: SafeBoundsUpdate): Promise<SafeBoundsRead> {
+  const url = withToken(`${API_BASE}/trust/safety-bounds`)
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) throw new Error(`Failed to update safety bounds: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchDefaultTier(): Promise<DefaultTierRead> {
+  const url = withToken(`${API_BASE}/trust/default-tier`)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Failed to fetch default tier: ${res.status}`)
+  return res.json()
+}
+
+export async function updateDefaultTier(tier: AssignedTier): Promise<DefaultTierRead> {
+  const url = withToken(`${API_BASE}/trust/default-tier`)
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ default_tier: tier }),
+  })
+  if (!res.ok) throw new Error(`Failed to update default tier: ${res.status}`)
+  return res.json()
+}
+
 // --- Activity API ---
 
 export async function fetchTaskActivity(taskId: string, params: {

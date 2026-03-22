@@ -19,9 +19,10 @@ import { TriageQueue } from './components/planning/TriageQueue'
 import IntentEditor from './components/planning/IntentEditor'
 import RoutingPreview from './components/planning/RoutingPreview'
 import BacklogBoard from './components/planning/BacklogBoard'
+import { TrustConfiguration } from './components/TrustConfiguration'
 import { PIPELINE_STAGES } from './lib/constants'
 
-type Tab = 'pipeline' | 'triage' | 'intent' | 'routing' | 'board'
+type Tab = 'pipeline' | 'triage' | 'intent' | 'routing' | 'board' | 'trust'
 
 function App() {
   useSSE()
@@ -77,6 +78,12 @@ function App() {
               className={`px-3 py-1.5 text-sm rounded ${activeTab === 'board' ? 'bg-gray-700 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}
             >
               Backlog
+            </button>
+            <button
+              onClick={() => setActiveTab('trust')}
+              className={`px-3 py-1.5 text-sm rounded ${activeTab === 'trust' ? 'bg-gray-700 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}
+            >
+              Trust Tiers
             </button>
           </nav>
         </div>
@@ -166,7 +173,7 @@ function App() {
             </div>
           )}
         </div>
-      ) : (
+      ) : activeTab === 'board' ? (
         /* Backlog Board (Epic 36, Slice 4) */
         <div className="mx-auto max-w-screen-2xl px-6 py-6">
           <BacklogBoard onTaskClick={(taskId) => {
@@ -174,6 +181,9 @@ function App() {
             setActiveTab('pipeline')
           }} />
         </div>
+      ) : (
+        /* Trust Tier Configuration (Epic 37, Slice 3) */
+        <TrustConfiguration />
       )}
     </div>
   )
