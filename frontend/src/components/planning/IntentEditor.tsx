@@ -6,6 +6,7 @@ import { fetchTaskDetail } from '../../lib/api'
 import type { TaskPacketRead } from '../../lib/api'
 import SourceContext from './SourceContext'
 import IntentSpec from './IntentSpec'
+import IntentEditMode from './IntentEditMode'
 import VersionSelector from './VersionSelector'
 
 interface IntentEditorProps {
@@ -198,9 +199,13 @@ export default function IntentEditor({ taskId }: IntentEditorProps) {
           )}
         </div>
 
-        {/* Right panel: intent spec (view mode) */}
+        {/* Right panel: intent spec (view) or edit form */}
         <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
-          <IntentSpec spec={current} />
+          {mode === 'edit' ? (
+            <IntentEditMode spec={current} />
+          ) : (
+            <IntentSpec spec={current} />
+          )}
         </div>
       </div>
     </div>

@@ -41,7 +41,7 @@
 
 - [x] 36.11d: IntentEditor container + routing + action buttons — container component with split-pane layout (`grid-cols-[2fr_3fr]`). Fetches own task via `fetchTaskDetail(taskId)`. Four action buttons (Approve/Edit/Refine/Reject). Reject inline confirmation with reason. VersionSelector dropdown. Loading/error states. Wired into App.tsx as third tab. Files: `frontend/src/components/planning/IntentEditor.tsx`, `VersionSelector.tsx`, modify `App.tsx`. Depends on 36.11a, 36.11b, 36.11c. (M, 4h)
 
-- [ ] 36.11e: Intent edit mode form — `IntentEditMode.tsx` replaces right panel when editing. Goal textarea, constraints/AC/non-goals as editable lists (add/remove items). `EditableList` sub-component. Save calls `store.saveEdit()`, Cancel returns to view mode. Empty strings filtered on save. Save disabled when unchanged. File: `frontend/src/components/planning/IntentEditMode.tsx`, modify IntentEditor.tsx. Depends on 36.11d. (M, 4h)
+- [x] 36.11e: Intent edit mode form — `IntentEditMode.tsx` replaces right panel when editing. Goal textarea, constraints/AC/non-goals as editable lists (add/remove items). `EditableList` sub-component. Save calls `store.saveEdit()`, Cancel returns to view mode. Empty strings filtered on save. Save disabled when unchanged. File: `frontend/src/components/planning/IntentEditMode.tsx`, modify IntentEditor.tsx. Depends on 36.11d. (M, 4h)
 
 - [ ] 36.11f: Refinement modal — `RefinementModal.tsx` with backdrop overlay, feedback textarea (10-char minimum), submit/cancel/escape. Submit calls `store.requestRefine()`. File: `frontend/src/components/planning/RefinementModal.tsx`, modify IntentEditor.tsx. Depends on 36.11d. (S, 3h)
 
