@@ -22,7 +22,7 @@
 - [x] T37.6: Budget router tests — `tests/dashboard/test_budget_router.py`. Test all 6 endpoints (summary, history, by-stage, by-model, config get, config put). Test `window_hours` query param validation.
 - [x] T37.7: Notification generator tests — `tests/dashboard/test_notification_generator.py`. Test all 4 builder functions (`_notification_for_gate_fail`, `_notification_for_cost_update`, `_notification_for_steering_action`, `_notification_for_trust_tier`). Test `_safe_task_id`, `_on_message` dispatch + ack-always, `_BUILDERS` dict.
 - [x] T37.8: Notification router tests — `tests/dashboard/test_notification_router.py`. Test list (with unread_only, type filter, pagination), mark-read (+ 404), mark-all-read.
-- [ ] T37.9: Temporal signal handler tests — `tests/workflow/test_steering_signals.py`. Test all 5 signal handlers (pause_task, resume_task, abort_task, redirect_task, retry_stage). Test state mutations, audit activity calls, idempotency, invalid redirect targets, retry with no current stage. Use `temporalio.testing.WorkflowEnvironment` pattern from `test_approval_wait.py`.
+- [x] T37.9: Temporal signal handler tests — `tests/workflow/test_steering_signals.py`. Test all 5 signal handlers (pause_task, resume_task, abort_task, redirect_task, retry_stage). Test state mutations, audit activity calls, idempotency, invalid redirect targets, retry with no current stage. Use `temporalio.testing.WorkflowEnvironment` pattern from `test_approval_wait.py`.
 
 ---
 
