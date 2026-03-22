@@ -38,6 +38,7 @@ def _make_task(
 
 
 class TestAcceptEndpoint:
+    @patch("src.dashboard.events_publisher.emit_triage_accepted", new_callable=AsyncMock)
     @patch("src.ingress.workflow_trigger.start_workflow", new_callable=AsyncMock)
     @patch("src.dashboard.planning.update_status", new_callable=AsyncMock)
     @patch("src.dashboard.planning.get_by_id", new_callable=AsyncMock)
@@ -46,6 +47,7 @@ class TestAcceptEndpoint:
         mock_get: AsyncMock,
         mock_update: AsyncMock,
         mock_workflow: AsyncMock,
+        mock_emit: AsyncMock,
         client: TestClient,
     ) -> None:
         task_id = uuid4()

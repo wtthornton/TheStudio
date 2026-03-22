@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any
+from typing import Any, ClassVar
 
 import httpx
 
@@ -50,7 +50,7 @@ class ResilientGitHubClient:
     (rate limits and server errors). Auth and validation errors fail immediately.
     """
 
-    RETRYABLE_CLASSES = {"rate_limit", "server"}
+    RETRYABLE_CLASSES: ClassVar[set[str]] = {"rate_limit", "server"}
     MAX_RETRIES = 3
     BASE_DELAY = 1.0  # seconds
 

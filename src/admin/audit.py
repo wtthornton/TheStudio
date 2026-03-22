@@ -13,7 +13,7 @@ Provides:
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
@@ -263,7 +263,7 @@ class AuditService:
             stmt = stmt.where(AuditLogRow.target_id == filters.target_id)
 
         if filters.hours is not None:
-            cutoff = datetime.now(tz=timezone.utc) - timedelta(hours=filters.hours)
+            cutoff = datetime.now(tz=UTC) - timedelta(hours=filters.hours)
             stmt = stmt.where(AuditLogRow.timestamp >= cutoff)
 
         count_stmt = select(func.count()).select_from(stmt.subquery())

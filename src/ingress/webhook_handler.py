@@ -85,7 +85,7 @@ async def github_webhook(
     x_hub_signature_256: str | None = Header(None),
     x_github_delivery: str | None = Header(None),
     x_github_event: str | None = Header(None),
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> Response:
     """Receive GitHub webhook events, validate, dedupe, and start workflow."""
     with tracer.start_as_current_span(SPAN_INGRESS_RECEIVE) as span:

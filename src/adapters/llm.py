@@ -21,10 +21,10 @@ from typing import Any, Protocol
 
 import httpx
 
-_json_loads = _json_module.loads
-
-from src.admin.model_gateway import ModelCallAudit, ProviderConfig
+from src.admin.model_gateway import ProviderConfig
 from src.settings import settings
+
+_json_loads = _json_module.loads
 
 logger = logging.getLogger(__name__)
 
@@ -197,7 +197,7 @@ class AnthropicAdapter:
 
     API_URL = "https://api.anthropic.com/v1/messages"
     API_VERSION = "2023-06-01"
-    TOKEN_REFRESH_URL = "https://console.anthropic.com/api/oauth/token"
+    TOKEN_REFRESH_URL = "https://console.anthropic.com/api/oauth/token"  # noqa: S105
 
     def __init__(
         self,

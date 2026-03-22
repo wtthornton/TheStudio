@@ -11,7 +11,6 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from src.admin.model_gateway import ModelCallAudit, get_model_audit_store
-
 from src.agent.framework import PIPELINE_BUDGET_DEFAULTS, get_budget_for_tier
 
 
@@ -173,7 +172,6 @@ def get_spend_report(window_hours: int = 24) -> SpendReport:
         return SpendReport(window_hours=window_hours)
 
     total_cost = sum(r.cost for r in records)
-    total_tokens_in = sum(r.tokens_in for r in records)
     total_cache_creation = sum(r.cache_creation_tokens for r in records)
     total_cache_read = sum(r.cache_read_tokens for r in records)
 

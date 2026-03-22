@@ -14,13 +14,12 @@ from __future__ import annotations
 import logging
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from src.admin.compliance_scorecard import get_scorecard_service, RepoComplianceData
+from src.admin.compliance_scorecard import RepoComplianceData, get_scorecard_service
 from src.admin.model_gateway import (
     BudgetSpec,
-    ModelCallAudit,
     get_budget_enforcer,
     get_model_audit_store,
     get_model_router,
@@ -66,8 +65,8 @@ async def get_tool_suite(
     catalog = get_tool_catalog()
     try:
         suite = catalog.get_suite(suite_name)
-    except Exception:
-        raise HTTPException(status_code=404, detail=f"Suite '{suite_name}' not found")
+    except Exception as exc:
+        raise HTTPException(status_code=404, detail=f"Suite '{suite_name}' not found") from exc
     return suite.to_dict()
 
 
@@ -84,7 +83,7 @@ async def promote_tool_suite(
     try:
         suite = catalog.promote_suite(suite_name)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     logger.info("Tool suite promoted: %s -> %s by %s", suite_name, suite.approval_status.value, user_id)
     return suite.to_dict()
 
@@ -168,7 +167,7 @@ async def route_model(
             complexity=request.complexity,
         )
     except Exception as e:
-        raise HTTPException(status_code=503, detail=str(e))
+        raise HTTPException(status_code=503, detail=str(e)) from e
     return {
         "selected": provider.to_dict(),
         "resolved_class": provider.model_class.value,
@@ -205,8 +204,8 @@ async def update_provider(
     router = get_model_router()
     try:
         provider = router.set_provider_enabled(provider_id, enabled)
-    except KeyError:
-        raise HTTPException(status_code=404, detail=f"Provider '{provider_id}' not found")
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Provider '{provider_id}' not found") from exc
     logger.info("Provider %s set enabled=%s by %s", provider_id, enabled, user_id)
     return provider.to_dict()
 

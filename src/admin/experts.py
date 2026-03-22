@@ -9,7 +9,7 @@ from typing import Any
 from uuid import UUID
 
 from src.reputation.engine import get_all_weights, query_weights
-from src.reputation.models import DriftSignal, TrustTier, WeightQuery
+from src.reputation.models import TrustTier, WeightQuery
 
 
 @dataclass

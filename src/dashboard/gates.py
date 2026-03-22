@@ -90,7 +90,7 @@ class GateMetrics(BaseModel):
 async def list_task_gates(
     task_id: uuid.UUID,
     token: str | None = Query(None),
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> list[GateEvidenceRead]:
     """Gate results for a specific task, chronological order (S2.B1).
 
@@ -113,7 +113,7 @@ async def list_task_gates(
 async def gate_metrics(
     token: str | None = Query(None),
     window_hours: int = Query(24, ge=1, le=720),
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> GateMetrics:
     """Aggregated gate health metrics over a configurable window (S2.B5).
 
@@ -205,7 +205,7 @@ async def gate_metrics(
 async def get_gate(
     gate_id: uuid.UUID,
     token: str | None = Query(None),
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> GateEvidenceRead:
     """Gate detail with full evidence, checks, and decision rule (S2.B4).
 
@@ -226,10 +226,10 @@ async def list_gates(
     limit: int = Query(20, ge=1, le=100),
     result: str | None = Query(None, description="Filter by 'pass' or 'fail'"),
     stage: str | None = Query(None),
-    task_id: uuid.UUID | None = Query(None),  # noqa: B008
-    created_after: datetime | None = Query(None),  # noqa: B008
-    created_before: datetime | None = Query(None),  # noqa: B008
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    task_id: uuid.UUID | None = Query(None),
+    created_after: datetime | None = Query(None),
+    created_before: datetime | None = Query(None),
+    session: AsyncSession = Depends(get_session),
 ) -> dict:
     """List all gate events with pagination and filters (S2.B3).
 

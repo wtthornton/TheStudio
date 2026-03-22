@@ -1,5 +1,12 @@
 """Dashboard ORM models package."""
 
+from src.dashboard.models.budget_config import (
+    BudgetConfigRead,
+    BudgetConfigRow,
+    BudgetConfigUpdate,
+    get_budget_config,
+    update_budget_config,
+)
 from src.dashboard.models.notification import (
     NotificationCreate,
     NotificationListResponse,
@@ -11,13 +18,6 @@ from src.dashboard.models.notification import (
     list_notifications,
     mark_all_notifications_read,
     mark_notification_read,
-)
-from src.dashboard.models.budget_config import (
-    BudgetConfigRead,
-    BudgetConfigRow,
-    BudgetConfigUpdate,
-    get_budget_config,
-    update_budget_config,
 )
 from src.dashboard.models.steering_audit import (
     SteeringAction,
@@ -48,7 +48,7 @@ from src.dashboard.models.trust_config import (
     update_safety_bounds,
 )
 
-__all__ = [
+__all__ = [  # noqa: RUF022
     # notification
     "NotificationCreate",
     "NotificationListResponse",

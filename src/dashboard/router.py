@@ -7,10 +7,10 @@ from src.dashboard.board import router as board_router
 from src.dashboard.budget_router import router as budget_router
 from src.dashboard.events import router as events_router
 from src.dashboard.gates import router as gates_router
+from src.dashboard.notification_router import router as notification_router
 from src.dashboard.planning import router as planning_router
 from src.dashboard.steering import router as steering_router
 from src.dashboard.tasks import router as tasks_router
-from src.dashboard.notification_router import router as notification_router
 from src.dashboard.trust_router import router as trust_router
 
 router = APIRouter(prefix="/api/v1/dashboard", tags=["dashboard"])

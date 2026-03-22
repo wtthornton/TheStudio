@@ -127,13 +127,13 @@ async def get_budget_by_model(
 
 @router.get("/config", response_model=BudgetConfigRead)
 async def get_config(
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> BudgetConfigRead:
     """Return the current budget configuration.
 
     Returns the singleton budget configuration row, creating it with safe
     defaults if it does not yet exist.  All threshold values are in USD.
-    ``downgrade_threshold_percent`` is in the range 0–100.
+    ``downgrade_threshold_percent`` is in the range 0-100.
     """
     async with session.begin():
         return await get_budget_config(session)
@@ -142,7 +142,7 @@ async def get_config(
 @router.put("/config", response_model=BudgetConfigRead)
 async def put_config(
     payload: BudgetConfigUpdate,
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> BudgetConfigRead:
     """Update the budget configuration (partial update — all fields optional).
 

@@ -6,12 +6,11 @@ Implements ToolCatalogProtocol using SQLAlchemy async sessions.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.admin.tool_catalog import (
+    _PROMOTION_ORDER,
     ApprovalStatus,
     CapabilityCategory,
     InvalidPromotionError,
@@ -19,7 +18,6 @@ from src.admin.tool_catalog import (
     SuiteNotFoundError,
     ToolEntry,
     ToolSuite,
-    _PROMOTION_ORDER,
 )
 from src.db.models import ToolEntryRow, ToolSuiteRow
 

@@ -26,7 +26,6 @@ from src.admin.rbac import get_current_user_id
 from src.approval.chat_models import MessageRole
 from src.db.connection import get_session
 from src.observability.conventions import (
-    ATTR_CORRELATION_ID,
     ATTR_TASKPACKET_ID,
     SPAN_APPROVAL_CHAT_MESSAGE,
     SPAN_APPROVAL_LLM_RESPONSE,

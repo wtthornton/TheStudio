@@ -11,12 +11,10 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from src.outcome.ingestor import get_signals
-from src.outcome.models import OutcomeType, SignalEvent
+from src.outcome.models import SignalEvent
 from src.outcome.reopen import (
-    ReopenClassification,
     get_reopen_outcomes,
 )
-
 
 # Maps signal events to loopback categories
 LOOPBACK_CATEGORIES = {

@@ -1473,9 +1473,9 @@ async def partial_settings_budget_controls(request: Request) -> Response:
 @ui_router.post("/partials/settings/budget-controls", response_class=HTMLResponse)
 async def partial_settings_budget_controls_update(request: Request) -> Response:
     """Update budget tier caps and re-render (Story 32.7)."""
-    from src.admin.audit import AuditEventType, get_audit_service
-
     import json as _json
+
+    from src.admin.audit import AuditEventType, get_audit_service
 
     form = await request.form()
     user_id = request.state.user_id

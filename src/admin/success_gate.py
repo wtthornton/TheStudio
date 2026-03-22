@@ -9,7 +9,6 @@ from typing import Any
 
 from src.admin.metrics import get_metrics_service
 
-
 DEFAULT_THRESHOLD = 0.60
 DEFAULT_MIN_SAMPLES = 10
 DEFAULT_WINDOW_DAYS = 28

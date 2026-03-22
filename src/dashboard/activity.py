@@ -84,7 +84,7 @@ async def list_task_activity(
     activity_type: str | None = Query(None, description="Filter by activity type"),
     subphase: str | None = Query(None, description="Filter by subphase"),
     order: str = Query("oldest", description="'oldest' (asc) or 'newest' (desc)"),
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> dict:
     """Paginated activity log for a specific task (S3.B3).
 

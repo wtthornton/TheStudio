@@ -23,8 +23,8 @@ from src.compliance.promotion import (
 from src.repo.repo_profile import RepoProfileCreate, RepoStatus, RepoTier
 
 if TYPE_CHECKING:
-    from src.repo.repository import RepoRepository
     from src.repo.repo_profile import RepoProfileRow
+    from src.repo.repository import RepoRepository
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/repos", tags=["compliance"])

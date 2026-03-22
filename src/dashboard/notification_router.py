@@ -39,7 +39,7 @@ router = APIRouter(prefix="/notifications", tags=["notifications"])
 @router.get("", response_model=NotificationListResponse)
 async def get_notifications(
     unread_only: bool = Query(False, description="Return only unread notifications"),
-    type: NotificationType | None = Query(
+    notification_type: NotificationType | None = Query(
         None, description="Filter by notification type"
     ),
     limit: int = Query(50, ge=1, le=200, description="Page size"),
@@ -55,7 +55,7 @@ async def get_notifications(
     return await list_notifications(
         session,
         unread_only=unread_only,
-        type_filter=type,
+        type_filter=notification_type,
         limit=limit,
         offset=offset,
     )

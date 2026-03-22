@@ -11,6 +11,7 @@ Architecture reference: thestudioarc/15-system-runtime-flow.md (runtime steps)
 """
 
 from dataclasses import dataclass, field
+from datetime import UTC
 
 from temporalio import activity
 
@@ -1019,7 +1020,7 @@ Generate the file changes to satisfy this issue."""
     # Strip markdown fences if present
     if raw.startswith("```"):
         lines = raw.split("\n")
-        lines = [l for l in lines if not l.strip().startswith("```")]
+        lines = [line for line in lines if not line.strip().startswith("```")]
         raw = "\n".join(lines)
 
     try:
@@ -1332,7 +1333,7 @@ async def _publish_real(
         for target_status in status_chain:
             try:
                 await update_status(session, taskpacket_id, target_status)
-            except Exception:
+            except Exception:  # noqa: S110
                 pass  # Already in this or later status
 
         # Load TaskPacket for timing data
@@ -1751,7 +1752,7 @@ async def assign_trust_tier_activity(
             )
 
         # Persist steering audit entry for trust tier assignment/override
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         from src.dashboard.models.steering_audit import (
             SteeringAction,
@@ -1782,7 +1783,7 @@ async def assign_trust_tier_activity(
                     from_stage=audit_from,
                     to_stage=tier_value,
                     reason="; ".join(audit_reason_parts),
-                    timestamp=datetime.now(tz=timezone.utc),
+                    timestamp=datetime.now(tz=UTC),
                     actor="system",
                 ),
             )

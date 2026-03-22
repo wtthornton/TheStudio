@@ -70,10 +70,6 @@ class GitHubChannel(NotificationChannel):
         approved_by: str,
     ) -> bool:
         """Post an approval confirmation comment."""
-        comment = (
-            f"**Approved** by `{approved_by}` via TheStudio review interface.\n\n"
-            f"The pipeline will proceed with publishing."
-        )
         logger.info(
             "approval.channel.github.approved",
             extra={
@@ -182,7 +178,7 @@ This task is awaiting human approval before the pipeline proceeds.
 ### Instructions
 
 1. Review the changes in this PR
-2. Use the review interface to ask questions about the changes{review_link and " (link above)" or ""}
+2. Use the review interface to ask questions about the changes{(review_link and " (link above)") or ""}
 3. **Approve** via `POST /api/tasks/{tp.taskpacket_id}/approve` or the review UI
 4. **Reject** via `POST /api/tasks/{tp.taskpacket_id}/reject` with a reason
 

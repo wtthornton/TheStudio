@@ -61,7 +61,7 @@ class ManualTaskCreateResponse(BaseModel):
 @router.post("/tasks", status_code=201)
 async def create_manual_task(
     body: ManualTaskCreate,
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> ManualTaskCreateResponse:
     """Create a task manually from the planning dashboard.
 
@@ -135,7 +135,7 @@ async def list_tasks(
     created_after: datetime | None = None,
     created_before: datetime | None = None,
     repo: str | None = None,
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> dict:
     """List TaskPackets with pagination and optional filters.
 
@@ -205,7 +205,7 @@ def _extract_cost_by_stage(stage_timings: dict[str, Any] | None) -> list[StageCo
 async def get_task(
     task_id: UUID,
     token: str | None = Query(None),
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> TaskPacketDetail:
     """Get a single TaskPacket by ID with stage timestamps and cost breakdown.
 
@@ -445,7 +445,7 @@ def _build_comparison(rows: list[Any]) -> HistoricalComparisonResponse:
 async def historical_comparison(
     task_id: UUID,
     token: str | None = Query(None),
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> HistoricalComparisonResponse:
     """Return historical stats from similar past TaskPackets.
 
@@ -522,7 +522,7 @@ async def historical_comparison(
 async def stage_metrics(
     token: str | None = Query(None),
     window_hours: int = Query(24, ge=1, le=720),
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> StageMetricsResponse:
     """Per-stage pass rate, avg duration, and throughput over a configurable window.
 

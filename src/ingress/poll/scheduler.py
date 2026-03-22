@@ -6,7 +6,7 @@ Supports per-repo poll intervals and exponential backoff on rate limits.
 
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 
@@ -61,7 +61,7 @@ def _repo_due_for_poll(repo: RepoProfileRow) -> bool:
         return True
 
     interval_minutes = repo.poll_interval_minutes or settings.intake_poll_interval_minutes
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     elapsed = (now - repo.poll_last_run_at).total_seconds()
     return elapsed >= interval_minutes * 60
 
@@ -126,7 +126,7 @@ async def run_poll_cycle() -> tuple[int, int, bool]:
                     latest = max(i.get("updated_at", "") for i in result.issues)
                     if latest:
                         repo.poll_since = latest
-                repo.poll_last_run_at = datetime.now(timezone.utc)
+                repo.poll_last_run_at = datetime.now(UTC)
                 await session.commit()
 
                 repos_polled += 1

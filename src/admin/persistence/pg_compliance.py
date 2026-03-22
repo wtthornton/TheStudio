@@ -6,9 +6,6 @@ Implements ComplianceScorecardProtocol using the existing compliance_results tab
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.admin.compliance_scorecard import (

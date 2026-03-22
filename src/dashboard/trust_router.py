@@ -57,7 +57,7 @@ router = APIRouter(prefix="/trust", tags=["trust"])
 @router.get("/rules", response_model=list[TrustTierRuleRead])
 async def list_trust_rules(
     active_only: bool = Query(False, description="When true, return only active rules"),
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> list[TrustTierRuleRead]:
     """Return all trust-tier rules ordered by priority ascending.
 
@@ -72,7 +72,7 @@ async def list_trust_rules(
 @router.post("/rules", response_model=TrustTierRuleRead, status_code=201)
 async def create_trust_rule(
     body: TrustTierRuleCreate,
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> TrustTierRuleRead:
     """Create a new trust-tier rule.
 
@@ -92,7 +92,7 @@ async def create_trust_rule(
 @router.get("/rules/{rule_id}", response_model=TrustTierRuleRead)
 async def get_trust_rule(
     rule_id: UUID,
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> TrustTierRuleRead:
     """Fetch a single trust-tier rule by ID.
 
@@ -110,7 +110,7 @@ async def get_trust_rule(
 async def update_trust_rule(
     rule_id: UUID,
     body: TrustTierRuleUpdate,
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> TrustTierRuleRead:
     """Partially update a trust-tier rule.
 
@@ -133,7 +133,7 @@ async def update_trust_rule(
 @router.delete("/rules/{rule_id}", status_code=204)
 async def delete_trust_rule(
     rule_id: UUID,
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> None:
     """Delete a trust-tier rule by ID.
 
@@ -155,7 +155,7 @@ async def delete_trust_rule(
 
 @router.get("/safety-bounds", response_model=SafeBoundsRead)
 async def get_trust_safety_bounds(
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> SafeBoundsRead:
     """Return the safety bounds singleton.
 
@@ -171,7 +171,7 @@ async def get_trust_safety_bounds(
 @router.put("/safety-bounds", response_model=SafeBoundsRead)
 async def update_trust_safety_bounds(
     body: SafeBoundsUpdate,
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> SafeBoundsRead:
     """Update the safety bounds singleton.
 
@@ -194,7 +194,7 @@ async def update_trust_safety_bounds(
 
 @router.get("/default-tier", response_model=DefaultTierRead)
 async def get_trust_default_tier(
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> DefaultTierRead:
     """Return the default trust tier used when no rule matches.
 
@@ -207,7 +207,7 @@ async def get_trust_default_tier(
 @router.put("/default-tier", response_model=DefaultTierRead)
 async def set_trust_default_tier(
     body: DefaultTierUpdate,
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> DefaultTierRead:
     """Set the default trust tier fallback.
 

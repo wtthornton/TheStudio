@@ -37,7 +37,7 @@ from src.dashboard.models.trust_config import (
 )
 from src.models.taskpacket import TaskPacketRow
 
-__all__ = ["evaluate_trust_tier", "EvaluationResult"]
+__all__ = ["EvaluationResult", "evaluate_trust_tier"]
 
 log = logging.getLogger(__name__)
 

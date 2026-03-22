@@ -6,6 +6,7 @@ directly (no Temporal server required).
 """
 
 from datetime import timedelta
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -33,6 +34,22 @@ from src.workflow.pipeline import (
     StepPolicy,
     WorkflowStep,
 )
+
+@pytest.fixture(autouse=True)
+def _mock_nats_emit():
+    """Prevent NATS connection attempts in unit tests (no JetStream available)."""
+    with (
+        patch(
+            "src.dashboard.events_publisher.emit_stage_enter",
+            new_callable=AsyncMock,
+        ),
+        patch(
+            "src.dashboard.events_publisher.emit_stage_exit",
+            new_callable=AsyncMock,
+        ),
+    ):
+        yield
+
 
 # --- Step Policy Configuration Tests ---
 
@@ -314,8 +331,8 @@ class TestRouterActivity:
 
 class TestWorkflowStep:
     def test_all_steps(self) -> None:
-        """Workflow has 13 steps (9 core + readiness + preflight + approval wait + projects_v2_sync)."""
-        assert len(WorkflowStep) == 13
+        """Workflow has 15 steps (9 core + readiness + preflight + 2 review waits + approval wait + projects_v2_sync)."""
+        assert len(WorkflowStep) == 15
 
     def test_step_order(self) -> None:
         steps = list(WorkflowStep)
@@ -329,6 +346,8 @@ class TestWorkflowStep:
         assert steps[7] == WorkflowStep.IMPLEMENT
         assert steps[8] == WorkflowStep.VERIFY
         assert steps[9] == WorkflowStep.QA
-        assert steps[10] == WorkflowStep.AWAITING_APPROVAL
-        assert steps[11] == WorkflowStep.PUBLISH
-        assert steps[12] == WorkflowStep.PROJECTS_V2_SYNC
+        assert steps[10] == WorkflowStep.AWAITING_INTENT_REVIEW
+        assert steps[11] == WorkflowStep.AWAITING_ROUTING_REVIEW
+        assert steps[12] == WorkflowStep.AWAITING_APPROVAL
+        assert steps[13] == WorkflowStep.PUBLISH
+        assert steps[14] == WorkflowStep.PROJECTS_V2_SYNC

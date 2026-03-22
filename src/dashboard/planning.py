@@ -161,7 +161,7 @@ async def _get_triage_task(
 @router.post("/tasks/{task_id}/accept")
 async def accept_task(
     task_id: UUID,
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> AcceptResponse:
     """Accept a triaged task: transition TRIAGE -> RECEIVED, start workflow."""
     await _get_triage_task(session, task_id)
@@ -200,7 +200,7 @@ async def accept_task(
 async def reject_task(
     task_id: UUID,
     body: RejectRequest,
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> TaskPacketRead:
     """Reject a triaged task with a reason."""
     await _get_triage_task(session, task_id)
@@ -228,7 +228,7 @@ async def reject_task(
 async def edit_triage_task(
     task_id: UUID,
     body: TriageEditRequest,
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> TaskPacketRead:
     """Edit a triaged task before accepting."""
     await _get_triage_task(session, task_id)
@@ -258,7 +258,7 @@ async def edit_triage_task(
 @router.get("/tasks/{task_id}/intent")
 async def get_intent(
     task_id: UUID,
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> IntentResponse:
     """Get the current intent spec and version history for a task."""
     await _get_task(session, task_id)
@@ -274,7 +274,7 @@ async def get_intent(
 @router.post("/tasks/{task_id}/intent/approve")
 async def approve_intent(
     task_id: UUID,
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> IntentActionResponse:
     """Approve the intent spec — sends approve_intent signal to Temporal."""
     await _get_intent_built_task(session, task_id)
@@ -292,7 +292,7 @@ async def approve_intent(
 async def reject_intent(
     task_id: UUID,
     body: IntentRejectRequest,
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> IntentActionResponse:
     """Reject the intent spec — sends reject_intent signal to Temporal."""
     await _get_intent_built_task(session, task_id)
@@ -310,7 +310,7 @@ async def reject_intent(
 async def edit_intent(
     task_id: UUID,
     body: IntentEditRequest,
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> IntentSpecRead:
     """Edit the intent spec — creates a new version with source=developer."""
     await _get_intent_built_task(session, task_id)
@@ -338,7 +338,7 @@ async def edit_intent(
 async def refine_intent_endpoint(
     task_id: UUID,
     body: IntentRefineRequest,
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> IntentSpecRead:
     """Request intent refinement — constructs RefinementTrigger and creates new version."""
     await _get_intent_built_task(session, task_id)
@@ -370,7 +370,7 @@ class RoutingActionResponse(BaseModel):
 @router.get("/tasks/{task_id}/routing")
 async def get_routing(
     task_id: UUID,
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> RoutingResultRead:
     """Get the current routing result (ConsultPlan) for a task.
 
@@ -410,7 +410,7 @@ async def get_routing(
 @router.post("/tasks/{task_id}/routing/approve")
 async def approve_routing_endpoint(
     task_id: UUID,
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> RoutingActionResponse:
     """Approve the routing plan — sends approve_routing signal to Temporal.
 
@@ -432,7 +432,7 @@ async def approve_routing_endpoint(
 async def override_routing_endpoint(
     task_id: UUID,
     body: RoutingOverrideRequest,
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> RoutingActionResponse:
     """Override the routing plan — sends override_routing signal to Temporal.
 

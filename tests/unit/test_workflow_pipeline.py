@@ -5,11 +5,15 @@ and QA gates, rejection handling, and step_reached tracking.
 All Temporal activity calls are mocked — no Temporal server required.
 """
 
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, patch
+
+import pytest
 
 from src.workflow.activities import (
     ApprovalRequestOutput,
     AssemblerOutput,
+    AssignTrustTierOutput,
     ContextOutput,
     ImplementOutput,
     IntakeOutput,
@@ -26,31 +30,48 @@ from src.workflow.pipeline import (
     WorkflowStep,
 )
 
+
+# --- Module-level fixture: suppress workflow.logger runtime check ---
+
+
+@pytest.fixture(autouse=True)
+def _patch_workflow_logger():
+    """Patch temporalio.workflow.logger to avoid _NotInWorkflowEventLoopError.
+
+    workflow.logger internally calls _Runtime.current() which raises
+    _NotInWorkflowEventLoopError when used outside the Temporal event loop.
+    Unit tests drive the workflow directly with AsyncMock-patched activities,
+    so we suppress the logger to keep tests self-contained.
+    """
+    with patch("temporalio.workflow.logger"):
+        yield
+
+
 # --- Helpers ---
 
 
 def _default_params(**overrides) -> PipelineInput:
     """Build a PipelineInput with sensible defaults, accepting overrides."""
-    defaults = dict(
-        taskpacket_id="tp-001",
-        correlation_id="corr-001",
-        labels=["agent:run"],
-        repo="acme/widgets",
-        repo_registered=True,
-        repo_paused=False,
-        has_active_workflow=False,
-        event_id="evt-001",
-        issue_title="Fix the widget",
-        issue_body="The widget is broken",
-        repo_path="/tmp/repo",
-        repo_tier="observe",
-    )
+    defaults = {
+        "taskpacket_id": "tp-001",
+        "correlation_id": "corr-001",
+        "labels": ["agent:run"],
+        "repo": "acme/widgets",
+        "repo_registered": True,
+        "repo_paused": False,
+        "has_active_workflow": False,
+        "event_id": "evt-001",
+        "issue_title": "Fix the widget",
+        "issue_body": "The widget is broken",
+        "repo_path": "/tmp/repo",
+        "repo_tier": "observe",
+    }
     defaults.update(overrides)
     return PipelineInput(**defaults)
 
 
 def _intake_accepted(**overrides) -> IntakeOutput:
-    defaults = dict(accepted=True, base_role="developer", overlays=[])
+    defaults = {"accepted": True, "base_role": "developer", "overlays": []}
     defaults.update(overrides)
     return IntakeOutput(**defaults)
 
@@ -60,18 +81,24 @@ def _intake_rejected(reason: str = "Not eligible") -> IntakeOutput:
 
 
 def _context_output(**overrides) -> ContextOutput:
-    defaults = dict(scope={}, risk_flags={}, complexity_index="low", context_packs=[])
+    defaults = {"scope": {}, "risk_flags": {}, "complexity_index": "low", "context_packs": []}
     defaults.update(overrides)
     return ContextOutput(**defaults)
 
 
+def _assign_trust_tier_output(**overrides) -> AssignTrustTierOutput:
+    defaults = {"tier": "observe", "matched_rule_id": None, "safety_capped": False, "reason": "default"}
+    defaults.update(overrides)
+    return AssignTrustTierOutput(**defaults)
+
+
 def _intent_output(**overrides) -> IntentOutput:
-    defaults = dict(
-        intent_spec_id="int-001",
-        version=1,
-        goal="Fix the widget",
-        acceptance_criteria=["Widget works"],
-    )
+    defaults = {
+        "intent_spec_id": "int-001",
+        "version": 1,
+        "goal": "Fix the widget",
+        "acceptance_criteria": ["Widget works"],
+    }
     defaults.update(overrides)
     return IntentOutput(**defaults)
 
@@ -81,22 +108,22 @@ _ROUTER_OUTPUT = object()
 
 
 def _assembler_output(**overrides) -> AssemblerOutput:
-    defaults = dict(
-        plan_steps=["implement_changes"],
-        qa_handoff=[{"check": "widget_works"}],
-        provenance={"taskpacket_id": "tp-001"},
-    )
+    defaults = {
+        "plan_steps": ["implement_changes"],
+        "qa_handoff": [{"check": "widget_works"}],
+        "provenance": {"taskpacket_id": "tp-001"},
+    }
     defaults.update(overrides)
     return AssemblerOutput(**defaults)
 
 
 def _impl_output(**overrides) -> ImplementOutput:
-    defaults = dict(
-        taskpacket_id="tp-001",
-        intent_version=1,
-        files_changed=["src/widget.py"],
-        agent_summary="Fixed widget",
-    )
+    defaults = {
+        "taskpacket_id": "tp-001",
+        "intent_version": 1,
+        "files_changed": ["src/widget.py"],
+        "agent_summary": "Fixed widget",
+    }
     defaults.update(overrides)
     return ImplementOutput(**defaults)
 
@@ -118,12 +145,12 @@ def _qa_failed() -> QAOutput:
 
 
 def _publish_output(**overrides) -> PublishOutput:
-    defaults = dict(
-        pr_number=42,
-        pr_url="https://github.com/acme/widgets/pull/42",
-        created=True,
-        marked_ready=True,
-    )
+    defaults = {
+        "pr_number": 42,
+        "pr_url": "https://github.com/acme/widgets/pull/42",
+        "created": True,
+        "marked_ready": True,
+    }
     defaults.update(overrides)
     return PublishOutput(**defaults)
 
@@ -139,6 +166,7 @@ class TestHappyPath:
         activity_returns = [
             _intake_accepted(),
             _context_output(),
+            _assign_trust_tier_output(),
             _intent_output(),
             _ROUTER_OUTPUT,
             _assembler_output(),
@@ -170,6 +198,7 @@ class TestHappyPath:
         activity_returns = [
             _intake_accepted(),
             _context_output(),
+            _assign_trust_tier_output(),
             _intent_output(),
             _ROUTER_OUTPUT,
             _assembler_output(),
@@ -226,6 +255,7 @@ class TestIntakeRejection:
         activity_returns = [
             _intake_accepted(base_role=None),  # None base_role
             _context_output(),
+            _assign_trust_tier_output(),
             _intent_output(),
             _ROUTER_OUTPUT,
             _assembler_output(),
@@ -254,6 +284,7 @@ class TestVerificationLoopback:
         activity_returns = [
             _intake_accepted(),
             _context_output(),
+            _assign_trust_tier_output(),
             _intent_output(),
             _ROUTER_OUTPUT,
             _assembler_output(),
@@ -284,6 +315,7 @@ class TestVerificationLoopback:
         activity_returns = [
             _intake_accepted(),
             _context_output(),
+            _assign_trust_tier_output(),
             _intent_output(),
             _ROUTER_OUTPUT,
             _assembler_output(),
@@ -309,6 +341,7 @@ class TestVerificationLoopback:
         activity_returns = [
             _intake_accepted(),
             _context_output(),
+            _assign_trust_tier_output(),
             _intent_output(),
             _ROUTER_OUTPUT,
             _assembler_output(),
@@ -333,6 +366,7 @@ class TestVerificationLoopback:
         activity_returns = [
             _intake_accepted(),
             _context_output(),
+            _assign_trust_tier_output(),
             _intent_output(),
             _ROUTER_OUTPUT,
             _assembler_output(),
@@ -365,6 +399,7 @@ class TestQALoopback:
         activity_returns = [
             _intake_accepted(),
             _context_output(),
+            _assign_trust_tier_output(),
             _intent_output(),
             _ROUTER_OUTPUT,
             _assembler_output(),
@@ -396,6 +431,7 @@ class TestQALoopback:
         activity_returns = [
             _intake_accepted(),
             _context_output(),
+            _assign_trust_tier_output(),
             _intent_output(),
             _ROUTER_OUTPUT,
             _assembler_output(),
@@ -425,6 +461,7 @@ class TestQALoopback:
         activity_returns = [
             _intake_accepted(),
             _context_output(),
+            _assign_trust_tier_output(),
             _intent_output(),
             _ROUTER_OUTPUT,
             _assembler_output(),
@@ -456,6 +493,7 @@ class TestMixedLoopbacks:
         activity_returns = [
             _intake_accepted(),
             _context_output(),
+            _assign_trust_tier_output(),
             _intent_output(),
             _ROUTER_OUTPUT,
             _assembler_output(),
@@ -498,6 +536,7 @@ class TestStepReachedTracking:
         activity_returns = [
             _intake_accepted(),
             _context_output(),
+            _assign_trust_tier_output(),
             _intent_output(),
             _ROUTER_OUTPUT,
             _assembler_output(),
@@ -517,6 +556,7 @@ class TestStepReachedTracking:
         activity_returns = [
             _intake_accepted(),
             _context_output(),
+            _assign_trust_tier_output(),
             _intent_output(),
             _ROUTER_OUTPUT,
             _assembler_output(),
@@ -557,6 +597,7 @@ class TestActivityCallArguments:
         activity_returns = [
             _intake_accepted(),
             _context_output(),
+            _assign_trust_tier_output(),
             _intent_output(),
             _ROUTER_OUTPUT,
             _assembler_output(),
@@ -587,6 +628,7 @@ class TestActivityCallArguments:
         activity_returns = [
             _intake_accepted(),
             _context_output(),
+            _assign_trust_tier_output(),
             _intent_output(),
             _ROUTER_OUTPUT,
             _assembler_output(),
@@ -599,8 +641,6 @@ class TestActivityCallArguments:
         ]
         mock_exec = AsyncMock(side_effect=activity_returns)
 
-        from datetime import datetime, timezone
-
         wf = TheStudioPipelineWorkflow()
 
         async def mock_wait_condition(fn, *, timeout=None):
@@ -611,8 +651,7 @@ class TestActivityCallArguments:
         with (
             patch("temporalio.workflow.execute_activity", mock_exec),
             patch("temporalio.workflow.wait_condition", mock_wait_condition),
-            patch("temporalio.workflow.now", return_value=datetime.now(timezone.utc)),
-            patch("temporalio.workflow.logger") as mock_logger,
+            patch("temporalio.workflow.now", return_value=datetime.now(UTC)),
         ):
             params = _default_params(repo_tier="execute")
             await wf.run(params)
@@ -627,6 +666,7 @@ class TestActivityCallArguments:
         activity_returns = [
             _intake_accepted(),
             _context_output(),
+            _assign_trust_tier_output(),
             _intent_output(),
             _ROUTER_OUTPUT,
             _assembler_output(),
@@ -675,6 +715,7 @@ class TestPipelineOutputDefaults:
         activity_returns = [
             _intake_accepted(),
             _context_output(),
+            _assign_trust_tier_output(),
             _intent_output(),
             _ROUTER_OUTPUT,
             _assembler_output(),
@@ -696,11 +737,12 @@ class TestPipelineOutputDefaults:
 class TestActivityCallCount:
     """Verify the correct number of activity calls for various scenarios."""
 
-    async def test_happy_path_has_nine_calls(self) -> None:
-        """Full success path calls exactly 9 activities."""
+    async def test_happy_path_has_ten_calls(self) -> None:
+        """Full success path calls exactly 10 activities (9 pipeline steps + trust tier)."""
         activity_returns = [
             _intake_accepted(),
             _context_output(),
+            _assign_trust_tier_output(),
             _intent_output(),
             _ROUTER_OUTPUT,
             _assembler_output(),
@@ -715,13 +757,14 @@ class TestActivityCallCount:
             wf = TheStudioPipelineWorkflow()
             await wf.run(_default_params())
 
-        assert mock_exec.call_count == 9
+        assert mock_exec.call_count == 10
 
-    async def test_one_verify_loopback_has_eleven_calls(self) -> None:
-        """One verification loopback adds 2 calls (impl + verify)."""
+    async def test_one_verify_loopback_has_twelve_calls(self) -> None:
+        """One verification loopback adds 2 calls (impl + verify); total 12."""
         activity_returns = [
             _intake_accepted(),
             _context_output(),
+            _assign_trust_tier_output(),
             _intent_output(),
             _ROUTER_OUTPUT,
             _assembler_output(),
@@ -736,13 +779,14 @@ class TestActivityCallCount:
             wf = TheStudioPipelineWorkflow()
             await wf.run(_default_params())
 
-        assert mock_exec.call_count == 11
+        assert mock_exec.call_count == 12
 
-    async def test_one_qa_loopback_has_twelve_calls(self) -> None:
-        """One QA loopback adds 3 calls (impl + verify + QA)."""
+    async def test_one_qa_loopback_has_thirteen_calls(self) -> None:
+        """One QA loopback adds 3 calls (impl + verify + QA); total 13."""
         activity_returns = [
             _intake_accepted(),
             _context_output(),
+            _assign_trust_tier_output(),
             _intent_output(),
             _ROUTER_OUTPUT,
             _assembler_output(),
@@ -756,7 +800,7 @@ class TestActivityCallCount:
             wf = TheStudioPipelineWorkflow()
             await wf.run(_default_params())
 
-        assert mock_exec.call_count == 12
+        assert mock_exec.call_count == 13
 
 
 class TestIntentReviewWaitPoint:
@@ -767,6 +811,7 @@ class TestIntentReviewWaitPoint:
         activity_returns = [
             _intake_accepted(),
             _context_output(),
+            _assign_trust_tier_output(),
             _intent_output(),
             _ROUTER_OUTPUT,
             _assembler_output(),
@@ -792,6 +837,7 @@ class TestIntentReviewWaitPoint:
         activity_returns = [
             _intake_accepted(),
             _context_output(),
+            _assign_trust_tier_output(),
             _intent_output(),
             _ROUTER_OUTPUT,
             _assembler_output(),
@@ -826,6 +872,7 @@ class TestIntentReviewWaitPoint:
         activity_returns = [
             _intake_accepted(),
             _context_output(),
+            _assign_trust_tier_output(),
             _intent_output(),
         ]
         mock_exec = AsyncMock(side_effect=activity_returns)
@@ -855,6 +902,7 @@ class TestIntentReviewWaitPoint:
         activity_returns = [
             _intake_accepted(),
             _context_output(),
+            _assign_trust_tier_output(),
             _intent_output(),
         ]
         mock_exec = AsyncMock(side_effect=activity_returns)
@@ -865,7 +913,6 @@ class TestIntentReviewWaitPoint:
         with (
             patch("temporalio.workflow.execute_activity", mock_exec),
             patch("temporalio.workflow.wait_condition", mock_wait_condition),
-            patch("temporalio.workflow.logger"),
         ):
             wf = TheStudioPipelineWorkflow()
             result = await wf.run(

@@ -127,7 +127,7 @@ def _detect_current_stage(stage_timings: dict | None) -> str | None:
 @router.post("/tasks/{task_id}/pause", status_code=202)
 async def pause_task(
     task_id: UUID,
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> SteeringResponse:
     """Pause an active pipeline task between activities.
 
@@ -162,7 +162,7 @@ async def pause_task(
 @router.post("/tasks/{task_id}/resume", status_code=202)
 async def resume_task(
     task_id: UUID,
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> SteeringResponse:
     """Resume a paused pipeline task.
 
@@ -196,7 +196,7 @@ async def resume_task(
 async def abort_task(
     task_id: UUID,
     body: AbortRequest,
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> SteeringResponse:
     """Abort a pipeline task with a mandatory reason.
 
@@ -234,7 +234,7 @@ async def abort_task(
 async def redirect_task(
     task_id: UUID,
     body: RedirectRequest,
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> SteeringResponse:
     """Redirect the pipeline to re-enter at an earlier stage.
 
@@ -298,7 +298,7 @@ async def redirect_task(
 async def retry_task(
     task_id: UUID,
     body: RetryRequest,
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> SteeringResponse:
     """Retry the current pipeline stage from the beginning.
 
@@ -345,10 +345,10 @@ async def retry_task(
 
 @router.get("/steering/audit", response_model=list[SteeringAuditLogRead])
 async def list_all_steering_audit(
-    action: SteeringAction | None = Query(None, description="Filter by steering action type"),  # noqa: B008
-    limit: int = Query(50, ge=1, le=500),  # noqa: B008
-    offset: int = Query(0, ge=0),  # noqa: B008
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    action: SteeringAction | None = Query(None, description="Filter by steering action type"),
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    session: AsyncSession = Depends(get_session),
 ) -> list[SteeringAuditLogRead]:
     """Return all steering audit log entries across all tasks, newest first.
 
@@ -371,7 +371,7 @@ async def get_task_audit(
     task_id: UUID,
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
-    session: AsyncSession = Depends(get_session),  # noqa: B008
+    session: AsyncSession = Depends(get_session),
 ) -> list[SteeringAuditLogRead]:
     """Return steering audit log entries for a specific task, newest first.
 

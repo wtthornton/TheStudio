@@ -14,14 +14,13 @@ Migration: ``src/db/migrations/035_trust_config.py``
 from __future__ import annotations
 
 import enum
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
-from sqlalchemy import Boolean, DateTime, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Integer, String, Text, select
 from sqlalchemy import Uuid as SaUuid
-from sqlalchemy import select, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
@@ -344,9 +343,8 @@ async def update_safety_bounds(
 
 def _utcnow() -> datetime:
     """Return current UTC time (timezone-naive for SQLAlchemy compat)."""
-    from datetime import timezone
 
-    return datetime.now(tz=timezone.utc)
+    return datetime.now(tz=UTC)
 
 
 async def get_default_tier(session: AsyncSession) -> DefaultTierRead:

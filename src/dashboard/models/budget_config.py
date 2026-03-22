@@ -11,7 +11,7 @@ Migration: ``src/db/migrations/039_budget_config.py``
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
@@ -22,7 +22,6 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from src.db.base import Base
 
-
 # ---------------------------------------------------------------------------
 # ORM model
 # ---------------------------------------------------------------------------
@@ -32,7 +31,7 @@ class BudgetConfigRow(Base):
     """Singleton row holding budget configuration for the platform.
 
     Only one row should ever exist (``id == SINGLETON_ID``).  All threshold
-    values are in USD.  ``downgrade_threshold_percent`` is in the range 0–100.
+    values are in USD.  ``downgrade_threshold_percent`` is in the range 0-100.
     """
 
     __tablename__ = "budget_config"
@@ -64,7 +63,7 @@ class BudgetConfigRow(Base):
     )
     downgrade_threshold_percent: Mapped[float] = mapped_column(
         Float, nullable=False, default=80.0,
-        comment="Percent of weekly_budget_cap that triggers model downgrade (0–100)"
+        comment="Percent of weekly_budget_cap that triggers model downgrade (0-100)"
     )
 
     updated_at: Mapped[datetime] = mapped_column(
@@ -125,7 +124,7 @@ class BudgetConfigUpdate(BaseModel):
 
 
 def _utcnow() -> datetime:
-    return datetime.now(tz=timezone.utc)
+    return datetime.now(tz=UTC)
 
 
 async def get_budget_config(session: AsyncSession) -> BudgetConfigRead:
