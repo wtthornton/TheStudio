@@ -24,7 +24,7 @@ Steps:
 Retry/timeout policy per the architecture table in 15-system-runtime-flow.md.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import timedelta
 from enum import StrEnum
 
@@ -112,6 +112,26 @@ class WorkflowStep(StrEnum):
     AWAITING_APPROVAL = "awaiting_approval"
     PUBLISH = "publish"
     PROJECTS_V2_SYNC = "projects_v2_sync"
+
+
+# Ordered pipeline stage sequence for redirect validation.
+# A redirect is only valid when target_stage < current_stage.
+STAGE_ORDER: dict[str, int] = {
+    WorkflowStep.INTAKE: 1,
+    WorkflowStep.CONTEXT: 2,
+    WorkflowStep.READINESS: 3,
+    WorkflowStep.INTENT: 4,
+    WorkflowStep.AWAITING_INTENT_REVIEW: 5,
+    WorkflowStep.ROUTER: 6,
+    WorkflowStep.AWAITING_ROUTING_REVIEW: 7,
+    WorkflowStep.ASSEMBLER: 8,
+    WorkflowStep.PREFLIGHT: 9,
+    WorkflowStep.IMPLEMENT: 10,
+    WorkflowStep.VERIFY: 11,
+    WorkflowStep.QA: 12,
+    WorkflowStep.AWAITING_APPROVAL: 13,
+    WorkflowStep.PUBLISH: 14,
+}
 
 
 # --- Retry/Timeout Policy Table ---
@@ -226,6 +246,10 @@ class PipelineInput:
     approval_auto_bypass: bool = False
     intent_review_enabled: bool = False
     routing_review_enabled: bool = False
+    # Set by redirect_task continue_as_new to indicate which stage to start from.
+    # Stages before start_from_stage are still executed (activities are idempotent
+    # and will fast-path based on existing TaskPacket state).
+    start_from_stage: str = ""
 
 
 @dataclass
@@ -295,8 +319,13 @@ class TheStudioPipelineWorkflow:
         self._paused = False
         self._aborted = False
         self._abort_reason: str = ""
+        # Redirect state — redirect/retry (Slice 2, Epic 37)
+        self._redirect_target: str | None = None
+        self._redirect_reason: str = ""
         # Tracks the last completed workflow step for steering audit from_stage
         self._current_step: str = ""
+        # Cached workflow params — set at start of run() for use in signal handlers
+        self._params: PipelineInput | None = None
 
     @workflow.signal
     async def approve_publish(self, approved_by: str, approval_source: str) -> None:
@@ -448,28 +477,119 @@ class TheStudioPipelineWorkflow:
             retry_policy=_STEERING_AUDIT_POLICY.to_retry_policy(),
         )
 
+    @workflow.signal
+    async def redirect_task(
+        self,
+        target_stage: str,
+        reason: str,
+        actor: str = "system",
+        taskpacket_id: str = "",
+    ) -> None:
+        """Signal handler — redirect the pipeline to re-enter at target_stage.
+
+        The redirect takes effect at the next inter-activity checkpoint; any
+        in-flight activity completes before the redirect is applied.
+
+        Validates that:
+        - ``target_stage`` is a known pipeline stage (in STAGE_ORDER).
+        - ``target_stage`` is earlier than the current stage (cannot redirect
+          forward — use ``retry_stage`` to re-run the current stage).
+
+        When the redirect is observed, the workflow calls
+        ``workflow.continue_as_new`` with ``start_from_stage=target_stage`` so
+        the pipeline re-enters from that point. Activities are idempotent and
+        will fast-path on existing TaskPacket state for stages before the target.
+
+        Idempotent: subsequent calls before the redirect is applied will update
+        the target stage to the latest value.
+        """
+        # Validate that the target stage is a known pipeline step.
+        if target_stage not in STAGE_ORDER:
+            workflow.logger.warning(
+                "pipeline.steering.redirect_unknown_stage",
+                extra={"target_stage": target_stage, "current_step": self._current_step},
+            )
+            return
+
+        # Validate that target < current (redirect must go backward in the pipeline).
+        target_order = STAGE_ORDER[target_stage]
+        current_order = STAGE_ORDER.get(self._current_step, 999)
+        if target_order >= current_order:
+            workflow.logger.warning(
+                "pipeline.steering.redirect_invalid_direction",
+                extra={
+                    "target_stage": target_stage,
+                    "target_order": target_order,
+                    "current_step": self._current_step,
+                    "current_order": current_order,
+                },
+            )
+            return
+
+        self._redirect_target = target_stage
+        self._redirect_reason = reason
+        # Unblock any active pause hold so the redirect is observed immediately.
+        self._paused = False
+        workflow.logger.info(
+            "pipeline.steering.redirect_set",
+            extra={"target_stage": target_stage, "from_stage": self._current_step, "reason": reason},
+        )
+        await workflow.execute_activity(
+            persist_steering_audit_activity,
+            PersistSteeringAuditInput(
+                task_id=taskpacket_id,
+                action="redirect",
+                actor=actor,
+                from_stage=self._current_step,
+                to_stage=target_stage,
+                reason=reason,
+            ),
+            start_to_close_timeout=_STEERING_AUDIT_POLICY.timeout,
+            retry_policy=_STEERING_AUDIT_POLICY.to_retry_policy(),
+        )
+
     async def _await_if_paused(self, upcoming_step: str = "") -> bool:
         """Block at the next inter-activity checkpoint if a pause is requested.
 
         Called before each pipeline activity. If ``self._paused`` is True the
-        workflow holds at this point until a ``resume_task`` or ``abort_task``
-        signal is received. Because this check happens between activities, any
-        in-flight work completes before the hold takes effect.
+        workflow holds at this point until a ``resume_task``, ``abort_task``,
+        or ``redirect_task`` signal is received. Because this check happens
+        between activities, any in-flight work completes before the hold takes
+        effect.
 
         ``upcoming_step`` is recorded on ``self._current_step`` so that
-        steering signal handlers (pause / resume / abort) can include the
-        current pipeline stage in the audit log entry.
+        steering signal handlers (pause / resume / abort / redirect) can include
+        the current pipeline stage in the audit log entry.
+
+        If a redirect is pending (``_redirect_target`` is set), this method
+        calls ``workflow.continue_as_new`` to restart the workflow at the target
+        stage. The ``ContinueAsNewError`` propagates up to the Temporal runtime
+        automatically — callers do not need to handle it.
 
         Returns:
             True if an abort was requested (caller should return immediately),
             False if the workflow should continue normally.
+            Note: if redirect is active this method never returns — it raises
+            ``ContinueAsNewError`` instead.
         """
         if upcoming_step:
             self._current_step = upcoming_step
         if self._paused:
             workflow.logger.info("pipeline.steering.hold_start")
-            await workflow.wait_condition(lambda: not self._paused or self._aborted)
+            await workflow.wait_condition(
+                lambda: not self._paused or self._aborted or self._redirect_target is not None
+            )
             workflow.logger.info("pipeline.steering.hold_end")
+        # Apply pending redirect via continue_as_new (raises ContinueAsNewError).
+        if self._redirect_target is not None and self._params is not None:
+            target = self._redirect_target
+            workflow.logger.info(
+                "pipeline.steering.redirect_applying",
+                extra={"target_stage": target, "reason": self._redirect_reason},
+            )
+            workflow.continue_as_new(replace(self._params, start_from_stage=target))
+            # ContinueAsNewError is raised above — the line below is unreachable
+            # but satisfies type checkers that expect a return.
         return self._aborted
 
     async def _sync_project_status(
@@ -505,6 +625,9 @@ class TheStudioPipelineWorkflow:
     @workflow.run
     async def run(self, params: PipelineInput) -> PipelineOutput:
         output = PipelineOutput()
+
+        # Cache params for use in redirect_task signal handler's continue_as_new call.
+        self._params = params
 
         # Step 1: Intake
         if await self._await_if_paused(WorkflowStep.INTAKE):
