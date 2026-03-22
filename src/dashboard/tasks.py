@@ -14,6 +14,8 @@ from src.dashboard.events import _verify_token
 from src.db.connection import get_session
 from src.models.taskpacket import TaskPacketCreate, TaskPacketRead, TaskPacketRow, TaskPacketStatus
 from src.models.taskpacket_crud import create as create_taskpacket
+from src.models.taskpacket_crud import get_by_id as get_taskpacket_by_id
+from src.publisher.evidence_payload import EvidencePayload, TaskSummary
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -545,3 +547,59 @@ async def stage_metrics(
         window_hours=window_hours,
         stages=_compute_stage_metrics(rows),
     )
+
+
+# ---------------------------------------------------------------------------
+# Evidence payload endpoint (Epic 38 Story 38.7)
+# ---------------------------------------------------------------------------
+
+
+def _build_evidence_payload(task: TaskPacketRead) -> EvidencePayload:
+    """Build an EvidencePayload from a TaskPacketRead.
+
+    Populates the task_summary section from stored TaskPacket fields.
+    Sections that require runtime data not persisted in the DB (intent,
+    gate_results, cost_breakdown, provenance) are left as None.
+    """
+    task_summary = TaskSummary(
+        taskpacket_id=task.id,
+        correlation_id=task.correlation_id,
+        repo=task.repo,
+        issue_id=task.issue_id,
+        issue_title=task.issue_title,
+        status=task.status.value,
+        trust_tier=task.task_trust_tier.value if task.task_trust_tier is not None else None,
+        loopback_count=task.loopback_count,
+        created_at=task.created_at,
+        updated_at=task.updated_at,
+        pr_number=task.pr_number,
+        pr_url=task.pr_url,
+    )
+    return EvidencePayload(
+        generated_at=datetime.now(UTC),
+        task_summary=task_summary,
+    )
+
+
+@router.get("/tasks/{task_id}/evidence", response_model=EvidencePayload)
+async def get_task_evidence(
+    task_id: UUID,
+    session: AsyncSession = Depends(get_session),
+) -> EvidencePayload:
+    """Return a structured EvidencePayload JSON document for a TaskPacket.
+
+    The payload includes the task summary (id, status, repo, issue, trust tier,
+    PR details) populated from the stored TaskPacket record.  Sections that
+    require runtime data not persisted in the database (intent, gate_results,
+    cost_breakdown, provenance) are omitted (null) and will be enriched by the
+    Evidence Explorer frontend via other endpoints once available.
+
+    Returns 404 when the task ID is not found.
+
+    Epic 38, Story 38.7.
+    """
+    task = await get_taskpacket_by_id(session, task_id)
+    if task is None:
+        raise HTTPException(status_code=404, detail="TaskPacket not found")
+
+    return _build_evidence_payload(task)
