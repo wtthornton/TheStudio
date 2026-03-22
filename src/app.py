@@ -113,6 +113,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception:
         _logger.warning("Failed to start gate evidence consumer", exc_info=True)
 
+    # Start budget threshold checker (non-blocking, logs on failure)
+    budget_checker_task = None
+    try:
+        from src.dashboard.budget_checker import start_budget_checker
+
+        budget_checker_task = await start_budget_checker(settings.nats_url)
+    except Exception:
+        _logger.warning("Failed to start budget checker consumer", exc_info=True)
+
     yield
 
     if worker_task is not None:
@@ -125,6 +134,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         from src.dashboard.gate_consumer import stop_gate_consumer
 
         await stop_gate_consumer()
+    if budget_checker_task is not None:
+        from src.dashboard.budget_checker import stop_budget_checker
+
+        await stop_budget_checker()
     if consumer_task is not None:
         await stop_signal_consumer()
     if poll_task is not None:
