@@ -496,3 +496,486 @@ class TestApprovePRGitHubErrors:
 
         assert resp.status_code == 503
         assert "token not configured" in resp.json()["detail"]
+
+
+# ===========================================================================
+# POST /tasks/{task_id}/pr/request-changes (Story 38.10)
+# ===========================================================================
+
+
+def _make_async_client_ctx_post(post_response: MagicMock) -> MagicMock:
+    """Return an async context manager whose client.post() returns the given response."""
+    client_mock = AsyncMock()
+    client_mock.post = AsyncMock(return_value=post_response)
+
+    ctx_mock = MagicMock()
+    ctx_mock.__aenter__ = AsyncMock(return_value=client_mock)
+    ctx_mock.__aexit__ = AsyncMock(return_value=None)
+    return ctx_mock
+
+
+def _mock_httpx_post_response(
+    payload: dict[str, Any],
+    status_code: int = 200,
+) -> MagicMock:
+    """Build a mock httpx.Response for a POST request."""
+    resp = MagicMock()
+    resp.status_code = status_code
+    resp.is_success = 200 <= status_code < 300
+    resp.text = str(payload)
+    resp.json.return_value = payload
+    return resp
+
+
+class TestRequestChangesPRHappyPath:
+    def test_request_changes_returns_200(
+        self,
+        client: TestClient,
+    ) -> None:
+        """Successfully posting a request-changes review returns 200 with review_id."""
+        task_id = uuid4()
+        task = _make_task(task_id=task_id)
+
+        review_payload = {"id": 12345, "body": "Please fix the tests", "state": "CHANGES_REQUESTED"}
+        resp_mock = _mock_httpx_post_response(review_payload, status_code=200)
+        ctx = _make_async_client_ctx_post(resp_mock)
+
+        async def fake_get_by_id(session: Any, tid: UUID) -> TaskPacketRead:
+            return task
+
+        async def fake_session():
+            yield MagicMock()
+
+        app.dependency_overrides[get_session] = fake_session
+
+        try:
+            with patch("src.dashboard.pr_router.get_by_id", side_effect=fake_get_by_id):
+                with patch("src.dashboard.pr_router.httpx.AsyncClient", return_value=ctx):
+                    resp = client.post(
+                        f"/api/v1/dashboard/tasks/{task_id}/pr/request-changes",
+                        json={"body": "Please fix the tests"},
+                    )
+        finally:
+            app.dependency_overrides.pop(get_session, None)
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["task_id"] == str(task_id)
+        assert data["pr_number"] == 42
+        assert data["review_id"] == 12345
+        assert "changes requested" in data["message"]
+
+    def test_request_changes_posts_request_changes_event(
+        self,
+        client: TestClient,
+    ) -> None:
+        """The GitHub API call uses event=REQUEST_CHANGES."""
+        task_id = uuid4()
+        task = _make_task(task_id=task_id)
+
+        review_payload = {"id": 99, "state": "CHANGES_REQUESTED"}
+        resp_mock = _mock_httpx_post_response(review_payload, status_code=200)
+        ctx = _make_async_client_ctx_post(resp_mock)
+
+        async def fake_get_by_id(session: Any, tid: UUID) -> TaskPacketRead:
+            return task
+
+        async def fake_session():
+            yield MagicMock()
+
+        app.dependency_overrides[get_session] = fake_session
+
+        try:
+            with patch("src.dashboard.pr_router.get_by_id", side_effect=fake_get_by_id):
+                with patch("src.dashboard.pr_router.httpx.AsyncClient", return_value=ctx):
+                    resp = client.post(
+                        f"/api/v1/dashboard/tasks/{task_id}/pr/request-changes",
+                        json={"body": "Needs more tests"},
+                    )
+        finally:
+            app.dependency_overrides.pop(get_session, None)
+
+        assert resp.status_code == 200
+        call_kwargs = ctx.__aenter__.return_value.post.call_args
+        assert call_kwargs.kwargs["json"]["event"] == "REQUEST_CHANGES"
+        assert call_kwargs.kwargs["json"]["body"] == "Needs more tests"
+
+    def test_request_changes_with_loopback_sends_retry_signal(
+        self,
+        client: TestClient,
+    ) -> None:
+        """When trigger_loopback=true, a retry_stage Temporal signal is attempted.
+
+        This test verifies the endpoint still returns 200 even when Temporal is
+        unavailable (best-effort loopback — signal failure is non-fatal).
+        """
+        task_id = uuid4()
+        task = _make_task(task_id=task_id)
+
+        review_payload = {"id": 55, "state": "CHANGES_REQUESTED"}
+        resp_mock = _mock_httpx_post_response(review_payload, status_code=200)
+        ctx = _make_async_client_ctx_post(resp_mock)
+
+        async def fake_get_by_id(session: Any, tid: UUID) -> TaskPacketRead:
+            return task
+
+        async def fake_session():
+            yield MagicMock()
+
+        app.dependency_overrides[get_session] = fake_session
+
+        try:
+            with patch("src.dashboard.pr_router.get_by_id", side_effect=fake_get_by_id):
+                with patch("src.dashboard.pr_router.httpx.AsyncClient", return_value=ctx):
+                    # Patch Temporal to raise — loopback is best-effort so endpoint
+                    # must still return 200
+                    with patch(
+                        "src.ingress.workflow_trigger.get_temporal_client",
+                        side_effect=RuntimeError("temporal unavailable"),
+                    ):
+                        resp = client.post(
+                            f"/api/v1/dashboard/tasks/{task_id}/pr/request-changes",
+                            json={"body": "Needs rework", "trigger_loopback": True},
+                        )
+        finally:
+            app.dependency_overrides.pop(get_session, None)
+
+        # The review is posted; Temporal failure is swallowed
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["review_id"] == 55
+
+    def test_request_changes_without_loopback_skips_temporal(
+        self,
+        client: TestClient,
+    ) -> None:
+        """When trigger_loopback=false (default), no Temporal signal is sent."""
+        task_id = uuid4()
+        task = _make_task(task_id=task_id)
+
+        review_payload = {"id": 77, "state": "CHANGES_REQUESTED"}
+        resp_mock = _mock_httpx_post_response(review_payload, status_code=200)
+        ctx = _make_async_client_ctx_post(resp_mock)
+
+        async def fake_get_by_id(session: Any, tid: UUID) -> TaskPacketRead:
+            return task
+
+        async def fake_session():
+            yield MagicMock()
+
+        app.dependency_overrides[get_session] = fake_session
+
+        # Patch Temporal to fail hard — if called, the test would detect it
+        temporal_called = []
+
+        async def fake_get_temporal_fails():
+            temporal_called.append(True)
+            raise RuntimeError("Should not be called")
+
+        try:
+            with patch("src.dashboard.pr_router.get_by_id", side_effect=fake_get_by_id):
+                with patch("src.dashboard.pr_router.httpx.AsyncClient", return_value=ctx):
+                    with patch(
+                        "src.ingress.workflow_trigger.get_temporal_client",
+                        side_effect=fake_get_temporal_fails,
+                    ):
+                        resp = client.post(
+                            f"/api/v1/dashboard/tasks/{task_id}/pr/request-changes",
+                            json={"body": "Looks good but small nit"},
+                        )
+        finally:
+            app.dependency_overrides.pop(get_session, None)
+
+        assert resp.status_code == 200
+        assert temporal_called == []
+
+
+class TestRequestChangesPR404:
+    def test_returns_404_when_task_not_found(self, client: TestClient) -> None:
+        """Returns 404 when the TaskPacket does not exist."""
+        task_id = uuid4()
+
+        async def fake_get_by_id(session: Any, tid: UUID) -> None:
+            return None
+
+        async def fake_session():
+            yield MagicMock()
+
+        app.dependency_overrides[get_session] = fake_session
+
+        try:
+            with patch("src.dashboard.pr_router.get_by_id", side_effect=fake_get_by_id):
+                resp = client.post(
+                    f"/api/v1/dashboard/tasks/{task_id}/pr/request-changes",
+                    json={"body": "Please fix"},
+                )
+        finally:
+            app.dependency_overrides.pop(get_session, None)
+
+        assert resp.status_code == 404
+        assert str(task_id) in resp.json()["detail"]
+
+    def test_returns_404_when_github_pr_not_found(self, client: TestClient) -> None:
+        """Returns 404 when the PR number exists in DB but GitHub returns 404."""
+        task_id = uuid4()
+        task = _make_task(task_id=task_id)
+
+        resp_mock = _mock_httpx_post_response({}, status_code=404)
+        ctx = _make_async_client_ctx_post(resp_mock)
+
+        async def fake_get_by_id(session: Any, tid: UUID) -> TaskPacketRead:
+            return task
+
+        async def fake_session():
+            yield MagicMock()
+
+        app.dependency_overrides[get_session] = fake_session
+
+        try:
+            with patch("src.dashboard.pr_router.get_by_id", side_effect=fake_get_by_id):
+                with patch("src.dashboard.pr_router.httpx.AsyncClient", return_value=ctx):
+                    resp = client.post(
+                        f"/api/v1/dashboard/tasks/{task_id}/pr/request-changes",
+                        json={"body": "Please fix"},
+                    )
+        finally:
+            app.dependency_overrides.pop(get_session, None)
+
+        assert resp.status_code == 404
+        assert "42" in resp.json()["detail"]
+
+
+class TestRequestChangesPR409:
+    def test_returns_409_when_no_pr_number(self, client: TestClient) -> None:
+        """Returns 409 when task exists but has no associated PR."""
+        task_id = uuid4()
+        task = _make_task(task_id=task_id, pr_number=None)
+
+        async def fake_get_by_id(session: Any, tid: UUID) -> TaskPacketRead:
+            return task
+
+        async def fake_session():
+            yield MagicMock()
+
+        app.dependency_overrides[get_session] = fake_session
+
+        try:
+            with patch("src.dashboard.pr_router.get_by_id", side_effect=fake_get_by_id):
+                resp = client.post(
+                    f"/api/v1/dashboard/tasks/{task_id}/pr/request-changes",
+                    json={"body": "Please fix"},
+                )
+        finally:
+            app.dependency_overrides.pop(get_session, None)
+
+        assert resp.status_code == 409
+        assert "no associated pull request" in resp.json()["detail"]
+
+
+class TestRequestChangesPRGitHubErrors:
+    def test_returns_502_on_auth_failure(self, client: TestClient) -> None:
+        """Returns 502 when GitHub returns 401/403."""
+        task_id = uuid4()
+        task = _make_task(task_id=task_id)
+
+        resp_mock = _mock_httpx_post_response({}, status_code=403)
+        ctx = _make_async_client_ctx_post(resp_mock)
+
+        async def fake_get_by_id(session: Any, tid: UUID) -> TaskPacketRead:
+            return task
+
+        async def fake_session():
+            yield MagicMock()
+
+        app.dependency_overrides[get_session] = fake_session
+
+        try:
+            with patch("src.dashboard.pr_router.get_by_id", side_effect=fake_get_by_id):
+                with patch("src.dashboard.pr_router.httpx.AsyncClient", return_value=ctx):
+                    resp = client.post(
+                        f"/api/v1/dashboard/tasks/{task_id}/pr/request-changes",
+                        json={"body": "Please fix"},
+                    )
+        finally:
+            app.dependency_overrides.pop(get_session, None)
+
+        assert resp.status_code == 502
+        assert "authentication" in resp.json()["detail"]
+
+    def test_returns_429_on_rate_limit(self, client: TestClient) -> None:
+        """Returns 429 when GitHub rate-limits the request."""
+        task_id = uuid4()
+        task = _make_task(task_id=task_id)
+
+        resp_mock = _mock_httpx_post_response({}, status_code=429)
+        ctx = _make_async_client_ctx_post(resp_mock)
+
+        async def fake_get_by_id(session: Any, tid: UUID) -> TaskPacketRead:
+            return task
+
+        async def fake_session():
+            yield MagicMock()
+
+        app.dependency_overrides[get_session] = fake_session
+
+        try:
+            with patch("src.dashboard.pr_router.get_by_id", side_effect=fake_get_by_id):
+                with patch("src.dashboard.pr_router.httpx.AsyncClient", return_value=ctx):
+                    resp = client.post(
+                        f"/api/v1/dashboard/tasks/{task_id}/pr/request-changes",
+                        json={"body": "Please fix"},
+                    )
+        finally:
+            app.dependency_overrides.pop(get_session, None)
+
+        assert resp.status_code == 429
+
+    def test_returns_502_on_unexpected_github_status(self, client: TestClient) -> None:
+        """Returns 502 for unexpected GitHub error codes (e.g., 500)."""
+        task_id = uuid4()
+        task = _make_task(task_id=task_id)
+
+        resp_mock = _mock_httpx_post_response({}, status_code=500)
+        ctx = _make_async_client_ctx_post(resp_mock)
+
+        async def fake_get_by_id(session: Any, tid: UUID) -> TaskPacketRead:
+            return task
+
+        async def fake_session():
+            yield MagicMock()
+
+        app.dependency_overrides[get_session] = fake_session
+
+        try:
+            with patch("src.dashboard.pr_router.get_by_id", side_effect=fake_get_by_id):
+                with patch("src.dashboard.pr_router.httpx.AsyncClient", return_value=ctx):
+                    resp = client.post(
+                        f"/api/v1/dashboard/tasks/{task_id}/pr/request-changes",
+                        json={"body": "Please fix"},
+                    )
+        finally:
+            app.dependency_overrides.pop(get_session, None)
+
+        assert resp.status_code == 502
+        assert "HTTP 500" in resp.json()["detail"]
+
+    def test_returns_504_on_timeout(self, client: TestClient) -> None:
+        """Returns 504 when the GitHub API request times out."""
+        import httpx as _httpx
+
+        task_id = uuid4()
+        task = _make_task(task_id=task_id)
+
+        async def fake_get_by_id(session: Any, tid: UUID) -> TaskPacketRead:
+            return task
+
+        async def fake_session():
+            yield MagicMock()
+
+        app.dependency_overrides[get_session] = fake_session
+
+        client_mock = AsyncMock()
+        client_mock.post = AsyncMock(side_effect=_httpx.TimeoutException("timed out"))
+        ctx_mock = MagicMock()
+        ctx_mock.__aenter__ = AsyncMock(return_value=client_mock)
+        ctx_mock.__aexit__ = AsyncMock(return_value=None)
+
+        try:
+            with patch("src.dashboard.pr_router.get_by_id", side_effect=fake_get_by_id):
+                with patch("src.dashboard.pr_router.httpx.AsyncClient", return_value=ctx_mock):
+                    resp = client.post(
+                        f"/api/v1/dashboard/tasks/{task_id}/pr/request-changes",
+                        json={"body": "Please fix"},
+                    )
+        finally:
+            app.dependency_overrides.pop(get_session, None)
+
+        assert resp.status_code == 504
+        assert "timed out" in resp.json()["detail"]
+
+    def test_returns_502_on_request_error(self, client: TestClient) -> None:
+        """Returns 502 when a network-level httpx.RequestError occurs."""
+        import httpx as _httpx
+
+        task_id = uuid4()
+        task = _make_task(task_id=task_id)
+
+        async def fake_get_by_id(session: Any, tid: UUID) -> TaskPacketRead:
+            return task
+
+        async def fake_session():
+            yield MagicMock()
+
+        app.dependency_overrides[get_session] = fake_session
+
+        client_mock = AsyncMock()
+        client_mock.post = AsyncMock(
+            side_effect=_httpx.RequestError("connection refused", request=MagicMock())
+        )
+        ctx_mock = MagicMock()
+        ctx_mock.__aenter__ = AsyncMock(return_value=client_mock)
+        ctx_mock.__aexit__ = AsyncMock(return_value=None)
+
+        try:
+            with patch("src.dashboard.pr_router.get_by_id", side_effect=fake_get_by_id):
+                with patch("src.dashboard.pr_router.httpx.AsyncClient", return_value=ctx_mock):
+                    resp = client.post(
+                        f"/api/v1/dashboard/tasks/{task_id}/pr/request-changes",
+                        json={"body": "Please fix"},
+                    )
+        finally:
+            app.dependency_overrides.pop(get_session, None)
+
+        assert resp.status_code == 502
+
+    def test_returns_503_when_no_token_configured(self, client: TestClient) -> None:
+        """Returns 503 when THESTUDIO_INTAKE_POLL_TOKEN is not set."""
+        from src import settings as settings_mod
+
+        task_id = uuid4()
+
+        app.dependency_overrides.pop(get_session, None)
+
+        original = settings_mod.settings.intake_poll_token
+        settings_mod.settings.intake_poll_token = ""
+
+        try:
+            resp = client.post(
+                f"/api/v1/dashboard/tasks/{task_id}/pr/request-changes",
+                json={"body": "Please fix"},
+            )
+        finally:
+            settings_mod.settings.intake_poll_token = original
+
+        assert resp.status_code == 503
+        assert "token not configured" in resp.json()["detail"]
+
+    def test_returns_422_on_invalid_review_body(self, client: TestClient) -> None:
+        """Returns 422 when GitHub rejects the review payload."""
+        task_id = uuid4()
+        task = _make_task(task_id=task_id)
+
+        resp_mock = _mock_httpx_post_response(
+            {"message": "Validation Failed"}, status_code=422
+        )
+        ctx = _make_async_client_ctx_post(resp_mock)
+
+        async def fake_get_by_id(session: Any, tid: UUID) -> TaskPacketRead:
+            return task
+
+        async def fake_session():
+            yield MagicMock()
+
+        app.dependency_overrides[get_session] = fake_session
+
+        try:
+            with patch("src.dashboard.pr_router.get_by_id", side_effect=fake_get_by_id):
+                with patch("src.dashboard.pr_router.httpx.AsyncClient", return_value=ctx):
+                    resp = client.post(
+                        f"/api/v1/dashboard/tasks/{task_id}/pr/request-changes",
+                        json={"body": "Please fix"},
+                    )
+        finally:
+            app.dependency_overrides.pop(get_session, None)
+
+        assert resp.status_code == 422

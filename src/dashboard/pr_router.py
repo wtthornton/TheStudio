@@ -57,6 +57,10 @@ class PRRequestChangesRequest(BaseModel):
         max_length=65535,
         description="Review comment body explaining the requested changes",
     )
+    trigger_loopback: bool = Field(
+        default=False,
+        description="If true, send a retry_stage signal to the Temporal workflow",
+    )
 
 
 class PRRequestChangesResponse(BaseModel):
@@ -202,4 +206,132 @@ async def approve_pr(
         merged=True,
         sha=sha,
         message=message,
+    )
+
+
+@router.post(
+    "/tasks/{task_id}/pr/request-changes",
+    response_model=PRRequestChangesResponse,
+    status_code=200,
+)
+async def request_changes_pr(
+    task_id: UUID,
+    body: PRRequestChangesRequest,
+    session: AsyncSession = Depends(get_session),
+) -> PRRequestChangesResponse:
+    """Post a REQUEST_CHANGES review on the pull request associated with a TaskPacket.
+
+    Calls the GitHub pull request reviews API
+    (``POST /repos/{owner}/{repo}/pulls/{pr}/reviews``) with
+    ``event="REQUEST_CHANGES"``.
+
+    Optionally sends a ``retry_stage`` Temporal signal if *trigger_loopback* is
+    set to ``true`` in the request body, causing the workflow to re-run the
+    current pipeline stage.
+
+    Raises:
+        404 — task not found
+        409 — task has no associated PR
+        422 — repo field not in owner/repo format
+        502 — GitHub API error (auth, rate limit, unexpected status)
+        503 — GitHub token not configured
+        504 — GitHub API request timed out
+    """
+    token = settings.intake_poll_token
+    if not token:
+        raise HTTPException(
+            status_code=503,
+            detail="GitHub API token not configured (THESTUDIO_INTAKE_POLL_TOKEN)",
+        )
+
+    repo, pr_number = await _require_task_with_pr(session, task_id)
+
+    if "/" not in repo:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Task repo '{repo}' is not in 'owner/repo' format",
+        )
+    owner, repo_name = repo.split("/", 1)
+
+    review_url = (
+        f"{GITHUB_API_BASE}/repos/{owner}/{repo_name}/pulls/{pr_number}/reviews"
+    )
+    payload = {
+        "body": body.body,
+        "event": "REQUEST_CHANGES",
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                review_url,
+                json=payload,
+                headers=_github_headers(token),
+            )
+    except httpx.TimeoutException as exc:
+        raise HTTPException(status_code=504, detail="GitHub API request timed out") from exc
+    except httpx.RequestError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"GitHub API request failed: {exc}",
+        ) from exc
+
+    if response.status_code in (401, 403):
+        raise HTTPException(status_code=502, detail="GitHub API authentication failed")
+    if response.status_code == 404:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Pull request #{pr_number} not found on GitHub",
+        )
+    if response.status_code == 422:
+        raise HTTPException(
+            status_code=422,
+            detail=f"GitHub API rejected the review request: {response.text}",
+        )
+    if response.status_code == 429:
+        raise HTTPException(status_code=429, detail="GitHub API rate limit exceeded")
+    if not response.is_success:
+        raise HTTPException(
+            status_code=502,
+            detail=f"GitHub API error: HTTP {response.status_code}",
+        )
+
+    data = response.json()
+    review_id: int | None = data.get("id")
+
+    logger.info(
+        "PR #%d request-changes review posted for task %s repo=%s review_id=%s",
+        pr_number,
+        task_id,
+        repo,
+        review_id,
+    )
+
+    if body.trigger_loopback:
+        try:
+            from src.ingress.workflow_trigger import get_temporal_client
+
+            temporal_client = await get_temporal_client()
+            handle = temporal_client.get_workflow_handle(str(task_id))
+            await handle.signal(
+                "retry_stage",
+                args=["reviewer_request_changes", "api", str(task_id)],
+            )
+            logger.info(
+                "retry_stage loopback signal sent for task %s after request-changes",
+                task_id,
+            )
+        except Exception as exc:  # noqa: BLE001
+            # Loopback is best-effort — review already posted, log and continue
+            logger.warning(
+                "retry_stage loopback signal failed for task %s: %s",
+                task_id,
+                exc,
+            )
+
+    return PRRequestChangesResponse(
+        task_id=task_id,
+        pr_number=pr_number,
+        review_id=review_id,
+        message="Review submitted: changes requested",
     )
