@@ -33,7 +33,7 @@
 
 #### Frontend (Sprint 4 — Meridian PASS 2026-03-21)
 
-- [ ] 36.11a: Intent API types + functions — extend `TaskPacketRead` with `issue_title`, `issue_body`, `scope`, `risk_flags`, `complexity_index` (optional fields). Add `IntentSpecRead` interface (9 fields), `IntentResponse` interface, 5 API functions (fetchIntent, approveIntent, rejectIntent, editIntent, refineIntent). File: `frontend/src/lib/api.ts`. (S, 2h)
+- [x] 36.11a: Intent API types + functions — extend `TaskPacketRead` with `issue_title`, `issue_body`, `scope`, `risk_flags`, `complexity_index` (optional fields). Add `IntentSpecRead` interface (9 fields), `IntentResponse` interface, 5 API functions (fetchIntent, approveIntent, rejectIntent, editIntent, refineIntent). File: `frontend/src/lib/api.ts`. (S, 2h)
 
 - [ ] 36.11b: Intent Zustand store — `intent-store.ts` with state (taskId, current, versions, selectedVersion, loading, error, mode, refineModalOpen, saving) and actions (loadIntent, approve, reject, saveEdit, requestRefine, selectVersion, setMode, setRefineModalOpen, reset). Re-fetches after mutations. File: `frontend/src/stores/intent-store.ts`. Depends on 36.11a. (S, 2h)
 

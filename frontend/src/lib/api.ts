@@ -21,6 +21,11 @@ export interface TaskPacketRead {
   created_at: string
   updated_at: string
   stage_timings?: Record<string, { start?: string; end?: string; cost?: number; model?: string }>
+  issue_title?: string | null
+  issue_body?: string | null
+  scope?: Record<string, unknown> | null
+  risk_flags?: Record<string, boolean> | null
+  complexity_index?: Record<string, unknown> | null
 }
 
 export interface TaskPacketDetail extends TaskPacketRead {
@@ -198,6 +203,85 @@ export async function editTriageTask(taskId: string, fields: {
   if (!res.ok) throw new Error(`Failed to edit task: ${res.status}`)
   return res.json()
 }
+
+// --- Intent Review Types (Epic 36, Slice 2) ---
+
+export interface IntentSpecRead {
+  id: string
+  taskpacket_id: string
+  version: number
+  goal: string
+  constraints: string[]
+  acceptance_criteria: string[]
+  non_goals: string[]
+  source: string
+  created_at: string
+}
+
+export interface IntentResponse {
+  current: IntentSpecRead
+  versions: IntentSpecRead[]
+}
+
+export interface IntentActionResponse {
+  status: string
+}
+
+// --- Intent Review API (Epic 36, Slice 2) ---
+
+export async function fetchIntent(taskId: string): Promise<IntentResponse> {
+  const url = withToken(`${API_BASE}/tasks/${taskId}/intent`)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Failed to fetch intent: ${res.status}`)
+  return res.json()
+}
+
+export async function approveIntent(taskId: string): Promise<IntentActionResponse> {
+  const url = withToken(`${API_BASE}/tasks/${taskId}/intent/approve`)
+  const res = await fetch(url, { method: 'POST' })
+  if (!res.ok) throw new Error(`Failed to approve intent: ${res.status}`)
+  return res.json()
+}
+
+export async function rejectIntent(taskId: string, reason: string): Promise<IntentActionResponse> {
+  const url = withToken(`${API_BASE}/tasks/${taskId}/intent/reject`)
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason }),
+  })
+  if (!res.ok) throw new Error(`Failed to reject intent: ${res.status}`)
+  return res.json()
+}
+
+export async function editIntent(taskId: string, spec: {
+  goal: string
+  constraints: string[]
+  acceptance_criteria: string[]
+  non_goals: string[]
+}): Promise<IntentSpecRead> {
+  const url = withToken(`${API_BASE}/tasks/${taskId}/intent`)
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(spec),
+  })
+  if (!res.ok) throw new Error(`Failed to edit intent: ${res.status}`)
+  return res.json()
+}
+
+export async function refineIntent(taskId: string, feedback: string): Promise<IntentSpecRead> {
+  const url = withToken(`${API_BASE}/tasks/${taskId}/intent/refine`)
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ feedback }),
+  })
+  if (!res.ok) throw new Error(`Failed to refine intent: ${res.status}`)
+  return res.json()
+}
+
+// --- Activity API ---
 
 export async function fetchTaskActivity(taskId: string, params: {
   offset?: number
