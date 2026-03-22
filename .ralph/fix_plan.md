@@ -56,7 +56,7 @@
 
 - [x] 36.13a: MetricCard + RiskFlags display components — `MetricCard.tsx` (label, value, icon, color), `RiskFlags.tsx` (checklist from `risk_flags` dict, red/green icons, null="pending"). Pure display, no API calls. (S, 2h)
 
-- [ ] 36.13b: FileHeatmap component — `FileHeatmap.tsx` renders `scope` data: file count, component list, file references grouped by directory with intensity bars. Null="Scope: pending". (S, 2h)
+- [x] 36.13b: FileHeatmap component — `FileHeatmap.tsx` renders `scope` data: file count, component list, file references grouped by directory with intensity bars. Null="Scope: pending". (S, 2h)
 
 - [ ] 36.13c: ComplexityDashboard container — `ComplexityDashboard.tsx` assembles score bar (color-coded by band: low=green, medium=amber, high=red), 3 MetricCards (files affected, risk flag count, expert coverage with integer thresholds: green>=2, amber=1, red=0), FileHeatmap + RiskFlags in bottom row. Depends on 36.13a, 36.13b. (M, 3h)
 
