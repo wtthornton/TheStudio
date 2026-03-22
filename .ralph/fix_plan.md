@@ -28,7 +28,7 @@
 
 ### Slice 3: Trust Tier Configuration
 
-- [ ] 37.12: Trust tier rule data model — `src/dashboard/models/trust_config.py`. TrustTierRule (id, priority, conditions JSON, assigned_tier, active, timestamps). SafetyBounds (max_auto_merge_lines, max_auto_merge_cost, max_loopbacks, mandatory_review_patterns). Migration.
+- [x] 37.12: Trust tier rule data model — `src/dashboard/models/trust_config.py`. TrustTierRule (id, priority, conditions JSON, assigned_tier, active, timestamps). SafetyBounds (max_auto_merge_lines, max_auto_merge_cost, max_loopbacks, mandatory_review_patterns). Migration.
 - [ ] 37.13: Task-level trust tier on TaskPacket — add `task_trust_tier` nullable field (observe/suggest/execute). Migration. Do NOT modify `src/reputation/tiers.py`.
 - [ ] 37.14: Trust tier rule evaluation engine — `src/dashboard/trust_engine.py`. Evaluate conditions (equals, less_than, greater_than, contains, matches_glob) against TaskPacket metadata. First match wins. Safety bounds override. Default tier fallback.
 - [ ] 37.15: Trust tier CRUD API — GET/POST/PUT/DELETE `/trust/rules`, GET/PUT `/trust/safety-bounds`, GET/PUT `/trust/default-tier` in `src/dashboard/trust_router.py`.
