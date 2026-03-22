@@ -38,7 +38,7 @@
 
 ### Slice 4: Budget Dashboard (MVP)
 
-- [ ] 37.19: Budget API endpoints — `src/dashboard/budget_router.py`. GET `/budget/summary`, `/budget/history` (time series by model), `/budget/by-stage`, `/budget/by-model`. Source from existing ModelCallAudit + SpendReport.
+- [x] 37.19: Budget API endpoints — `src/dashboard/budget_router.py`. GET `/budget/summary`, `/budget/history` (time series by model), `/budget/by-stage`, `/budget/by-model`. Source from existing ModelCallAudit + SpendReport.
 - [ ] 37.20: Budget configuration API — GET/PUT `/budget/config`. Fields: daily_spend_warning, weekly_budget_cap, per_task_warning, pause_on_budget_exceeded, model_downgrade_on_approach, downgrade_threshold_percent. Persist to PostgreSQL. Migration.
 - [ ] 37.21: Budget threshold checker — `src/dashboard/budget_checker.py`. Run after each cost_update event. Compare spend vs thresholds. If pause_on_budget_exceeded + cap breached → pause all active workflows. If downgrade → update model routing preference.
 - [ ] 37.22: Frontend — BudgetDashboard view + SpendChart (stacked bar, Chart.js) + CostBreakdown (by-stage + by-model horizontal bars) + BudgetAlertConfig (threshold inputs + action toggles) + period selector (1d/7d/30d).
