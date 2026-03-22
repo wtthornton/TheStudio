@@ -1,8 +1,9 @@
 # Epic 38 — GitHub Deep Integration: Issue Import, PR Evidence, Projects Sync, and Pipeline Comments
 
-> **Phase:** UI Phase 4 | **Status:** Draft — Awaiting Meridian Review
-> **Estimated duration:** 5-7 weeks | **Stories:** 12 backend + frontend per slice
-> **Depends on:** Epic 34 (Phase 0 SSE scaffold), Epic 35 (Phase 1 pipeline visibility), Epic 36 (Phase 2 triage/planning)
+> **Phase:** UI Phase 4 | **Status:** Approved — Meridian Round 2 PASS (2026-03-22)
+> **Estimated duration:** 5-7 weeks | **Stories:** 27 across 4 slices (MVP: Slices 1+2)
+> **Depends on:** Epic 34 (COMPLETE), Epic 35 (COMPLETE), Epic 36 (COMPLETE), Epic 37 (COMPLETE)
+> **Kill Criterion:** If after MVP delivery (Slices 1+2), fewer than 20% of pipeline tasks use manual import within 2 weeks, defer Slices 3-4 and proceed to Epic 39. Slices 1+2 shipping alone constitutes a successful epic.
 
 ---
 
@@ -117,8 +118,8 @@ The existing `ProjectsV2Client` (Epic 29, feature-flagged off at `src/github/pro
 | Metric | Target | Measurement |
 |--------|--------|-------------|
 | Issue import adoption | 60%+ of pipeline tasks originate from manual import (vs webhook-only) within 30 days of launch | TaskPacket source field |
-| PR evidence engagement | Reviewers spend 2x more time on Evidence Explorer tabs than on raw GitHub PR evidence comment | Dashboard interaction logs (tab switches, time-on-page) |
-| Projects sync accuracy | 95%+ of TaskPacket stage transitions reflected on GitHub board within 60 seconds | Sync lag measurement (stage event timestamp vs GitHub field update timestamp) |
+| PR evidence engagement | Evidence Explorer is used for 50%+ of published TaskPackets (at least one tab viewed) within 30 days of launch | Server-side: count of `GET /tasks/:id/evidence` requests vs total PUBLISHED TaskPackets |
+| Projects sync accuracy | 95%+ of TaskPacket stage transitions produce a corresponding `update_project_status_activity` success log within 60 seconds | Server-side: compare `pipeline.stage.exit` event count to `projects.sync.success` audit log count per period |
 | Pipeline comment usefulness | Developers report (via feedback) that issue comments reduce dashboard visits for status checks | Qualitative feedback; dashboard visit frequency delta |
 | Webhook bridge latency | GitHub events appear in SSE stream within 2 seconds of webhook receipt | Event timestamp comparison |
 | Zero feedback loops | No infinite update cycles between TheStudio and GitHub Projects | Monitor for >2 consecutive updates on the same item within 10 seconds |
@@ -183,8 +184,8 @@ The existing `ProjectsV2Client` (Epic 29, feature-flagged off at `src/github/pro
 | # | Story | Type | Files to Modify/Create | Est. |
 |---|-------|------|------------------------|------|
 | 38.1 | `GET /api/v1/dashboard/github/issues` — List repo issues from GitHub REST API with label/status/search filters, cached (5-min TTL), paginated | Backend | `src/dashboard/github_router.py` (new), `src/dashboard/__init__.py` | M |
-| 38.2 | `POST /api/v1/dashboard/github/import` — Batch import selected issues as TaskPackets; check for duplicates; respect triage mode if available | Backend | `src/dashboard/github_router.py`, `src/models/taskpacket_crud.py` | M |
-| 38.3 | Import modal frontend — repo selector, label/status filters, search, issue list with checkboxes, import mode toggle (triage vs direct), "already in pipeline" detection | Frontend | `dashboard/src/features/github/ImportModal.tsx` (new) | M |
+| 38.2 | `POST /api/v1/dashboard/github/import` — Batch import selected issues as TaskPackets; check for duplicates; respect triage mode if available. **Intake boundary:** Import creates TaskPackets directly via `taskpacket_crud.py` (same as webhook handler), bypassing `src/intake/` eligibility checks since the developer has manually selected the issues. Sets `source_name="dashboard_import"` to distinguish from webhook intake. If `TRIAGE_MODE_ENABLED`, creates in TRIAGE status; otherwise creates in RECEIVED and starts Temporal workflow. | Backend | `src/dashboard/github_router.py`, `src/models/taskpacket_crud.py` | M |
+| 38.3 | Import modal frontend — repo selector (uses existing admin settings repo config), label/status filters, search, issue list with checkboxes, import mode toggle (triage vs direct), "already in pipeline" detection | Frontend | `frontend/src/components/github/ImportModal.tsx` (new) | M |
 | 38.4 | Integration test: import 2 issues, verify TaskPackets created, verify duplicate blocked | Test | `tests/integration/test_issue_import.py` (new) | S |
 
 ### Slice 2: PR Evidence Explorer (MVP)
@@ -196,10 +197,10 @@ The existing `ProjectsV2Client` (Epic 29, feature-flagged off at `src/github/pro
 | 38.5 | `EvidencePayload` Pydantic model — structured JSON schema for evidence (task summary, intent, gate results, cost breakdown, provenance, files changed) | Backend | `src/publisher/evidence_payload.py` (new) | M |
 | 38.6 | `format_evidence_json()` — generate `EvidencePayload` alongside existing Markdown evidence comment | Backend | `src/publisher/evidence_comment.py` | M |
 | 38.7 | `GET /api/v1/dashboard/tasks/:id/evidence` — Return `EvidencePayload` JSON for a TaskPacket | Backend | `src/dashboard/task_router.py` (new or extend) | S |
-| 38.8 | PR Evidence Explorer frontend — tabbed viewer (Evidence, Diff, Intent, Gates, Cost) consuming evidence JSON | Frontend | `dashboard/src/features/pr/EvidenceExplorer.tsx` (new) | L |
+| 38.8 | PR Evidence Explorer frontend — tabbed viewer (Evidence, Diff, Intent, Gates, Cost) consuming evidence JSON | Frontend | `frontend/src/components/pr/EvidenceExplorer.tsx` (new) | L |
 | 38.9 | `POST /api/v1/dashboard/tasks/:id/pr/approve` — Approve and merge PR via GitHub REST API | Backend | `src/dashboard/pr_router.py` (new) | M |
 | 38.10 | `POST /api/v1/dashboard/tasks/:id/pr/request-changes` — Post PR review comment via GitHub API + create loopback signal | Backend | `src/dashboard/pr_router.py` | M |
-| 38.11 | Reviewer action buttons frontend — Approve & Merge, Request Changes, Close PR, View on GitHub | Frontend | `dashboard/src/features/pr/ReviewerActions.tsx` (new) | S |
+| 38.11 | Reviewer action buttons frontend — Approve & Merge, Request Changes, Close PR, View on GitHub | Frontend | `frontend/src/components/pr/ReviewerActions.tsx` (new) | S |
 | 38.12 | Integration test: evidence JSON generated for published TaskPacket, reviewer actions call GitHub API | Test | `tests/integration/test_pr_evidence_explorer.py` (new) | M |
 
 ### Slice 3: GitHub Projects Sync
@@ -209,11 +210,11 @@ The existing `ProjectsV2Client` (Epic 29, feature-flagged off at `src/github/pro
 | # | Story | Type | Files to Modify/Create | Est. |
 |---|-------|------|------------------------|------|
 | 38.13 | Enable `ProjectsV2Client` — remove feature-flag guard for sync when `projects_v2_enabled=True`; validate token scopes on connect | Backend | `src/workflow/pipeline.py`, `src/workflow/activities.py`, `src/settings.py` | S |
-| 38.14 | Extend field mapping — add Cost (number) and Complexity (single-select) custom fields to `projects_mapping.py`; auto-create fields if missing | Backend | `src/github/projects_mapping.py`, `src/github/projects_client.py` | M |
+| 38.14 | Extend field mapping — add Cost (number) and Complexity (single-select) custom fields to `projects_mapping.py`. Add `create_custom_field()` GraphQL mutation to `ProjectsV2Client` (net-new capability — the client currently reads fields but cannot create them). Auto-create fields on first sync if they do not exist on the project. | Backend | `src/github/projects_mapping.py`, `src/github/projects_client.py` | M |
 | 38.15 | GitHub-to-TheStudio sync — subscribe to `projects_v2_item` webhook events; update TaskPacket status when item status changes on GitHub board; skip self-triggered events | Backend | `src/ingress/webhook_handler.py`, `src/github/projects_sync.py` (new) | M |
 | 38.16 | `GET /PUT /api/v1/dashboard/github/projects/config` — Projects sync configuration (project selection, field mapping, sync behaviors) | Backend | `src/dashboard/github_router.py` | M |
 | 38.17 | `POST /api/v1/dashboard/github/projects/sync` — Force full sync (re-push all active TaskPackets to GitHub project) | Backend | `src/dashboard/github_router.py` | M |
-| 38.18 | Projects sync configuration UI — connect project, map fields, toggle behaviors, test sync, force sync | Frontend | `dashboard/src/features/github/ProjectsSyncConfig.tsx` (new) | M |
+| 38.18 | Projects sync configuration UI — connect project, map fields, toggle behaviors, test sync, force sync | Frontend | `frontend/src/components/github/ProjectsSyncConfig.tsx` (new) | M |
 | 38.19 | Feedback loop guard — tag outbound GraphQL mutations with `thestudio-sync` client mutation ID; detect and skip inbound webhooks triggered by own mutations | Backend | `src/github/projects_client.py`, `src/github/projects_sync.py` | M |
 | 38.20 | Integration test: stage transition pushes to Projects v2; manual GitHub status change updates TaskPacket; self-triggered webhook skipped | Test | `tests/integration/test_projects_sync.py` (new) | M |
 
@@ -227,24 +228,47 @@ The existing `ProjectsV2Client` (Epic 29, feature-flagged off at `src/github/pro
 | 38.22 | Pipeline comment activity — Temporal activity that creates comment on first call, edits in place on subsequent calls; final update includes PR link | Backend | `src/workflow/activities.py`, `src/workflow/pipeline.py` | M |
 | 38.23 | `pipeline_comments_enabled` feature flag + per-repo configuration | Backend | `src/settings.py`, `src/admin/settings_service.py` | S |
 | 38.24 | Webhook bridge — extend `webhook_handler.py` to parse PR and issue events, publish to NATS JetStream on `github.event.*` subjects | Backend | `src/ingress/webhook_handler.py` | M |
-| 38.25 | SSE propagation — include `github.event.*` subjects in the SSE stream subscription so dashboard receives real-time GitHub events | Backend | `src/dashboard/sse.py` (extend if exists, or new) | S |
-| 38.26 | PR status and issue updates in dashboard — consume `github.event.*` SSE events to update PR Evidence Explorer (review status) and triage queue (new comments/labels) in real time | Frontend | `dashboard/src/hooks/useGitHubEvents.ts` (new) | M |
+| 38.25 | SSE propagation — extend `src/dashboard/events.py` to include `github.event.*` subjects in the NATS stream subscription (currently only subscribes to `pipeline.>`). May require adding `github.>` as a second subject filter on the `THESTUDIO_PIPELINE` stream, or creating a second stream. Dashboard receives real-time GitHub events via existing SSE bridge. | Backend | `src/dashboard/events.py` (extend) | S |
+| 38.26 | PR status and issue updates in dashboard — consume `github.event.*` SSE events to update PR Evidence Explorer (review status) and triage queue (new comments/labels) in real time | Frontend | `frontend/src/hooks/useGitHubEvents.ts` (new) | M |
 | 38.27 | Integration test: stage transition posts comment on issue; comment edited on next transition; webhook events published to NATS | Test | `tests/integration/test_pipeline_comments.py` (new) | M |
 
 ---
 
 ## Meridian Review Status
 
-### Round 1: Pending
+### Round 1: CONDITIONAL PASS (2026-03-22)
 
-This epic is in draft. It requires Meridian review before commit. The seven review questions and red-flag scan have not yet been applied.
+**Overall Verdict: CONDITIONAL PASS — 6 blockers identified.**
 
-| Question | Status |
-|----------|--------|
-| 1. Is the scope bounded and achievable in 5-7 weeks? | Pending |
-| 2. Are acceptance criteria testable at epic level? | Pending |
-| 3. Are non-goals explicit enough to prevent scope creep? | Pending |
-| 4. Are dependencies identified and their absence handled? | Pending |
-| 5. Are success metrics measurable with existing infrastructure? | Pending |
-| 6. Is the story map ordered by risk reduction? | Pending |
-| 7. Can an AI agent implement each story from its description alone? | Pending |
+| # | Question | Verdict | Detail |
+|---|----------|---------|--------|
+| 1 | Scope bounded and achievable? | **CONDITIONAL PASS** | Missing kill criterion for partial-ship scenario |
+| 2 | Acceptance criteria testable? | **PASS** | All 8 ACs testable. AC-2 tab list pinned to 5 tabs. |
+| 3 | Non-goals explicit? | **PASS** | 7 explicit non-goals, well-bounded |
+| 4 | Dependencies identified? | **CONDITIONAL PASS** | SSE stream subject filter gap; intake boundary unclear |
+| 5 | Success metrics measurable? | **CONDITIONAL PASS** | 2 metrics required frontend analytics not provisioned |
+| 6 | Story map ordered by risk? | **PASS** | Correct: REST → schema → GraphQL → infrastructure |
+| 7 | AI agent can implement? | **CONDITIONAL PASS** | 5 stories had wrong frontend paths; SSE file reference wrong |
+
+### Blockers Found and Fixed
+
+1. ~~**Frontend paths wrong.**~~ **FIXED:** All `dashboard/src/features/...` paths changed to `frontend/src/components/...` or `frontend/src/hooks/...`
+2. ~~**SSE file reference wrong.**~~ **FIXED:** Story 38.25 now references `src/dashboard/events.py` with note about NATS stream subject expansion
+3. ~~**Missing kill criterion.**~~ **FIXED:** Kill criterion added to epic header (20% import adoption threshold)
+4. ~~**Unmeasurable success metrics.**~~ **FIXED:** PR evidence engagement and Projects sync accuracy metrics replaced with server-side measurable proxies
+5. ~~**Intake boundary unclear.**~~ **FIXED:** Story 38.2 now specifies import creates TaskPackets via `taskpacket_crud.py` directly, sets `source_name="dashboard_import"`, respects triage mode
+6. ~~**Missing field-creation capability.**~~ **FIXED:** Story 38.14 now explicitly notes `create_custom_field()` is net-new GraphQL mutation work
+
+### Round 2: PASS (2026-03-22)
+
+**Overall Verdict: PASS — All 6 blockers resolved. Epic approved for Helm sprint planning.**
+
+| # | Question | R1 Verdict | R2 Verdict |
+|---|----------|------------|------------|
+| 1 | Scope bounded? | CONDITIONAL | **PASS** |
+| 2 | ACs testable? | PASS | **PASS** |
+| 3 | Non-goals explicit? | PASS | **PASS** |
+| 4 | Dependencies identified? | CONDITIONAL | **PASS** |
+| 5 | Metrics measurable? | CONDITIONAL | **PASS** |
+| 6 | Story map risk-ordered? | PASS | **PASS** |
+| 7 | AI agent can implement? | CONDITIONAL | **PASS** |

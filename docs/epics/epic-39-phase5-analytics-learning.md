@@ -1,10 +1,10 @@
 # Epic 39: Phase 5 -- Analytics & Learning Dashboards
 
-> **Status:** Draft
+> **Status:** Approved — Meridian Round 2 PASS (2026-03-22)
 > **Epic Owner:** Primary Developer
-> **Duration:** 4-5 weeks (backend + frontend, solo developer)
+> **Duration:** 5-6 weeks (backend + frontend, solo developer; +1 week for prerequisite data stories)
 > **Created:** 2026-03-20
-> **Meridian Review:** Round 1: Pending
+> **Meridian Review:** Round 1: CONDITIONAL PASS → Round 2: **PASS** (2026-03-22)
 
 ---
 
@@ -39,7 +39,7 @@ This is the final phase of the Pipeline UI initiative. It depends on all prior p
 | Reputation & Outcome Dashboard design | `docs/design/03-INTERACTIVE-CONTROLS.md` Section 5 |
 | Backend requirements (B-5.1 through B-5.8) | `docs/design/06-BACKEND-REQUIREMENTS.md` Section 3, Phase 5 |
 | Technology architecture | `docs/design/05-TECHNOLOGY-ARCHITECTURE.md` |
-| Reputation system (weights, tiers) | `src/reputation/` |
+| Reputation system (weights API: `get_all_weights()`, `query_weights()`, `get_weight()`) | `src/reputation/engine.py` |
 | Outcome system (signals, quarantine) | `src/outcome/` |
 | Model spend tracking | `src/admin/model_spend.py` |
 | Stage timing data (Phase 1 dependency) | `src/models/taskpacket.py` (stage timestamps from B-1.12) |
@@ -135,7 +135,7 @@ Four summary cards appear at the top of the Operational Analytics view (tasks co
 |--------|--------|--------------|
 | Bottleneck identification | Developer identifies slowest pipeline stage within 3 seconds of viewing analytics | Playwright timing test: page load to visible bottleneck highlight |
 | Category insight | Developer can compare merge rates across task categories from a single view | AC 3 implemented; no navigation required to compare categories |
-| Drift awareness | Declining expert performance detected within 48 hours of trend onset | Drift detection alerts fire when 14-day rolling window shows >10% decline; verified with synthetic data |
+| Drift awareness | Declining expert performance visible on dashboard load when the 14-day rolling window shows >10% decline | Drift detection computed on API request; verified with synthetic data showing >10% weight decline |
 | Dashboard load time | All analytics views render in under 2 seconds with 90 days of data | Automated performance test with 10,000 synthetic TaskPackets |
 | API response time | All aggregation endpoints respond in under 1 second for 10,000 TaskPackets | pytest benchmark with synthetic data |
 | Zero regressions | All pre-existing tests pass after epic delivery | `pytest` full suite green |
@@ -148,7 +148,7 @@ Four summary cards appear at the top of the Operational Analytics view (tasks co
 
 - **Period calculation.** "Previous period" for trend comparison means the period of equal length immediately preceding the selected period. A 30d view compares days 1-30 against days 31-60.
 - **Task "completion."** A task is "completed" when it reaches PUBLISHED, REJECTED, or FAILED terminal status. Tasks still in-flight are excluded from aggregation but included in "active" counts.
-- **Expert weight source.** Expert weights come from `src/reputation/weights.py`. The dashboard reads but never writes weights -- the reputation system is the sole authority.
+- **Expert weight source.** Expert weights come from `src/reputation/engine.py` (functions: `get_all_weights()`, `query_weights()`, `get_weight()`). The dashboard reads but never writes weights -- the reputation system is the sole authority.
 - **Drift window.** 14-day rolling window is hardcoded for MVP. Configurable windows are a post-MVP enhancement.
 - **Category taxonomy.** Task categories (bug, feature, refactor, docs) are derived from GitHub issue labels at intake time. Tasks without labels are categorized as "other."
 
@@ -159,17 +159,17 @@ Four summary cards appear at the top of the Operational Analytics view (tasks co
 | Stage timing per TaskPacket (start/end per stage) | B-1.12 (Phase 1) | Bottleneck analysis, avg pipeline time |
 | Gate evidence in PostgreSQL | B-1.6 (Phase 1) | Failure analysis by type |
 | Cost records (ModelCallAudit) | Existing (`src/admin/model_spend.py`) | Total spend metric, cost trends |
-| PR merge status from GitHub | Phase 4 (webhook bridge) | Merge rate calculations |
-| Expert reputation weights | Existing (`src/reputation/`) | Expert performance table |
-| Outcome signals | Existing (`src/outcome/`) | Outcome feed, learnings |
+| PR merge status from GitHub | Phase 4 (Epic 38 webhook bridge, or prerequisite story 39.0b) | Merge rate calculations |
+| Expert reputation weights | Existing (`src/reputation/engine.py`) | Expert performance table |
+| Outcome signals in PostgreSQL | **PREREQUISITE** (currently in-memory only in `src/outcome/ingestor.py`) | Outcome feed, learnings |
 | React SPA scaffold | Phase 0 | Dashboard shell, routing, component library |
 | Chart library | Phase 3 (cost dashboard) | Consistent charting across dashboard |
 
 ### Systems Affected
 
-- **PostgreSQL:** New aggregation queries (read-only). Possible new indexes on `task_packets.completed_at`, `gate_results.stage`, `gate_results.created_at`. No schema changes.
+- **PostgreSQL:** New aggregation queries (read-only) plus 3 prerequisite schema changes: (a) `completed_at` column on `TaskPacketRow`, (b) outcome signal table, (c) `pr_merge_status` field. New indexes on `task_packets.completed_at`, `gate_results.stage`, `gate_results.created_at`.
 - **FastAPI:** 7 new GET endpoints under `/api/v1/dashboard/analytics/` and `/api/v1/dashboard/reputation/`.
-- **React SPA:** 2 new route views (`/dashboard/analytics`, `/dashboard/reputation`), ~12-15 new components.
+- **React SPA:** 2 new tab views (`analytics`, `reputation` added to `Tab` union in `frontend/src/App.tsx`), ~12-15 new components at `frontend/src/components/`.
 - **Reputation module:** Read-only access. No changes to weight computation or drift detection logic -- the dashboard surfaces existing computations.
 - **Outcome module:** Read-only access. No changes to signal ingestion or quarantine logic.
 
@@ -187,6 +187,16 @@ Four summary cards appear at the top of the Operational Analytics view (tasks co
 
 ---
 
+### Slice 0: Data Prerequisites (Must complete before Slices 1-2)
+
+> **Goal:** Add missing schema columns and tables that Slices 1-2 depend on.
+
+| # | Story | Type | Est. | Files to Modify/Create |
+|---|-------|------|------|----------------------|
+| 39.0a | Add `completed_at` timestamp column to `TaskPacketRow` — set on transition to terminal status (PUBLISHED, REJECTED, FAILED, ABORTED). Alembic migration + backfill from `updated_at` for existing terminal TaskPackets. | Backend | S | `src/models/taskpacket.py`, `src/models/taskpacket_crud.py`, migration |
+| 39.0b | Add `pr_merge_status` field to `TaskPacketRow` — enum (open, merged, closed), nullable. Updated by Epic 38 webhook bridge (Story 38.24) or by a new polling activity. If Epic 38 is not yet complete, add a manual update endpoint. Migration. | Backend | S | `src/models/taskpacket.py`, migration |
+| 39.0c | Persist outcome signals to PostgreSQL — create `OutcomeSignalRow` table (id, task_id, signal_type, payload JSON, created_at). Migrate `src/outcome/ingestor.py` from in-memory list to DB persistence. Preserve existing in-memory API as a cache layer. | Backend | M | `src/outcome/ingestor.py`, `src/outcome/models.py` (new), migration |
+
 ### Slice 1: Operational Analytics (Backend + Frontend)
 
 > **Goal:** Answer "How is the pipeline performing overall?" with throughput, bottlenecks, categories, and failures.
@@ -199,12 +209,12 @@ Four summary cards appear at the top of the Operational Analytics view (tasks co
 | 39.3 | `GET /api/v1/dashboard/analytics/categories` -- Performance by task category (count, merge rate, avg cost, avg time) | Backend | B-1.12 | S | `src/dashboard/analytics_queries.py` |
 | 39.4 | `GET /api/v1/dashboard/analytics/failures` -- Gate failures by stage and type with trend indicator | Backend | B-1.6 | M | `src/dashboard/analytics_queries.py` |
 | 39.5 | Operational Analytics summary cards (tasks done, avg time, merge rate, spend) with trend calculation | Backend | 39.1-39.4 | S | `src/dashboard/analytics_queries.py` |
-| 39.6 | Throughput chart component (bar chart, period selector, responsive) | Frontend | 39.1 | M | `src/dashboard/ui/views/Analytics.tsx` (create), `src/dashboard/ui/components/ThroughputChart.tsx` (create) |
-| 39.7 | Stage bottleneck horizontal bar component (highlight longest, annotate most variable) | Frontend | 39.2 | M | `src/dashboard/ui/components/BottleneckBars.tsx` (create) |
-| 39.8 | Category breakdown table component | Frontend | 39.3 | S | `src/dashboard/ui/components/CategoryBreakdown.tsx` (create) |
-| 39.9 | Failure analysis component (grouped by stage, trend indicators) | Frontend | 39.4 | M | `src/dashboard/ui/components/FailureAnalysis.tsx` (create) |
-| 39.10 | Summary cards row component with trend indicators | Frontend | 39.5 | S | `src/dashboard/ui/components/SummaryCards.tsx` (create) |
-| 39.11 | Period selector component (7d, 30d, 90d, custom) shared across analytics views | Frontend | -- | S | `src/dashboard/ui/components/PeriodSelector.tsx` (create) |
+| 39.6 | Throughput chart component (bar chart, period selector, responsive) | Frontend | 39.1 | M | `frontend/src/components/analytics/Analytics.tsx` (create), `frontend/src/components/analytics/ThroughputChart.tsx` (create) |
+| 39.7 | Stage bottleneck horizontal bar component (highlight longest, annotate most variable) | Frontend | 39.2 | M | `frontend/src/components/analytics/BottleneckBars.tsx` (create) |
+| 39.8 | Category breakdown table component | Frontend | 39.3 | S | `frontend/src/components/analytics/CategoryBreakdown.tsx` (create) |
+| 39.9 | Failure analysis component (grouped by stage, trend indicators) | Frontend | 39.4 | M | `frontend/src/components/analytics/FailureAnalysis.tsx` (create) |
+| 39.10 | Summary cards row component with trend indicators | Frontend | 39.5 | S | `frontend/src/components/analytics/SummaryCards.tsx` (create) |
+| 39.11 | Period selector component (7d, 30d, 90d, custom) shared across analytics views | Frontend | -- | S | `frontend/src/components/analytics/PeriodSelector.tsx` (create) |
 
 ### Slice 2: Reputation & Outcomes (Backend + Frontend)
 
@@ -218,24 +228,41 @@ Four summary cards appear at the top of the Operational Analytics view (tasks co
 | 39.14 | `GET /api/v1/dashboard/reputation/drift` -- Drift detection alerts (14-day rolling window) | Backend | -- | M | `src/dashboard/reputation_queries.py` |
 | 39.15 | Drift score computation: composite metric from gate pass rates, expert weights, cost trends, loopback rates | Backend | 39.14 | M | `src/dashboard/reputation_queries.py` |
 | 39.16 | Reputation summary cards (success rate, avg loopbacks, merge rate, drift score) with trends | Backend | 39.12-39.15 | S | `src/dashboard/reputation_queries.py` |
-| 39.17 | Expert performance table component (sortable columns, click-to-expand detail) | Frontend | 39.12 | M | `src/dashboard/ui/views/Reputation.tsx` (create), `src/dashboard/ui/components/ExpertTable.tsx` (create) |
-| 39.18 | Expert detail view (task history list, weight trend chart) | Frontend | 39.12 | M | `src/dashboard/ui/components/ExpertDetail.tsx` (create) |
-| 39.19 | Outcome signals feed component (chronological, outcome badges, learnings) | Frontend | 39.13 | M | `src/dashboard/ui/components/OutcomeFeed.tsx` (create) |
-| 39.20 | Drift detection alerts panel (metric, direction, magnitude, possible cause) | Frontend | 39.14, 39.15 | M | `src/dashboard/ui/components/DriftAlerts.tsx` (create) |
-| 39.21 | Reputation summary cards row | Frontend | 39.16 | S | Reuse `SummaryCards.tsx` from Slice 1 with reputation data shape |
+| 39.17 | Expert performance table component (sortable columns, click-to-expand detail) | Frontend | 39.12 | M | `frontend/src/components/reputation/Reputation.tsx` (create), `frontend/src/components/analytics/ExpertTable.tsx` (create) |
+| 39.18 | Expert detail view (task history list, weight trend chart) | Frontend | 39.12 | M | `frontend/src/components/analytics/ExpertDetail.tsx` (create) |
+| 39.19 | Outcome signals feed component (chronological, outcome badges, learnings) | Frontend | 39.13 | M | `frontend/src/components/analytics/OutcomeFeed.tsx` (create) |
+| 39.20 | Drift detection alerts panel (metric, direction, magnitude, possible cause) | Frontend | 39.14, 39.15 | M | `frontend/src/components/analytics/DriftAlerts.tsx` (create) |
+| 39.21 | Reputation summary cards row | Frontend | 39.16 | S | Reuse `frontend/src/components/analytics/SummaryCards.tsx` from Slice 1 with reputation data shape |
 
-**Total: 21 stories** (11 in Slice 1, 10 in Slice 2)
+**Total: 24 stories** (3 in Slice 0, 11 in Slice 1, 10 in Slice 2)
 
 ---
 
 ## Meridian Review Status
 
-**Round 1: Pending**
+### Round 1: CONDITIONAL PASS (2026-03-22)
 
-| # | Issue | Resolution |
-|---|-------|------------|
-| -- | -- | -- |
+**Verdict: CONDITIONAL PASS — 5 blockers found.**
 
----
+| # | Question | Verdict |
+|---|----------|---------|
+| 1 | Scope bounded? | **CONDITIONAL PASS** — Missing data prerequisites add ~1 week |
+| 2 | ACs testable? | **PASS** |
+| 3 | Non-goals explicit? | **PASS** |
+| 4 | Dependencies identified? | **CONDITIONAL PASS** — 4 missing data dependencies |
+| 5 | Metrics measurable? | **CONDITIONAL PASS** — Drift metric implies push detection |
+| 6 | Story map risk-ordered? | **PASS** |
+| 7 | AI agent can implement? | **CONDITIONAL PASS** — Frontend paths wrong, weights.py doesn't exist |
 
-*This epic requires Meridian review before commit. Flag for review using the Meridian persona.*
+### Blockers Found and Fixed
+
+1. ~~**`src/reputation/weights.py` does not exist**~~ **FIXED:** Updated to `src/reputation/engine.py` with specific function names
+2. ~~**`completed_at` column missing**~~ **FIXED:** Added prerequisite Story 39.0a
+3. ~~**Outcome signals in-memory only**~~ **FIXED:** Added prerequisite Story 39.0c
+4. ~~**PR merge status not persisted**~~ **FIXED:** Added prerequisite Story 39.0b
+5. ~~**Frontend paths wrong (`src/dashboard/ui/`)**~~ **FIXED:** All paths updated to `frontend/src/components/`
+6. ~~**Drift metric unmeasurable**~~ **FIXED:** Rephrased to "visible on dashboard load"
+
+### Round 2: PASS (2026-03-22)
+
+All 5 blockers resolved. Duration adjusted to 5-6 weeks (+1 week for Slice 0 prerequisites). Epic approved for sprint planning after Epic 38 MVP completes.

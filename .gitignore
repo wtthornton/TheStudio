@@ -63,3 +63,6 @@ CLAUDE.local.md
 !.ralph/logs/.gitkeep
 .ralph/docs/generated/*
 !.ralph/docs/generated/.gitkeep
+
+# LOCK-1: Instance lock file (auto-released by flock)
+.ralph/.ralph.lock
