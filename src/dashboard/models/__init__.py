@@ -1,5 +1,17 @@
 """Dashboard ORM models package."""
 
+from src.dashboard.models.notification import (
+    NotificationCreate,
+    NotificationListResponse,
+    NotificationRead,
+    NotificationRow,
+    NotificationType,
+    create_notification,
+    get_notification,
+    list_notifications,
+    mark_all_notifications_read,
+    mark_notification_read,
+)
 from src.dashboard.models.budget_config import (
     BudgetConfigRead,
     BudgetConfigRow,
@@ -37,6 +49,17 @@ from src.dashboard.models.trust_config import (
 )
 
 __all__ = [
+    # notification
+    "NotificationCreate",
+    "NotificationListResponse",
+    "NotificationRead",
+    "NotificationRow",
+    "NotificationType",
+    "create_notification",
+    "get_notification",
+    "list_notifications",
+    "mark_all_notifications_read",
+    "mark_notification_read",
     # budget_config
     "BudgetConfigRead",
     "BudgetConfigRow",
