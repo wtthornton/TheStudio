@@ -111,6 +111,11 @@ class Settings(BaseSettings):
     routing_review_enabled: bool = False  # When True, workflow pauses after Router stage
     max_intent_versions: int = 10  # Cap on intent spec versions per workflow (was 2)
 
+    # Pipeline Comments (Epic 38 Slice 4, Story 38.23)
+    # Posts a live status comment on the GitHub issue at each stage transition.
+    pipeline_comments_enabled: bool = False  # Feature flag — off by default
+    pipeline_webhook_bridge_enabled: bool = False  # Publish PR/issue events to NATS (38.24)
+
     # Dashboard SSE auth (Epic 34 — B-0.7)
     dashboard_token: str = ""  # Token for SSE endpoint; empty = dev mode (no auth)
 

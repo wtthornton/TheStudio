@@ -19,6 +19,18 @@ from sqlalchemy.orm import Mapped, mapped_column
 from src.db.base import Base
 
 
+class PrMergeStatus(enum.StrEnum):
+    """Merge status of the pull request associated with a TaskPacket.
+
+    Updated by the Epic 38 webhook bridge (Story 38.24) or a polling activity.
+    Nullable — only set after a PR is created (PUBLISHED status).
+    """
+
+    OPEN = "open"
+    MERGED = "merged"
+    CLOSED = "closed"
+
+
 class TaskTrustTier(enum.StrEnum):
     """Pipeline-level trust tier assigned to a TaskPacket.
 
@@ -183,6 +195,10 @@ class TaskPacketRow(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
+    # Set on transition to terminal status: PUBLISHED, REJECTED, FAILED, ABORTED (Epic 39.0a)
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None
+    )
 
     # Enrichment fields (Story 0.3 — Context Manager, upgraded in Story 2.1)
     scope: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
@@ -222,6 +238,18 @@ class TaskPacketRow(Base):
     # Published PR fields — persisted by Publisher after PR creation
     pr_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
     pr_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # PR merge status: open/merged/closed. Set by webhook bridge (Epic 38.24) or polling.
+    # Nullable — only populated after PR creation. (Epic 39.0b)
+    pr_merge_status: Mapped[PrMergeStatus | None] = mapped_column(
+        Enum(
+            PrMergeStatus,
+            name="pr_merge_status_enum",
+            create_constraint=True,
+            values_callable=lambda e: [m.value for m in e],
+        ),
+        nullable=True,
+        default=None,
+    )
 
     # Trust tier (Epic 37 — Slice 3: Trust Tier Configuration)
     # Nullable: set by trust rule engine before first pipeline activity.
@@ -290,8 +318,12 @@ class TaskPacketRead(BaseModel):
     routing_result: dict[str, Any] | None = None
     pr_number: int | None = None
     pr_url: str | None = None
+    # PR merge status (Epic 39.0b)
+    pr_merge_status: PrMergeStatus | None = None
     loopback_count: int = 0
     # Trust tier assigned by the rule engine (Epic 37 — Slice 3)
     task_trust_tier: TaskTrustTier | None = None
     created_at: datetime
     updated_at: datetime
+    # Set when TaskPacket reaches terminal status (Epic 39.0a)
+    completed_at: datetime | None = None

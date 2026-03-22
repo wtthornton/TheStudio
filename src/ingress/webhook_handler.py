@@ -39,6 +39,15 @@ _ISSUE_UPDATE_ACTIONS = frozenset({"edited"})
 _COMMENT_TRIGGER_ACTIONS = frozenset({"created"})
 # Epic 38.15: Projects v2 item event type for inbound sync
 _PROJECTS_V2_ITEM_EVENT = "projects_v2_item"
+# Epic 38.24: Webhook bridge — event types published to NATS github.event.* subjects
+_BRIDGE_EVENT_TYPES = frozenset({
+    "pull_request",
+    "pull_request_review",
+    "pull_request_review_comment",
+    "check_run",
+    "check_suite",
+    "issue_comment",
+})
 
 
 def normalize_webhook_payload(
@@ -79,6 +88,60 @@ def _is_reevaluation_trigger(event_type: str, action: str) -> bool:
     if event_type == "issue_comment" and action in _COMMENT_TRIGGER_ACTIONS:
         return True
     return False
+
+
+async def _publish_github_event_to_nats(
+    event_type: str,
+    delivery_id: str,
+    payload: dict,
+    repo: str,
+) -> None:
+    """Publish a GitHub webhook event to NATS JetStream (fire-and-forget).
+
+    Epic 38.24 — Webhook Bridge.
+
+    Publishes to subject ``github.event.{event_type}`` so the SSE stream
+    can relay real-time GitHub events to the dashboard.
+
+    Failures are logged but never raised — bridge events never block intake.
+    """
+    from datetime import UTC, datetime
+
+    try:
+        from src.dashboard.events_publisher import get_pipeline_jetstream
+
+        action = payload.get("action", "")
+        nats_payload = {
+            "type": f"github.event.{event_type}",
+            "data": {
+                "event_type": event_type,
+                "action": action,
+                "delivery_id": delivery_id,
+                "repo": repo,
+                "payload": payload,
+                "timestamp": datetime.now(UTC).isoformat(),
+            },
+        }
+        import json
+
+        js = await get_pipeline_jetstream()
+        await js.publish(
+            f"github.event.{event_type}",
+            json.dumps(nats_payload).encode(),
+        )
+        logger.debug(
+            "github.event.published event=%s action=%s repo=%s",
+            event_type,
+            action,
+            repo,
+        )
+    except Exception:
+        logger.debug(
+            "github.event.publish_failed event=%s repo=%s",
+            event_type,
+            repo,
+            exc_info=True,
+        )
 
 
 @router.post("/webhook/github")
@@ -142,8 +205,16 @@ async def github_webhook(
             span.set_attribute(ATTR_OUTCOME, "invalid_signature")
             return Response(status_code=401, content="Invalid signature")
 
-        # 6. Filter for handled event types
+        # 6. Filter for handled event types; bridge supported events to NATS (38.24)
         if x_github_event not in _REEVALUATION_EVENTS:
+            # Epic 38.24: Publish bridge-eligible events to NATS before returning
+            if x_github_event in _BRIDGE_EVENT_TYPES and settings.pipeline_webhook_bridge_enabled:
+                await _publish_github_event_to_nats(
+                    x_github_event,
+                    x_github_delivery or "",
+                    payload,
+                    repo_full_name,
+                )
             span.set_attribute(ATTR_OUTCOME, "not_issue_event")
             return Response(status_code=200, content="Event type not handled")
 

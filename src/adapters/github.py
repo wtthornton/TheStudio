@@ -180,6 +180,20 @@ class ResilientGitHubClient:
             json={"body": body},
         )
 
+    async def list_issue_comments(
+        self, owner: str, repo: str, issue_number: int, per_page: int = 100,
+    ) -> list[dict[str, Any]]:
+        """List comments on an issue or pull request (up to per_page).
+
+        Added for Epic 38.22 pipeline comment idempotent update support.
+        """
+        resp = await self._client.request(
+            "GET",
+            f"/repos/{owner}/{repo}/issues/{issue_number}/comments",
+            params={"per_page": per_page},
+        )
+        resp.raise_for_status()
+        return resp.json()  # type: ignore[no-any-return]
 
     async def find_pr_by_head(
         self, owner: str, repo: str, head_branch: str

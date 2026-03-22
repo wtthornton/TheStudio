@@ -192,6 +192,33 @@ class ProjectStatusOutput:
 
 
 @dataclass
+class PostPipelineCommentInput:
+    """Input for the pipeline comment activity (Story 38.22).
+
+    Posts or updates the <!-- thestudio-pipeline-status --> comment on the
+    GitHub issue linked to this TaskPacket.
+    """
+
+    taskpacket_id: str
+    current_stage: str
+    completed_stages: list[str] = field(default_factory=list)
+    trust_tier: str = "observe"
+    cost_usd: float = 0.0
+    model: str = ""
+    pr_url: str = ""
+    status: str = "in_progress"  # in_progress | passed | failed | complete
+
+
+@dataclass
+class PostPipelineCommentOutput:
+    """Output of the pipeline comment activity."""
+
+    posted: bool = False
+    comment_id: int = 0
+    error: str = ""
+
+
+@dataclass
 class ImplementInput:
     """Input for the implementation activity."""
 
@@ -1824,3 +1851,128 @@ async def assign_trust_tier_activity(
             exc_info=True,
         )
         return AssignTrustTierOutput(tier="observe", reason="evaluation error — fallback")
+
+
+@activity.defn
+async def post_pipeline_comment_activity(
+    params: PostPipelineCommentInput,
+) -> PostPipelineCommentOutput:
+    """Post or update the pipeline status comment on the linked GitHub issue.
+
+    Epic 38 Story 38.22 — Pipeline comment activity.
+
+    Creates the <!-- thestudio-pipeline-status --> comment on first call;
+    edits it in place on subsequent calls. Best-effort: any failure is logged
+    but never blocks the pipeline (same pattern as update_project_status_activity).
+
+    When github_provider is "mock" or pipeline_comments_enabled is False,
+    returns immediately without calling the GitHub API.
+    """
+    import logging
+    from uuid import UUID
+
+    from src.publisher.pipeline_comment import (
+        PIPELINE_COMMENT_MARKER,
+        format_pipeline_comment,
+    )
+    from src.settings import settings
+
+    logger = logging.getLogger("thestudio.pipeline_comment")
+
+    if not settings.pipeline_comments_enabled:
+        return PostPipelineCommentOutput(posted=False, error="pipeline_comments_disabled")
+
+    if settings.github_provider != "real":
+        logger.debug(
+            "pipeline_comment.skip_mock",
+            extra={"taskpacket_id": params.taskpacket_id, "stage": params.current_stage},
+        )
+        return PostPipelineCommentOutput(posted=False, error="mock_provider")
+
+    try:
+        from src.adapters.github import get_github_client
+        from src.db.connection import get_async_session
+        from src.models.taskpacket_crud import get as get_taskpacket
+
+        # Resolve GitHub token (same pattern as _publish_real)
+        token = settings.intake_poll_token
+        if not token:
+            logger.warning(
+                "pipeline_comment.no_token",
+                extra={"taskpacket_id": params.taskpacket_id},
+            )
+            return PostPipelineCommentOutput(posted=False, error="no_github_token")
+
+        async with get_async_session() as session:
+            tp = await get_taskpacket(session, UUID(params.taskpacket_id))
+            if tp is None:
+                return PostPipelineCommentOutput(posted=False, error="taskpacket_not_found")
+
+            owner, repo_name = tp.repo.split("/", 1)
+            issue_number = tp.issue_id
+
+        comment_body = format_pipeline_comment(
+            taskpacket_id=params.taskpacket_id,
+            current_stage=params.current_stage,
+            completed_stages=params.completed_stages,
+            trust_tier=params.trust_tier,
+            cost_usd=params.cost_usd,
+            model=params.model,
+            pr_url=params.pr_url,
+            status=params.status,
+        )
+
+        github = get_github_client(token)
+        try:
+            # Search for an existing pipeline comment by marker
+            existing_comments = await github.list_issue_comments(
+                owner, repo_name, issue_number
+            )
+            existing_comment_id: int | None = None
+            for c in existing_comments:
+                body = c.get("body", "")
+                if PIPELINE_COMMENT_MARKER in body:
+                    existing_comment_id = c.get("id")
+                    break
+
+            if existing_comment_id is not None:
+                result = await github.update_comment(
+                    owner, repo_name, existing_comment_id, comment_body
+                )
+                comment_id: int = result.get("id", existing_comment_id)
+                logger.info(
+                    "pipeline_comment.updated",
+                    extra={
+                        "taskpacket_id": params.taskpacket_id,
+                        "comment_id": comment_id,
+                        "stage": params.current_stage,
+                    },
+                )
+            else:
+                result = await github.add_comment(
+                    owner, repo_name, issue_number, comment_body
+                )
+                comment_id = result.get("id", 0)
+                logger.info(
+                    "pipeline_comment.created",
+                    extra={
+                        "taskpacket_id": params.taskpacket_id,
+                        "comment_id": comment_id,
+                        "stage": params.current_stage,
+                    },
+                )
+
+            return PostPipelineCommentOutput(posted=True, comment_id=comment_id)
+        finally:
+            await github.close()
+
+    except Exception:
+        logger.warning(
+            "pipeline_comment.failed",
+            extra={
+                "taskpacket_id": params.taskpacket_id,
+                "stage": params.current_stage,
+            },
+            exc_info=True,
+        )
+        return PostPipelineCommentOutput(posted=False, error="github_api_error")

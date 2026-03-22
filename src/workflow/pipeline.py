@@ -48,6 +48,7 @@ with workflow.unsafe.imports_passed_through():
         IntentInput,
         IntentOutput,
         PersistSteeringAuditInput,
+        PostPipelineCommentInput,
         PreflightActivityOutput,
         PreflightInput,
         ProjectStatusInput,
@@ -69,6 +70,7 @@ with workflow.unsafe.imports_passed_through():
         intent_activity,
         persist_steering_audit_activity,
         post_approval_request_activity,
+        post_pipeline_comment_activity,
         preflight_activity,
         publish_activity,
         qa_activity,
@@ -249,6 +251,7 @@ class PipelineInput:
     approval_auto_bypass: bool = False
     intent_review_enabled: bool = False
     routing_review_enabled: bool = False
+    pipeline_comments_enabled: bool = False  # Epic 38.23 — post live status on issue
     # Set by redirect_task continue_as_new to indicate which stage to start from.
     # Stages before start_from_stage are still executed (activities are idempotent
     # and will fast-path based on existing TaskPacket state).
@@ -700,6 +703,53 @@ class TheStudioPipelineWorkflow:
                 extra={"taskpacket_id": params.taskpacket_id, "status": status},
             )
 
+    async def _post_pipeline_comment(
+        self,
+        params: PipelineInput,
+        current_stage: str,
+        completed_stages: list[str],
+        *,
+        status: str = "in_progress",
+        pr_url: str = "",
+        trust_tier: str = "",
+    ) -> None:
+        """Fire-and-forget pipeline status comment post/update (best-effort).
+
+        Epic 38 Story 38.22 — wired at key stage transitions.
+        Never blocks the pipeline on failure.
+        """
+        if not params.pipeline_comments_enabled:
+            return
+        comment_policy = StepPolicy(
+            timeout=timedelta(seconds=30),
+            max_retries=1,
+            initial_interval=timedelta(seconds=2),
+            backoff_coefficient=1.0,
+        )
+        try:
+            await workflow.execute_activity(
+                post_pipeline_comment_activity,
+                PostPipelineCommentInput(
+                    taskpacket_id=params.taskpacket_id,
+                    current_stage=current_stage,
+                    completed_stages=completed_stages,
+                    trust_tier=trust_tier or params.repo_tier,
+                    status=status,
+                    pr_url=pr_url,
+                ),
+                start_to_close_timeout=comment_policy.timeout,
+                retry_policy=comment_policy.to_retry_policy(),
+            )
+        except Exception:
+            # Best-effort — log but never fail the pipeline
+            workflow.logger.warning(
+                "pipeline_comment.post_failed",
+                extra={
+                    "taskpacket_id": params.taskpacket_id,
+                    "stage": current_stage,
+                },
+            )
+
     @workflow.run
     async def run(self, params: PipelineInput) -> PipelineOutput:
         output = PipelineOutput()
@@ -759,6 +809,13 @@ class TheStudioPipelineWorkflow:
         # Projects v2: sync ENRICHED → Queued (sets Risk Tier from complexity)
         await self._sync_project_status(
             params, "ENRICHED", complexity_index=context_result.complexity_index
+        )
+
+        # Epic 38.22: Post initial pipeline comment on issue after context
+        await self._post_pipeline_comment(
+            params,
+            current_stage=WorkflowStep.CONTEXT,
+            completed_stages=[WorkflowStep.INTAKE, WorkflowStep.CONTEXT],
         )
 
         # Step 2.3: Trust Tier Assignment — evaluate rule engine against enriched
@@ -1272,5 +1329,14 @@ class TheStudioPipelineWorkflow:
         output.marked_ready = publish_result.marked_ready
         output.verification_loopbacks = verification_loopbacks
         output.qa_loopbacks = qa_loopbacks
+
+        # Epic 38.22: Final pipeline comment update — includes PR link
+        await self._post_pipeline_comment(
+            params,
+            current_stage=WorkflowStep.PUBLISH,
+            completed_stages=list(STAGE_ORDER.keys()),
+            status="complete",
+            pr_url=publish_result.pr_url,
+        )
 
         return output

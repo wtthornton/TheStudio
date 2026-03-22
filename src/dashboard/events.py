@@ -20,18 +20,50 @@ router = APIRouter()
 
 STREAM_NAME = "THESTUDIO_PIPELINE"
 SUBJECT_PATTERN = "pipeline.>"
+# Epic 38.25: also subscribe to GitHub bridge events on same stream
+GITHUB_SUBJECT_PATTERN = "github.event.>"
 _HEARTBEAT_INTERVAL_S = 15
 _MAX_REPLAY_GAP = 1000
 
+# All subjects carried on the THESTUDIO_PIPELINE stream
+_STREAM_SUBJECTS = ["pipeline.>", "github.event.>"]
+
 
 async def ensure_stream(js: JetStreamContext) -> None:
-    """Create THESTUDIO_PIPELINE JetStream stream if it does not exist."""
+    """Create or verify the THESTUDIO_PIPELINE JetStream stream.
+
+    Epic 38.25: stream carries both pipeline.> and github.event.> subjects
+    so webhook bridge events flow through the same SSE connection.
+
+    If the stream already exists (legacy single-subject config), we attempt
+    to add the github.event.> subject filter. Failures are non-fatal — the
+    stream remains usable for pipeline.> events; github events will be
+    silently dropped until the stream is updated.
+    """
     try:
-        await js.find_stream_name_by_subject("pipeline.>")
+        existing_name = await js.find_stream_name_by_subject("pipeline.>")
+        # Stream exists — check if github.event.> is already included
+        try:
+            info = await js.stream_info(existing_name)
+            current_subjects = list(info.config.subjects or [])
+            if "github.event.>" not in current_subjects:
+                new_subjects = current_subjects + ["github.event.>"]
+                await js.add_stream(name=existing_name, subjects=new_subjects)
+                logger.info(
+                    "Updated stream %s to include github.event.> subjects",
+                    existing_name,
+                )
+        except Exception:
+            # Non-fatal: stream update failed, pipeline.> still works
+            logger.debug(
+                "Could not add github.event.> to stream — GitHub events may not flow via SSE",
+                exc_info=True,
+            )
     except Exception:
+        # Stream does not exist — create it with both subject filters
         await js.add_stream(
             name=STREAM_NAME,
-            subjects=["pipeline.>"],
+            subjects=_STREAM_SUBJECTS,
         )
         logger.info("Created JetStream stream %s", STREAM_NAME)
 
@@ -126,14 +158,19 @@ async def _nats_event_generator(
                     opt_start_seq=resume_seq,
                 )
 
-        # Push-based subscription: messages arrive via asyncio iterator
+        # Push-based subscription: messages arrive via asyncio iterator.
+        # Epic 38.25: subscribe to ">" (all subjects in stream) so both
+        # pipeline.> and github.event.> messages are delivered.
         sub = await js.subscribe(
-            SUBJECT_PATTERN,
+            ">",
             stream=STREAM_NAME,
             ordered_consumer=True,
             config=config,
         )
-        logger.info("SSE client connected, subscribed to %s", SUBJECT_PATTERN)
+        logger.info(
+            "SSE client connected, subscribed to all subjects in stream %s",
+            STREAM_NAME,
+        )
 
         while True:
             try:

@@ -20,11 +20,13 @@ _consumer_task: asyncio.Task[None] | None = None
 
 
 async def _process_message(data: bytes) -> None:
-    """Decode and pass to ingest_signal."""
+    """Decode and pass to ingest_signal with DB persistence (Epic 39.0c)."""
+    from src.db.connection import get_async_session
     from src.outcome.ingestor import ingest_signal
 
     payload = json.loads(data)
-    await ingest_signal(payload)
+    async with get_async_session() as session:
+        await ingest_signal(payload, db_session=session)
 
 
 async def start_signal_consumer(

@@ -1,5 +1,6 @@
 """CRUD operations for TaskPacket."""
 
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -9,12 +10,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.taskpacket import (
     ALLOWED_TRANSITIONS,
+    PrMergeStatus,
     TaskPacketCreate,
     TaskPacketRead,
     TaskPacketRow,
     TaskPacketStatus,
 )
-
 
 class InvalidStatusTransitionError(Exception):
     """Raised when a status transition is not allowed."""
@@ -114,6 +115,9 @@ async def update_status(
         raise InvalidStatusTransitionError(current, new_status)
 
     row.status = new_status
+    # Set completed_at on first transition to a terminal status (Epic 39.0a)
+    if new_status in _TERMINAL_STATUSES and row.completed_at is None:
+        row.completed_at = datetime.now(UTC)
     await session.commit()
     await session.refresh(row)
     return TaskPacketRead.model_validate(row)
@@ -296,4 +300,27 @@ async def list_active(session: AsyncSession) -> list[TaskPacketRow]:
         )
     )
     return list(result.scalars().all())
+
+
+async def update_pr_merge_status(
+    session: AsyncSession,
+    task_id: UUID,
+    merge_status: PrMergeStatus,
+) -> TaskPacketRead:
+    """Update the pr_merge_status field on a TaskPacket.
+
+    Called by the Epic 38 webhook bridge (Story 38.24) or a manual update endpoint.
+    Requires the task to exist and have a PR (pr_number not None).
+
+    Epic 39.0b.
+    """
+    row = await session.get(TaskPacketRow, task_id)
+    if row is None:
+        raise ValueError(f"TaskPacket {task_id} not found")
+    if row.pr_number is None:
+        raise ValueError(f"TaskPacket {task_id} has no associated PR")
+    row.pr_merge_status = merge_status
+    await session.commit()
+    await session.refresh(row)
+    return TaskPacketRead.model_validate(row)
 

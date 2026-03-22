@@ -23,7 +23,11 @@ _js: JetStreamContext | None = None
 
 
 async def get_pipeline_jetstream() -> JetStreamContext:
-    """Get or create a JetStream context for the pipeline stream (singleton)."""
+    """Get or create a JetStream context for the pipeline stream (singleton).
+
+    Epic 38.25: stream is created with both pipeline.> and github.event.>
+    subjects so webhook bridge events flow through the same SSE connection.
+    """
     global _js
     if _js is None:
         nc = await nats.connect(settings.nats_url)
@@ -33,7 +37,7 @@ async def get_pipeline_jetstream() -> JetStreamContext:
         except Exception:
             await _js.add_stream(
                 name=STREAM_NAME,
-                subjects=["pipeline.>"],
+                subjects=["pipeline.>", "github.event.>"],
             )
             logger.info("Created JetStream stream %s", STREAM_NAME)
     return _js
@@ -339,6 +343,60 @@ async def emit_trust_tier_assigned(
         logger.debug(
             "Failed to emit trust_tier.assigned for task=%s",
             task_id,
+            exc_info=True,
+        )
+
+
+async def emit_github_event(
+    event_type: str,
+    action: str,
+    repo: str,
+    payload: dict,
+    *,
+    delivery_id: str = "",
+) -> None:
+    """Emit a github.event.{type} event to NATS (fire-and-forget).
+
+    Epic 38.24+38.25: publishes GitHub webhook bridge events to the pipeline
+    stream so they appear in the dashboard SSE stream without a separate
+    connection.
+
+    Args:
+        event_type: GitHub event name (pull_request, pull_request_review, …).
+        action: GitHub action within the event (opened, merged, submitted, …).
+        repo: Full repo name (owner/repo).
+        payload: Raw GitHub webhook payload dict.
+        delivery_id: X-GitHub-Delivery header value for tracing.
+
+    Failures are logged but never raised — bridge events never block intake.
+    """
+    try:
+        js = await get_pipeline_jetstream()
+        msg = json.dumps(
+            {
+                "type": f"github.event.{event_type}",
+                "data": {
+                    "event_type": event_type,
+                    "action": action,
+                    "repo": repo,
+                    "delivery_id": delivery_id,
+                    "payload": payload,
+                    "timestamp": datetime.now(UTC).isoformat(),
+                },
+            }
+        ).encode()
+        await js.publish(f"github.event.{event_type}", msg)
+        logger.debug(
+            "Emitted github.event.%s action=%s repo=%s",
+            event_type,
+            action,
+            repo,
+        )
+    except Exception:
+        logger.debug(
+            "Failed to emit github.event.%s repo=%s",
+            event_type,
+            repo,
             exc_info=True,
         )
 

@@ -61,7 +61,7 @@
 > Decision point after Sprint 3: if <20% of tasks use manual import, defer and proceed to Epic 39.
 
 - [x] 38.13-38.20: Slice 3 — GitHub Projects Sync (8 stories)
-- [ ] 38.21-38.27: Slice 4 — Pipeline Comments + Webhook Bridge (7 stories)
+- [x] 38.21-38.27: Slice 4 — Pipeline Comments + Webhook Bridge (7 stories)
 
 ### Epic 39 — Phase 5: Analytics & Learning (Meridian PASS 2026-03-22, 24 stories)
 
@@ -69,7 +69,7 @@
 > Depends on: Epic 38 MVP (for PR merge status data)
 > Duration: 5-6 weeks (includes Slice 0 data prerequisites)
 
-- [ ] 39.0a-39.0c: Slice 0 — Data Prerequisites (3 stories: completed_at column, pr_merge_status field, outcome signal DB persistence)
+- [x] 39.0a-39.0c: Slice 0 — Data Prerequisites (3 stories: completed_at column, pr_merge_status field, outcome signal DB persistence)
 - [ ] 39.1-39.11: Slice 1 — Operational Analytics (11 stories: throughput, bottlenecks, categories, failures, summary cards, frontend)
 - [ ] 39.12-39.21: Slice 2 — Reputation & Outcomes (10 stories: expert performance, outcomes feed, drift detection, frontend)
 

@@ -16,6 +16,8 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.observability.conventions import (
     ATTR_CORRELATION_ID,
     ATTR_TASKPACKET_ID,
@@ -188,6 +190,7 @@ async def ingest_signal(
     quarantine_store: QuarantineStore | None = None,
     dead_letter_store: DeadLetterStore | None = None,
     failure_tracker: FailureTracker | None = None,
+    db_session: AsyncSession | None = None,
 ) -> OutcomeSignal | QuarantinedSignal:
     """Ingest a signal payload from JetStream.
 
@@ -210,6 +213,9 @@ async def ingest_signal(
         quarantine_store: Optional QuarantineStore (uses global if not provided).
         dead_letter_store: Optional DeadLetterStore (uses global if not provided).
         failure_tracker: Optional FailureTracker (uses global if not provided).
+        db_session: Optional AsyncSession for DB persistence (Epic 39.0c). When
+            provided, the signal is also written to the outcome_signals table.
+            The in-memory _signals list is preserved as a cache layer.
 
     Returns:
         OutcomeSignal if valid, QuarantinedSignal if quarantined.
@@ -477,7 +483,21 @@ async def ingest_signal(
             timestamp=signal_ts,
             payload=raw_payload,
         )
+        # In-memory cache (preserved for test isolation and legacy API compatibility)
         _signals.append(signal)
+
+        # DB persistence (Epic 39.0c): write to outcome_signals table when session provided
+        if db_session is not None:
+            try:
+                from src.outcome.signal_store import save_signal
+                await save_signal(db_session, signal)
+            except Exception:
+                logger.exception(
+                    "Failed to persist signal %s for TaskPacket %s to DB — "
+                    "in-memory cache still updated",
+                    event,
+                    taskpacket_id,
+                )
 
         logger.info(
             "Ingested signal %s for TaskPacket %s (correlation=%s)",

@@ -62,6 +62,10 @@ MIGRATIONS = [
     "src.db.migrations.037_trust_default_tier",
     "src.db.migrations.038_steering_action_trust_tier",
     "src.db.migrations.039_budget_config",
+    "src.db.migrations.040_notifications",
+    "src.db.migrations.041_completed_at",
+    "src.db.migrations.042_pr_merge_status",
+    "src.db.migrations.043_outcome_signals",
 ]
 
 

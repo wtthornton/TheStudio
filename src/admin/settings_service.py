@@ -91,6 +91,9 @@ SETTING_DEFINITIONS: dict[str, dict[str, Any]] = {
     "triage_mode_enabled": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
     "intent_review_enabled": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
     "max_intent_versions": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
+    # Pipeline Comments + Webhook Bridge (Epic 38 Slice 4)
+    "pipeline_comments_enabled": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
+    "pipeline_webhook_bridge_enabled": {"category": SettingCategory.FEATURE_FLAGS, "sensitive": False},
     # Dashboard (Epic 34)
     "dashboard_token": {"category": SettingCategory.SECRETS, "sensitive": True},
     # Secrets

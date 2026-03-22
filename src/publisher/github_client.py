@@ -144,6 +144,22 @@ class GitHubClient:
             json={"body": body},
         )
 
+    async def list_issue_comments(
+        self, owner: str, repo: str, issue_number: int, per_page: int = 100
+    ) -> list[dict[str, Any]]:
+        """List comments on an issue or pull request.
+
+        Returns up to *per_page* comments (max 100). For issues with many
+        comments only the first page is fetched — sufficient for finding
+        TheStudio marker comments which are always posted early.
+        """
+        resp = await self._client.get(
+            f"/repos/{owner}/{repo}/issues/{issue_number}/comments",
+            params={"per_page": per_page},
+        )
+        resp.raise_for_status()
+        return resp.json()  # type: ignore[no-any-return]
+
     async def get_file_content(
         self, owner: str, repo: str, path: str, ref: str | None = None
     ) -> dict[str, Any] | None:
