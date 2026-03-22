@@ -360,6 +360,39 @@ export async function createManualTask(body: ManualTaskCreate): Promise<ManualTa
   return res.json()
 }
 
+// --- Steering API (Epic 37 Slice 1) ---
+
+export interface SteeringActionResponse {
+  task_id: string
+  action: string
+  status: string
+}
+
+export async function pauseTask(taskId: string): Promise<SteeringActionResponse> {
+  const url = withToken(`${API_BASE}/tasks/${taskId}/pause`)
+  const res = await fetch(url, { method: 'POST' })
+  if (!res.ok) throw new Error(`Failed to pause task: ${res.status}`)
+  return res.json()
+}
+
+export async function resumeTask(taskId: string): Promise<SteeringActionResponse> {
+  const url = withToken(`${API_BASE}/tasks/${taskId}/resume`)
+  const res = await fetch(url, { method: 'POST' })
+  if (!res.ok) throw new Error(`Failed to resume task: ${res.status}`)
+  return res.json()
+}
+
+export async function abortTask(taskId: string, reason?: string): Promise<SteeringActionResponse> {
+  const url = withToken(`${API_BASE}/tasks/${taskId}/abort`)
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason: reason ?? '' }),
+  })
+  if (!res.ok) throw new Error(`Failed to abort task: ${res.status}`)
+  return res.json()
+}
+
 // --- Activity API ---
 
 export async function fetchTaskActivity(taskId: string, params: {

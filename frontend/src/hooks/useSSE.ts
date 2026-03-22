@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { usePipelineStore } from '../stores/pipeline-store'
 import { useTriageStore } from '../stores/triage-store'
+import { useSteeringStore } from '../stores/steering-store'
 import type { StageId } from '../lib/constants'
 import { PIPELINE_STAGES } from '../lib/constants'
 
@@ -33,6 +34,8 @@ interface SSEEventData {
     content?: string
     subphase?: string
     detail?: string
+    action?: string
+    new_status?: string
   }
 }
 
@@ -40,6 +43,7 @@ export function useSSE(): void {
   const esRef = useRef<EventSource | null>(null)
   const { stageEnter, stageExit, gateResult, costUpdate, setLastEventId, setConnected, pushEvent, reset } =
     usePipelineStore()
+  const setSteeringStatus = useSteeringStore((s) => s.setSteeringStatus)
 
   useEffect(() => {
     const lastId = usePipelineStore.getState().lastEventId
@@ -100,6 +104,15 @@ export function useSSE(): void {
         useTriageStore.getState().removeTask(data.task_id)
       } else if (eventType === 'pipeline.triage.rejected' && data.task_id) {
         useTriageStore.getState().removeTask(data.task_id)
+      } else if (eventType === 'pipeline.steering.action' && data.task_id) {
+        // Update steering status for the currently-viewed task
+        const action = data.action
+        const currentTaskId = useSteeringStore.getState().taskId
+        if (currentTaskId === data.task_id) {
+          if (action === 'pause') setSteeringStatus('paused')
+          else if (action === 'resume') setSteeringStatus('running')
+          else if (action === 'abort') setSteeringStatus('aborted')
+        }
       }
     }
 
@@ -107,5 +120,5 @@ export function useSSE(): void {
       es.close()
       esRef.current = null
     }
-  }, [stageEnter, stageExit, gateResult, costUpdate, setLastEventId, setConnected, pushEvent, reset])
+  }, [stageEnter, stageExit, gateResult, costUpdate, setLastEventId, setConnected, pushEvent, reset, setSteeringStatus])
 }

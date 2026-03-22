@@ -11,6 +11,7 @@ import { PIPELINE_STAGES } from '../lib/constants'
 import { fetchTaskDetail, fetchTaskGates } from '../lib/api'
 import type { TaskPacketDetail, GateEvidenceRead } from '../lib/api'
 import { usePipelineStore } from '../stores/pipeline-store'
+import { SteeringActionBar } from './SteeringActionBar'
 
 interface TaskTimelineProps {
   taskId: string
@@ -228,7 +229,11 @@ export function TaskTimeline({ taskId, onClose }: TaskTimelineProps) {
             <span className="text-cyan-400">${task.total_cost.toFixed(4)}</span>
           </div>
         </div>
-        <button onClick={onClose} className="text-gray-400 hover:text-gray-200 text-sm">Close</button>
+        <div className="flex items-center gap-3">
+          {/* S1.37.6: Steering controls — pause/resume/abort */}
+          <SteeringActionBar taskId={task.id} taskStatus={task.status} />
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-200 text-sm">Close</button>
+        </div>
       </div>
 
       {/* Progress bar */}
