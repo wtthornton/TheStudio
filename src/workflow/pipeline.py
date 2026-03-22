@@ -281,6 +281,8 @@ class TheStudioPipelineWorkflow:
         self._routing_rejected = False
         self._routing_rejected_by: str | None = None
         self._routing_rejection_reason: str | None = None
+        # Steering state — pause/resume (Slice 1, Epic 37)
+        self._paused = False
 
     @workflow.signal
     async def approve_publish(self, approved_by: str, approval_source: str) -> None:
@@ -351,6 +353,39 @@ class TheStudioPipelineWorkflow:
         self._updated_issue_title = issue_title
         self._updated_issue_body = issue_body
 
+    @workflow.signal
+    async def pause_task(self) -> None:
+        """Signal handler — pauses pipeline execution after current activity completes.
+
+        The pause takes effect at the next inter-activity checkpoint; any
+        in-flight activity is allowed to finish before the workflow holds.
+        Idempotent: calling twice is harmless (flag stays True).
+        """
+        self._paused = True
+        workflow.logger.info("pipeline.steering.paused")
+
+    @workflow.signal
+    async def resume_task(self) -> None:
+        """Signal handler — resumes pipeline execution after a pause.
+
+        Idempotent: calling twice is harmless (flag stays False).
+        """
+        self._paused = False
+        workflow.logger.info("pipeline.steering.resumed")
+
+    async def _await_if_paused(self) -> None:
+        """Block at the next inter-activity checkpoint if a pause is requested.
+
+        Called before each pipeline activity. If ``self._paused`` is True the
+        workflow holds at this point until a ``resume_task`` signal is received.
+        Because this check happens between activities, any in-flight work
+        completes before the hold takes effect.
+        """
+        if self._paused:
+            workflow.logger.info("pipeline.steering.hold_start")
+            await workflow.wait_condition(lambda: not self._paused)
+            workflow.logger.info("pipeline.steering.hold_end")
+
     async def _sync_project_status(
         self,
         params: PipelineInput,
@@ -386,6 +421,7 @@ class TheStudioPipelineWorkflow:
         output = PipelineOutput()
 
         # Step 1: Intake
+        await self._await_if_paused()
         intake_policy = STEP_POLICIES[WorkflowStep.INTAKE]
         intake_result: IntakeOutput = await workflow.execute_activity(
             intake_activity,
@@ -413,6 +449,7 @@ class TheStudioPipelineWorkflow:
         await self._sync_project_status(params, "RECEIVED")
 
         # Step 2: Context Enrichment
+        await self._await_if_paused()
         context_policy = STEP_POLICIES[WorkflowStep.CONTEXT]
         context_result: ContextOutput = await workflow.execute_activity(
             context_activity,
@@ -440,6 +477,7 @@ class TheStudioPipelineWorkflow:
             evaluation_count = 0
 
             while True:
+                await self._await_if_paused()
                 readiness_policy = STEP_POLICIES[WorkflowStep.READINESS]
                 readiness_result: ReadinessActivityOutput = (
                     await workflow.execute_activity(
@@ -492,6 +530,7 @@ class TheStudioPipelineWorkflow:
                     current_body = self._updated_issue_body
 
         # Step 3: Intent Building
+        await self._await_if_paused()
         intent_policy = STEP_POLICIES[WorkflowStep.INTENT]
         intent_result: IntentOutput = await workflow.execute_activity(
             intent_activity,
@@ -538,6 +577,7 @@ class TheStudioPipelineWorkflow:
             output.intent_approved_by = self._intent_approved_by
 
         # Step 4: Expert Routing
+        await self._await_if_paused()
         router_policy = STEP_POLICIES[WorkflowStep.ROUTER]
         await workflow.execute_activity(
             router_activity,
@@ -581,6 +621,7 @@ class TheStudioPipelineWorkflow:
             output.routing_approved_by = self._routing_approved_by
 
         # Step 5: Assembler
+        await self._await_if_paused()
         assembler_policy = STEP_POLICIES[WorkflowStep.ASSEMBLER]
         assembler_result: AssemblerOutput = await workflow.execute_activity(
             assembler_activity,
@@ -599,6 +640,7 @@ class TheStudioPipelineWorkflow:
         if params.preflight_enabled and params.repo_tier in [
             t.lower() for t in params.preflight_tiers
         ]:
+            await self._await_if_paused()
             preflight_policy = STEP_POLICIES[WorkflowStep.PREFLIGHT]
             preflight_result: PreflightActivityOutput = (
                 await workflow.execute_activity(
@@ -681,6 +723,7 @@ class TheStudioPipelineWorkflow:
 
         while True:
             # Step 6: Implementation
+            await self._await_if_paused()
             impl_policy = STEP_POLICIES[WorkflowStep.IMPLEMENT]
             impl_result: ImplementOutput = await workflow.execute_activity(
                 implement_activity,
@@ -703,6 +746,7 @@ class TheStudioPipelineWorkflow:
             output.step_reached = WorkflowStep.IMPLEMENT
 
             # Step 7: Verification
+            await self._await_if_paused()
             verify_policy = STEP_POLICIES[WorkflowStep.VERIFY]
             verify_result: VerifyOutput = await workflow.execute_activity(
                 verify_activity,
@@ -730,6 +774,7 @@ class TheStudioPipelineWorkflow:
                 continue  # Loop back to implementation
 
             # Step 8: QA Validation
+            await self._await_if_paused()
             qa_policy = STEP_POLICIES[WorkflowStep.QA]
             qa_result: QAOutput = await workflow.execute_activity(
                 qa_activity,
@@ -763,6 +808,7 @@ class TheStudioPipelineWorkflow:
         # Step 8.5: Approval Wait (Suggest/Execute tier only)
         if params.repo_tier in APPROVAL_REQUIRED_TIERS and not params.approval_auto_bypass:
             # Post approval request comment before entering wait
+            await self._await_if_paused()
             await workflow.execute_activity(
                 post_approval_request_activity,
                 ApprovalRequestInput(
@@ -866,6 +912,7 @@ class TheStudioPipelineWorkflow:
             output.approval_bypassed = True
 
         # Step 9: Publish
+        await self._await_if_paused()
         publish_policy = STEP_POLICIES[WorkflowStep.PUBLISH]
         publish_result: PublishOutput = await workflow.execute_activity(
             publish_activity,
