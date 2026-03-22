@@ -643,10 +643,16 @@ Both slices are additive. All existing behavior is preserved behind feature flag
 
 ---
 
-## Sprint 4: Intent Review Frontend (Stories 36.11-36.12)
+## Sprint 4: Intent Review Frontend (Stories 36.11a-36.11g)
+
+> **Decomposition:** Stories 36.11 and 36.12 were right-sized on 2026-03-21 into 7
+> Ralph-executable sub-stories (36.11a through 36.11g). See
+> `docs/epics/epic-36-sprint4-story-decomposition.md` for full specifications
+> including per-story deliverables, acceptance criteria, dependencies, and
+> implementation details.
 
 **Sprint Duration:** 1 week (2026-04-14 to 2026-04-18)
-**Capacity:** 30 hours total, 77% allocation = 23 hours, 7 hours buffer
+**Capacity:** 30 hours total, 73% allocation = 22 hours, 8 hours buffer
 **Depends on:** Sprint 3 complete (all intent review endpoints available)
 
 ### Sprint Goal (Testable Format)
@@ -762,31 +768,38 @@ Both slices are additive. All existing behavior is preserved behind feature flag
 
 ---
 
-### Sprint 4 Capacity Summary
+### Sprint 4 Capacity Summary (Decomposed)
 
-| Story | Estimate | Day | Cumulative | Ralph Loops |
-|-------|----------|-----|------------|-------------|
-| 36.11 Intent Editor Split Pane | 12.0h | Day 1-3 | 12.0h | 2-3 |
-| 36.12 Edit Mode + Refinement | 10.0h | Day 3-5 | 22.0h | 2-3 |
-| **Total** | **22.0h** | | **73% of 30h** | |
-| **Buffer** | **8.0h** | | **27%** | |
+| Story | Title | Size | Est. | Day | Ralph Loops |
+|-------|-------|------|------|-----|-------------|
+| 36.11a | API Types + Functions | S | 2.0h | Day 1 | 1 |
+| 36.11b | Intent Zustand Store | S | 2.0h | Day 1 | 1 |
+| 36.11c | SourceContext + IntentSpec Display | M | 4.0h | Day 1-2 | 1 |
+| 36.11d | IntentEditor Container + Routing | M | 4.0h | Day 2 | 1 |
+| 36.11e | Edit Mode Form | M | 4.0h | Day 3 | 1 |
+| 36.11f | Refinement Modal | S | 3.0h | Day 3 | 1 |
+| 36.11g | Version Diff + All Tests | M | 3.0h | Day 4 | 1 |
+| **Total** | | | **22.0h** | | **7** |
+| **Buffer** | | | **8.0h (Day 5)** | | |
 
-**Allocation rationale:** 73% allocation with 27% buffer. Both stories are frontend L-sized with interactive state management. Frontend estimation has historically needed 20-30% buffer in this project. The diff view component (in 36.12) is the biggest unknown -- field-level diffing of structured data may be more complex than estimated.
+**Allocation rationale:** 73% allocation with 27% buffer (unchanged from original). Decomposition reduces risk: each sub-story is 1 Ralph loop (3-6h) with clear boundaries. 36.11b and 36.11c can be parallelized (Day 1). 36.11e and 36.11f can be parallelized (Day 3). The diff view (36.11g) remains the biggest unknown but is now isolated and deferrable.
 
 ### Sprint 4 Risks
 
 | # | Risk | Likelihood | Impact | Mitigation |
 |---|------|-----------|--------|------------|
 | 1 | **Split pane layout issues on different screen sizes.** The epic specifies minimum 1024px viewport. Responsive behavior below that may cause layout breaks. | Medium | Low (cosmetic) | Set `min-width: 1024px` on the container. Stack panes vertically below 1024px as specified in constraints. |
-| 2 | **Version diff complexity.** Field-level diffing of arrays with partially matching strings is harder than simple set difference. If a constraint is edited (not added/removed), matching becomes fuzzy. | Medium | Medium (diff is wrong) | For MVP, treat any text change as "removed old + added new." Exact-match comparison only. Fuzzy matching deferred. |
+| 2 | **Version diff complexity.** Field-level diffing of arrays with partially matching strings is harder than simple set difference. If a constraint is edited (not added/removed), matching becomes fuzzy. | Medium | Medium (diff is wrong) | For MVP, treat any text change as "removed old + added new." Exact-match comparison only. Fuzzy matching deferred. Isolated in 36.11g so it cannot block other stories. |
 | 3 | **Sprint 3 overflow.** If the Temporal wait point story (36.8) carries over, Sprint 4 cannot test approve/reject integration. | Low | High (frontend cannot demo) | The frontend can be built against mocked API responses. Integration testing happens when Sprint 3 completes, which may extend Sprint 4 by a day. |
-| 4 | **react-markdown or Markdown rendering dependency.** If not already in the frontend dependencies, adding it increases bundle size. | Low | Low (dependency add) | `react-markdown` is 30KB gzipped. Acceptable for dashboard app. Check `frontend/package.json` first. |
+| 4 | **No react-markdown dependency.** `react-markdown` is not installed. | Low | Low (resolved) | Story 36.11c renders issue body as plain preformatted text. Markdown rendering deferred to a follow-up story if needed. |
 
-### Sprint 4 Compressible Stories
+### Sprint 4 Compressible Stories (Updated)
 
-1. **Story 36.12 VersionDiff component -- first to defer within the story.** The edit mode and refinement modal are essential. The diff view is nice-to-have. If time runs short, ship edit + refine without diff view. Developer can compare versions manually by selecting different versions in the dropdown. **Impact:** Version comparison requires manual reading instead of highlighted diff.
+1. **36.11g VersionDiff + tests** -- first to defer. Diff view is nice-to-have. Tests for 36.11a-36.11f can be written inline or deferred to a dedicated test story. **Impact:** No visual diff between versions; version selector still works for manual comparison.
 
-2. **Story 36.12 entirely -- second level of compression.** If Sprint 3 overflows significantly, the edit/refine frontend can defer to Sprint 5 while the approve/reject-only flow (36.11) ships. The developer can still review and approve/reject specs. **Impact:** No editing from dashboard -- developer must reject and re-submit to change the spec.
+2. **36.11f Refinement Modal** -- second to defer. Developer can manually edit the spec (36.11e) instead of requesting AI refinement. **Impact:** No AI-assisted refinement from the dashboard.
+
+3. **36.11e Edit Mode Form** -- third to defer (most aggressive). Read-only view with approve/reject (36.11a-36.11d) is the minimum viable intent review. **Impact:** Developer must reject and re-submit to change intent.
 
 ---
 
@@ -800,12 +813,12 @@ Sprint 1 (Backend)          Sprint 2 (Frontend)
 36.4 Pre-Scan -------------> 36.5 (enrichment data on cards)
                               36.6 SSE Events (both backend + frontend)
 
-Sprint 3 (Backend)          Sprint 4 (Frontend)
-36.7 Source Column --------> 36.11 IntentSpec display
-36.7a Version Cap ---------> 36.12 Edit + Refine
-36.8 Workflow Wait Point --> 36.11 (approve/reject integration)
-36.9 Intent API -----------> 36.11
-36.10 Edit/Refine API -----> 36.12
+Sprint 3 (Backend)          Sprint 4 (Frontend, decomposed)
+36.7 Source Column --------> 36.11a (types), 36.11c (IntentSpec display)
+36.7a Version Cap ---------> 36.11e (Edit), 36.11f (Refine)
+36.8 Workflow Wait Point --> 36.11d (approve/reject integration)
+36.9 Intent API -----------> 36.11a (API functions)
+36.10 Edit/Refine API -----> 36.11e (Edit form), 36.11f (Refine modal)
 ```
 
 **Key observation:** Sprints 1 and 3 (backend) are independent of each other. Sprint 2 depends only on Sprint 1. Sprint 4 depends only on Sprint 3. This means:
@@ -822,8 +835,8 @@ Sprint 3 (Backend)          Sprint 4 (Frontend)
 | Sprint 1: Triage Backend | 36.1-36.4 | 22.0h | 30h | 73% | 8.0h (27%) |
 | Sprint 2: Triage Frontend | 36.5-36.6 | 18.0h | 30h | 60% | 12.0h (40%) |
 | Sprint 3: Intent Backend | 36.7-36.10 | 23.0h | 30h | 77% | 7.0h (23%) |
-| Sprint 4: Intent Frontend | 36.11-36.12 | 22.0h | 30h | 73% | 8.0h (27%) |
-| **Total MVP** | **13 stories** | **85.0h** | **120h** | **71%** | **35.0h (29%)** |
+| Sprint 4: Intent Frontend | 36.11a-36.11g (7 sub-stories) | 22.0h | 30h | 73% | 8.0h (27%) |
+| **Total MVP** | **18 stories (11 + 7 decomposed)** | **85.0h** | **120h** | **71%** | **35.0h (29%)** |
 
 **Overall allocation:** 71% across 4 weeks with 29% buffer. This is appropriate for an MVP that:
 - Introduces a new status to the core domain model (TRIAGE)

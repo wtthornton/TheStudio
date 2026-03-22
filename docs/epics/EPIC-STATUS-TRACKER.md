@@ -1,6 +1,6 @@
 # Epic Status Tracker
 
-> Consolidated status of all epics as of 2026-03-20.
+> Consolidated status of all epics as of 2026-03-21.
 > Source of truth for epic status is each epic's own file. This tracker is a rollup view.
 
 ---
@@ -9,12 +9,13 @@
 
 | Metric | Value |
 |--------|-------|
-| Total epics | 34 (0-33) |
-| Complete | 34 (Epics 0-26, 28-33) |
-| In Progress | 0 |
-| Milestone | **First real GitHub issue processed end-to-end** (2026-03-20) — Issue #19 → Draft PR #20 |
+| Total epics | 39 (0-39) |
+| Complete | 35 (Epics 0-26, 28-35) |
+| In Progress | 1 (Epic 36 — Phase 2: Planning Experience) |
+| Planned | 3 (Epics 37-39 — Pipeline UI Phases 3-5) |
+| Milestone | **Pipeline UI visible and steerable** (2026-03-21) — Phase 0+1 complete, Phase 2 in progress |
 | Deferred | 1 (Epic 27) |
-| Tests passing | 2,011 unit (zero failures), 9 E2E pipeline, ~244 integration, 23 P0 harness |
+| Tests passing | 2,011+ unit (zero failures), 9 E2E pipeline, ~244 integration, 23 P0 harness |
 | Eval tests | 20/25 passed with real Claude (~$5/run) |
 | Coverage | 84% |
 
@@ -140,9 +141,31 @@
 
 ---
 
+## Phase 9 — Pipeline UI (In Progress)
+
+| Epic | Title | Status | Notes |
+|------|-------|--------|-------|
+| 34 | Phase 0: SSE PoC + Frontend Scaffolding | **Complete** (2026-03-21) | 14 stories. Dashboard API router, SSE bridge (NATS→EventSource), Vite+React+Zustand+Tailwind, pipeline rail, auth, CI. |
+| 35 | Phase 1: Pipeline Visibility | **Complete** (2026-03-21) | 63 stories across 4 slices. Pipeline Rail, TaskPacket Timeline, Gate Inspector, Activity Stream, Loopback arcs, Minimap, error states. |
+| 36 | Phase 2: Planning Experience | **In Progress** | Slice 1 (Triage Queue) COMPLETE. Slice 2 backend COMPLETE, frontend planned (Sprint 4: 7 stories). Slice 3 planned (10 stories). Slices 3-4 not started. Meridian PASS. |
+| 37 | Phase 3: Interactive Controls | Planned | Trust tier controls, bulk actions, keyboard shortcuts. Epic defined, not started. |
+| 38 | Phase 4: GitHub Integration | Planned | Bidirectional sync with GitHub Projects, issue templates. Epic defined, not started. |
+| 39 | Phase 5: Analytics & Learning | Planned | Cost analytics, performance trends, model comparison. Epic defined, not started. |
+
+---
+
 ## Critical Path
 
 ```
+Phase 9 — IN PROGRESS (2026-03-21)
+  Epic 34 (Phase 0: SSE PoC) — COMPLETE. 14 stories. Dashboard infra.
+  Epic 35 (Phase 1: Pipeline Visibility) — COMPLETE. 63 stories. Full dashboard.
+  Epic 36 (Phase 2: Planning Experience) — IN PROGRESS.
+    Slice 1 (Triage Queue): COMPLETE (6 stories, backend+frontend)
+    Slice 2 (Intent Review): Backend COMPLETE (5 stories), Frontend planned (7 stories)
+    Slice 3 (Complexity+Routing): Planned (10 stories, Meridian PASS)
+    Slice 4 (Backlog+Tasks): Not started (5 stories)
+
 Phase 8 — COMPLETE (2026-03-20)
   Epic 33 complete (2 sprints, all 8 ACs). P0 deployment test harness delivered.
   All 9 pipeline activities wired to real providers.
@@ -232,3 +255,8 @@ Phase 5 — COMPLETE (2026-03-17)
 27. **Onboard second repo** — Test multi-repo support with real issues.
 28. **Wire remote verification** — Run ruff/pytest on target repo via GitHub Actions or container.
 29. **Execute tier promotion** — When ready for auto-merge with approval gates.
+30. ~~**Epic 34 (Phase 0: SSE PoC)**~~ — **Complete** (2026-03-21). 14 stories. SSE bridge, React scaffolding.
+31. ~~**Epic 35 (Phase 1: Pipeline Visibility)**~~ — **Complete** (2026-03-21). 63 stories across 4 slices.
+32. **Epic 36 Sprint 4 (Intent Editor frontend)** — 7 stories (36.11a-g). Meridian PASS. Ready to execute.
+33. **Epic 36 Slice 3 (Complexity + Routing)** — 10 stories (36.13a-c, 36.14a-d, 36.15a-c). Meridian PASS. After Sprint 4.
+34. **Epic 36 Slice 4 (Backlog + Tasks)** — 5 stories (36.16-36.20). Not yet decomposed. After Slice 3.

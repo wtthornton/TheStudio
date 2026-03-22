@@ -1,176 +1,93 @@
-# Fix Plan — TheStudio: Pipeline UI Initiative
+# Fix Plan — TheStudio: Epic 36 — Phase 2: Planning Experience
 
-> Epic details: `docs/epics/epic-34-phase0-sse-poc.md` and `docs/epics/epic-35-phase1-pipeline-visibility.md`
-> Sprint plan: `docs/sprints/session-prompt-epic34-s1.md`
-
-## Time Tracking
-
-**Instructions:** Ralph updates `actual_loops` and `actual_min` after completing each story. After Epic 34 completes, compute the calibration ratio (actual/estimated) and apply it to Epic 35 estimates.
-
-### Run 1: Epic 34 (Calibration Run)
-
-| Story | Est. Loops | Est. Min | Actual Loops | Actual Min | Notes |
-|-------|-----------|---------|-------------|-----------|-------|
-| B-0.1 | 1 | 8 | | | |
-| B-0.2a | 1 | 12 | | | |
-| B-0.2b | 2 | 25 | | | Highest risk — NATS in SSE |
-| B-0.3 | 1 | 15 | | | |
-| B-0.4a | 1 | 12 | | | |
-| B-0.4b | 1 | 12 | | | |
-| B-0.5 | 1 | 10 | | | |
-| F-0.1 | 1 | 15 | | | |
-| F-0.2 | 1 | 15 | | | |
-| F-0.3a | 1 | 12 | | | |
-| F-0.3b | 1 | 10 | | | |
-| B-0.7 | 1 | 10 | | | Compressible |
-| B-0.6 | 1 | 8 | | | Compressible |
-| F-0.4 | 1 | 6 | | | |
-| **Total** | **15** | **170 min** | | | **Est: ~3 hrs** |
-
-**Start time:** _______________
-**End time:** _______________
-**Wall clock total:** _______________
-**Calibration ratio:** actual_min / 170 = _______________
+> Epic: `docs/epics/epic-36-phase2-planning-experience.md`
+> Sprint plan: `docs/epics/epic-36-sprint-plan.md`
+> Sprint 4 stories: `docs/epics/epic-36-sprint4-story-decomposition.md`
+> Slice 3 stories: `docs/epics/epic-36-slice3-story-decomposition.md`
+> Status: Slices 1+2 backend COMPLETE, Slice 2 frontend IN PROGRESS (Sprint 4)
 
 ---
 
-## Epic 34 — Phase 0: SSE PoC + Frontend Scaffolding
+## Epic 36 — Phase 2: Planning Experience
 
-### Slice 1: Backend Foundation
-- [x] B-0.1: Create `src/dashboard/` package with FastAPI router at `/api/v1/dashboard/`, health endpoint, register in `src/app.py`. Test: `GET /api/v1/dashboard/health` returns `{"status": "ok"}`.
+### Slice 1: Triage Queue (COMPLETE)
 
-### Slice 2: SSE Endpoint
-- [x] B-0.2a: SSE endpoint with hardcoded test events. Create `src/dashboard/events.py` with `GET /api/v1/dashboard/events/stream` returning `StreamingResponse` with `text/event-stream`. Heartbeat every 15s. Test: curl the endpoint, verify event-stream content type and heartbeat events arrive.
-- [x] B-0.2b: Wire SSE endpoint to NATS JetStream. Subscribe to `pipeline.>` subject on `THESTUDIO_PIPELINE` stream (create stream if not exists). Replace hardcoded events with NATS messages. Add disconnect cleanup. Test: publish to NATS, verify SSE client receives within 200ms.
+#### Backend
+- [x] 36.1: Add TRIAGE status to TaskPacket model — enum, transitions (TRIAGE->RECEIVED, TRIAGE->REJECTED, TRIAGE->FAILED), triage_enrichment JSON column, rejection_reason column, issue_title/issue_body columns, Alembic migration
+- [x] 36.2: Conditional triage mode in webhook handler — `triage_mode_enabled` setting, webhook creates TRIAGE status when enabled, skips workflow start
+- [x] 36.3: Triage action endpoints — POST accept (TRIAGE->RECEIVED + start workflow), POST reject (TRIAGE->REJECTED + reason), PATCH edit (title/description while in TRIAGE), all with 409 on wrong status
+- [x] 36.4: Context pre-scan for triage enrichment — `prescan_issue()` in `src/context/prescan.py`, produces file_count_estimate/complexity_hint/cost_estimate_range, called from webhook handler in triage mode
 
-### Slice 3: Reconnection
-- [x] B-0.3: Add `Last-Event-ID` reconnection support. Parse header, use `DeliverPolicy.BY_START_SEQUENCE` to replay missed events. If gap >1000, send `system.full_state`. Test: disconnect, reconnect with Last-Event-ID, verify zero missed events.
+#### Frontend
+- [x] 36.5: Triage queue frontend — TriageQueue.tsx, TriageCard.tsx (with enrichment badges), EditPanel.tsx (slide-in editor), inline reject dropdown, triage-store.ts (Zustand)
+- [x] 36.6: Triage SSE events — emit_triage_created/accepted/rejected via NATS, frontend subscribes via Phase 0 SSE bridge
 
-### Slice 4: Pipeline Event Emission
-- [x] B-0.4a: Create `src/dashboard/events_publisher.py` with fire-and-forget NATS publish helper. Instrument first 3 stages (intake, context, intent) with `pipeline.stage.enter`/`exit` events. Create `THESTUDIO_PIPELINE` JetStream stream on startup. Test: mock NATS, run activity, verify publish called.
-- [x] B-0.4b: Instrument remaining 6 stages (router, assembler, implement, verify, qa, publish). Integration test: full pipeline run emits 9/9 stage enter/exit events.
-- [x] B-0.5: Extend `src/verification/signals.py` and `src/qa/signals.py` to publish `pipeline.gate.pass`/`fail` to `THESTUDIO_PIPELINE`. Existing streams unchanged. Test: trigger verification, observe gate event in SSE.
+### Slice 2: Intent Specification Review (Backend COMPLETE, Frontend Sprint 4)
 
-### Slice 5: Frontend Scaffolding
-- [x] F-0.1: Scaffold `frontend/` with Vite + React 19 + TypeScript strict + Zustand 5 + Tailwind CSS v4. Vite proxy `/api/*` to localhost:8000. Pipeline stage colors in `src/lib/constants.ts`. Test: `npm run build` < 50KB gzipped, `npm run typecheck` passes.
-- [x] F-0.2: Create `useSSE` hook (`frontend/src/hooks/useSSE.ts`) and Zustand pipeline store (`frontend/src/stores/pipeline-store.ts`). Store tracks 9 stages with status/taskCount/activeTasks. Hook connects via EventSource, dispatches to store. Vitest tests with mock EventSource.
-- [x] F-0.3a: Create `PipelineStatus.tsx` and `StageNode.tsx`. Render 9 stage nodes in horizontal rail, color-coded by status from store, with task count. Component test with mocked store.
-- [x] F-0.3b: Create `ConnectionIndicator.tsx` and `EventLog.tsx` (last 20 events). Wire into App.tsx. Dark mode Tailwind styling. Component test for disconnected state.
+#### Backend
+- [x] 36.7: Add `source` column to IntentSpecRow — `source: str` with default "auto", updated Pydantic schemas, CRUD passes source through
+- [x] 36.7a: Raise MAX_INTENT_VERSIONS cap — changed from 2 to 10, configurable via `settings.max_intent_versions`
+- [x] 36.8: Temporal workflow wait point after Intent stage — `approve_intent`/`reject_intent` signal handlers, `workflow.wait_condition()`, 30-day safety timeout (escalates, does NOT auto-approve), feature-flagged via `intent_review_enabled`
+- [x] 36.9: Intent review API endpoints — GET `/tasks/{id}/intent` (spec + version history), POST `.../approve` (Temporal signal), POST `.../reject` (Temporal signal + reason)
+- [x] 36.10: Intent edit and refinement endpoints — PUT `/tasks/{id}/intent` (creates new version with source=developer), POST `.../refine` (constructs RefinementTrigger, creates version with source=refinement)
 
-### Slice 6: Auth + Serving
-- [x] B-0.7: Auth token on SSE endpoint via `?token=` query param, matching admin auth. Test: 401 without, 200 with valid token. (COMPRESSIBLE)
-- [x] B-0.6: Conditional static mount in `src/app.py` — serve `frontend/dist/` at `/dashboard/` when exists, skip with warning when missing. SPA catch-all. (COMPRESSIBLE)
+#### Frontend (Sprint 4 — Meridian PASS 2026-03-21)
 
-### Slice 7: CI
-- [x] F-0.4: GitHub Actions frontend CI workflow. `npm ci`, `npm run typecheck`, `npm run lint`, `npm test`. Node.js 22, cache node_modules.
+- [ ] 36.11a: Intent API types + functions — extend `TaskPacketRead` with `issue_title`, `issue_body`, `scope`, `risk_flags`, `complexity_index` (optional fields). Add `IntentSpecRead` interface (9 fields), `IntentResponse` interface, 5 API functions (fetchIntent, approveIntent, rejectIntent, editIntent, refineIntent). File: `frontend/src/lib/api.ts`. (S, 2h)
+
+- [ ] 36.11b: Intent Zustand store — `intent-store.ts` with state (taskId, current, versions, selectedVersion, loading, error, mode, refineModalOpen, saving) and actions (loadIntent, approve, reject, saveEdit, requestRefine, selectVersion, setMode, setRefineModalOpen, reset). Re-fetches after mutations. File: `frontend/src/stores/intent-store.ts`. Depends on 36.11a. (S, 2h)
+
+- [ ] 36.11c: SourceContext + IntentSpec display components — two pure display components. SourceContext: left panel showing issue title/body (plain `<pre>`), enrichment (complexity score bar, risk flags checklist, scope/files). IntentSpec: right panel showing goal, constraints (bullet list), acceptance criteria (numbered list), non-goals (strikethrough bullets), source badge (color-coded), version + timestamp. Files: `frontend/src/components/planning/SourceContext.tsx`, `IntentSpec.tsx`. Depends on 36.11a. (M, 4h)
+
+- [ ] 36.11d: IntentEditor container + routing + action buttons — container component with split-pane layout (`grid-cols-[2fr_3fr]`). Fetches own task via `fetchTaskDetail(taskId)`. Four action buttons (Approve/Edit/Refine/Reject). Reject inline confirmation with reason. VersionSelector dropdown. Loading/error states. Wired into App.tsx as third tab. Files: `frontend/src/components/planning/IntentEditor.tsx`, `VersionSelector.tsx`, modify `App.tsx`. Depends on 36.11a, 36.11b, 36.11c. (M, 4h)
+
+- [ ] 36.11e: Intent edit mode form — `IntentEditMode.tsx` replaces right panel when editing. Goal textarea, constraints/AC/non-goals as editable lists (add/remove items). `EditableList` sub-component. Save calls `store.saveEdit()`, Cancel returns to view mode. Empty strings filtered on save. Save disabled when unchanged. File: `frontend/src/components/planning/IntentEditMode.tsx`, modify IntentEditor.tsx. Depends on 36.11d. (M, 4h)
+
+- [ ] 36.11f: Refinement modal — `RefinementModal.tsx` with backdrop overlay, feedback textarea (10-char minimum), submit/cancel/escape. Submit calls `store.requestRefine()`. File: `frontend/src/components/planning/RefinementModal.tsx`, modify IntentEditor.tsx. Depends on 36.11d. (S, 3h)
+
+- [ ] 36.11g: Version diff + component tests — `VersionDiff.tsx` with field-level comparison (Set-based exact match: added=green, removed=red, unchanged=plain). "Compare Versions" toggle in IntentEditor. `IntentEditor.test.tsx` with 15 test cases covering loading, split-pane, sections, source badge, version selector, approve, reject, edit, refine, diff. Files: `frontend/src/components/planning/VersionDiff.tsx`, `__tests__/IntentEditor.test.tsx`, modify IntentEditor.tsx. Depends on 36.11e, 36.11f. (M, 3h)
+
+### Slice 3: Complexity Dashboard + Expert Routing Preview (Meridian PASS 2026-03-21)
+
+> Story decomposition: `docs/epics/epic-36-slice3-story-decomposition.md`
+> Two parallel tracks: Track A (complexity, frontend-only) and Track B (routing, backend+frontend)
+
+#### Track A: Complexity Dashboard (frontend-only — all data exists on TaskPacketRead)
+
+- [ ] 36.13a: MetricCard + RiskFlags display components — `MetricCard.tsx` (label, value, icon, color), `RiskFlags.tsx` (checklist from `risk_flags` dict, red/green icons, null="pending"). Pure display, no API calls. (S, 2h)
+
+- [ ] 36.13b: FileHeatmap component — `FileHeatmap.tsx` renders `scope` data: file count, component list, file references grouped by directory with intensity bars. Null="Scope: pending". (S, 2h)
+
+- [ ] 36.13c: ComplexityDashboard container — `ComplexityDashboard.tsx` assembles score bar (color-coded by band: low=green, medium=amber, high=red), 3 MetricCards (files affected, risk flag count, expert coverage with integer thresholds: green>=2, amber=1, red=0), FileHeatmap + RiskFlags in bottom row. Depends on 36.13a, 36.13b. (M, 3h)
+
+#### Track B: Routing Review (backend + frontend)
+
+- [ ] 36.14a: Routing review setting + Pydantic schema — add `routing_review_enabled: bool = False` to settings.py. Create `src/routing/routing_result.py` with `ExpertSelectionRead` (7 fields: expert_id, expert_class, pattern, reputation_weight/confidence, selection_score, selection_reason) and `RoutingResultRead`. (S, 2h)
+
+- [ ] 36.14b: Temporal wait point after Router — `approve_routing`/`override_routing` signal handlers in pipeline.py. `AWAITING_ROUTING_REVIEW` step enum. 30-day safety timeout. Feature-flagged via `routing_review_enabled` on PipelineInput. Mirrors intent wait point pattern. Depends on 36.14a. (M, 4h)
+
+- [ ] 36.14c: Routing review API endpoints + storage — GET `/tasks/{id}/routing`, POST `.../approve`, POST `.../override`. Add `routing_result` JSONB column to TaskPacketRow (Alembic migration). Update `router_activity()` to persist full ConsultPlan data (not reduced RouterOutput) using DB session (following intent_activity pattern). Files: planning.py, activities.py, taskpacket.py, migration. Depends on 36.14a, 36.14b. (M, 4h)
+
+- [ ] 36.14d: Routing backend tests — `test_routing_result.py` (Pydantic schema round-trip), `test_routing_endpoints.py` (GET 404/200, POST approve/override with mocked Temporal). Depends on 36.14a-c. (S, 2h)
+
+- [ ] 36.15a: Routing API client + Zustand store — add `ExpertSelectionRead`, `RoutingResultRead` interfaces and 3 API functions (fetchRouting, approveRouting, overrideRouting) to api.ts. Create `routing-store.ts` (loadRouting, approve, override, reset). Depends on 36.14c. (S, 3h)
+
+- [ ] 36.15b: ExpertCard + RoutingPreview components — `ExpertCard.tsx` (expert class badge, MANDATORY lock icon, reputation weight color, remove button for AUTO only). `RoutingPreview.tsx` container (loads routing on mount, expert card grid, rationale, budget, approve button). Depends on 36.15a. (M, 3h)
+
+- [ ] 36.15c: AddExpertDropdown + component tests — `AddExpertDropdown.tsx` (select from available expert classes, excludes already-selected). Wire into RoutingPreview. `RoutingPreview.test.tsx` with 13 test cases. Depends on 36.15b. (M, 3h)
+
+### Slice 4: Backlog Board + Manual Task Creation (NOT STARTED)
+
+- [ ] 36.16: Backlog board frontend — Kanban view with 6 columns (Triage, Planning, Building, Verify, Done, Rejected). Cards with issue#/title/category/complexity/cost. Click to detail.
+- [ ] 36.17: Board state persistence — POST/GET `/api/v1/dashboard/board/preferences`, PostgreSQL table for column width/collapse/sort.
+- [ ] 36.18: Manual task creation endpoint — POST `/api/v1/dashboard/tasks` (title, description, optional category/priority/acceptance_criteria/skip_triage). skip_triage=true starts workflow immediately.
+- [ ] 36.19: Manual task creation frontend — modal with title, Markdown description, category/priority dropdowns, acceptance criteria list, skip triage checkbox.
+- [ ] 36.20: Historical comparison query (stretch) — GET `.../comparison` returns stats from similar past TaskPackets. Only when >5 similar tasks exist.
 
 ---
 
-## Epic 35 — Phase 1: Pipeline Visibility
+## Completed Epics
 
-> **Load after Epic 34 completes.** Apply calibration ratio to adjust estimates below.
-> **Estimated runtime:** ~20-28 hrs single instance. With parallelism: ~8-12 hrs.
-
-### Time Tracking — Run 2+
-
-| Slice | Stories | Est. Loops | Est. Min | Actual Loops | Actual Min |
-|-------|---------|-----------|---------|-------------|-----------|
-| S1 Backend | 5 | 6 | 70 | | |
-| S1 Frontend | 9 | 10 | 110 | | |
-| S2 Backend | 6 | 7 | 80 | | |
-| S2 Frontend | 12 | 14 | 150 | | |
-| S3 Backend | 4 | 5 | 55 | | |
-| S3 Frontend | 11 | 13 | 140 | | |
-| S4 Backend | 1 | 1 | 10 | | |
-| S4 Frontend | 14 | 16 | 170 | | |
-| **Total** | **63** | **72** | **785 min** | | |
-
-### Slice 1: Pipeline Rail
-
-#### Backend
-- [x] S1.B1: Add stage timing fields to TaskPacket model (start/end timestamp per stage). Alembic migration. Nulls for historical records. (M)
-- [x] S1.B2: `GET /api/v1/dashboard/tasks` — List TaskPackets with pagination (offset/limit), filter by status/date/category. Returns JSON array. Auth required. (M)
-- [x] S1.B3: `GET /api/v1/dashboard/tasks/:id` — TaskPacket detail with stage timestamps, cost breakdown by stage, model per stage. 404 for unknown ID. (S)
-- [x] S1.B4: Pipeline stage metrics aggregation query — per-stage pass rate, avg duration, throughput over configurable window. `GET /api/v1/dashboard/stages/metrics`. (M)
-- [x] S1.B5: Emit `pipeline.cost_update` events from `PipelineBudget` on each model call. Payload: task_id, cost_delta, total_cost, model, stage. Fire-and-forget. (S)
-
-#### Frontend
-- [x] S1.F1: Static 9-node pipeline layout with connecting arrows. React component, two-row layout, directional SVG arrows. All 9 stages render with correct names/order. (M, MVP)
-- [x] S1.F2: Stage node status rendering — status icon (idle/active/review/passed/failed) and TaskPacket count badge from Zustand store. (M, MVP)
-- [x] S1.F3: SSE connection for Pipeline Rail — parse stage_enter/exit and gate events, update store. Rail updates within 2s of event. (M, MVP)
-- [x] S1.F4: Header bar — active count, queued count, running cost total. Updated via SSE cost events. Zero state: "0 active / 0 queued / $0.00". (S, MVP)
-- [x] S1.F5a: Stage detail panel shell — slide-in right panel on stage node click. Close on X or Escape. Animation transition. (M, MVP)
-- [x] S1.F5b: Stage detail panel content — list TaskPackets in stage with progress %, model, cost. "View Timeline" link. Stage metrics (pass rate, avg time). (M, MVP)
-- [x] S1.F7: Active stage pulse animation — CSS glow on active nodes. IntersectionObserver pauses when off-screen. (S)
-- [x] S1.F8: Hover tooltips on stage nodes — avg time, pass rate, current TaskPacket titles. 300ms delay. (S)
-- [x] S1.F9: Initial data load — fetch tasks + stage metrics on mount to populate store before SSE events. Loading spinner. (M, MVP)
-
-### Slice 2: TaskPacket Timeline + Gate Inspector
-
-#### Backend
-- [x] S2.B1: `GET /api/v1/dashboard/tasks/:id/gates` — Gate results array with stage_from/to, result, checks, defect_category. Chronological. (S)
-- [x] S2.B2a: GateEvidence SQLAlchemy model — task_id, stage, result, checks (JSONB), defect_category, evidence_artifact (JSONB), timestamp. Alembic migration. (M)
-- [x] S2.B2b: NATS consumer to populate GateEvidence from verification/QA signals. Subscribe to existing streams, write to PostgreSQL. (M)
-- [x] S2.B3: `GET /api/v1/dashboard/gates` — List all gate events, paginated, filterable by pass/fail, stage, task_id, date range. Newest-first. (M)
-- [x] S2.B4: `GET /api/v1/dashboard/gates/:id` — Gate detail with full evidence, checks, outputs, decision rule. 404 for unknown. (S)
-- [x] S2.B5: Gate health metrics aggregation — pass rate, avg issues, top failure type, loopback rate. `GET /api/v1/dashboard/gates/metrics`. (M)
-
-#### Frontend
-- [x] S2.F1: Vertical timeline layout with stage bars — static rendering from TaskPacket detail. Duration bars color-coded. (M, MVP)
-- [x] S2.F2: Duration-proportional bar widths from timestamps. Minimum width for short stages. (S, MVP)
-- [x] S2.F3: Gate result display under each stage bar — pass/fail icon + summary. Failed in red. (S, MVP)
-- [x] S2.F4: TaskPacket timeline header — ID, title, status with progress %, elapsed time, cost. (S, MVP)
-- [x] S2.F5: Queued stage rendering — dashed/gray bars for unreached stages with "(queued)" label. (S, MVP)
-- [x] S2.F6: Click-to-expand gate evidence — expand completed stage to show checks, per-check results, decision. Loads from API, cached. (M, MVP)
-- [x] S2.F7: Gate Inspector list view — chronological gate transitions. Pass/fail icon, TaskPacket ID, transition, timestamp, issue count. (M, MVP)
-- [x] S2.F8: Gate Inspector detail view — click to expand full evidence, checks, decision, defect category. (M, MVP)
-- [x] S2.F9: Gate Inspector filter bar — pass/fail toggle, TaskPacket selector, stage selector, date range. (M)
-- [x] S2.F10: Gate health metrics summary panel — pass rate, avg issues, top failure, loopback rate with trend. (S)
-- [x] S2.F11: Real-time SSE updates on timeline — gate events and activity entries append, active bar grows. (M)
-- [x] S2.F12: Hover tooltips on stage bars — timestamps, model, cost. (S)
-
-### Slice 3: Activity Stream
-
-#### Backend
-- [x] S3.B1a: Activity event publisher — create `src/dashboard/activity_publisher.py`. Instrument agent framework for file_read, file_edit, search event types. Fire-and-forget. (M)
-- [x] S3.B1b: Instrument agent framework for test_run, shell, reasoning, llm_call event types. Integration test: all 7 types emit correctly. (M)
-- [x] S3.B2: ActivityEntry PostgreSQL model — task_id, stage, timestamp, type, subphase, content, detail, metadata (JSONB). Auto-prune at 5000/task. Migration. (M)
-- [x] S3.B3: `GET /api/v1/dashboard/tasks/:id/activity` — Paginated activity log. Filter by type, subphase. Newest-first or oldest-first. (M)
-
-#### Frontend
-- [x] S3.F1: Activity stream container — list of entries with timestamp (HH:MM:SS), type icon, content text. Chronological. (M, MVP)
-- [x] S3.F2: Entry type icons and formatting — distinct icon per type. Reasoning italic/muted. Errors red. (M, MVP)
-- [x] S3.F3: SSE connection for activity stream — subscribe to `pipeline.activity` for current TaskPacket. Append in real time. (M, MVP)
-- [x] S3.F4: Smart auto-scroll — scroll to bottom when within 100px. Preserve position when scrolled up. "New entries below" indicator. (M, MVP)
-- [x] S3.F5: Subphase grouping with collapsible sections — CONTEXT GATHERING, IMPLEMENTATION, TESTING headers. Time range per subphase. (M)
-- [x] S3.F6: Detail expansion — file edits show 3-line diff preview with "Show full". Test failures show error with "Show full" for trace. (M)
-- [x] S3.F7: Virtual scrolling for long streams — virtualize when >500 entries. Smooth with 5000. Memory bounded. (M)
-- [x] S3.F8: Filter bar — type toggles, text search, reasoning toggle, LLM call toggle. (M)
-- [x] S3.F9: File edit diff preview — first 3 lines, green additions, red removals, line count summary. (S)
-- [x] S3.F10: Test result formatting — pass/fail counts with badges, failed test names, monospace errors. (S)
-- [x] S3.F11: Active stage activity preview in timeline — last 5 entries inline in TaskPacket Timeline for active stage. "View full stream" link. (S, MVP)
-
-### Slice 4: Loopback + Minimap + Error States
-
-#### Backend
-- [x] S4.B1: Emit `pipeline.loopback.start` and `pipeline.loopback.resolve` events from workflow loopback logic. Payload: task_id, from/to stage, reason, attempt, max_attempts. (S)
-
-#### Frontend
-- [x] S4.F1: Loopback arc on Pipeline Rail — animated dashed arc from failing stage to target. Badge with ID, reason, attempt count. Amber/red coloring. (M, MVP)
-- [x] S4.F2: Loopback entries in TaskPacket Timeline — backward arrows, attempt counter, re-entry as separate entries. (M, MVP)
-- [x] S4.F3: Escalation indicator — max loopbacks: red arc, "ESCALATED — needs human review". (S)
-- [x] S4.F4: Loopback resolution animation — arc fades to green, then disappears. (S)
-- [x] S4.F5: Loopback history panel — all loopbacks for a TaskPacket with stages, reason, outcome, duration. (S)
-- [x] S4.F6: Minimap bottom bar — persistent, horizontal cards. Status dot, ID + title (truncated), stage + progress %, cost. (M, MVP)
-- [x] S4.F7: Minimap click-to-navigate — click card → navigate to TaskPacket timeline. Active card highlighted. (S, MVP)
-- [x] S4.F8: Minimap horizontal scroll — mouse wheel and drag when >5 cards. No clipping. (S)
-- [x] S4.F9: Minimap collapse/expand toggle — minimize to count only. Preference in localStorage. (S)
-- [x] S4.F10: SSE disconnection banner — "Reconnecting..." with attempt count, "Retry Now" button, stale stage indicators. Within 5s of disconnect. (M, MVP)
-- [x] S4.F11: SSE reconnection with full state refresh — `system.full_state` on reconnect. "Connection restored" toast. No stale data after reconnect. (M, MVP)
-- [x] S4.F12: API error cards — per-panel error card (not full-page). Error message, Retry, Dismiss. Rest of UI functional. (M, MVP)
-- [x] S4.F13: Empty state: Pipeline Rail — message with "Import Issues" and "Create Task" buttons (wiring deferred to Phase 2). (S, MVP)
-- [x] S4.F14: Empty states: Activity Stream, Gate Inspector, Minimap — contextual empty messages. (S, MVP)
-
----
-
-## Completed
+- **Epic 34** — Phase 0: SSE PoC + Frontend Scaffolding (all 14 stories COMPLETE)
+- **Epic 35** — Phase 1: Pipeline Visibility (all 63 stories across S1-S4 COMPLETE)
+- **Epics 0-33** — All prior epics COMPLETE
