@@ -191,6 +191,123 @@ function SteeringAuditEntry({ entry }: { entry: SteeringAuditLogRead }) {
   )
 }
 
+/** S4.37.23: Per-task cost breakdown panel — cost by stage and by model */
+function TaskCostBreakdown({ task }: { task: TaskPacketDetail }) {
+  const [expanded, setExpanded] = useState(false)
+
+  const stageEntries = task.cost_by_stage
+    .filter((c) => c.cost > 0)
+    .map((c) => {
+      const stageConfig = PIPELINE_STAGES.find((s) => s.id === c.stage)
+      return { ...c, label: stageConfig?.label ?? c.stage, color: stageConfig?.color ?? '#6b7280' }
+    })
+    .sort((a, b) => b.cost - a.cost)
+
+  const modelMap = new Map<string, number>()
+  for (const entry of task.cost_by_stage) {
+    const model = entry.model ?? 'unknown'
+    modelMap.set(model, (modelMap.get(model) ?? 0) + entry.cost)
+  }
+  const modelEntries = Array.from(modelMap.entries())
+    .map(([model, cost]) => ({ model, cost }))
+    .sort((a, b) => b.cost - a.cost)
+
+  if (task.total_cost === 0 && stageEntries.length === 0) return null
+
+  const maxStageCost = Math.max(...stageEntries.map((e) => e.cost), 0.0001)
+  const maxModelCost = Math.max(...modelEntries.map((e) => e.cost), 0.0001)
+
+  return (
+    <div className="rounded-lg border border-cyan-800/40 bg-cyan-900/10" data-testid="task-cost-breakdown">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium text-cyan-300"
+      >
+        <span aria-hidden="true">💰</span>
+        <span>Cost Breakdown — ${task.total_cost.toFixed(4)}</span>
+        <span className="ml-auto text-gray-500">{expanded ? '▾' : '▸'}</span>
+      </button>
+      {expanded && (
+        <div className="space-y-4 px-3 pb-3">
+          {/* By Stage */}
+          {stageEntries.length > 0 && (
+            <div>
+              <div className="mb-2 text-xs font-medium text-gray-400">By Stage</div>
+              <div className="space-y-1.5">
+                {stageEntries.map((entry) => (
+                  <div key={entry.stage} className="flex items-center gap-2" data-testid={`cost-stage-${entry.stage}`}>
+                    <div className="w-20 shrink-0 text-right text-xs" style={{ color: entry.color }}>
+                      {entry.label}
+                    </div>
+                    <div className="h-4 flex-1 overflow-hidden rounded bg-gray-800">
+                      <div
+                        className="h-full rounded transition-all"
+                        style={{
+                          width: `${(entry.cost / maxStageCost) * 100}%`,
+                          backgroundColor: `${entry.color}50`,
+                          borderRight: `2px solid ${entry.color}`,
+                        }}
+                      />
+                    </div>
+                    <div className="w-20 shrink-0 text-right text-xs tabular-nums text-gray-300">
+                      ${entry.cost.toFixed(4)}
+                    </div>
+                    {entry.model && (
+                      <div className="max-w-24 truncate text-xs text-gray-500" title={entry.model}>
+                        {entry.model}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Divider */}
+          {stageEntries.length > 0 && modelEntries.length > 0 && (
+            <div className="border-t border-gray-700" />
+          )}
+
+          {/* By Model */}
+          {modelEntries.length > 0 && (
+            <div>
+              <div className="mb-2 text-xs font-medium text-gray-400">By Model</div>
+              <div className="space-y-1.5">
+                {modelEntries.map(({ model, cost }) => (
+                  <div key={model} className="flex items-center gap-2" data-testid={`cost-model-${model}`}>
+                    <div className="w-20 shrink-0 truncate text-right text-xs text-gray-400" title={model}>
+                      {model === 'unknown' ? <span className="italic">unknown</span> : model}
+                    </div>
+                    <div className="h-4 flex-1 overflow-hidden rounded bg-gray-800">
+                      <div
+                        className="h-full rounded bg-violet-600/50 transition-all"
+                        style={{
+                          width: `${(cost / maxModelCost) * 100}%`,
+                          borderRight: '2px solid #7c3aed',
+                        }}
+                      />
+                    </div>
+                    <div className="w-20 shrink-0 text-right text-xs tabular-nums text-gray-300">
+                      ${cost.toFixed(4)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Total */}
+          <div className="flex justify-end border-t border-gray-700 pt-2">
+            <div className="text-xs text-gray-400">
+              Total: <span className="font-medium text-cyan-300">${task.total_cost.toFixed(4)}</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 /** S1.37.7: Collapsible steering audit entries section */
 function SteeringAuditSection({ entries }: { entries: SteeringAuditLogRead[] }) {
   const [expanded, setExpanded] = useState(true)
@@ -321,6 +438,9 @@ export function TaskTimeline({ taskId, onClose }: TaskTimelineProps) {
 
       {/* S1.37.7: Steering audit entries */}
       <SteeringAuditSection entries={auditEntries} />
+
+      {/* S4.37.23: Per-task cost breakdown */}
+      <TaskCostBreakdown task={task} />
 
       {/* Timeline stages */}
       <div className="space-y-2">
