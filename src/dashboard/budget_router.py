@@ -1,13 +1,16 @@
-"""Budget API endpoints — spend summary, history, and breakdowns.
+"""Budget API endpoints — spend summary, history, breakdowns, and configuration.
 
 Endpoints:
 - GET /budget/summary      — total spend, call count, cache stats for a time window
 - GET /budget/history      — time-series spend by model (daily buckets)
 - GET /budget/by-stage     — spend aggregated by pipeline stage (step)
 - GET /budget/by-model     — spend aggregated by model
+- GET /budget/config       — fetch the budget configuration singleton
+- PUT /budget/config       — update budget thresholds and automated actions
 
-All data is sourced from ModelCallAudit records via the existing
+All spend data is sourced from ModelCallAudit records via the existing
 ``get_spend_report`` and ``_aggregate`` helpers in ``src.admin.model_spend``.
+Budget configuration is persisted to PostgreSQL via the ``budget_config`` table.
 """
 
 from __future__ import annotations
@@ -15,9 +18,17 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.admin.model_spend import SpendSummary, get_spend_report
+from src.dashboard.models.budget_config import (
+    BudgetConfigRead,
+    BudgetConfigUpdate,
+    get_budget_config,
+    update_budget_config,
+)
+from src.db.connection import get_session
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/budget", tags=["budget"])
@@ -107,3 +118,36 @@ async def get_budget_by_model(
         "total_calls": report.total_calls,
         "by_model": [_summary_to_dict(s) for s in report.by_model],
     }
+
+
+# ---------------------------------------------------------------------------
+# Budget configuration
+# ---------------------------------------------------------------------------
+
+
+@router.get("/config", response_model=BudgetConfigRead)
+async def get_config(
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+) -> BudgetConfigRead:
+    """Return the current budget configuration.
+
+    Returns the singleton budget configuration row, creating it with safe
+    defaults if it does not yet exist.  All threshold values are in USD.
+    ``downgrade_threshold_percent`` is in the range 0–100.
+    """
+    async with session.begin():
+        return await get_budget_config(session)
+
+
+@router.put("/config", response_model=BudgetConfigRead)
+async def put_config(
+    payload: BudgetConfigUpdate,
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+) -> BudgetConfigRead:
+    """Update the budget configuration (partial update — all fields optional).
+
+    Only fields present in the request body are updated.  Omitted fields
+    retain their current values.  Returns the updated configuration.
+    """
+    async with session.begin():
+        return await update_budget_config(session, payload)

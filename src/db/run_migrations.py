@@ -53,6 +53,15 @@ MIGRATIONS = [
     "src.db.migrations.028_gate_evidence",
     "src.db.migrations.029_activity_entry",
     "src.db.migrations.030_taskpacket_routing_result",
+    "src.db.migrations.031_board_preferences",
+    "src.db.migrations.032_taskpacket_pr_fields",
+    "src.db.migrations.033_taskpacket_paused_aborted",
+    "src.db.migrations.034_steering_audit_log",
+    "src.db.migrations.035_trust_config",
+    "src.db.migrations.036_task_trust_tier",
+    "src.db.migrations.037_trust_default_tier",
+    "src.db.migrations.038_steering_action_trust_tier",
+    "src.db.migrations.039_budget_config",
 ]
 
 

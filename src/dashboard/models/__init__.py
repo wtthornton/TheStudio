@@ -1,5 +1,12 @@
 """Dashboard ORM models package."""
 
+from src.dashboard.models.budget_config import (
+    BudgetConfigRead,
+    BudgetConfigRow,
+    BudgetConfigUpdate,
+    get_budget_config,
+    update_budget_config,
+)
 from src.dashboard.models.steering_audit import (
     SteeringAction,
     SteeringAuditLogCreate,
@@ -30,6 +37,12 @@ from src.dashboard.models.trust_config import (
 )
 
 __all__ = [
+    # budget_config
+    "BudgetConfigRead",
+    "BudgetConfigRow",
+    "BudgetConfigUpdate",
+    "get_budget_config",
+    "update_budget_config",
     # steering_audit
     "SteeringAction",
     "SteeringAuditLogCreate",
