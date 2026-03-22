@@ -325,6 +325,199 @@ def _compute_stage_metrics(
     return result
 
 
+# ---------------------------------------------------------------------------
+# Historical comparison query (Story 36.20 — stretch)
+# ---------------------------------------------------------------------------
+
+MIN_SIMILAR_TASKS = 5  # minimum count before comparison data is returned
+
+
+class StageDurationStats(BaseModel):
+    """Average duration stats for a single pipeline stage."""
+
+    stage: str
+    avg_duration_seconds: float
+
+
+class HistoricalComparisonResponse(BaseModel):
+    """Stats from similar past TaskPackets.
+
+    ``available`` is False when fewer than 5 similar tasks exist.
+    All aggregate fields are None when available=False.
+    """
+
+    available: bool
+    similar_count: int = 0
+    avg_complexity_score: float | None = None
+    common_risk_flags: list[str] | None = None  # flags present in >50% of similar tasks
+    pass_rate: float | None = None  # fraction that reached a success status
+    avg_loopback_count: float | None = None
+    stage_durations: list[StageDurationStats] | None = None
+
+
+def _extract_complexity_band(complexity_index: dict[str, Any] | None) -> str | None:
+    """Extract the band string (low/medium/high/critical) from a complexity_index dict."""
+    if not complexity_index or not isinstance(complexity_index, dict):
+        return None
+    return complexity_index.get("band")
+
+
+def _build_comparison(rows: list[Any]) -> HistoricalComparisonResponse:
+    """Compute aggregate statistics from a list of similar TaskPacketRows."""
+    if len(rows) < MIN_SIMILAR_TASKS:
+        return HistoricalComparisonResponse(available=False, similar_count=len(rows))
+
+    count = len(rows)
+
+    # Avg complexity score
+    scores: list[float] = []
+    for r in rows:
+        ci = r.complexity_index
+        if isinstance(ci, dict):
+            s = ci.get("score")
+            if isinstance(s, (int, float)):
+                scores.append(float(s))
+    avg_score = sum(scores) / len(scores) if scores else None
+
+    # Common risk flags (present in >50% of tasks that have risk_flags)
+    flag_counts: dict[str, int] = {}
+    tasks_with_flags = 0
+    for r in rows:
+        rf = r.risk_flags
+        if isinstance(rf, dict):
+            tasks_with_flags += 1
+            for flag, value in rf.items():
+                if value:
+                    flag_counts[flag] = flag_counts.get(flag, 0) + 1
+    threshold = max(1, tasks_with_flags // 2)
+    common_flags = sorted(f for f, c in flag_counts.items() if c > threshold) or None
+
+    # Pass rate
+    pass_statuses = {
+        TaskPacketStatus.VERIFICATION_PASSED,
+        TaskPacketStatus.PUBLISHED,
+        TaskPacketStatus.AWAITING_APPROVAL,
+    }
+    passed = sum(1 for r in rows if r.status in pass_statuses)
+    pass_rate = passed / count
+
+    # Avg loopback count
+    avg_loopbacks = sum(r.loopback_count for r in rows) / count
+
+    # Avg stage durations from stage_timings
+    dur_sums: dict[str, list[float]] = {}
+    for r in rows:
+        timings = r.stage_timings
+        if not isinstance(timings, dict):
+            continue
+        for stage, sdata in timings.items():
+            if not isinstance(sdata, dict):
+                continue
+            start_str = sdata.get("start")
+            end_str = sdata.get("end")
+            if start_str and end_str:
+                try:
+                    start_dt = datetime.fromisoformat(start_str)
+                    end_dt = datetime.fromisoformat(end_str)
+                    dur = (end_dt - start_dt).total_seconds()
+                    if dur >= 0:
+                        dur_sums.setdefault(stage, []).append(dur)
+                except (ValueError, TypeError):
+                    pass
+    stage_durations = [
+        StageDurationStats(stage=s, avg_duration_seconds=sum(durs) / len(durs))
+        for s, durs in sorted(dur_sums.items())
+        if durs
+    ] or None
+
+    return HistoricalComparisonResponse(
+        available=True,
+        similar_count=count,
+        avg_complexity_score=avg_score,
+        common_risk_flags=common_flags,
+        pass_rate=pass_rate,
+        avg_loopback_count=avg_loopbacks,
+        stage_durations=stage_durations,
+    )
+
+
+@router.get("/tasks/{task_id}/comparison")
+async def historical_comparison(
+    task_id: UUID,
+    token: str | None = Query(None),
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+) -> HistoricalComparisonResponse:
+    """Return historical stats from similar past TaskPackets.
+
+    Similarity is defined as:
+    1. Same repo AND same complexity band (primary match)
+    2. Falls back to same complexity band only (secondary match)
+
+    Returns ``available: false`` when fewer than 5 similar tasks exist.
+    The requesting task itself is always excluded from the comparison set.
+    """
+    _verify_token(token)
+
+    target = await session.get(TaskPacketRow, task_id)
+    if target is None:
+        raise HTTPException(status_code=404, detail="TaskPacket not found")
+
+    complexity_band = _extract_complexity_band(target.complexity_index)
+
+    # Build query: exclude the target task; only completed/processed tasks
+    # (i.e. tasks that have moved beyond RECEIVED) to get meaningful stats.
+    terminal_statuses = {
+        TaskPacketStatus.VERIFICATION_PASSED,
+        TaskPacketStatus.VERIFICATION_FAILED,
+        TaskPacketStatus.PUBLISHED,
+        TaskPacketStatus.AWAITING_APPROVAL,
+        TaskPacketStatus.AWAITING_APPROVAL_EXPIRED,
+        TaskPacketStatus.REJECTED,
+        TaskPacketStatus.FAILED,
+    }
+
+    base_stmt = (
+        select(TaskPacketRow)
+        .where(TaskPacketRow.id != task_id)
+        .where(TaskPacketRow.status.in_(list(terminal_statuses)))
+    )
+
+    # Primary: same repo + same complexity band (if band is known)
+    if complexity_band and target.repo:
+        # Filter by repo first (cheap) — band filtering done in Python
+        repo_stmt = base_stmt.where(TaskPacketRow.repo == target.repo)
+        result = await session.execute(repo_stmt)
+        repo_rows = [
+            r
+            for r in result.scalars().all()
+            if _extract_complexity_band(r.complexity_index) == complexity_band
+        ]
+        if len(repo_rows) >= MIN_SIMILAR_TASKS:
+            return _build_comparison(repo_rows)
+
+    # Secondary: same complexity band across all repos
+    if complexity_band:
+        result = await session.execute(base_stmt)
+        band_rows = [
+            r
+            for r in result.scalars().all()
+            if _extract_complexity_band(r.complexity_index) == complexity_band
+        ]
+        if len(band_rows) >= MIN_SIMILAR_TASKS:
+            return _build_comparison(band_rows)
+
+    # Fallback: same repo only (no band info or not enough band-matched tasks)
+    if target.repo:
+        repo_stmt = base_stmt.where(TaskPacketRow.repo == target.repo)
+        result = await session.execute(repo_stmt)
+        repo_rows_all = list(result.scalars().all())
+        if len(repo_rows_all) >= MIN_SIMILAR_TASKS:
+            return _build_comparison(repo_rows_all)
+
+    # Not enough data for any similarity dimension
+    return HistoricalComparisonResponse(available=False, similar_count=0)
+
+
 @router.get("/stages/metrics")
 async def stage_metrics(
     token: str | None = Query(None),
