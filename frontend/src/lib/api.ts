@@ -602,3 +602,112 @@ export async function fetchTaskActivity(taskId: string, params: {
   if (!res.ok) throw new Error(`Failed to fetch activity: ${res.status}`)
   return res.json()
 }
+
+// --- Budget API ---
+
+export interface SpendEntry {
+  key: string
+  total_cost: number
+  total_tokens_in: number
+  total_tokens_out: number
+  total_tokens: number
+  call_count: number
+  avg_latency_ms: number
+  error_count: number
+}
+
+export interface BudgetSummary {
+  window_hours: number
+  total_cost: number
+  total_calls: number
+  total_cache_creation_tokens: number
+  total_cache_read_tokens: number
+  cache_hit_rate: number
+}
+
+export interface BudgetHistory {
+  window_hours: number
+  total_cost: number
+  total_calls: number
+  by_day: SpendEntry[]
+  by_model: SpendEntry[]
+}
+
+export interface BudgetByStage {
+  window_hours: number
+  total_cost: number
+  total_calls: number
+  by_stage: SpendEntry[]
+}
+
+export interface BudgetByModel {
+  window_hours: number
+  total_cost: number
+  total_calls: number
+  by_model: SpendEntry[]
+}
+
+export interface BudgetConfig {
+  daily_spend_warning: number
+  weekly_budget_cap: number
+  per_task_warning: number
+  pause_on_budget_exceeded: boolean
+  model_downgrade_on_approach: boolean
+  downgrade_threshold_percent: number
+  updated_at: string
+}
+
+export interface BudgetConfigUpdate {
+  daily_spend_warning?: number
+  weekly_budget_cap?: number
+  per_task_warning?: number
+  pause_on_budget_exceeded?: boolean
+  model_downgrade_on_approach?: boolean
+  downgrade_threshold_percent?: number
+}
+
+export async function fetchBudgetSummary(windowHours = 24): Promise<BudgetSummary> {
+  const url = withToken(`${API_BASE}/budget/summary?window_hours=${windowHours}`)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Failed to fetch budget summary: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchBudgetHistory(windowHours = 168): Promise<BudgetHistory> {
+  const url = withToken(`${API_BASE}/budget/history?window_hours=${windowHours}`)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Failed to fetch budget history: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchBudgetByStage(windowHours = 24): Promise<BudgetByStage> {
+  const url = withToken(`${API_BASE}/budget/by-stage?window_hours=${windowHours}`)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Failed to fetch budget by stage: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchBudgetByModel(windowHours = 24): Promise<BudgetByModel> {
+  const url = withToken(`${API_BASE}/budget/by-model?window_hours=${windowHours}`)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Failed to fetch budget by model: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchBudgetConfig(): Promise<BudgetConfig> {
+  const url = withToken(`${API_BASE}/budget/config`)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Failed to fetch budget config: ${res.status}`)
+  return res.json()
+}
+
+export async function updateBudgetConfig(payload: BudgetConfigUpdate): Promise<BudgetConfig> {
+  const url = withToken(`${API_BASE}/budget/config`)
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) throw new Error(`Failed to update budget config: ${res.status}`)
+  return res.json()
+}

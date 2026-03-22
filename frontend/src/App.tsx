@@ -20,9 +20,10 @@ import IntentEditor from './components/planning/IntentEditor'
 import RoutingPreview from './components/planning/RoutingPreview'
 import BacklogBoard from './components/planning/BacklogBoard'
 import { TrustConfiguration } from './components/TrustConfiguration'
+import { BudgetDashboard } from './components/BudgetDashboard'
 import { PIPELINE_STAGES } from './lib/constants'
 
-type Tab = 'pipeline' | 'triage' | 'intent' | 'routing' | 'board' | 'trust'
+type Tab = 'pipeline' | 'triage' | 'intent' | 'routing' | 'board' | 'trust' | 'budget'
 
 function App() {
   useSSE()
@@ -84,6 +85,12 @@ function App() {
               className={`px-3 py-1.5 text-sm rounded ${activeTab === 'trust' ? 'bg-gray-700 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}
             >
               Trust Tiers
+            </button>
+            <button
+              onClick={() => setActiveTab('budget')}
+              className={`px-3 py-1.5 text-sm rounded ${activeTab === 'budget' ? 'bg-gray-700 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}
+            >
+              Budget
             </button>
           </nav>
         </div>
@@ -181,9 +188,12 @@ function App() {
             setActiveTab('pipeline')
           }} />
         </div>
-      ) : (
+      ) : activeTab === 'trust' ? (
         /* Trust Tier Configuration (Epic 37, Slice 3) */
         <TrustConfiguration />
+      ) : (
+        /* Budget Dashboard (Epic 37, Slice 4) */
+        <BudgetDashboard />
       )}
     </div>
   )
