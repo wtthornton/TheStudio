@@ -35,7 +35,7 @@
 
 - [x] 36.11a: Intent API types + functions — extend `TaskPacketRead` with `issue_title`, `issue_body`, `scope`, `risk_flags`, `complexity_index` (optional fields). Add `IntentSpecRead` interface (9 fields), `IntentResponse` interface, 5 API functions (fetchIntent, approveIntent, rejectIntent, editIntent, refineIntent). File: `frontend/src/lib/api.ts`. (S, 2h)
 
-- [ ] 36.11b: Intent Zustand store — `intent-store.ts` with state (taskId, current, versions, selectedVersion, loading, error, mode, refineModalOpen, saving) and actions (loadIntent, approve, reject, saveEdit, requestRefine, selectVersion, setMode, setRefineModalOpen, reset). Re-fetches after mutations. File: `frontend/src/stores/intent-store.ts`. Depends on 36.11a. (S, 2h)
+- [x] 36.11b: Intent Zustand store — `intent-store.ts` with state (taskId, current, versions, selectedVersion, loading, error, mode, refineModalOpen, saving) and actions (loadIntent, approve, reject, saveEdit, requestRefine, selectVersion, setMode, setRefineModalOpen, reset). Re-fetches after mutations. File: `frontend/src/stores/intent-store.ts`. Depends on 36.11a. (S, 2h)
 
 - [ ] 36.11c: SourceContext + IntentSpec display components — two pure display components. SourceContext: left panel showing issue title/body (plain `<pre>`), enrichment (complexity score bar, risk flags checklist, scope/files). IntentSpec: right panel showing goal, constraints (bullet list), acceptance criteria (numbered list), non-goals (strikethrough bullets), source badge (color-coded), version + timestamp. Files: `frontend/src/components/planning/SourceContext.tsx`, `IntentSpec.tsx`. Depends on 36.11a. (M, 4h)
 
