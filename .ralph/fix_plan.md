@@ -23,7 +23,7 @@
 
 - [x] 37.8: Temporal signal handler — redirect_task(target_stage, reason) — set redirect flag, workflow loop re-enters at target stage after current activity completes. Validate target < current stage.
 - [x] 37.9: Temporal signal handler — retry_stage — redirect to current stage, clear stage artifacts, re-enter.
-- [ ] 37.10: Steering API endpoints — POST `/tasks/:id/redirect` (body: target_stage + reason), POST `/tasks/:id/retry`. Validate target stage < current stage. Return 202/400.
+- [x] 37.10: Steering API endpoints — POST `/tasks/:id/redirect` (body: target_stage + reason), POST `/tasks/:id/retry`. Validate target stage < current stage. Return 202/400.
 - [ ] 37.11: Frontend — RedirectModal (current stage, radio for valid earlier stages, required reason, warning about re-run scope) + RetryConfirmation dialog.
 
 ### Slice 3: Trust Tier Configuration
