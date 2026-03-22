@@ -37,7 +37,7 @@
 - [x] 38.2: `POST /api/v1/dashboard/github/import` — `src/dashboard/github_router.py`. Batch import selected issues as TaskPackets. Check for duplicates. Set `source_name="dashboard_import"`. Respect triage mode (TRIAGE status if enabled, RECEIVED + start workflow if not). `taskpacket_crud.create()` already accepts `source_name`.
 - [x] 38.7: `GET /api/v1/dashboard/tasks/:id/evidence` — return `EvidencePayload` JSON for a TaskPacket. 404 on missing task. Tests at `tests/dashboard/test_evidence_endpoint.py`.
 - [x] 38.3: Import modal frontend — `frontend/src/components/github/ImportModal.tsx`. Repo selector (from admin settings), label/status filters, search, issue list with checkboxes, import mode toggle (triage vs direct), "already in pipeline" detection. Wire into dashboard navigation.
-- [ ] 38.4: Integration test — `tests/integration/test_issue_import.py`. Import 2 issues, verify TaskPackets created with `source_name="dashboard_import"`, verify duplicate blocked, test triage mode, test direct mode. Mocked GitHub API.
+- [x] 38.4: Integration test — `tests/integration/test_issue_import.py`. Import 2 issues, verify TaskPackets created with `source_name="dashboard_import"`, verify duplicate blocked, test triage mode, test direct mode. Mocked GitHub API.
 
 ---
 
