@@ -39,12 +39,15 @@ The following files are Ralph's infrastructure. NEVER delete, move, rename, or o
 
 The ONE exception: update fix_plan.md (`- [ ]` → `- [x]`) after completing a task.
 
-## Testing Guidelines
-- LIMIT testing to ~20% of your total effort per loop
-- PRIORITIZE: Implementation > Documentation > Tests
-- Only write tests for NEW functionality you implement
-- Do NOT refactor existing tests unless broken
-- Do NOT add "additional test coverage" as busy work
+## Testing Guidelines (Epic-Boundary QA)
+- **Do NOT run tests after every task.** Defer QA to epic boundaries.
+- An **epic boundary** = completing the last `- [ ]` task under a `##` section in fix_plan.md.
+- At epic boundary: run full QA (lint/type/test) for all changes in that section.
+- Before EXIT_SIGNAL: true: mandatory full QA — never exit without passing tests.
+- For LARGE tasks (cross-module): run QA for that task's scope only.
+- Set `TESTS_STATUS: DEFERRED` when QA is intentionally skipped (mid-epic).
+- Only write tests for NEW functionality you implement.
+- Do NOT refactor existing tests unless broken.
 
 ## Quality Pipeline (TAPPS)
 - Call `tapps_session_start(quick=true)` at the start of each loop.
@@ -76,7 +79,7 @@ At the end of your response, ALWAYS include:
 STATUS: IN_PROGRESS | COMPLETE | BLOCKED
 TASKS_COMPLETED_THIS_LOOP: <number>
 FILES_MODIFIED: <number>
-TESTS_STATUS: PASSING | FAILING | NOT_RUN
+TESTS_STATUS: PASSING | FAILING | DEFERRED | NOT_RUN
 WORK_TYPE: IMPLEMENTATION | TESTING | DOCUMENTATION | REFACTORING
 EXIT_SIGNAL: false | true
 RECOMMENDATION: <one line summary>
