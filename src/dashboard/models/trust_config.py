@@ -95,6 +95,7 @@ class TrustSafetyBoundsRow(Base):
 
     Only one row should ever exist (id = fixed sentinel UUID).
     ``mandatory_review_patterns`` is a JSON array of glob strings.
+    ``default_tier`` is the fallback tier when no rule matches.
     """
 
     __tablename__ = "trust_safety_bounds"
@@ -113,6 +114,9 @@ class TrustSafetyBoundsRow(Base):
     max_loopbacks: Mapped[int | None] = mapped_column(Integer, nullable=True)
     mandatory_review_patterns: Mapped[list[str]] = mapped_column(
         JSONB, nullable=False, default=list
+    )
+    default_tier: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="observe"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
@@ -198,6 +202,26 @@ class SafeBoundsRead(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
+# Pydantic schemas — DefaultTier
+# ---------------------------------------------------------------------------
+
+
+class DefaultTierRead(BaseModel):
+    """Output schema for the default trust tier."""
+
+    default_tier: AssignedTier
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class DefaultTierUpdate(BaseModel):
+    """Input schema for setting the default trust tier."""
+
+    default_tier: AssignedTier
 
 
 # ---------------------------------------------------------------------------
@@ -325,6 +349,34 @@ def _utcnow() -> datetime:
     return datetime.now(tz=timezone.utc)
 
 
+async def get_default_tier(session: AsyncSession) -> DefaultTierRead:
+    """Return the default trust tier from the singleton, creating defaults if absent."""
+    row = await session.get(TrustSafetyBoundsRow, TrustSafetyBoundsRow.SINGLETON_ID)
+    if row is None:
+        row = await _create_default_bounds(session)
+    return DefaultTierRead(
+        default_tier=AssignedTier(row.default_tier),
+        updated_at=row.updated_at,
+    )
+
+
+async def update_default_tier(
+    session: AsyncSession,
+    payload: DefaultTierUpdate,
+) -> DefaultTierRead:
+    """Update the default trust tier on the singleton."""
+    row = await session.get(TrustSafetyBoundsRow, TrustSafetyBoundsRow.SINGLETON_ID)
+    if row is None:
+        row = await _create_default_bounds(session)
+    row.default_tier = payload.default_tier.value
+    row.updated_at = _utcnow()
+    await session.flush()
+    return DefaultTierRead(
+        default_tier=AssignedTier(row.default_tier),
+        updated_at=row.updated_at,
+    )
+
+
 async def _create_default_bounds(session: AsyncSession) -> TrustSafetyBoundsRow:
     """Insert the safety bounds singleton with sensible defaults."""
     row = TrustSafetyBoundsRow(
@@ -333,6 +385,7 @@ async def _create_default_bounds(session: AsyncSession) -> TrustSafetyBoundsRow:
         max_auto_merge_cost=500,  # $5.00 in cents
         max_loopbacks=3,
         mandatory_review_patterns=["**/migrations/**", "**/settings*"],
+        default_tier="observe",
         updated_at=_utcnow(),
     )
     session.add(row)

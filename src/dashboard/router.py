@@ -9,6 +9,7 @@ from src.dashboard.gates import router as gates_router
 from src.dashboard.planning import router as planning_router
 from src.dashboard.steering import router as steering_router
 from src.dashboard.tasks import router as tasks_router
+from src.dashboard.trust_router import router as trust_router
 
 router = APIRouter(prefix="/api/v1/dashboard", tags=["dashboard"])
 router.include_router(events_router)
@@ -18,6 +19,7 @@ router.include_router(activity_router)
 router.include_router(planning_router)
 router.include_router(board_router)
 router.include_router(steering_router)
+router.include_router(trust_router)
 
 
 @router.get("/health")
