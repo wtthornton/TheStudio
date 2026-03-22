@@ -36,6 +36,9 @@ class TaskPacketStatus(enum.StrEnum):
     REJECTED = "rejected"
     PUBLISHED = "published"
     FAILED = "failed"
+    # Steering states (Epic 37 — Slice 1)
+    PAUSED = "paused"   # Pipeline held between activities; resumes on resume_task signal
+    ABORTED = "aborted"  # Forcefully terminated by operator; terminal, stores reason
 
 
 # Allowed status transitions. Key = current status, value = set of valid next statuses.
@@ -44,45 +47,88 @@ ALLOWED_TRANSITIONS: dict[TaskPacketStatus, set[TaskPacketStatus]] = {
         TaskPacketStatus.RECEIVED,
         TaskPacketStatus.REJECTED,
         TaskPacketStatus.FAILED,
+        TaskPacketStatus.PAUSED,
+        TaskPacketStatus.ABORTED,
     },
-    TaskPacketStatus.RECEIVED: {TaskPacketStatus.ENRICHED, TaskPacketStatus.FAILED},
+    TaskPacketStatus.RECEIVED: {
+        TaskPacketStatus.ENRICHED,
+        TaskPacketStatus.FAILED,
+        TaskPacketStatus.PAUSED,
+        TaskPacketStatus.ABORTED,
+    },
     TaskPacketStatus.ENRICHED: {
         TaskPacketStatus.CLARIFICATION_REQUESTED,
         TaskPacketStatus.HUMAN_REVIEW_REQUIRED,
         TaskPacketStatus.INTENT_BUILT,
         TaskPacketStatus.FAILED,
+        TaskPacketStatus.PAUSED,
+        TaskPacketStatus.ABORTED,
     },
     TaskPacketStatus.CLARIFICATION_REQUESTED: {
         TaskPacketStatus.ENRICHED,  # re-evaluation after update
         TaskPacketStatus.FAILED,
+        TaskPacketStatus.PAUSED,
+        TaskPacketStatus.ABORTED,
     },
     TaskPacketStatus.HUMAN_REVIEW_REQUIRED: {
         TaskPacketStatus.ENRICHED,  # re-evaluation after update
         TaskPacketStatus.FAILED,
+        TaskPacketStatus.PAUSED,
+        TaskPacketStatus.ABORTED,
     },
-    TaskPacketStatus.INTENT_BUILT: {TaskPacketStatus.IN_PROGRESS, TaskPacketStatus.FAILED},
+    TaskPacketStatus.INTENT_BUILT: {
+        TaskPacketStatus.IN_PROGRESS,
+        TaskPacketStatus.FAILED,
+        TaskPacketStatus.PAUSED,
+        TaskPacketStatus.ABORTED,
+    },
     TaskPacketStatus.IN_PROGRESS: {
         TaskPacketStatus.VERIFICATION_PASSED,
         TaskPacketStatus.VERIFICATION_FAILED,
         TaskPacketStatus.FAILED,
+        TaskPacketStatus.PAUSED,
+        TaskPacketStatus.ABORTED,
     },
     TaskPacketStatus.VERIFICATION_PASSED: {
         TaskPacketStatus.AWAITING_APPROVAL,
         TaskPacketStatus.PUBLISHED,
         TaskPacketStatus.FAILED,
+        TaskPacketStatus.PAUSED,
+        TaskPacketStatus.ABORTED,
     },
     TaskPacketStatus.AWAITING_APPROVAL: {
         TaskPacketStatus.PUBLISHED,
         TaskPacketStatus.AWAITING_APPROVAL_EXPIRED,
         TaskPacketStatus.REJECTED,
         TaskPacketStatus.FAILED,
+        TaskPacketStatus.PAUSED,
+        TaskPacketStatus.ABORTED,
     },
-    TaskPacketStatus.AWAITING_APPROVAL_EXPIRED: {TaskPacketStatus.FAILED},
+    TaskPacketStatus.AWAITING_APPROVAL_EXPIRED: {
+        TaskPacketStatus.FAILED,
+        TaskPacketStatus.ABORTED,
+    },
     TaskPacketStatus.REJECTED: {TaskPacketStatus.FAILED},
     TaskPacketStatus.VERIFICATION_FAILED: {
         TaskPacketStatus.IN_PROGRESS,  # loopback
         TaskPacketStatus.FAILED,
+        TaskPacketStatus.PAUSED,
+        TaskPacketStatus.ABORTED,
     },
+    # Steering states (Epic 37 — Slice 1)
+    # PAUSED can resume back to any active pipeline stage, or be aborted.
+    TaskPacketStatus.PAUSED: {
+        TaskPacketStatus.RECEIVED,
+        TaskPacketStatus.ENRICHED,
+        TaskPacketStatus.INTENT_BUILT,
+        TaskPacketStatus.IN_PROGRESS,
+        TaskPacketStatus.VERIFICATION_PASSED,
+        TaskPacketStatus.AWAITING_APPROVAL,
+        TaskPacketStatus.ABORTED,
+        TaskPacketStatus.FAILED,
+    },
+    # ABORTED is a terminal state — no outgoing transitions.
+    TaskPacketStatus.ABORTED: set(),
     TaskPacketStatus.PUBLISHED: set(),
     TaskPacketStatus.FAILED: set(),
 }

@@ -12,7 +12,7 @@
 ### Slice 1: Pipeline Steering — Pause/Resume/Abort (MVP)
 
 - [x] 37.1: Temporal signal handlers — pause_task and resume_task — `src/workflow/pipeline.py`. Add pause flag checked via `workflow.wait_condition()` before each activity. Pausing mid-activity waits for current activity to complete, then holds.
-- [ ] 37.2: Temporal signal handler — abort_task(reason) — `src/workflow/pipeline.py`, add PAUSED + ABORTED statuses to TaskPacket enum + transitions, store abort reason on TaskPacket metadata.
+- [x] 37.2: Temporal signal handler — abort_task(reason) — `src/workflow/pipeline.py`, add PAUSED + ABORTED statuses to TaskPacket enum + transitions, store abort reason on TaskPacket metadata.
 - [ ] 37.3: Steering API endpoints — POST `/tasks/:id/pause`, `/resume`, `/abort` in `src/dashboard/steering.py`. Look up Temporal workflow ID, send signal. Return 202/404/409.
 - [ ] 37.4: Steering audit log model — `src/dashboard/models/steering_audit.py` with SteeringAuditLog (id, task_id, action enum, from_stage, to_stage, reason, timestamp, actor). Alembic migration + CRUD.
 - [ ] 37.5: Steering audit persistence in signal handlers — after each signal, persist audit entry via Temporal activity. Emit `pipeline.steering.action` event to NATS for SSE.
