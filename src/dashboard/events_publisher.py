@@ -297,3 +297,53 @@ async def emit_loopback_resolve(
         )
     except Exception:
         logger.debug("Failed to emit loopback.resolve for task=%s", task_id, exc_info=True)
+
+
+async def emit_steering_action(
+    task_id: str,
+    action: str,
+    actor: str,
+    audit_id: str,
+    *,
+    from_stage: str | None = None,
+    to_stage: str | None = None,
+    reason: str | None = None,
+    timestamp_iso: str = "",
+) -> None:
+    """Emit a pipeline.steering.action event (fire-and-forget).
+
+    Published after each steering signal (pause/resume/abort/redirect/retry)
+    so the SSE stream delivers real-time steering state to the dashboard.
+    Failures are logged but never raised — callers must not be blocked.
+    """
+    try:
+        js = await get_pipeline_jetstream()
+        payload = json.dumps(
+            {
+                "type": "pipeline.steering.action",
+                "data": {
+                    "task_id": task_id,
+                    "action": action,
+                    "from_stage": from_stage,
+                    "to_stage": to_stage,
+                    "reason": reason,
+                    "actor": actor,
+                    "audit_id": audit_id,
+                    "timestamp": timestamp_iso,
+                },
+            }
+        ).encode()
+        await js.publish("pipeline.steering.action", payload)
+        logger.debug(
+            "Emitted steering.action task=%s action=%s actor=%s",
+            task_id,
+            action,
+            actor,
+        )
+    except Exception:
+        logger.debug(
+            "Failed to emit steering.action for task=%s action=%s",
+            task_id,
+            action,
+            exc_info=True,
+        )

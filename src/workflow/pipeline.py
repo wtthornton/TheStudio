@@ -45,6 +45,7 @@ with workflow.unsafe.imports_passed_through():
         IntakeOutput,
         IntentInput,
         IntentOutput,
+        PersistSteeringAuditInput,
         PreflightActivityOutput,
         PreflightInput,
         ProjectStatusInput,
@@ -63,6 +64,7 @@ with workflow.unsafe.imports_passed_through():
         implement_activity,
         intake_activity,
         intent_activity,
+        persist_steering_audit_activity,
         post_approval_request_activity,
         preflight_activity,
         publish_activity,
@@ -191,6 +193,14 @@ STEP_POLICIES: dict[WorkflowStep, StepPolicy] = {
 MAX_VERIFICATION_LOOPBACKS = 2
 MAX_QA_LOOPBACKS = 2
 
+# Audit activity policy — fast write, 3 attempts total (2 retries)
+_STEERING_AUDIT_POLICY = StepPolicy(
+    timeout=timedelta(seconds=30),
+    max_retries=2,
+    initial_interval=timedelta(seconds=1),
+    backoff_coefficient=2.0,
+)
+
 
 @dataclass
 class PipelineInput:
@@ -285,6 +295,8 @@ class TheStudioPipelineWorkflow:
         self._paused = False
         self._aborted = False
         self._abort_reason: str = ""
+        # Tracks the last completed workflow step for steering audit from_stage
+        self._current_step: str = ""
 
     @workflow.signal
     async def approve_publish(self, approved_by: str, approval_source: str) -> None:
@@ -356,27 +368,57 @@ class TheStudioPipelineWorkflow:
         self._updated_issue_body = issue_body
 
     @workflow.signal
-    async def pause_task(self) -> None:
+    async def pause_task(self, actor: str = "system", taskpacket_id: str = "") -> None:
         """Signal handler — pauses pipeline execution after current activity completes.
 
         The pause takes effect at the next inter-activity checkpoint; any
         in-flight activity is allowed to finish before the workflow holds.
         Idempotent: calling twice is harmless (flag stays True).
+
+        Schedules ``persist_steering_audit_activity`` to durably record this
+        action and emit ``pipeline.steering.action`` to NATS for SSE.
         """
         self._paused = True
         workflow.logger.info("pipeline.steering.paused")
+        await workflow.execute_activity(
+            persist_steering_audit_activity,
+            PersistSteeringAuditInput(
+                task_id=taskpacket_id,
+                action="pause",
+                actor=actor,
+                from_stage=self._current_step,
+                to_stage="paused",
+            ),
+            start_to_close_timeout=_STEERING_AUDIT_POLICY.timeout,
+            retry_policy=_STEERING_AUDIT_POLICY.to_retry_policy(),
+        )
 
     @workflow.signal
-    async def resume_task(self) -> None:
+    async def resume_task(self, actor: str = "system", taskpacket_id: str = "") -> None:
         """Signal handler — resumes pipeline execution after a pause.
 
         Idempotent: calling twice is harmless (flag stays False).
+
+        Schedules ``persist_steering_audit_activity`` to durably record this
+        action and emit ``pipeline.steering.action`` to NATS for SSE.
         """
         self._paused = False
         workflow.logger.info("pipeline.steering.resumed")
+        await workflow.execute_activity(
+            persist_steering_audit_activity,
+            PersistSteeringAuditInput(
+                task_id=taskpacket_id,
+                action="resume",
+                actor=actor,
+                from_stage="paused",
+                to_stage=self._current_step,
+            ),
+            start_to_close_timeout=_STEERING_AUDIT_POLICY.timeout,
+            retry_policy=_STEERING_AUDIT_POLICY.to_retry_policy(),
+        )
 
     @workflow.signal
-    async def abort_task(self, reason: str) -> None:
+    async def abort_task(self, reason: str, actor: str = "system", taskpacket_id: str = "") -> None:
         """Signal handler — aborts pipeline execution with a user-provided reason.
 
         Sets the abort flag and clears any pause hold so the workflow can
@@ -392,8 +434,21 @@ class TheStudioPipelineWorkflow:
         # Unblock any active pause hold so the abort is observed immediately.
         self._paused = False
         workflow.logger.info("pipeline.steering.aborted", extra={"reason": reason})
+        await workflow.execute_activity(
+            persist_steering_audit_activity,
+            PersistSteeringAuditInput(
+                task_id=taskpacket_id,
+                action="abort",
+                actor=actor,
+                from_stage=self._current_step,
+                to_stage="aborted",
+                reason=reason,
+            ),
+            start_to_close_timeout=_STEERING_AUDIT_POLICY.timeout,
+            retry_policy=_STEERING_AUDIT_POLICY.to_retry_policy(),
+        )
 
-    async def _await_if_paused(self) -> bool:
+    async def _await_if_paused(self, upcoming_step: str = "") -> bool:
         """Block at the next inter-activity checkpoint if a pause is requested.
 
         Called before each pipeline activity. If ``self._paused`` is True the
@@ -401,10 +456,16 @@ class TheStudioPipelineWorkflow:
         signal is received. Because this check happens between activities, any
         in-flight work completes before the hold takes effect.
 
+        ``upcoming_step`` is recorded on ``self._current_step`` so that
+        steering signal handlers (pause / resume / abort) can include the
+        current pipeline stage in the audit log entry.
+
         Returns:
             True if an abort was requested (caller should return immediately),
             False if the workflow should continue normally.
         """
+        if upcoming_step:
+            self._current_step = upcoming_step
         if self._paused:
             workflow.logger.info("pipeline.steering.hold_start")
             await workflow.wait_condition(lambda: not self._paused or self._aborted)
@@ -446,7 +507,7 @@ class TheStudioPipelineWorkflow:
         output = PipelineOutput()
 
         # Step 1: Intake
-        if await self._await_if_paused():
+        if await self._await_if_paused(WorkflowStep.INTAKE):
             output.rejection_reason = f"aborted: {self._abort_reason}"
             return output
         intake_policy = STEP_POLICIES[WorkflowStep.INTAKE]
@@ -476,7 +537,7 @@ class TheStudioPipelineWorkflow:
         await self._sync_project_status(params, "RECEIVED")
 
         # Step 2: Context Enrichment
-        if await self._await_if_paused():
+        if await self._await_if_paused(WorkflowStep.CONTEXT):
             output.rejection_reason = f"aborted: {self._abort_reason}"
             return output
         context_policy = STEP_POLICIES[WorkflowStep.CONTEXT]
@@ -506,7 +567,7 @@ class TheStudioPipelineWorkflow:
             evaluation_count = 0
 
             while True:
-                if await self._await_if_paused():
+                if await self._await_if_paused(WorkflowStep.READINESS):
                     output.rejection_reason = f"aborted: {self._abort_reason}"
                     return output
                 readiness_policy = STEP_POLICIES[WorkflowStep.READINESS]
@@ -561,7 +622,7 @@ class TheStudioPipelineWorkflow:
                     current_body = self._updated_issue_body
 
         # Step 3: Intent Building
-        if await self._await_if_paused():
+        if await self._await_if_paused(WorkflowStep.INTENT):
             output.rejection_reason = f"aborted: {self._abort_reason}"
             return output
         intent_policy = STEP_POLICIES[WorkflowStep.INTENT]
@@ -610,7 +671,7 @@ class TheStudioPipelineWorkflow:
             output.intent_approved_by = self._intent_approved_by
 
         # Step 4: Expert Routing
-        if await self._await_if_paused():
+        if await self._await_if_paused(WorkflowStep.ROUTER):
             output.rejection_reason = f"aborted: {self._abort_reason}"
             return output
         router_policy = STEP_POLICIES[WorkflowStep.ROUTER]
@@ -656,7 +717,7 @@ class TheStudioPipelineWorkflow:
             output.routing_approved_by = self._routing_approved_by
 
         # Step 5: Assembler
-        if await self._await_if_paused():
+        if await self._await_if_paused(WorkflowStep.ASSEMBLER):
             output.rejection_reason = f"aborted: {self._abort_reason}"
             return output
         assembler_policy = STEP_POLICIES[WorkflowStep.ASSEMBLER]
@@ -677,7 +738,7 @@ class TheStudioPipelineWorkflow:
         if params.preflight_enabled and params.repo_tier in [
             t.lower() for t in params.preflight_tiers
         ]:
-            if await self._await_if_paused():
+            if await self._await_if_paused(WorkflowStep.PREFLIGHT):
                 output.rejection_reason = f"aborted: {self._abort_reason}"
                 return output
             preflight_policy = STEP_POLICIES[WorkflowStep.PREFLIGHT]
@@ -762,7 +823,7 @@ class TheStudioPipelineWorkflow:
 
         while True:
             # Step 6: Implementation
-            if await self._await_if_paused():
+            if await self._await_if_paused(WorkflowStep.IMPLEMENT):
                 output.rejection_reason = f"aborted: {self._abort_reason}"
                 return output
             impl_policy = STEP_POLICIES[WorkflowStep.IMPLEMENT]
@@ -787,7 +848,7 @@ class TheStudioPipelineWorkflow:
             output.step_reached = WorkflowStep.IMPLEMENT
 
             # Step 7: Verification
-            if await self._await_if_paused():
+            if await self._await_if_paused(WorkflowStep.VERIFY):
                 output.rejection_reason = f"aborted: {self._abort_reason}"
                 return output
             verify_policy = STEP_POLICIES[WorkflowStep.VERIFY]
@@ -817,7 +878,7 @@ class TheStudioPipelineWorkflow:
                 continue  # Loop back to implementation
 
             # Step 8: QA Validation
-            if await self._await_if_paused():
+            if await self._await_if_paused(WorkflowStep.QA):
                 output.rejection_reason = f"aborted: {self._abort_reason}"
                 return output
             qa_policy = STEP_POLICIES[WorkflowStep.QA]
@@ -853,7 +914,7 @@ class TheStudioPipelineWorkflow:
         # Step 8.5: Approval Wait (Suggest/Execute tier only)
         if params.repo_tier in APPROVAL_REQUIRED_TIERS and not params.approval_auto_bypass:
             # Post approval request comment before entering wait
-            if await self._await_if_paused():
+            if await self._await_if_paused(WorkflowStep.AWAITING_APPROVAL):
                 output.rejection_reason = f"aborted: {self._abort_reason}"
                 return output
             await workflow.execute_activity(
@@ -959,7 +1020,7 @@ class TheStudioPipelineWorkflow:
             output.approval_bypassed = True
 
         # Step 9: Publish
-        if await self._await_if_paused():
+        if await self._await_if_paused(WorkflowStep.PUBLISH):
             output.rejection_reason = f"aborted: {self._abort_reason}"
             return output
         publish_policy = STEP_POLICIES[WorkflowStep.PUBLISH]

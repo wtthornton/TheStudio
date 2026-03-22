@@ -311,6 +311,19 @@ class EscalateTimeoutOutput:
     label_applied: bool = False
 
 
+@dataclass
+class PersistSteeringAuditInput:
+    """Input for the steering audit persistence activity."""
+
+    task_id: str
+    action: str  # SteeringAction string value: pause/resume/abort/redirect/retry
+    actor: str = "system"
+    from_stage: str = ""
+    to_stage: str = ""
+    reason: str = ""
+    timestamp_iso: str = ""  # ISO-8601 UTC timestamp; defaults to now() if empty
+
+
 # --- Activity Implementations ---
 # The intake and router activities call real pure functions (no DB dependency).
 # Others are stubs that return sensible defaults; in production they delegate
@@ -1582,3 +1595,80 @@ async def escalate_timeout_activity(
         },
     )
     return EscalateTimeoutOutput(escalated=True, label_applied=True)
+
+
+@activity.defn
+async def persist_steering_audit_activity(
+    params: PersistSteeringAuditInput,
+) -> None:
+    """Persist a steering audit entry and emit pipeline.steering.action NATS event.
+
+    Called from within Temporal signal handlers (pause_task / resume_task /
+    abort_task) after each steering action.  Durably persists the entry to
+    ``steering_audit_log`` via the async DB session and then publishes a
+    ``pipeline.steering.action`` SSE event so the dashboard can reflect the
+    new steering state in real time.
+
+    Failures fall back gracefully — the activity retry policy ensures
+    delivery under transient failures.
+    """
+    import logging
+    from datetime import UTC, datetime
+    from uuid import UUID, uuid4
+
+    from src.dashboard.events_publisher import emit_steering_action
+    from src.dashboard.models.steering_audit import SteeringAuditLogCreate, create_audit_entry
+    from src.db.connection import get_async_session
+
+    _logger = logging.getLogger("thestudio.steering")
+
+    timestamp_str = params.timestamp_iso or datetime.now(UTC).isoformat()
+    try:
+        timestamp = datetime.fromisoformat(timestamp_str)
+    except ValueError:
+        timestamp = datetime.now(UTC)
+
+    audit_id = str(uuid4())
+
+    # 1. Persist to steering_audit_log
+    try:
+        task_uuid = UUID(params.task_id)
+        async with get_async_session() as session:
+            entry = SteeringAuditLogCreate(
+                task_id=task_uuid,
+                action=params.action,
+                from_stage=params.from_stage or None,
+                to_stage=params.to_stage or None,
+                reason=params.reason or None,
+                timestamp=timestamp,
+                actor=params.actor or "system",
+            )
+            result = await create_audit_entry(session, entry)
+            audit_id = str(result.id)
+            await session.commit()
+    except Exception:
+        _logger.warning(
+            "steering.audit.persist_failed",
+            extra={"task_id": params.task_id, "action": params.action},
+            exc_info=True,
+        )
+
+    # 2. Emit pipeline.steering.action NATS event for SSE
+    await emit_steering_action(
+        task_id=params.task_id,
+        action=params.action,
+        actor=params.actor or "system",
+        audit_id=audit_id,
+        from_stage=params.from_stage or None,
+        to_stage=params.to_stage or None,
+        reason=params.reason or None,
+        timestamp_iso=timestamp.isoformat(),
+    )
+    _logger.info(
+        "steering.audit.persisted",
+        extra={
+            "task_id": params.task_id,
+            "action": params.action,
+            "audit_id": audit_id,
+        },
+    )

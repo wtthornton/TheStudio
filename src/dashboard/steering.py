@@ -105,7 +105,7 @@ async def pause_task(
 
     client = await get_temporal_client()
     handle = client.get_workflow_handle(str(task_id))
-    await handle.signal("pause_task")
+    await handle.signal("pause_task", args=["api", str(task_id)])
 
     logger.info("pause_task signal sent", extra={"task_id": str(task_id), "status": task.status})
     return SteeringResponse(task_id=task_id, action="pause")
@@ -138,7 +138,7 @@ async def resume_task(
 
     client = await get_temporal_client()
     handle = client.get_workflow_handle(str(task_id))
-    await handle.signal("resume_task")
+    await handle.signal("resume_task", args=["api", str(task_id)])
 
     logger.info("resume_task signal sent", extra={"task_id": str(task_id)})
     return SteeringResponse(task_id=task_id, action="resume")
@@ -173,7 +173,7 @@ async def abort_task(
 
     client = await get_temporal_client()
     handle = client.get_workflow_handle(str(task_id))
-    await handle.signal("abort_task", args=[body.reason])
+    await handle.signal("abort_task", args=[body.reason, "api", str(task_id)])
 
     logger.info(
         "abort_task signal sent",

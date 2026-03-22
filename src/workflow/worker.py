@@ -18,6 +18,7 @@ from src.workflow.activities import (
     implement_activity,
     intake_activity,
     intent_activity,
+    persist_steering_audit_activity,
     post_approval_request_activity,
     preflight_activity,
     publish_activity,
@@ -46,6 +47,7 @@ ACTIVITIES = [
     post_approval_request_activity,
     update_project_status_activity,
     escalate_timeout_activity,
+    persist_steering_audit_activity,
 ]
 
 
