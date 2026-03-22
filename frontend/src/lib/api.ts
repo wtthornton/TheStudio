@@ -281,6 +281,56 @@ export async function refineIntent(taskId: string, feedback: string): Promise<In
   return res.json()
 }
 
+// --- Routing Review Types (Epic 36, Slice 3) ---
+
+export interface ExpertSelectionRead {
+  expert_id: string
+  expert_class: string
+  pattern: string
+  reputation_weight: number
+  reputation_confidence: number
+  selection_score: number
+  selection_reason: string
+}
+
+export interface RoutingResultRead {
+  taskpacket_id: string
+  selections: ExpertSelectionRead[]
+  rationale: string
+  budget_remaining: number
+}
+
+export interface RoutingActionResponse {
+  status: string
+}
+
+// --- Routing Review API (Epic 36, Slice 3) ---
+
+export async function fetchRouting(taskId: string): Promise<RoutingResultRead> {
+  const url = withToken(`${API_BASE}/tasks/${taskId}/routing`)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Failed to fetch routing: ${res.status}`)
+  return res.json()
+}
+
+export async function approveRouting(taskId: string): Promise<RoutingActionResponse> {
+  const url = withToken(`${API_BASE}/tasks/${taskId}/routing/approve`)
+  const res = await fetch(url, { method: 'POST' })
+  if (!res.ok) throw new Error(`Failed to approve routing: ${res.status}`)
+  return res.json()
+}
+
+export async function overrideRouting(taskId: string, reason: string): Promise<RoutingActionResponse> {
+  const url = withToken(`${API_BASE}/tasks/${taskId}/routing/override`)
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason }),
+  })
+  if (!res.ok) throw new Error(`Failed to override routing: ${res.status}`)
+  return res.json()
+}
+
 // --- Activity API ---
 
 export async function fetchTaskActivity(taskId: string, params: {

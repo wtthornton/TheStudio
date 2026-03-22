@@ -70,7 +70,7 @@
 
 - [x] 36.14d: Routing backend tests — `test_routing_result.py` (Pydantic schema round-trip), `test_routing_endpoints.py` (GET 404/200, POST approve/override with mocked Temporal). Depends on 36.14a-c. (S, 2h)
 
-- [ ] 36.15a: Routing API client + Zustand store — add `ExpertSelectionRead`, `RoutingResultRead` interfaces and 3 API functions (fetchRouting, approveRouting, overrideRouting) to api.ts. Create `routing-store.ts` (loadRouting, approve, override, reset). Depends on 36.14c. (S, 3h)
+- [x] 36.15a: Routing API client + Zustand store — add `ExpertSelectionRead`, `RoutingResultRead` interfaces and 3 API functions (fetchRouting, approveRouting, overrideRouting) to api.ts. Create `routing-store.ts` (loadRouting, approve, override, reset). Depends on 36.14c. (S, 3h)
 
 - [ ] 36.15b: ExpertCard + RoutingPreview components — `ExpertCard.tsx` (expert class badge, MANDATORY lock icon, reputation weight color, remove button for AUTO only). `RoutingPreview.tsx` container (loads routing on mount, expert card grid, rationale, budget, approve button). Depends on 36.15a. (M, 3h)
 
