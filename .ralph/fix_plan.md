@@ -43,7 +43,7 @@
 
 - [x] 36.11e: Intent edit mode form — `IntentEditMode.tsx` replaces right panel when editing. Goal textarea, constraints/AC/non-goals as editable lists (add/remove items). `EditableList` sub-component. Save calls `store.saveEdit()`, Cancel returns to view mode. Empty strings filtered on save. Save disabled when unchanged. File: `frontend/src/components/planning/IntentEditMode.tsx`, modify IntentEditor.tsx. Depends on 36.11d. (M, 4h)
 
-- [ ] 36.11f: Refinement modal — `RefinementModal.tsx` with backdrop overlay, feedback textarea (10-char minimum), submit/cancel/escape. Submit calls `store.requestRefine()`. File: `frontend/src/components/planning/RefinementModal.tsx`, modify IntentEditor.tsx. Depends on 36.11d. (S, 3h)
+- [x] 36.11f: Refinement modal — `RefinementModal.tsx` with backdrop overlay, feedback textarea (10-char minimum), submit/cancel/escape. Submit calls `store.requestRefine()`. File: `frontend/src/components/planning/RefinementModal.tsx`, modify IntentEditor.tsx. Depends on 36.11d. (S, 3h)
 
 - [ ] 36.11g: Version diff + component tests — `VersionDiff.tsx` with field-level comparison (Set-based exact match: added=green, removed=red, unchanged=plain). "Compare Versions" toggle in IntentEditor. `IntentEditor.test.tsx` with 15 test cases covering loading, split-pane, sections, source badge, version selector, approve, reject, edit, refine, diff. Files: `frontend/src/components/planning/VersionDiff.tsx`, `__tests__/IntentEditor.test.tsx`, modify IntentEditor.tsx. Depends on 36.11e, 36.11f. (M, 3h)
 

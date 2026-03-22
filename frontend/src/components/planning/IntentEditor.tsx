@@ -8,6 +8,7 @@ import SourceContext from './SourceContext'
 import IntentSpec from './IntentSpec'
 import IntentEditMode from './IntentEditMode'
 import VersionSelector from './VersionSelector'
+import RefinementModal from './RefinementModal'
 
 interface IntentEditorProps {
   taskId: string
@@ -30,9 +31,11 @@ export default function IntentEditor({ taskId }: IntentEditorProps) {
     error,
     saving,
     mode,
+    refineModalOpen,
     loadIntent,
     approve,
     reject,
+    requestRefine,
     selectVersion,
     setMode,
     setRefineModalOpen,
@@ -208,6 +211,14 @@ export default function IntentEditor({ taskId }: IntentEditorProps) {
           )}
         </div>
       </div>
+
+      {/* Refinement modal */}
+      <RefinementModal
+        open={refineModalOpen}
+        saving={saving}
+        onSubmit={requestRefine}
+        onClose={() => setRefineModalOpen(false)}
+      />
     </div>
   )
 }
