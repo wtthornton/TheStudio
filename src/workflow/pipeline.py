@@ -250,6 +250,9 @@ class PipelineInput:
     # Stages before start_from_stage are still executed (activities are idempotent
     # and will fast-path based on existing TaskPacket state).
     start_from_stage: str = ""
+    # Set by retry_stage to indicate that this stage's artifacts should be
+    # cleared before re-executing (preventing the fast-path from skipping it).
+    clear_artifacts_for_stage: str = ""
 
 
 @dataclass
@@ -322,6 +325,9 @@ class TheStudioPipelineWorkflow:
         # Redirect state — redirect/retry (Slice 2, Epic 37)
         self._redirect_target: str | None = None
         self._redirect_reason: str = ""
+        # Retry-specific: stage whose artifacts should be cleared on re-entry.
+        # Set by retry_stage; empty string means no artifact clearing needed.
+        self._retry_clear_stage: str = ""
         # Tracks the last completed workflow step for steering audit from_stage
         self._current_step: str = ""
         # Cached workflow params — set at start of run() for use in signal handlers
@@ -548,6 +554,68 @@ class TheStudioPipelineWorkflow:
             retry_policy=_STEERING_AUDIT_POLICY.to_retry_policy(),
         )
 
+    @workflow.signal
+    async def retry_stage(
+        self,
+        reason: str,
+        actor: str = "system",
+        taskpacket_id: str = "",
+    ) -> None:
+        """Signal handler — retry the current pipeline stage from the beginning.
+
+        Clears artifacts for the current stage and re-enters it, allowing a
+        failed or incomplete stage to be re-executed without rolling back to an
+        earlier point in the pipeline.
+
+        Differs from ``redirect_task`` in two ways:
+        - No direction validation — target IS the current stage (same order).
+        - Sets ``clear_artifacts_for_stage`` so the re-entered workflow does not
+          fast-path through the stage's work based on stale TaskPacket state.
+
+        The retry takes effect at the next inter-activity checkpoint via
+        ``workflow.continue_as_new``. Any in-flight activity completes first.
+
+        Idempotent: subsequent calls before the retry is applied update the
+        reason but retain the same target stage.
+        """
+        current_stage = self._current_step
+        if not current_stage:
+            workflow.logger.warning(
+                "pipeline.steering.retry_no_current_stage",
+                extra={"reason": reason},
+            )
+            return
+
+        if current_stage not in STAGE_ORDER:
+            workflow.logger.warning(
+                "pipeline.steering.retry_unknown_stage",
+                extra={"current_stage": current_stage, "reason": reason},
+            )
+            return
+
+        self._redirect_target = current_stage
+        self._redirect_reason = reason
+        self._retry_clear_stage = current_stage
+        # Unblock any active pause hold so the retry is observed immediately.
+        self._paused = False
+        workflow.logger.info(
+            "pipeline.steering.retry_set",
+            extra={"stage": current_stage, "reason": reason},
+        )
+        await workflow.execute_activity(
+            persist_steering_audit_activity,
+            PersistSteeringAuditInput(
+                task_id=taskpacket_id,
+                action="retry",
+                actor=actor,
+                from_stage=current_stage,
+                to_stage=current_stage,
+                reason=reason,
+            ),
+            start_to_close_timeout=_STEERING_AUDIT_POLICY.timeout,
+            retry_policy=_STEERING_AUDIT_POLICY.to_retry_policy(),
+        )
+
     async def _await_if_paused(self, upcoming_step: str = "") -> bool:
         """Block at the next inter-activity checkpoint if a pause is requested.
 
@@ -587,7 +655,14 @@ class TheStudioPipelineWorkflow:
                 "pipeline.steering.redirect_applying",
                 extra={"target_stage": target, "reason": self._redirect_reason},
             )
-            workflow.continue_as_new(replace(self._params, start_from_stage=target))
+            # For retry_stage, also pass clear_artifacts_for_stage so the
+            # re-entered workflow skips the fast-path for the retried stage.
+            new_params = replace(
+                self._params,
+                start_from_stage=target,
+                clear_artifacts_for_stage=self._retry_clear_stage,
+            )
+            workflow.continue_as_new(new_params)
             # ContinueAsNewError is raised above — the line below is unreachable
             # but satisfies type checkers that expect a return.
         return self._aborted
