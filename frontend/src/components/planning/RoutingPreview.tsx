@@ -1,8 +1,9 @@
-/** RoutingPreview — container for routing review (Epic 36, Story 36.15b). */
+/** RoutingPreview — container for routing review (Epic 36, Story 36.15b+c). */
 
 import { useEffect } from 'react'
 import { useRoutingStore } from '../../stores/routing-store'
 import ExpertCard from './ExpertCard'
+import AddExpertDropdown from './AddExpertDropdown'
 
 export interface RoutingPreviewProps {
   taskId: string
@@ -83,6 +84,10 @@ export default function RoutingPreview({ taskId, onClose }: RoutingPreviewProps)
     void override(`remove:${expertClass}`)
   }
 
+  const handleAddExpert = (expertClass: string) => {
+    void override(`add:${expertClass}`)
+  }
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -148,14 +153,11 @@ export default function RoutingPreview({ taskId, onClose }: RoutingPreviewProps)
       {/* Action bar */}
       <div className="flex items-center justify-between gap-3 pt-2 border-t border-gray-700">
         <div>
-          {/* Placeholder for 36.15c AddExpertDropdown */}
-          <button
-            disabled
-            className="border border-blue-700 text-blue-400 text-sm px-3 py-1.5 rounded opacity-50 cursor-not-allowed"
-            title="Add expert (coming in next story)"
-          >
-            + Add Expert
-          </button>
+          <AddExpertDropdown
+            selectedClasses={routing.selections.map((s) => s.expert_class)}
+            onAdd={handleAddExpert}
+            disabled={saving}
+          />
         </div>
 
         <button
