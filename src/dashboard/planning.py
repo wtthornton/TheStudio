@@ -1,4 +1,4 @@
-"""Planning API endpoints — triage + intent review (Epic 36).
+"""Planning API endpoints — triage + intent review + routing review (Epic 36).
 
 Provides endpoints for the triage workflow:
 - POST /tasks/{task_id}/accept — accept a triaged task into the pipeline
@@ -11,6 +11,11 @@ Intent review endpoints (Sprint 3):
 - POST /tasks/{task_id}/intent/reject — send reject_intent signal
 - PUT /tasks/{task_id}/intent — create new version with source=developer
 - POST /tasks/{task_id}/intent/refine — create refinement version
+
+Routing review endpoints (Story 36.14c):
+- GET /tasks/{task_id}/routing — current routing result (ConsultPlan)
+- POST /tasks/{task_id}/routing/approve — send approve_routing signal
+- POST /tasks/{task_id}/routing/override — send override_routing signal
 """
 
 import enum
@@ -30,6 +35,7 @@ from src.intent.intent_crud import (
 from src.intent.intent_spec import IntentSpecCreate, IntentSpecRead
 from src.models.taskpacket import TaskPacketRead, TaskPacketStatus
 from src.models.taskpacket_crud import get_by_id, update_intent_version, update_status
+from src.routing.routing_result import RoutingResultRead
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["planning"])
@@ -342,3 +348,103 @@ async def refine_intent_endpoint(
     trigger = RefinementTrigger(source="developer", questions=[body.feedback])
     refined = await refine_intent(session, task_id, trigger)
     return refined
+
+
+# ---------------------------------------------------------------------------
+# Routing review endpoints (Story 36.14c)
+# ---------------------------------------------------------------------------
+
+
+class RoutingOverrideRequest(BaseModel):
+    """Request body for overriding a routing plan."""
+
+    reason: str
+
+
+class RoutingActionResponse(BaseModel):
+    """Response after approve/override routing."""
+
+    status: str
+
+
+@router.get("/tasks/{task_id}/routing")
+async def get_routing(
+    task_id: UUID,
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+) -> RoutingResultRead:
+    """Get the current routing result (ConsultPlan) for a task.
+
+    Returns the expert selections, rationale, and budget computed by the
+    Router activity. 404 if routing has not yet completed for this task.
+    """
+    from uuid import UUID as _UUID
+
+    task = await _get_task(session, task_id)
+
+    if task.routing_result is None:
+        raise HTTPException(status_code=404, detail="No routing result found for this task")
+
+    from src.routing.routing_result import ExpertSelectionRead
+
+    selections = [
+        ExpertSelectionRead(
+            expert_id=_UUID(s["expert_id"]),
+            expert_class=s["expert_class"],
+            pattern=s["pattern"],
+            reputation_weight=s.get("reputation_weight", 0.5),
+            reputation_confidence=s.get("reputation_confidence", 0.5),
+            selection_score=s.get("selection_score", 0.0),
+            selection_reason=s.get("selection_reason", ""),
+        )
+        for s in task.routing_result.get("selections", [])
+    ]
+
+    return RoutingResultRead(
+        taskpacket_id=task_id,
+        selections=selections,
+        rationale=task.routing_result.get("rationale", ""),
+        budget_remaining=task.routing_result.get("budget_remaining", 0),
+    )
+
+
+@router.post("/tasks/{task_id}/routing/approve")
+async def approve_routing_endpoint(
+    task_id: UUID,
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+) -> RoutingActionResponse:
+    """Approve the routing plan — sends approve_routing signal to Temporal.
+
+    The workflow must be in the AWAITING_ROUTING_REVIEW wait state.
+    Returns 409 if the task is not in INTENT_BUILT status.
+    """
+    await _get_intent_built_task(session, task_id)
+
+    from src.ingress.workflow_trigger import get_temporal_client
+
+    client = await get_temporal_client()
+    handle = client.get_workflow_handle(str(task_id))
+    await handle.signal("approve_routing", args=["dashboard_user"])
+
+    return RoutingActionResponse(status="approved")
+
+
+@router.post("/tasks/{task_id}/routing/override")
+async def override_routing_endpoint(
+    task_id: UUID,
+    body: RoutingOverrideRequest,
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+) -> RoutingActionResponse:
+    """Override the routing plan — sends override_routing signal to Temporal.
+
+    The workflow must be in the AWAITING_ROUTING_REVIEW wait state.
+    Returns 409 if the task is not in INTENT_BUILT status.
+    """
+    await _get_intent_built_task(session, task_id)
+
+    from src.ingress.workflow_trigger import get_temporal_client
+
+    client = await get_temporal_client()
+    handle = client.get_workflow_handle(str(task_id))
+    await handle.signal("override_routing", args=["dashboard_user", body.reason])
+
+    return RoutingActionResponse(status="overridden")

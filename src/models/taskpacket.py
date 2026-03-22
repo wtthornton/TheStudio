@@ -152,6 +152,10 @@ class TaskPacketRow(Base):
     triage_enrichment: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     rejection_reason: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
+    # Routing review fields (Epic 36 — Story 36.14c)
+    # Full ConsultPlan stored as JSONB so the dashboard can render routing decisions.
+    routing_result: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+
     # Verification fields (Story 0.6 — Verification Gate)
     loopback_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
@@ -202,6 +206,7 @@ class TaskPacketRead(BaseModel):
     issue_body: str | None = None
     triage_enrichment: dict[str, Any] | None = None
     rejection_reason: str | None = None
+    routing_result: dict[str, Any] | None = None
     loopback_count: int = 0
     created_at: datetime
     updated_at: datetime

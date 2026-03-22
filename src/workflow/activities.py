@@ -614,6 +614,43 @@ async def router_activity(params: RouterInput) -> RouterOutput:
                 rationale=data.get("adjustments", ""),
             )
 
+        # Persist full ConsultPlan to DB for routing review dashboard (Story 36.14c)
+        try:
+            from uuid import UUID, uuid4
+
+            from src.db.connection import get_async_session
+            from src.models.taskpacket_crud import update_routing_result
+
+            selections_payload = [
+                {
+                    "expert_id": str(uuid4()),
+                    "expert_class": s.get("expert_class", ""),
+                    "pattern": s.get("pattern", "parallel"),
+                    "reputation_weight": 0.5,
+                    "reputation_confidence": 0.5,
+                    "selection_score": 0.0,
+                    "selection_reason": s.get("rationale", router_out.rationale),
+                }
+                for s in router_out.selections
+            ]
+            routing_payload: dict[str, object] = {
+                "taskpacket_id": params.taskpacket_id,
+                "selections": selections_payload,
+                "rationale": router_out.rationale,
+                "budget_remaining": max(0, 5 - len(router_out.selections)),
+            }
+            async with get_async_session() as session:
+                await update_routing_result(
+                    session,
+                    UUID(params.taskpacket_id),
+                    routing_payload,
+                )
+        except Exception:
+            import logging
+            logging.getLogger("thestudio.router").exception(
+                "Failed to persist routing result for taskpacket=%s", params.taskpacket_id
+            )
+
         success = True
         return router_out
     finally:

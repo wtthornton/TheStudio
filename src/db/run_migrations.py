@@ -52,6 +52,7 @@ MIGRATIONS = [
     "src.db.migrations.027_taskpacket_stage_timings",
     "src.db.migrations.028_gate_evidence",
     "src.db.migrations.029_activity_entry",
+    "src.db.migrations.030_taskpacket_routing_result",
 ]
 
 

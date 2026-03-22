@@ -245,6 +245,25 @@ async def mark_readiness_miss(session: AsyncSession, task_id: UUID) -> None:
     await session.commit()
 
 
+async def update_routing_result(
+    session: AsyncSession,
+    task_id: UUID,
+    routing_result: dict[str, Any],
+) -> TaskPacketRead:
+    """Persist the full ConsultPlan (routing_result) to the TaskPacket.
+
+    Called from router_activity after routing completes so the planning
+    dashboard can display and review expert selections.
+    """
+    row = await session.get(TaskPacketRow, task_id)
+    if row is None:
+        raise ValueError(f"TaskPacket {task_id} not found")
+    row.routing_result = routing_result
+    await session.commit()
+    await session.refresh(row)
+    return TaskPacketRead.model_validate(row)
+
+
 async def increment_loopback(session: AsyncSession, task_id: UUID) -> int:
     """Increment and return the loopback count."""
     row = await session.get(TaskPacketRow, task_id)
