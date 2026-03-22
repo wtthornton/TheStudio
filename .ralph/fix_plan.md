@@ -1,93 +1,62 @@
-# Fix Plan — TheStudio: Epic 36 — Phase 2: Planning Experience
+# Fix Plan — TheStudio: Epic 37 — Phase 3: Interactive Controls & Governance
 
-> Epic: `docs/epics/epic-36-phase2-planning-experience.md`
-> Sprint plan: `docs/epics/epic-36-sprint-plan.md`
-> Sprint 4 stories: `docs/epics/epic-36-sprint4-story-decomposition.md`
-> Slice 3 stories: `docs/epics/epic-36-slice3-story-decomposition.md`
-> Status: Slices 1+2 backend COMPLETE, Slice 2 frontend IN PROGRESS (Sprint 4)
+> Epic: `docs/epics/epic-37-phase3-interactive-controls.md`
+> Status: NOT YET STARTED — Meridian review pending
+> MVP Slices: 1 (Pause/Resume/Abort) + 4 (Budget Dashboard)
+> Full Slices: 2 (Retry/Redirect), 3 (Trust Tier Config), 5 (Notifications)
 
 ---
 
-## Epic 36 — Phase 2: Planning Experience
+## Epic 37 — Phase 3: Interactive Controls & Governance
 
-### Slice 1: Triage Queue (COMPLETE)
+### Slice 1: Pipeline Steering — Pause/Resume/Abort (MVP)
 
-#### Backend
-- [x] 36.1: Add TRIAGE status to TaskPacket model — enum, transitions (TRIAGE->RECEIVED, TRIAGE->REJECTED, TRIAGE->FAILED), triage_enrichment JSON column, rejection_reason column, issue_title/issue_body columns, Alembic migration
-- [x] 36.2: Conditional triage mode in webhook handler — `triage_mode_enabled` setting, webhook creates TRIAGE status when enabled, skips workflow start
-- [x] 36.3: Triage action endpoints — POST accept (TRIAGE->RECEIVED + start workflow), POST reject (TRIAGE->REJECTED + reason), PATCH edit (title/description while in TRIAGE), all with 409 on wrong status
-- [x] 36.4: Context pre-scan for triage enrichment — `prescan_issue()` in `src/context/prescan.py`, produces file_count_estimate/complexity_hint/cost_estimate_range, called from webhook handler in triage mode
+- [ ] 37.1: Temporal signal handlers — pause_task and resume_task — `src/workflow/pipeline.py`. Add pause flag checked via `workflow.wait_condition()` before each activity. Pausing mid-activity waits for current activity to complete, then holds.
+- [ ] 37.2: Temporal signal handler — abort_task(reason) — `src/workflow/pipeline.py`, add PAUSED + ABORTED statuses to TaskPacket enum + transitions, store abort reason on TaskPacket metadata.
+- [ ] 37.3: Steering API endpoints — POST `/tasks/:id/pause`, `/resume`, `/abort` in `src/dashboard/steering.py`. Look up Temporal workflow ID, send signal. Return 202/404/409.
+- [ ] 37.4: Steering audit log model — `src/dashboard/models/steering_audit.py` with SteeringAuditLog (id, task_id, action enum, from_stage, to_stage, reason, timestamp, actor). Alembic migration + CRUD.
+- [ ] 37.5: Steering audit persistence in signal handlers — after each signal, persist audit entry via Temporal activity. Emit `pipeline.steering.action` event to NATS for SSE.
+- [ ] 37.6: Frontend — SteeringActionBar on TaskPacket detail — Pause/Resume toggle + Abort (with confirmation dialog + mandatory reason). Buttons disabled while action in flight. SSE updates state.
+- [ ] 37.7: Frontend — steering audit entries in TaskPacket timeline — wrench icon, action/reason/timestamp. GET `/tasks/:id/audit` endpoint.
 
-#### Frontend
-- [x] 36.5: Triage queue frontend — TriageQueue.tsx, TriageCard.tsx (with enrichment badges), EditPanel.tsx (slide-in editor), inline reject dropdown, triage-store.ts (Zustand)
-- [x] 36.6: Triage SSE events — emit_triage_created/accepted/rejected via NATS, frontend subscribes via Phase 0 SSE bridge
+### Slice 2: Pipeline Steering — Retry/Redirect
 
-### Slice 2: Intent Specification Review (Backend COMPLETE, Frontend Sprint 4)
+- [ ] 37.8: Temporal signal handler — redirect_task(target_stage, reason) — set redirect flag, workflow loop re-enters at target stage after current activity completes. Validate target < current stage.
+- [ ] 37.9: Temporal signal handler — retry_stage — redirect to current stage, clear stage artifacts, re-enter.
+- [ ] 37.10: Steering API endpoints — POST `/tasks/:id/redirect` (body: target_stage + reason), POST `/tasks/:id/retry`. Validate target stage < current stage. Return 202/400.
+- [ ] 37.11: Frontend — RedirectModal (current stage, radio for valid earlier stages, required reason, warning about re-run scope) + RetryConfirmation dialog.
 
-#### Backend
-- [x] 36.7: Add `source` column to IntentSpecRow — `source: str` with default "auto", updated Pydantic schemas, CRUD passes source through
-- [x] 36.7a: Raise MAX_INTENT_VERSIONS cap — changed from 2 to 10, configurable via `settings.max_intent_versions`
-- [x] 36.8: Temporal workflow wait point after Intent stage — `approve_intent`/`reject_intent` signal handlers, `workflow.wait_condition()`, 30-day safety timeout (escalates, does NOT auto-approve), feature-flagged via `intent_review_enabled`
-- [x] 36.9: Intent review API endpoints — GET `/tasks/{id}/intent` (spec + version history), POST `.../approve` (Temporal signal), POST `.../reject` (Temporal signal + reason)
-- [x] 36.10: Intent edit and refinement endpoints — PUT `/tasks/{id}/intent` (creates new version with source=developer), POST `.../refine` (constructs RefinementTrigger, creates version with source=refinement)
+### Slice 3: Trust Tier Configuration
 
-#### Frontend (Sprint 4 — Meridian PASS 2026-03-21)
+- [ ] 37.12: Trust tier rule data model — `src/dashboard/models/trust_config.py`. TrustTierRule (id, priority, conditions JSON, assigned_tier, active, timestamps). SafetyBounds (max_auto_merge_lines, max_auto_merge_cost, max_loopbacks, mandatory_review_patterns). Migration.
+- [ ] 37.13: Task-level trust tier on TaskPacket — add `task_trust_tier` nullable field (observe/suggest/execute). Migration. Do NOT modify `src/reputation/tiers.py`.
+- [ ] 37.14: Trust tier rule evaluation engine — `src/dashboard/trust_engine.py`. Evaluate conditions (equals, less_than, greater_than, contains, matches_glob) against TaskPacket metadata. First match wins. Safety bounds override. Default tier fallback.
+- [ ] 37.15: Trust tier CRUD API — GET/POST/PUT/DELETE `/trust/rules`, GET/PUT `/trust/safety-bounds`, GET/PUT `/trust/default-tier` in `src/dashboard/trust_router.py`.
+- [ ] 37.16: Trust tier assignment at pipeline start — evaluate rule engine before first activity in Temporal workflow. Set `task_trust_tier` on TaskPacket. Emit `pipeline.trust_tier.assigned` event.
+- [ ] 37.17: Frontend — TrustConfiguration settings panel + RuleBuilder (condition builder, tier assignment, priority, active toggle) + SafetyBoundsPanel + ActiveTierDisplay.
+- [ ] 37.18: Trust tier audit log — log `trust_tier_assigned` / `trust_tier_overridden` to steering audit with matching rule ID, original tier, final tier.
 
-- [x] 36.11a: Intent API types + functions — extend `TaskPacketRead` with `issue_title`, `issue_body`, `scope`, `risk_flags`, `complexity_index` (optional fields). Add `IntentSpecRead` interface (9 fields), `IntentResponse` interface, 5 API functions (fetchIntent, approveIntent, rejectIntent, editIntent, refineIntent). File: `frontend/src/lib/api.ts`. (S, 2h)
+### Slice 4: Budget Dashboard (MVP)
 
-- [x] 36.11b: Intent Zustand store — `intent-store.ts` with state (taskId, current, versions, selectedVersion, loading, error, mode, refineModalOpen, saving) and actions (loadIntent, approve, reject, saveEdit, requestRefine, selectVersion, setMode, setRefineModalOpen, reset). Re-fetches after mutations. File: `frontend/src/stores/intent-store.ts`. Depends on 36.11a. (S, 2h)
+- [ ] 37.19: Budget API endpoints — `src/dashboard/budget_router.py`. GET `/budget/summary`, `/budget/history` (time series by model), `/budget/by-stage`, `/budget/by-model`. Source from existing ModelCallAudit + SpendReport.
+- [ ] 37.20: Budget configuration API — GET/PUT `/budget/config`. Fields: daily_spend_warning, weekly_budget_cap, per_task_warning, pause_on_budget_exceeded, model_downgrade_on_approach, downgrade_threshold_percent. Persist to PostgreSQL. Migration.
+- [ ] 37.21: Budget threshold checker — `src/dashboard/budget_checker.py`. Run after each cost_update event. Compare spend vs thresholds. If pause_on_budget_exceeded + cap breached → pause all active workflows. If downgrade → update model routing preference.
+- [ ] 37.22: Frontend — BudgetDashboard view + SpendChart (stacked bar, Chart.js) + CostBreakdown (by-stage + by-model horizontal bars) + BudgetAlertConfig (threshold inputs + action toggles) + period selector (1d/7d/30d).
+- [ ] 37.23: Per-task cost breakdown panel — add to TaskPacket detail view showing cost by stage and by model for that task.
 
-- [x] 36.11c: SourceContext + IntentSpec display components — two pure display components. SourceContext: left panel showing issue title/body (plain `<pre>`), enrichment (complexity score bar, risk flags checklist, scope/files). IntentSpec: right panel showing goal, constraints (bullet list), acceptance criteria (numbered list), non-goals (strikethrough bullets), source badge (color-coded), version + timestamp. Files: `frontend/src/components/planning/SourceContext.tsx`, `IntentSpec.tsx`. Depends on 36.11a. (M, 4h)
+### Slice 5: Notifications
 
-- [x] 36.11d: IntentEditor container + routing + action buttons — container component with split-pane layout (`grid-cols-[2fr_3fr]`). Fetches own task via `fetchTaskDetail(taskId)`. Four action buttons (Approve/Edit/Refine/Reject). Reject inline confirmation with reason. VersionSelector dropdown. Loading/error states. Wired into App.tsx as third tab. Files: `frontend/src/components/planning/IntentEditor.tsx`, `VersionSelector.tsx`, modify `App.tsx`. Depends on 36.11a, 36.11b, 36.11c. (M, 4h)
-
-- [x] 36.11e: Intent edit mode form — `IntentEditMode.tsx` replaces right panel when editing. Goal textarea, constraints/AC/non-goals as editable lists (add/remove items). `EditableList` sub-component. Save calls `store.saveEdit()`, Cancel returns to view mode. Empty strings filtered on save. Save disabled when unchanged. File: `frontend/src/components/planning/IntentEditMode.tsx`, modify IntentEditor.tsx. Depends on 36.11d. (M, 4h)
-
-- [x] 36.11f: Refinement modal — `RefinementModal.tsx` with backdrop overlay, feedback textarea (10-char minimum), submit/cancel/escape. Submit calls `store.requestRefine()`. File: `frontend/src/components/planning/RefinementModal.tsx`, modify IntentEditor.tsx. Depends on 36.11d. (S, 3h)
-
-- [x] 36.11g: Version diff + component tests — `VersionDiff.tsx` with field-level comparison (Set-based exact match: added=green, removed=red, unchanged=plain). "Compare Versions" toggle in IntentEditor. `IntentEditor.test.tsx` with 15 test cases covering loading, split-pane, sections, source badge, version selector, approve, reject, edit, refine, diff. Files: `frontend/src/components/planning/VersionDiff.tsx`, `__tests__/IntentEditor.test.tsx`, modify IntentEditor.tsx. Depends on 36.11e, 36.11f. (M, 3h)
-
-### Slice 3: Complexity Dashboard + Expert Routing Preview (Meridian PASS 2026-03-21)
-
-> Story decomposition: `docs/epics/epic-36-slice3-story-decomposition.md`
-> Two parallel tracks: Track A (complexity, frontend-only) and Track B (routing, backend+frontend)
-
-#### Track A: Complexity Dashboard (frontend-only — all data exists on TaskPacketRead)
-
-- [x] 36.13a: MetricCard + RiskFlags display components — `MetricCard.tsx` (label, value, icon, color), `RiskFlags.tsx` (checklist from `risk_flags` dict, red/green icons, null="pending"). Pure display, no API calls. (S, 2h)
-
-- [x] 36.13b: FileHeatmap component — `FileHeatmap.tsx` renders `scope` data: file count, component list, file references grouped by directory with intensity bars. Null="Scope: pending". (S, 2h)
-
-- [x] 36.13c: ComplexityDashboard container — `ComplexityDashboard.tsx` assembles score bar (color-coded by band: low=green, medium=amber, high=red), 3 MetricCards (files affected, risk flag count, expert coverage with integer thresholds: green>=2, amber=1, red=0), FileHeatmap + RiskFlags in bottom row. Depends on 36.13a, 36.13b. (M, 3h)
-
-#### Track B: Routing Review (backend + frontend)
-
-- [x] 36.14a: Routing review setting + Pydantic schema — add `routing_review_enabled: bool = False` to settings.py. Create `src/routing/routing_result.py` with `ExpertSelectionRead` (7 fields: expert_id, expert_class, pattern, reputation_weight/confidence, selection_score, selection_reason) and `RoutingResultRead`. (S, 2h)
-
-- [x] 36.14b: Temporal wait point after Router — `approve_routing`/`override_routing` signal handlers in pipeline.py. `AWAITING_ROUTING_REVIEW` step enum. 30-day safety timeout. Feature-flagged via `routing_review_enabled` on PipelineInput. Mirrors intent wait point pattern. Depends on 36.14a. (M, 4h)
-
-- [x] 36.14c: Routing review API endpoints + storage — GET `/tasks/{id}/routing`, POST `.../approve`, POST `.../override`. Add `routing_result` JSONB column to TaskPacketRow (Alembic migration). Update `router_activity()` to persist full ConsultPlan data (not reduced RouterOutput) using DB session (following intent_activity pattern). Files: planning.py, activities.py, taskpacket.py, migration. Depends on 36.14a, 36.14b. (M, 4h)
-
-- [x] 36.14d: Routing backend tests — `test_routing_result.py` (Pydantic schema round-trip), `test_routing_endpoints.py` (GET 404/200, POST approve/override with mocked Temporal). Depends on 36.14a-c. (S, 2h)
-
-- [x] 36.15a: Routing API client + Zustand store — add `ExpertSelectionRead`, `RoutingResultRead` interfaces and 3 API functions (fetchRouting, approveRouting, overrideRouting) to api.ts. Create `routing-store.ts` (loadRouting, approve, override, reset). Depends on 36.14c. (S, 3h)
-
-- [x] 36.15b: ExpertCard + RoutingPreview components — `ExpertCard.tsx` (expert class badge, MANDATORY lock icon, reputation weight color, remove button for AUTO only). `RoutingPreview.tsx` container (loads routing on mount, expert card grid, rationale, budget, approve button). Depends on 36.15a. (M, 3h)
-
-- [x] 36.15c: AddExpertDropdown + component tests — `AddExpertDropdown.tsx` (select from available expert classes, excludes already-selected). Wire into RoutingPreview. `RoutingPreview.test.tsx` with 13 test cases. Depends on 36.15b. (M, 3h)
-
-### Slice 4: Backlog Board + Manual Task Creation (NOT STARTED)
-
-- [x] 36.16: Backlog board frontend — Kanban view with 6 columns (Triage, Planning, Building, Verify, Done, Rejected). Cards with issue#/title/category/complexity/cost. Click to detail.
-- [x] 36.17: Board state persistence — POST/GET `/api/v1/dashboard/board/preferences`, PostgreSQL table for column width/collapse/sort.
-- [x] 36.18: Manual task creation endpoint — POST `/api/v1/dashboard/tasks` (title, description, optional category/priority/acceptance_criteria/skip_triage). skip_triage=true starts workflow immediately.
-- [x] 36.19: Manual task creation frontend — modal with title, Markdown description, category/priority dropdowns, acceptance criteria list, skip triage checkbox.
-- [x] 36.20: Historical comparison query (stretch) — GET `.../comparison` returns stats from similar past TaskPackets. Only when >5 similar tasks exist.
+- [ ] 37.24: Notification data model — `src/dashboard/models/notification.py`. Notification (id, type enum, title, message, task_id, read, created_at). Migration.
+- [ ] 37.25: Notification API endpoints — `src/dashboard/notification_router.py`. GET `/notifications` (paginated, filterable, includes unread_count), PATCH `/notifications/:id/read`, POST `/notifications/mark-all-read`.
+- [ ] 37.26: Notification generation from NATS — `src/dashboard/notification_generator.py`. JetStream consumer for `pipeline.gate.fail`, `pipeline.cost_update`, `pipeline.steering.action`, `pipeline.trust_tier.assigned`. Generate Notification records. Register as background task in app lifecycle.
+- [ ] 37.27: Frontend — NotificationBell (top bar, unread count badge) + NotificationDropdown (New/Earlier sections, type icons, relative timestamps, mark-all-read) + NotificationItem (click-through to relevant view).
+- [ ] 37.28: Settings activity log — SteeringActivityLog page with paginated, filterable table of all steering actions. GET `/steering/audit` endpoint.
 
 ---
 
 ## Completed Epics
 
-- **Epic 34** — Phase 0: SSE PoC + Frontend Scaffolding (all 14 stories COMPLETE)
-- **Epic 35** — Phase 1: Pipeline Visibility (all 63 stories across S1-S4 COMPLETE)
+- **Epic 36** — Phase 2: Planning Experience (29 stories across 4 slices COMPLETE)
+- **Epic 35** — Phase 1: Pipeline Visibility (63 stories COMPLETE)
+- **Epic 34** — Phase 0: SSE PoC + Frontend Scaffolding (14 stories COMPLETE)
 - **Epics 0-33** — All prior epics COMPLETE
