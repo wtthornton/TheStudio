@@ -16,9 +16,10 @@ import { Minimap } from './components/Minimap'
 import { DisconnectionBanner } from './components/ErrorStates'
 import { EmptyPipelineRail } from './components/ErrorStates'
 import { TriageQueue } from './components/planning/TriageQueue'
+import IntentEditor from './components/planning/IntentEditor'
 import { PIPELINE_STAGES } from './lib/constants'
 
-type Tab = 'pipeline' | 'triage'
+type Tab = 'pipeline' | 'triage' | 'intent'
 
 function App() {
   useSSE()
@@ -56,6 +57,12 @@ function App() {
               className={`px-3 py-1.5 text-sm rounded ${activeTab === 'triage' ? 'bg-gray-700 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}
             >
               Triage
+            </button>
+            <button
+              onClick={() => setActiveTab('intent')}
+              className={`px-3 py-1.5 text-sm rounded ${activeTab === 'intent' ? 'bg-gray-700 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}
+            >
+              Intent Review
             </button>
           </nav>
         </div>
@@ -106,10 +113,27 @@ function App() {
           {/* S4.F6: Minimap bottom bar */}
           <Minimap activeTaskId={selectedTaskId ?? undefined} onTaskClick={handleMinimapClick} />
         </>
-      ) : (
+      ) : activeTab === 'triage' ? (
         /* Triage Queue (Epic 36) */
         <div className="mx-auto max-w-4xl px-6 py-6">
           <TriageQueue />
+        </div>
+      ) : (
+        /* Intent Review (Epic 36, Slice 2) */
+        <div className="mx-auto max-w-6xl px-6 py-6">
+          {selectedTaskId ? (
+            <IntentEditor taskId={selectedTaskId} />
+          ) : (
+            <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+              <p className="text-sm">Select a task from the Pipeline tab to review its intent specification.</p>
+              <button
+                onClick={() => setActiveTab('pipeline')}
+                className="mt-3 rounded bg-gray-700 px-3 py-1.5 text-xs text-gray-300 hover:bg-gray-600"
+              >
+                Go to Pipeline
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
