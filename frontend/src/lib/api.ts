@@ -868,3 +868,89 @@ export async function importGitHubIssues(payload: ImportRequest): Promise<Import
   if (!res.ok) throw new Error(`Failed to import issues: ${res.status}`)
   return res.json()
 }
+
+// --- Evidence Explorer types (Epic 38, Story 38.8) ---
+
+export interface EvidenceTaskSummary {
+  taskpacket_id: string
+  correlation_id: string
+  repo: string
+  issue_id: number
+  issue_title: string | null
+  status: string
+  trust_tier: string | null
+  loopback_count: number
+  created_at: string | null
+  updated_at: string | null
+  pr_number: number | null
+  pr_url: string | null
+}
+
+export interface EvidenceIntentSummary {
+  goal: string
+  version: number
+  acceptance_criteria: string[]
+  constraints: string[]
+  non_goals: string[]
+}
+
+export interface EvidenceGateResult {
+  name: string
+  passed: boolean
+  details: string | null
+}
+
+export interface EvidenceGateResults {
+  verification_passed: boolean
+  qa_passed: boolean | null
+  checks: EvidenceGateResult[]
+  defect_count: number
+  defect_categories: string[]
+}
+
+export interface EvidenceCostEntry {
+  label: string
+  tokens_in: number
+  tokens_out: number
+  cost_usd: number
+}
+
+export interface EvidenceCostBreakdown {
+  total_cost_usd: number
+  total_tokens_in: number
+  total_tokens_out: number
+  entries: EvidenceCostEntry[]
+}
+
+export interface EvidenceProvenanceEntry {
+  name: string
+  version: string | null
+  role: string | null
+  policy_triggers: string[]
+}
+
+export interface EvidenceProvenance {
+  experts_consulted: EvidenceProvenanceEntry[]
+  agent_model: string | null
+  loopback_stages: string[]
+}
+
+export interface EvidencePayload {
+  schema_version: string
+  generated_at: string | null
+  task_summary: EvidenceTaskSummary
+  intent: EvidenceIntentSummary | null
+  gate_results: EvidenceGateResults | null
+  cost_breakdown: EvidenceCostBreakdown | null
+  provenance: EvidenceProvenance | null
+  files_changed: string[]
+  extra: Record<string, unknown>
+}
+
+export async function fetchTaskEvidence(taskId: string): Promise<EvidencePayload> {
+  const url = withToken(`${API_BASE}/tasks/${taskId}/evidence`)
+  const res = await fetch(url)
+  if (res.status === 404) throw new Error('Task not found')
+  if (!res.ok) throw new Error(`Failed to fetch evidence: ${res.status}`)
+  return res.json()
+}
