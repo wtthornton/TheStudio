@@ -5,6 +5,7 @@
     "titleBar.inactiveBackground": "#16213e",
     "titleBar.inactiveForeground": "#a0a0a0"
   },
+  "python.terminal.activateEnvironment": false,
   "terminal.integrated.profiles.windows": {
     "PowerShell (TheStudio)": {
       "source": "PowerShell",

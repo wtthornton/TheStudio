@@ -18,6 +18,12 @@ AI-augmented software delivery platform. GitHub issues in, evidence-backed draft
 - Server: `uvicorn src.app:app --reload`
 - Docker: `docker-compose up`
 
+## Ralph (Autonomous Dev Loop)
+
+- **Do NOT run pytest, ruff, mypy, vitest, or tsc mid-epic.** QA is deferred to epic boundaries (when the last `- [ ]` in a `##` section of fix_plan.md is completed). Set `TESTS_STATUS: DEFERRED` for all mid-epic tasks. This saves 2-5 minutes per loop.
+- fix_plan.md is the single source of truth for task priority.
+- Do ONE task per loop, commit, and stop.
+
 ## Pipeline (9 steps)
 
 Intake → Context → Intent → Router → Assembler → Implement → Verify → QA → Publish

@@ -1,12 +1,13 @@
 # TAPPS Handoff
 
-> Project-wide quality and delivery status as of 2026-03-18.
+> Project-wide quality and delivery status as of 2026-03-21.
 
 ## Project Status
 
-**Phases 0–6 complete.** Phase 7 (Real Provider Integration & Cost Optimization) in progress.
-30 epics tracked. Epic 27 (Multi-Source Webhooks) deferred — no current demand.
-Epics 30-32 actively delivering against Docker production environment.
+**Phases 0–9 (through Epic 36) complete.** 36 epics delivered. 3 planned (Epics 37-39).
+Epic 27 (Multi-Source Webhooks) deferred — no current demand.
+First real GitHub issue processed end-to-end (Issue #19 → PR #20, 2 min, $0.30).
+Pipeline UI Phase 2 (Planning Experience) fully delivered.
 
 ---
 
@@ -29,53 +30,65 @@ Epics 30-32 actively delivering against Docker production environment.
 | 12 | Playwright Admin UI Tests | 4 | Complete |
 | 13 | Agent Persona Infrastructure | 4 | Complete |
 | 14 | Agent Content Enrichment | 4 | Complete |
-| 15 | E2E Integration & Real Repo Onboarding | 5 | Complete (all 7 stories, 2026-03-17) |
-| 16 | Issue Readiness Gate | 5 | Complete (Sprint 17: 16.1-16.4, Sprint 18: 16.5-16.8) |
-| 17 | Poll for Issues (Backup) | 5 | Complete (all 8 stories, 2 sprints) |
-| 18 | Production E2E Test Suite | 5 | Complete (5 slices, full contract coverage) |
-| 19 | Critical Gaps Batch 1 | 5 | Complete (Sprint 19) |
-| 20 | Critical Gaps Batch 2 | 5 | Complete (Sprint 19) |
-| 21 | Human Approval Wait States | 5 | Complete (9 stories, 2026-03-13) |
-| 22 | Execute Tier End-to-End | 5 | Complete (18 stories, auto-merge gating) |
-| 23 | Unified Agent Framework | 5 | Complete (3 sprints, 8/8 agents, 215+ tests, 2026-03-16) |
-| 24 | Chat Approval Workflows | 5 | Complete (6 stories, 2 sprints, 56+ tests, 2026-03-17) |
-| 25 | Container Isolation | 5 | Complete (7 stories, 3 sprints, 35+ tests, 2026-03-17) |
-| 26 | File-Based Expert Packaging | 5 | Complete (6 stories, 2026-03-16) |
-| 27 | Multi-Source Webhooks | 5 | **Deferred** — no current demand |
+| 15 | E2E Integration & Real Repo Onboarding | 5 | Complete |
+| 16 | Issue Readiness Gate | 5 | Complete |
+| 17 | Poll for Issues (Backup) | 5 | Complete |
+| 18 | Production E2E Test Suite | 5 | Complete |
+| 19 | Critical Gaps Batch 1 | 5 | Complete |
+| 20 | Critical Gaps Batch 2 | 5 | Complete |
+| 21 | Human Approval Wait States | 5 | Complete |
+| 22 | Execute Tier End-to-End | 5 | Complete |
+| 23 | Unified Agent Framework | 5 | Complete |
+| 24 | Chat Approval Workflows | 5 | Complete |
+| 25 | Container Isolation | 5 | Complete |
+| 26 | File-Based Expert Packaging | 5 | Complete |
+| 27 | Multi-Source Webhooks | 5 | **Deferred** |
 | 28 | Preflight Plan Review Gate | 6 | Complete |
 | 29 | GitHub Projects v2 + Meridian Portfolio Review | 6 | Complete |
-| 30 | Real Provider Integration & Validation | 7 | **Sprint 1 Complete, Sprint 2 Stories 30.7-30.8 Complete** |
-| 31 | Anthropic Max OAuth Token Support | 7 | **Stories 31.2-31.5 Complete** (Docker-validated) |
-| 32 | Model Routing & Cost Optimization | 7 | **Slice 1 Stories 32.0, 32.4, 32.5 Complete** |
+| 30 | Real Provider Integration & Validation | 7 | Complete (3 sprints) |
+| 31 | Anthropic Max OAuth Adapter | 7 | Complete (2026-03-19) |
+| 32 | Model Routing & Cost Optimization | 7 | Complete (5 slices) |
+| 33 | P0 Deployment Test Harness | 8 | Complete (2 sprints) |
+| 34 | Phase 0: SSE PoC + Frontend Scaffolding | 9 | Complete (14 stories) |
+| 35 | Phase 1: Pipeline Visibility | 9 | Complete (63 stories) |
+| 36 | Phase 2: Planning Experience | 9 | Complete (29 stories, 4 slices) |
+| 37 | Phase 3: Interactive Controls | 9 | Planned |
+| 38 | Phase 4: GitHub Integration | 9 | Planned |
+| 39 | Phase 5: Analytics & Learning | 9 | Planned |
 
 ---
 
-## Phase 7 Deliverables (2026-03-18)
+## Recent Deliverables (2026-03-21)
 
-### Epic 31: OAuth Adapter (Stories 31.2-31.5)
-- OAuth token auto-detection (`sk-ant-oat01-*` → Bearer auth)
-- Token refresh on 401 with refresh token rotation
-- Feature flag: `THESTUDIO_ANTHROPIC_AUTH_MODE` (auto/api_key/oauth)
-- 23 unit tests passing, 3 Docker integration tests passing
-- Docker compose files updated with new env vars
+### Epic 36: Planning Experience (29 stories, 4 slices)
+- **Slice 1 — Triage Queue:** TRIAGE status, feature-flagged triage mode, accept/reject/edit endpoints, context pre-scan, TriageQueue frontend with SSE
+- **Slice 2 — Intent Review:** Intent source tracking, Temporal wait point, approve/reject/edit/refine API, IntentEditor frontend with version diff
+- **Slice 3 — Complexity + Routing:** MetricCard, RiskFlags, FileHeatmap, ComplexityDashboard, routing review wait point, ExpertCard, RoutingPreview with add/remove
+- **Slice 4 — Backlog + Tasks:** 6-column Kanban board, board preferences persistence, manual task creation endpoint + modal, historical comparison query
 
-### Epic 30 Sprint 2 (Stories 30.7-30.8)
-- Full pipeline tested against Docker prod stack (6/6 agents, real Anthropic API)
-- Per-issue cost measured: **$0.087** (far under $5 target)
-- Failure catalog: 9 failure modes documented (F1-F9)
+### Epic 35: Pipeline Visibility (63 stories)
+- Pipeline Rail, TaskPacket Timeline, Gate Inspector, Activity Stream
+- Loopback arcs, Minimap, error states
 
-### Epic 32 Slice 1 (Stories 32.0, 32.4, 32.5)
-- Per-agent cost baselines measured against Docker
-- Prompt caching implementation (cache_control blocks, beta headers, cache token tracking)
-- Cost optimization routing already implemented and tested (11 unit tests)
-
-### Routing Eval Re-run (8 tests, real API, ~$0.35)
-- 4/4 cost tests PASS (all agents under budget)
-- 4/4 quality tests FAIL (prompt/schema issues — F7, F8, F9 in failure catalog)
+### Epic 34: SSE PoC (14 stories)
+- Dashboard API router, SSE bridge (NATS→EventSource), Vite+React+Zustand+Tailwind scaffolding
 
 ---
 
-## Per-Agent Cost Baselines (Story 32.0)
+## Codebase Metrics (2026-03-21)
+
+| Metric | Value |
+|--------|-------|
+| Source files (src/) | 165+ |
+| Frontend components | 25+ React components |
+| Test files | 130+ |
+| Tests passing | 3,366+ |
+| Coverage | 84% |
+| Epics complete | 36/39 |
+
+---
+
+## Per-Agent Cost Baselines
 
 | Agent | Model | Cost | Latency |
 |-------|-------|------|---------|
@@ -91,43 +104,12 @@ Epics 30-32 actively delivering against Docker production environment.
 
 ---
 
-## Codebase Metrics (2026-03-18)
-
-| Metric | Value |
-|--------|-------|
-| Source files (src/) | 155+ |
-| Test files (tests/) | 115+ |
-| Tests passing | 1,767+ |
-| Pre-existing failures | 7 (workflow/gateway enforcement) |
-| Coverage | 84% |
-
----
-
-## Known Issues (Failure Catalog)
-
-| ID | Category | Severity | Description |
-|----|----------|----------|-------------|
-| F1 | auth | Critical | Stale API key in Docker container |
-| F4 | auth | High | OAuth without refresh token |
-| F8 | validation | High | Assembler qa_handoff schema mismatch |
-| F5 | validation | Medium | Intent/assembler hits max_tokens |
-| F7 | validation | Medium | Router template vars not injected |
-| F9 | validation | Medium | Eval scoring too strict for real LLM |
-| F2 | config | Medium | No host port mapping for app |
-| F3 | config | Low | pg-proxy not auto-started |
-| F6 | cost | Low | Prompt caching not active for short prompts |
-
-See `docs/FAILURE_CATALOG.md` for full details.
-
----
-
 ## Next Actions
 
-1. **Fix F8** — Assembler `qa_handoff.criterion` schema: `str` → `str | list[str]` (10 min)
-2. **Fix F7** — Router template variable injection in eval context builder (15 min)
-3. **Fix F9** — Calibrate intake/context eval scoring thresholds (30 min)
-4. **Re-run routing eval** after fixes to confirm quality gates pass (~$0.35)
-5. **Rebuild Docker container** with real API key from `infra/.env` (F1)
-6. **Epic 30 Sprint 3** — Feature flag activation, deployment runbook, Suggest tier validation
-7. **Epic 32 Slice 2** — Budget controls (trust-tier caps, admin UI)
-8. **Epic 32 Slice 3** — Prompt caching with production-length system prompts
+1. **Epic 37** — Phase 3: Interactive Controls (trust tier controls, bulk actions, keyboard shortcuts)
+2. **Epic 38** — Phase 4: GitHub Integration (bidirectional sync with GitHub Projects)
+3. **Epic 39** — Phase 5: Analytics & Learning (cost analytics, performance trends)
+4. **Process harder issues** — Multi-file changes, bug fixes, refactoring tasks
+5. **Onboard second repo** — Test multi-repo support with real issues
+6. **Wire remote verification** — Run ruff/pytest on target repo via GitHub Actions or container
+7. **Execute tier promotion** — When ready for auto-merge with approval gates
