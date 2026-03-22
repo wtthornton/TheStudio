@@ -13,7 +13,7 @@
 > This sprint writes tests only — no new features, no production code changes.
 > Gate: all tests green before Sprint 2 begins.
 
-- [ ] T37.10: Test infrastructure setup — create `tests/dashboard/__init__.py` + `tests/dashboard/conftest.py` with async DB session fixture, mock Temporal client, sample TaskPacketRow factory, mock NATS message fixture. Verify `pytest tests/dashboard/ --co` succeeds.
+- [x] T37.10: Test infrastructure setup — create `tests/dashboard/__init__.py` + `tests/dashboard/conftest.py` with async DB session fixture, mock Temporal client, sample TaskPacketRow factory, mock NATS message fixture. Verify `pytest tests/dashboard/ --co` succeeds.
 - [ ] T37.1: Pydantic model validation tests — `tests/dashboard/test_models_steering_audit.py`, `test_models_trust_config.py`, `test_models_budget_config.py`, `test_models_notification.py`. Test all enums, required fields, optional fields, `from_attributes` ORM loading, ge constraints, max_length, range validation.
 - [ ] T37.2: Trust engine tests — `tests/dashboard/test_trust_engine.py`. Test all 6 condition operators (equals, not_equals, less_than, greater_than, contains, matches_glob), `_resolve_field` with dot-notation, `_rule_matches` AND logic, `evaluate_trust_tier` first-match-wins, safety bounds override, default tier fallback, `_cap_tier` logic.
 - [ ] T37.4: Steering API tests — `tests/dashboard/test_steering.py`. Test all 5 endpoints (pause/resume/abort/redirect/retry) with happy path, 404, 409, 400 status codes. Test `GET /steering/audit` and `GET /tasks/{id}/audit`. Test `_detect_current_stage` helper. Mock Temporal client and DB.
