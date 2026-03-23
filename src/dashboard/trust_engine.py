@@ -76,19 +76,22 @@ class EvaluationResult:
         matched_rule_id: Any | None = None,
         safety_capped: bool = False,
         reason: str = "",
+        dry_run: bool = False,
     ) -> None:
         self.tier = tier
         self.raw_tier = raw_tier if raw_tier is not None else tier
         self.matched_rule_id = matched_rule_id
         self.safety_capped = safety_capped
         self.reason = reason
+        self.dry_run = dry_run
 
     def __repr__(self) -> str:
         return (
             f"EvaluationResult(tier={self.tier!r}, "
             f"raw_tier={self.raw_tier!r}, "
             f"matched_rule_id={self.matched_rule_id!r}, "
-            f"safety_capped={self.safety_capped!r})"
+            f"safety_capped={self.safety_capped!r}, "
+            f"dry_run={self.dry_run!r})"
         )
 
 
@@ -119,11 +122,13 @@ async def evaluate_trust_tier(
     matched_tier: AssignedTier = default_tier
     matched_rule_id: Any | None = None
     match_reason: str = f"no rule matched — using default tier '{default_tier}'"
+    dry_run_active: bool = False
 
     for rule in rules:
         if _rule_matches(rule, packet):
             matched_tier = rule.assigned_tier
             matched_rule_id = rule.id
+            dry_run_active = getattr(rule, "dry_run", False)
             match_reason = (
                 f"rule {rule.id} (priority={rule.priority}) matched — "
                 f"assigned tier '{rule.assigned_tier}'"
@@ -131,9 +136,23 @@ async def evaluate_trust_tier(
             log.debug(match_reason)
             break
 
-    # Snapshot the rule-assigned tier before any safety-bounds cap is applied.
-    # Callers use this to distinguish "what the rule said" vs "what was enforced".
+    # Snapshot the rule-assigned tier before any dry_run or safety-bounds cap.
     raw_tier: AssignedTier = matched_tier
+
+    # --- Dry-run override ---------------------------------------------------
+    # When the matched rule has dry_run=True, force the effective tier to
+    # SUGGEST while preserving the original tier in raw_tier.  This lets
+    # operators trial an EXECUTE rule without actually enabling auto-merge.
+    if dry_run_active and matched_tier == AssignedTier.EXECUTE:
+        log.info(
+            "dry_run rule %s matched — returning SUGGEST, raw tier was %s",
+            matched_rule_id,
+            matched_tier,
+        )
+        match_reason = (
+            f"{match_reason}; dry_run active — effective tier downgraded to SUGGEST"
+        )
+        matched_tier = AssignedTier.SUGGEST
 
     # --- Safety bounds cap -----------------------------------------------
     safety_capped = False
@@ -187,6 +206,7 @@ async def evaluate_trust_tier(
         matched_rule_id=matched_rule_id,
         safety_capped=safety_capped,
         reason=match_reason,
+        dry_run=dry_run_active,
     )
 
 

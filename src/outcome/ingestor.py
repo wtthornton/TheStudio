@@ -117,6 +117,22 @@ EVENT_TO_OUTCOME = {
     SignalEvent.QA_PASSED: OutcomeType.SUCCESS,
     SignalEvent.QA_DEFECT: OutcomeType.FAILURE,
     SignalEvent.QA_REWORK: OutcomeType.LOOPBACK,
+    # Epic 42 — Execute tier post-merge monitoring.
+    # Weights are applied directly (not complexity-normalized) because merge
+    # outcomes reflect end-to-end pipeline quality rather than individual task
+    # complexity.  Stored as LOOPBACK/FAILURE/SUCCESS for indicator building.
+    SignalEvent.MERGE_SUCCEEDED: OutcomeType.SUCCESS,
+    SignalEvent.MERGE_REVERTED: OutcomeType.FAILURE,
+    SignalEvent.POST_MERGE_ISSUE: OutcomeType.LOOPBACK,
+}
+
+# Override base weights for merge outcome signals (Epic 42).
+# These bypass the complexity-normalisation multipliers in _normalize_weight()
+# because post-merge outcomes represent real-world quality, not estimation.
+MERGE_OUTCOME_WEIGHTS = {
+    SignalEvent.MERGE_SUCCEEDED: 0.3,
+    SignalEvent.MERGE_REVERTED: -0.8,
+    SignalEvent.POST_MERGE_ISSUE: -0.4,
 }
 
 

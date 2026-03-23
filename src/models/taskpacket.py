@@ -11,7 +11,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
-from sqlalchemy import DateTime, Enum, Integer, String, UniqueConstraint, func
+from sqlalchemy import Boolean, DateTime, Enum, Integer, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -265,6 +265,16 @@ class TaskPacketRow(Base):
         default=None,
     )
 
+    # Execute tier fields (Epic 42 — Slice 1)
+    # UUID of the trust-tier rule that matched this packet (or None if default tier used).
+    matched_rule_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True), nullable=True, default=None
+    )
+    # Set to True by the Publisher when auto-merge is successfully enabled on the PR.
+    auto_merged: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+
     # Verification fields (Story 0.6 — Verification Gate)
     loopback_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
@@ -323,6 +333,9 @@ class TaskPacketRead(BaseModel):
     loopback_count: int = 0
     # Trust tier assigned by the rule engine (Epic 37 — Slice 3)
     task_trust_tier: TaskTrustTier | None = None
+    # Execute tier fields (Epic 42 — Slice 1)
+    matched_rule_id: UUID | None = None
+    auto_merged: bool = False
     created_at: datetime
     updated_at: datetime
     # Set when TaskPacket reaches terminal status (Epic 39.0a)

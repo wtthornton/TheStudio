@@ -97,7 +97,7 @@
 > Priority: P2 — depends on Epic 40 (remote verification should be complete before enabling auto-merge)
 > Duration: 3-4 weeks
 
-- [ ] 42.1-42.7: Slice 1 MVP — Publisher branching by task_trust_tier, safety bounds re-check, auto-merge execution, dry-run mode (7 stories)
+- [x] 42.1-42.7: Slice 1 MVP — Publisher branching by task_trust_tier, safety bounds re-check, auto-merge execution, dry-run mode (7 stories)
 - [ ] 42.8-42.13: Slice 2 — Post-merge monitoring, auto-demotion on failure, outcome tracking, dashboard API (6 stories)
 
 ### Epic 27 — Multi-Source Webhooks (Deferred, Meridian Conditional Pass)

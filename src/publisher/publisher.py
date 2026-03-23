@@ -8,6 +8,7 @@ Architecture reference: Epic 0 Story 0.7, Epic 1 Story 1.10 (tier promotion),
 Epic 22 (Execute tier end-to-end)
 """
 
+import fnmatch
 import logging
 from dataclasses import dataclass
 from uuid import UUID
@@ -18,7 +19,9 @@ from src.admin.merge_mode import MergeMode, get_merge_mode
 from src.agent.evidence import EvidenceBundle
 from src.intent.intent_crud import get_latest_for_taskpacket
 from src.intent.intent_spec import IntentSpecRead
-from src.models.taskpacket import TaskPacketStatus
+from src.dashboard.models.trust_config import AssignedTier, SafeBoundsRead, get_safety_bounds
+from src.dashboard.trust_engine import _cap_tier
+from src.models.taskpacket import TaskPacketStatus, TaskTrustTier
 from src.models.taskpacket_crud import get_by_id, update_status
 from src.observability.conventions import (
     ATTR_CORRELATION_ID,
@@ -99,6 +102,107 @@ async def _reconcile_tier_labels(
     await github.add_labels(owner, repo_name, pr_number, [correct_label])
 
 
+async def _check_safety_bounds_at_publish(
+    session: AsyncSession,
+    packet: object,
+    correlation_id: UUID,
+) -> tuple[bool, list[str]]:
+    """Pre-publish safety bound re-check.
+
+    Verifies the TaskPacket's metrics against the current safety bounds at
+    publish time.  This catches cases where bounds were tightened after the
+    trust tier was assigned, or where packet metrics changed during the
+    pipeline (e.g., loopback_count increased).
+
+    Returns:
+        (safe, reasons) — safe is True when all bounds are satisfied.
+        reasons contains human-readable descriptions of each violation.
+    """
+    bounds: SafeBoundsRead = await get_safety_bounds(session)
+    reasons: list[str] = []
+
+    # 1. Loopback count
+    loopback_count = getattr(packet, "loopback_count", 0)
+    if bounds.max_loopbacks is not None and loopback_count > bounds.max_loopbacks:
+        reasons.append(
+            f"loopback_count={loopback_count} > max_loopbacks={bounds.max_loopbacks}"
+        )
+
+    # 2. Estimated cost (field may not exist on older TaskPackets)
+    estimated_cost = getattr(packet, "estimated_cost", None)
+    if (
+        estimated_cost is not None
+        and bounds.max_auto_merge_cost is not None
+        and estimated_cost > bounds.max_auto_merge_cost
+    ):
+        reasons.append(
+            f"estimated_cost={estimated_cost} > max_auto_merge_cost={bounds.max_auto_merge_cost}"
+        )
+
+    # 3. Diff lines from scope
+    scope = getattr(packet, "scope", None)
+    diff_lines: int | None = None
+    if isinstance(scope, dict):
+        raw_dl = scope.get("diff_lines") or scope.get("changed_lines")
+        if raw_dl is not None:
+            try:
+                diff_lines = int(raw_dl)
+            except (TypeError, ValueError):
+                pass
+    if (
+        diff_lines is not None
+        and bounds.max_auto_merge_lines is not None
+        and diff_lines > bounds.max_auto_merge_lines
+    ):
+        reasons.append(
+            f"diff_lines={diff_lines} > max_auto_merge_lines={bounds.max_auto_merge_lines}"
+        )
+
+    # 4. Mandatory review patterns
+    repo = getattr(packet, "repo", "")
+    for pattern in bounds.mandatory_review_patterns:
+        if fnmatch.fnmatch(repo, pattern):
+            reasons.append(
+                f"repo '{repo}' matches mandatory-review pattern '{pattern}'"
+            )
+            break
+
+    safe = len(reasons) == 0
+    if not safe:
+        logger.info(
+            "Safety bound violations at publish time: %s (correlation_id=%s)",
+            "; ".join(reasons),
+            correlation_id,
+        )
+    return safe, reasons
+
+
+def _compute_effective_tier(
+    repo_tier: RepoTier,
+    task_trust_tier: TaskTrustTier | None,
+) -> RepoTier:
+    """Compute the effective tier for publish-time decisions.
+
+    The effective tier is the minimum (most restrictive) of the repo-level
+    tier and the task-level tier.  When task_trust_tier is None (legacy
+    packets that predate the trust rule engine), falls back to repo_tier.
+
+    Uses _cap_tier from the trust engine, bridging via AssignedTier which
+    shares the same string values as both RepoTier and TaskTrustTier.
+    """
+    if task_trust_tier is None:
+        return repo_tier
+
+    # Bridge to AssignedTier for the cap calculation
+    task_at = AssignedTier(task_trust_tier.value)
+    repo_at = AssignedTier(repo_tier.value)
+
+    capped = _cap_tier(task_at, repo_at)
+
+    # Convert back to RepoTier
+    return RepoTier(capped.value)
+
+
 async def publish(
     session: AsyncSession,
     taskpacket_id: UUID,
@@ -152,6 +256,18 @@ async def publish(
         if not verification.passed:
             raise ValueError("Cannot publish: verification has not passed")
 
+        # Compute effective tier: min(task_trust_tier, repo_tier)
+        task_tier = getattr(taskpacket, "task_trust_tier", None)
+        effective_tier = _compute_effective_tier(repo_tier, task_tier)
+        logger.debug(
+            "Publisher tier resolution: task_trust_tier=%s, repo_tier=%s, effective=%s "
+            "(correlation_id=%s)",
+            task_tier,
+            repo_tier,
+            effective_tier,
+            taskpacket.correlation_id,
+        )
+
         # Load intent for evidence comment
         intent = await get_latest_for_taskpacket(session, taskpacket_id)
         if intent is None:
@@ -167,6 +283,11 @@ async def publish(
         marked_ready = False
         auto_merge_enabled = False
 
+        # Pre-publish safety bounds re-check (Epic 42 — Story 42.2)
+        safety_ok, safety_reasons = await _check_safety_bounds_at_publish(
+            session, taskpacket, taskpacket.correlation_id,
+        )
+
         if existing_pr is not None:
             # Update existing PR's evidence comment
             pr_number = existing_pr["number"]
@@ -178,20 +299,37 @@ async def publish(
             logger.info("Updated existing PR #%d for TaskPacket %s", pr_number, taskpacket_id)
 
             # Suggest/Execute tier: mark ready-for-review if V+QA passed
-            if _should_mark_ready(repo_tier, verification.passed, qa_passed, merge_mode):
+            if _should_mark_ready(effective_tier, verification.passed, qa_passed, merge_mode):
                 await github.mark_ready_for_review(owner, repo_name, pr_number)
                 marked_ready = True
 
             # Execute tier: enable auto-merge if all gates passed
-            if _should_enable_auto_merge(
-                repo_tier, verification.passed, qa_passed, merge_mode, approval_received
+            # Safety bounds violation blocks auto-merge but not mark-ready
+            if not safety_ok:
+                logger.warning(
+                    "Safety bounds violated — auto-merge blocked for TaskPacket %s: %s "
+                    "(correlation_id=%s)",
+                    taskpacket_id,
+                    "; ".join(safety_reasons),
+                    taskpacket.correlation_id,
+                )
+            elif _should_enable_auto_merge(
+                effective_tier, verification.passed, qa_passed, merge_mode, approval_received
             ):
                 auto_merge_enabled = await _try_enable_auto_merge(
                     github, owner, repo_name, pr_number, merge_method
                 )
 
+            # Persist auto_merged flag (Epic 42 — Story 42.3d)
+            if auto_merge_enabled:
+                from src.models.taskpacket import TaskPacketRow
+
+                tp_row = await session.get(TaskPacketRow, taskpacket_id)
+                if tp_row is not None:
+                    tp_row.auto_merged = True
+
             # Reconcile tier labels
-            await _reconcile_tier_labels(github, owner, repo_name, pr_number, repo_tier)
+            await _reconcile_tier_labels(github, owner, repo_name, pr_number, effective_tier)
 
             await update_status(session, taskpacket_id, TaskPacketStatus.PUBLISHED)
             return PublishResult(
@@ -237,16 +375,25 @@ async def publish(
         await github.add_labels(owner, repo_name, pr_number, [LABEL_DONE])
 
         # Reconcile tier labels
-        await _reconcile_tier_labels(github, owner, repo_name, pr_number, repo_tier)
+        await _reconcile_tier_labels(github, owner, repo_name, pr_number, effective_tier)
 
         # Suggest/Execute tier: mark ready-for-review if V+QA passed
-        if _should_mark_ready(repo_tier, verification.passed, qa_passed, merge_mode):
+        if _should_mark_ready(effective_tier, verification.passed, qa_passed, merge_mode):
             await github.mark_ready_for_review(owner, repo_name, pr_number)
             marked_ready = True
 
         # Execute tier: enable auto-merge if all gates passed
-        if _should_enable_auto_merge(
-            repo_tier, verification.passed, qa_passed, merge_mode, approval_received
+        # Safety bounds violation blocks auto-merge but not mark-ready
+        if not safety_ok:
+            logger.warning(
+                "Safety bounds violated — auto-merge blocked for TaskPacket %s: %s "
+                "(correlation_id=%s)",
+                taskpacket_id,
+                "; ".join(safety_reasons),
+                taskpacket.correlation_id,
+            )
+        elif _should_enable_auto_merge(
+            effective_tier, verification.passed, qa_passed, merge_mode, approval_received
         ):
             auto_merge_enabled = await _try_enable_auto_merge(
                 github, owner, repo_name, pr_number, merge_method
@@ -259,6 +406,9 @@ async def publish(
         if tp_row is not None:
             tp_row.pr_number = pr_number
             tp_row.pr_url = pr_url
+            # Persist auto_merged flag (Epic 42 — Story 42.3d)
+            if auto_merge_enabled:
+                tp_row.auto_merged = True
 
         # Transition status
         await update_status(session, taskpacket_id, TaskPacketStatus.PUBLISHED)
@@ -268,7 +418,7 @@ async def publish(
         span.set_attribute("thestudio.marked_ready", marked_ready)
         span.set_attribute("thestudio.auto_merge_enabled", auto_merge_enabled)
         span.set_attribute("thestudio.merge_method", merge_method)
-        span.set_attribute("thestudio.execute_tier_active", repo_tier == RepoTier.EXECUTE)
+        span.set_attribute("thestudio.execute_tier_active", effective_tier == RepoTier.EXECUTE)
         logger.info(
             "Published %s PR #%d for TaskPacket %s: %s",
             "auto-merge" if auto_merge_enabled

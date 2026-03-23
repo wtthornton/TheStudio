@@ -1866,6 +1866,11 @@ async def assign_trust_tier_activity(
             # Convert AssignedTier → TaskTrustTier (same string values, different enum class)
             tier_value: str = result.tier.value
             packet.task_trust_tier = TaskTrustTier(tier_value)
+
+            # Persist the matched rule ID for audit trail (Epic 42 — Story 42.3c)
+            if result.matched_rule_id is not None:
+                packet.matched_rule_id = result.matched_rule_id
+
             await session.commit()
 
             matched_rule_str = (

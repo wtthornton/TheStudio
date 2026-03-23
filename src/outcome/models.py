@@ -20,6 +20,10 @@ class SignalEvent(enum.StrEnum):
     QA_PASSED = "qa_passed"
     QA_DEFECT = "qa_defect"
     QA_REWORK = "qa_rework"
+    # Epic 42 — Execute tier post-merge monitoring
+    MERGE_SUCCEEDED = "merge_succeeded"
+    MERGE_REVERTED = "merge_reverted"
+    POST_MERGE_ISSUE = "post_merge_issue"
 
 
 class OutcomeType(enum.StrEnum):

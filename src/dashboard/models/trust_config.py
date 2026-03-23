@@ -80,6 +80,9 @@ class TrustTierRuleRow(Base):
     )
     assigned_tier: Mapped[str] = mapped_column(String(20), nullable=False)
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    dry_run: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
@@ -147,6 +150,7 @@ class TrustTierRuleCreate(BaseModel):
     conditions: list[RuleCondition] = Field(default_factory=list)
     assigned_tier: AssignedTier
     active: bool = True
+    dry_run: bool = False
     description: str | None = Field(None, max_length=500)
 
 
@@ -157,6 +161,7 @@ class TrustTierRuleUpdate(BaseModel):
     conditions: list[RuleCondition] | None = None
     assigned_tier: AssignedTier | None = None
     active: bool | None = None
+    dry_run: bool | None = None
     description: str | None = Field(None, max_length=500)
 
 
@@ -168,6 +173,7 @@ class TrustTierRuleRead(BaseModel):
     conditions: list[RuleCondition]
     assigned_tier: AssignedTier
     active: bool
+    dry_run: bool = False
     description: str | None
     created_at: datetime
     updated_at: datetime
@@ -240,6 +246,7 @@ async def create_rule(
         conditions=[c.model_dump() for c in payload.conditions],
         assigned_tier=payload.assigned_tier.value,
         active=payload.active,
+        dry_run=payload.dry_run,
         description=payload.description,
         created_at=now,
         updated_at=now,
@@ -285,6 +292,8 @@ async def update_rule(
         row.assigned_tier = payload.assigned_tier.value
     if payload.active is not None:
         row.active = payload.active
+    if payload.dry_run is not None:
+        row.dry_run = payload.dry_run
     if payload.description is not None:
         row.description = payload.description
     row.updated_at = _utcnow()
@@ -400,6 +409,7 @@ def _rule_read(row: TrustTierRuleRow) -> TrustTierRuleRead:
         conditions=conditions,
         assigned_tier=AssignedTier(row.assigned_tier),
         active=row.active,
+        dry_run=getattr(row, "dry_run", False),
         description=row.description,
         created_at=row.created_at,
         updated_at=row.updated_at,
