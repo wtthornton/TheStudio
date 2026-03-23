@@ -21,13 +21,19 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.admin.model_gateway import (
+    BudgetExceededError,
+    ModelCallAudit,
+    get_budget_enforcer,
+    get_model_audit_store,
+)
 from src.agent.developer_role import (
     DEFAULT_TOOL_ALLOWLIST,
     DeveloperRoleConfig,
     build_system_prompt,
 )
 from src.agent.evidence import EvidenceBundle
-from src.agent.framework import AgentConfig, AgentContext, AgentRunner
+from src.agent.framework import AgentConfig, AgentContext, AgentRunner, PipelineBudget
 from src.intent.intent_crud import get_latest_for_taskpacket
 from src.models.taskpacket import TaskPacketStatus
 from src.models.taskpacket_crud import get_by_id, update_status
@@ -40,6 +46,17 @@ from src.observability.conventions import (
 from src.observability.tracing import get_tracer
 from src.settings import settings
 from src.verification.gate import VerificationResult
+
+
+# ---------------------------------------------------------------------------
+# Cost estimation constants for Ralph runs (Story 43.10)
+# ---------------------------------------------------------------------------
+
+# Per-1k-token cost estimate for Claude Sonnet (used by Ralph CLI).
+# These are conservative defaults; actual rates depend on the active model.
+_RALPH_COST_PER_1K_INPUT: float = 0.003  # $3.00 / M tokens
+_RALPH_COST_PER_1K_OUTPUT: float = 0.015  # $15.00 / M tokens
+_RALPH_PIPELINE_STEP: str = "primary_agent_ralph"
 
 logger = logging.getLogger(__name__)
 tracer = get_tracer("thestudio.agent")
@@ -128,6 +145,7 @@ async def _implement_ralph(
     repo_path: str,
     loopback_context: str = "",
     complexity: str = "",
+    pipeline_budget: PipelineBudget | None = None,
 ) -> EvidenceBundle:
     """Implement using RalphAgent with configurable state backend.
 
@@ -142,12 +160,18 @@ async def _implement_ralph(
     Stale session IDs are cleared before the agent starts when using the
     Postgres backend (TTL controlled by ``settings.ralph_session_ttl_seconds``).
 
+    Cost recording (Story 43.10):
+    - Pre-launch: ``pipeline_budget.consume()`` reserves the max allowed spend.
+    - Post-run: ``ModelCallAudit`` + ``BudgetEnforcer.record_spend()`` record
+      actual token/cost usage from the Ralph result.
+
     Args:
         taskpacket: TaskPacketRow ORM object.
         intent: IntentSpecRead for the current version.
         repo_path: Local path to the target repository (working directory for Ralph).
         loopback_context: Formatted verification failures for retry passes.
         complexity: Complexity hint string from the caller.
+        pipeline_budget: Optional pipeline-wide budget counter for this workflow.
 
     Returns:
         EvidenceBundle from the Ralph run.
@@ -183,10 +207,23 @@ async def _implement_ralph(
         loopback_context=loopback_context,
     )
 
+    # Pre-launch budget check (Story 43.10)
+    # Consume max_budget_usd from the pipeline budget before the run starts.
+    # This mirrors the AgentRunner pattern: reserve the max, record actual after.
+    taskpacket_id = getattr(taskpacket, "id", None)
+    if pipeline_budget is not None:
+        if not pipeline_budget.consume(settings.agent_max_budget_usd):
+            raise BudgetExceededError(
+                task_id=str(taskpacket_id or "unknown"),
+                current_spend=pipeline_budget.used,
+                limit=pipeline_budget.max_total_usd,
+                step=_RALPH_PIPELINE_STEP,
+            )
+
     # Select state backend (Story 43.8)
     # "postgres" — persistent state across retries via ralph_agent_state table
     # "null"     — no persistence (Slice 1 default)
-    taskpacket_id_for_state = getattr(taskpacket, "id", None)
+    taskpacket_id_for_state = taskpacket_id
     if settings.ralph_state_backend == "postgres" and taskpacket_id_for_state is not None:
         from src.agent.ralph_state import PostgresStateBackend
 
@@ -227,9 +264,60 @@ async def _implement_ralph(
 
         result = await agent.run()
 
-    taskpacket_id = taskpacket.id
     intent_version = intent.version
     loopback_attempt = getattr(taskpacket, "loopback_count", 0)
+
+    # Post-run cost recording (Story 43.10)
+    # Estimate cost from token counts returned by Ralph CLI.
+    # provider="claude_code" indicates Ralph's CLI path (not direct Anthropic API).
+    tokens_in = result.tokens_in
+    tokens_out = result.tokens_out
+    estimated_cost = (
+        tokens_in * _RALPH_COST_PER_1K_INPUT / 1000
+        + tokens_out * _RALPH_COST_PER_1K_OUTPUT / 1000
+    )
+    latency_ms = result.duration_seconds * 1000.0
+
+    audit = ModelCallAudit(
+        correlation_id=getattr(taskpacket, "correlation_id", None),
+        task_id=taskpacket_id,
+        step=_RALPH_PIPELINE_STEP,
+        role="developer",
+        provider="claude_code",
+        model=settings.agent_model,
+        tokens_in=tokens_in,
+        tokens_out=tokens_out,
+        cost=estimated_cost,
+        latency_ms=latency_ms,
+    )
+    get_model_audit_store().record(audit)
+
+    if taskpacket_id is not None:
+        try:
+            get_budget_enforcer().record_spend(
+                task_id=str(taskpacket_id),
+                step=_RALPH_PIPELINE_STEP,
+                cost=estimated_cost,
+                tokens=tokens_in + tokens_out,
+            )
+        except BudgetExceededError:
+            # Budget exceeded on recording (post-run); log and continue.
+            # The run already completed — we cannot undo it, but we warn loudly.
+            logger.warning(
+                "Budget exceeded on record_spend for TaskPacket %s after Ralph run "
+                "(cost=%.6f, tokens=%d). Run completed but budget limit was breached.",
+                taskpacket_id,
+                estimated_cost,
+                tokens_in + tokens_out,
+            )
+
+    logger.info(
+        "Ralph cost recorded for TaskPacket %s: tokens_in=%d tokens_out=%d cost=%.6f",
+        taskpacket_id,
+        tokens_in,
+        tokens_out,
+        estimated_cost,
+    )
 
     return ralph_result_to_evidence(result, taskpacket_id, intent_version, loopback_attempt)
 
@@ -328,6 +416,7 @@ async def implement(
                 repo_path,
                 loopback_context="",
                 complexity=complexity,
+                pipeline_budget=ctx.pipeline_budget,
             )
             span.set_attribute("thestudio.files_changed_count", len(evidence.files_changed))
             logger.info(
@@ -460,6 +549,7 @@ async def handle_loopback(
                 repo_path,
                 loopback_context=loopback_ctx,
                 complexity=complexity,
+                pipeline_budget=ctx.pipeline_budget,
             )
             span.set_attribute("thestudio.files_changed_count", len(evidence.files_changed))
             return evidence
