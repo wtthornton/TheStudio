@@ -353,11 +353,10 @@ The v2.2.0 changes are CLI-only.
 
 **Do upgrade the local WSL Ralph CLI** to v2.2.0 for development loop quality:
 ```bash
-wsl bash -c 'cd ~/.ralph && git pull'
+wsl bash -lc 'cd ~/.ralph && git pull'
 ```
+If `~/.ralph` is not a git repository, clone your Ralph CLI source into that path first, then pull.
 
-**Next step:** File these requests as an epic in the Ralph repo (or as a
-TheStudio epic to implement them as SDK patches in the vendor directory).
-The P0 items (stall detection, progressive context, structured files_changed)
-can be implemented in the vendored SDK without waiting for upstream, since
-TheStudio already maintains its own vendor copy.
+**Tracking (executed 2026-03-23):** TheStudio epic **Epic 51** — [`docs/epics/epic-51-ralph-vendored-sdk-parity.md`](epics/epic-51-ralph-vendored-sdk-parity.md) — captures P0–P1 vendor work and bridge fixes. Rollup: [`docs/epics/EPIC-STATUS-TRACKER.md`](epics/EPIC-STATUS-TRACKER.md).
+
+**Next step:** Optionally file parallel upstream issues in the Ralph repo for the same requests; implement P0 in `vendor/ralph-sdk/` without blocking on upstream releases.

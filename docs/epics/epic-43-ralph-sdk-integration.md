@@ -65,6 +65,8 @@ Why now: Epic 42 completed Execute tier promotion. Auto-merged PRs need the high
 | Epic | `docs/epics/epic-25-container-isolation.md` | Container mode for Primary Agent; Ralph integration adds a third mode |
 | Epic | `docs/epics/epic-32-model-routing-cost.md` | Cost optimization infrastructure that Ralph must route through |
 | Epic | `docs/epics/epic-42-execute-tier-promotion.md` | Auto-merge depends on high-quality implementation; Ralph improves it |
+| Epic | `docs/epics/epic-51-ralph-vendored-sdk-parity.md` | Vendor SDK parity (stall detection, progressive context, structured `files_changed`); complements this integration epic |
+| Evaluation | `docs/ralph-sdk-upgrade-evaluation.md` | CLI vs SDK gap analysis (2026-03-23); P0 backlog rationale |
 | Architecture | `thestudioarc/08-agent-roles.md` | Agent roles and the Developer role specification |
 | OKRs | `thestudioarc/personas/MERIDIAN-TEAM-REVIEW-AND-OKRS.md` | Autonomous operation and implementation quality KRs |
 
