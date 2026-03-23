@@ -21,10 +21,8 @@ dependencies = [
     "opentelemetry-instrumentation-httpx>=0.50b0",
     "httpx>=0.28.0",
     "claude-agent-sdk>=0.1.40",
-    # Ralph SDK — autonomous development loop integration (Epic 43)
-    # Dev path: installed from local clone. CI form (commented out until CI vendor path is set up):
-    # "ralph-sdk @ file:///vendor/ralph-sdk",
-    "ralph-sdk @ file:///C:/cursor/ralph/ralph-claude-code/sdk",
+    # Ralph SDK — vendored fork (Epic 43 + Epic 51 patches). Override with local path if needed.
+    "ralph-sdk @ file:./vendor/ralph-sdk",
     "anyio>=4.0.0",
     "jinja2>=3.1.0",
     "slowapi>=0.1.9",

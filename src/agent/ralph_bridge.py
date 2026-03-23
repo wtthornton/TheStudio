@@ -189,7 +189,8 @@ def ralph_result_to_evidence(
         summary_parts.append(result.output)
     agent_summary = "\n\n".join(summary_parts)
 
-    changed_files = _parse_changed_files(agent_summary)
+    structured = list(getattr(result, "files_changed", None) or [])
+    changed_files = structured if structured else _parse_changed_files(agent_summary)
 
     return EvidenceBundle(
         taskpacket_id=taskpacket_id,

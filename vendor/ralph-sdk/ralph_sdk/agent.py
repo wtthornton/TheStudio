@@ -9,8 +9,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import os
-import re
 import time
 import uuid
 from pathlib import Path
@@ -18,10 +16,12 @@ from typing import Any, Protocol
 
 from pydantic import BaseModel, Field, field_validator
 
+from ralph_sdk.circuit_breaker import CircuitBreaker, StallDetector
 from ralph_sdk.config import RalphConfig
+from ralph_sdk.context_management import build_progressive_context
 from ralph_sdk.parsing import parse_ralph_status
 from ralph_sdk.state import FileStateBackend, RalphStateBackend
-from ralph_sdk.status import CircuitBreakerState, RalphStatus
+from ralph_sdk.status import CircuitBreakerState, RalphLoopStatus, RalphStatus, WorkType
 from ralph_sdk.tools import (
     RALPH_TOOLS,
     ralph_circuit_state_tool,
@@ -33,9 +33,24 @@ from ralph_sdk.tools import (
 logger = logging.getLogger("ralph.sdk")
 
 
+def _status_is_timeout(status: RalphStatus) -> bool:
+    s = status.status
+    if isinstance(s, RalphLoopStatus):
+        return s == RalphLoopStatus.TIMEOUT
+    return str(s).upper() == "TIMEOUT"
+
+
+def _status_is_error(status: RalphStatus) -> bool:
+    s = status.status
+    if isinstance(s, RalphLoopStatus):
+        return s == RalphLoopStatus.ERROR
+    return str(s).upper() == "ERROR"
+
+
 # =============================================================================
 # Abstract Interface (SDK-3: Hybrid Architecture)
 # =============================================================================
+
 
 class RalphAgentInterface(Protocol):
     """Abstract interface for Ralph agent implementations (CLI and SDK)."""
@@ -61,12 +76,14 @@ class RalphAgentInterface(Protocol):
 # Task Input/Output (SDK-3: TheStudio compatibility)
 # =============================================================================
 
+
 class TaskInput(BaseModel, frozen=True):
     """Union type for task input — handles fix_plan.md and TheStudio TaskPackets.
 
     In standalone mode: reads from fix_plan.md + PROMPT.md
     In TheStudio mode: receives TaskPacket with structured fields
     """
+
     prompt: str = ""
     fix_plan: str = ""
     agent_instructions: str = ""
@@ -128,6 +145,7 @@ class TaskInput(BaseModel, frozen=True):
 
 class TaskResult(BaseModel):
     """Output compatible with status.json and TheStudio signals."""
+
     status: RalphStatus = Field(default_factory=RalphStatus)
     exit_code: int = 0
     output: str = ""
@@ -136,6 +154,7 @@ class TaskResult(BaseModel):
     duration_seconds: float = 0.0
     tokens_in: int = 0
     tokens_out: int = 0
+    files_changed: list[str] = Field(default_factory=list)
 
     def to_signal(self) -> dict[str, Any]:
         """Convert to TheStudio-compatible signal format."""
@@ -149,12 +168,14 @@ class TaskResult(BaseModel):
             "duration_seconds": self.duration_seconds,
             "tokens_in": self.tokens_in,
             "tokens_out": self.tokens_out,
+            "files_changed": self.files_changed,
         }
 
 
 # =============================================================================
 # SDK Agent Implementation (SDK-1: Proof of Concept)
 # =============================================================================
+
 
 class RalphAgent:
     """Ralph Agent SDK implementation — replicates ralph_loop.sh core loop in Python.
@@ -198,6 +219,24 @@ class RalphAgent:
         # State backend — FileStateBackend by default
         self.state_backend: RalphStateBackend = state_backend or FileStateBackend(self.ralph_dir)
 
+        self._circuit_breaker = CircuitBreaker(
+            self.state_backend,
+            no_progress_threshold=self.config.cb_no_progress_threshold,
+            same_error_threshold=self.config.cb_same_error_threshold,
+            cooldown_minutes=self.config.cb_cooldown_minutes,
+            auto_reset=self.config.cb_auto_reset,
+        )
+        self._stall_detector = StallDetector(
+            self._circuit_breaker,
+            fast_trip_max=self.config.stall_fast_trip_max,
+            fast_trip_max_seconds=self.config.stall_fast_trip_max_seconds,
+            deferred_test_max=self.config.stall_deferred_test_max,
+            consecutive_timeout_max=self.config.stall_consecutive_timeout_max,
+        )
+        self._files_changed_session: set[str] = set()
+        self._last_iteration_files_changed: list[str] = []
+        self._last_iteration_duration_sec: float = 0.0
+
         # Ensure .ralph directory exists
         self.ralph_dir.mkdir(parents=True, exist_ok=True)
         (self.ralph_dir / "logs").mkdir(exist_ok=True)
@@ -231,10 +270,18 @@ class RalphAgent:
         self.start_time = time.time()
         self._running = True
 
-        logger.info("Ralph SDK starting (v%s) [%s]", self.config.model, self.correlation_id,
-                     extra={"correlation_id": self.correlation_id})
-        logger.info("Project: %s (%s)", self.config.project_name, self.config.project_type,
-                     extra={"correlation_id": self.correlation_id})
+        logger.info(
+            "Ralph SDK starting (v%s) [%s]",
+            self.config.model,
+            self.correlation_id,
+            extra={"correlation_id": self.correlation_id},
+        )
+        logger.info(
+            "Project: %s (%s)",
+            self.config.project_name,
+            self.config.project_type,
+            extra={"correlation_id": self.correlation_id},
+        )
 
         # Load session
         await self._load_session()
@@ -245,6 +292,9 @@ class RalphAgent:
         cb.no_progress_count = 0
         cb.same_error_count = 0
         await self.state_backend.write_circuit_breaker(cb._to_state_dict())
+
+        self._stall_detector.reset()
+        self._files_changed_session.clear()
 
         result = TaskResult()
 
@@ -269,8 +319,8 @@ class RalphAgent:
                 if self.config.dry_run:
                     logger.info("Dry run mode — skipping API call")
                     status = RalphStatus(
-                        status="DRY_RUN",
-                        work_type="DRY_RUN",
+                        status=RalphLoopStatus.DRY_RUN,
+                        work_type=WorkType.DRY_RUN,
                         loop_count=self.loop_count,
                         correlation_id=self.correlation_id,
                     )
@@ -287,6 +337,19 @@ class RalphAgent:
 
                 # Execute one iteration
                 iteration_status = await self.run_iteration(task_input)
+
+                stall_reason = await self._stall_detector.evaluate_after_iteration(
+                    iteration_duration_sec=self._last_iteration_duration_sec,
+                    files_changed_count=len(self._last_iteration_files_changed),
+                    tests_status=iteration_status.tests_status,
+                    timed_out=_status_is_timeout(iteration_status),
+                    cli_had_error=_status_is_error(iteration_status),
+                )
+                if stall_reason:
+                    logger.warning("Stall detector tripped: %s", stall_reason)
+                    result.error = stall_reason
+                    result.status = iteration_status
+                    break
 
                 # Check exit conditions (dual-condition gate)
                 if await self.should_exit(iteration_status, self.loop_count):
@@ -309,6 +372,7 @@ class RalphAgent:
             result.duration_seconds = time.time() - self.start_time
             result.tokens_in = self._last_tokens_in
             result.tokens_out = self._last_tokens_out
+            result.files_changed = sorted(self._files_changed_session)
 
         return result
 
@@ -328,6 +392,10 @@ class RalphAgent:
         """
         if task_input is None:
             task_input = TaskInput.from_ralph_dir(str(self.ralph_dir))
+
+        iteration_t0 = time.monotonic()
+        self._last_iteration_duration_sec = 0.0
+        self._last_iteration_files_changed = []
 
         # Build the prompt for this iteration
         prompt = self._build_iteration_prompt(task_input)
@@ -372,9 +440,14 @@ class RalphAgent:
             # Log output
             self._log_output(stdout, stderr, self.loop_count)
 
+            self._last_iteration_duration_sec = time.monotonic() - iteration_t0
+            changed = await self._git_changed_paths()
+            self._last_iteration_files_changed = changed
+            self._files_changed_session.update(changed)
+
             return status
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning("Claude CLI timed out after %d minutes", self.config.timeout_minutes)
             # Kill the orphaned subprocess to prevent resource leaks
             try:
@@ -383,18 +456,22 @@ class RalphAgent:
             except Exception:
                 pass
             status = RalphStatus(
-                status="TIMEOUT",
+                status=RalphLoopStatus.TIMEOUT,
                 work_type="UNKNOWN",
                 error=f"Timeout after {self.config.timeout_minutes} minutes",
                 loop_count=self.loop_count,
             )
             await self.state_backend.write_status(status.to_dict())
+            self._last_iteration_duration_sec = time.monotonic() - iteration_t0
+            self._last_iteration_files_changed = []
             return status
 
         except FileNotFoundError:
             logger.error("Claude CLI not found: %s", self.config.claude_code_cmd)
+            self._last_iteration_duration_sec = time.monotonic() - iteration_t0
+            self._last_iteration_files_changed = []
             return RalphStatus(
-                status="ERROR",
+                status=RalphLoopStatus.ERROR,
                 error=f"Claude CLI not found: {self.config.claude_code_cmd}",
             )
 
@@ -437,10 +514,8 @@ class RalphAgent:
         return remaining > 0
 
     async def check_circuit_breaker(self) -> bool:
-        """Check circuit breaker via state backend — returns True if OK to proceed."""
-        cb_data = await self.state_backend.read_circuit_breaker()
-        state = cb_data.get("state", "CLOSED")
-        return state in ("CLOSED", "HALF_OPEN")
+        """Check circuit breaker — returns True if OK to proceed."""
+        return await self._circuit_breaker.can_proceed()
 
     # -------------------------------------------------------------------------
     # Private helpers
@@ -452,7 +527,12 @@ class RalphAgent:
         if task_input.prompt:
             parts.append(task_input.prompt)
         if task_input.fix_plan:
-            parts.append(f"\n\n## Current Fix Plan\n\n{task_input.fix_plan}")
+            fix_body = task_input.fix_plan
+            if self.config.progressive_context_enabled and fix_body.strip():
+                fix_body = build_progressive_context(
+                    fix_body, self.config.progressive_context_max_items
+                )
+            parts.append(f"\n\n## Current Fix Plan\n\n{fix_body}")
         if task_input.agent_instructions:
             parts.append(f"\n\n## Build/Run Instructions\n\n{task_input.agent_instructions}")
         return "\n".join(parts)
@@ -501,7 +581,7 @@ class RalphAgent:
         status = RalphStatus()
 
         if return_code != 0:
-            status.status = "ERROR"
+            status.status = RalphLoopStatus.ERROR
             status.error = f"Claude CLI exited with code {return_code}"
             return status
 
@@ -530,6 +610,29 @@ class RalphAgent:
                     return
             except json.JSONDecodeError:
                 continue
+
+    async def _git_changed_paths(self) -> list[str]:
+        """List paths changed vs HEAD in project_dir (working tree)."""
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "git",
+                "-C",
+                str(self.project_dir),
+                "diff",
+                "--name-only",
+                "HEAD",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=30.0)
+        except (FileNotFoundError, TimeoutError, OSError):
+            return []
+        if proc.returncode != 0:
+            return []
+        text = stdout.decode("utf-8", errors="replace").strip()
+        if not text:
+            return []
+        return [p.strip() for p in text.splitlines() if p.strip()]
 
     async def _load_session(self) -> None:
         """Load session ID via state backend."""
@@ -583,6 +686,7 @@ class RalphAgent:
             status=status,
             loop_count=self.loop_count,
             duration_seconds=time.time() - self.start_time if self.start_time else 0,
+            files_changed=list(self._last_iteration_files_changed),
         )
         return result.to_signal()
 
@@ -593,9 +697,7 @@ class RalphAgent:
     async def handle_tool_call(self, tool_name: str, tool_input: dict[str, Any]) -> dict[str, Any]:
         """Dispatch tool calls to appropriate async handlers."""
         if tool_name == "ralph_status":
-            return await ralph_status_tool(
-                ralph_dir=str(self.ralph_dir), **tool_input
-            )
+            return await ralph_status_tool(ralph_dir=str(self.ralph_dir), **tool_input)
         elif tool_name == "ralph_rate_check":
             return await ralph_rate_check_tool(
                 ralph_dir=str(self.ralph_dir),
@@ -606,14 +708,9 @@ class RalphAgent:
                 ralph_dir=str(self.ralph_dir),
             )
         elif tool_name == "ralph_task_update":
-            return await ralph_task_update_tool(
-                ralph_dir=str(self.ralph_dir), **tool_input
-            )
+            return await ralph_task_update_tool(ralph_dir=str(self.ralph_dir), **tool_input)
         return {"ok": False, "error": f"Unknown tool: {tool_name}"}
 
     def get_tool_definitions(self) -> list[dict[str, Any]]:
         """Return tool definitions for Agent SDK registration."""
-        return [
-            {k: v for k, v in tool.items() if k != "handler"}
-            for tool in RALPH_TOOLS
-        ]
+        return [{k: v for k, v in tool.items() if k != "handler"} for tool in RALPH_TOOLS]

@@ -13,8 +13,6 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 from uuid import UUID, uuid4
 
-import pytest
-
 from ralph_sdk.converters import ComplexityBand, TrustTier
 from ralph_sdk.status import RalphLoopStatus, RalphStatus, WorkType
 
@@ -25,7 +23,6 @@ from src.agent.ralph_bridge import (
     ralph_result_to_evidence,
     taskpacket_to_ralph_input,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -93,6 +90,7 @@ def _make_task_result(
     result.loop_count = loop_count
     result.duration_seconds = duration_seconds
     result.error = ""
+    result.files_changed = []
     return result
 
 
@@ -105,20 +103,20 @@ class TestTaskpacketToRalphInput:
     def test_maps_goal(self) -> None:
         tp = _make_taskpacket()
         intent = _make_intent(goal="Add rate limiting to the API")
-        packet, intent_input = taskpacket_to_ralph_input(tp, intent)
+        _packet, intent_input = taskpacket_to_ralph_input(tp, intent)
         assert intent_input.goal == "Add rate limiting to the API"
 
     def test_maps_constraints(self) -> None:
         tp = _make_taskpacket()
         intent = _make_intent(constraints=["Must be backward compatible", "No new deps"])
-        packet, intent_input = taskpacket_to_ralph_input(tp, intent)
+        _packet, intent_input = taskpacket_to_ralph_input(tp, intent)
         assert "Must be backward compatible" in intent_input.constraints
         assert "No new deps" in intent_input.constraints
 
     def test_maps_acceptance_criteria(self) -> None:
         tp = _make_taskpacket()
         intent = _make_intent(acceptance_criteria=["All tests green", "Coverage >= 80%"])
-        packet, intent_input = taskpacket_to_ralph_input(tp, intent)
+        _packet, intent_input = taskpacket_to_ralph_input(tp, intent)
         assert intent_input.acceptance_criteria == ["All tests green", "Coverage >= 80%"]
 
     def test_maps_non_goals(self) -> None:
@@ -238,6 +236,12 @@ class TestRalphResultToEvidence:
         assert "src/agent/primary_agent.py" in bundle.files_changed
         assert "tests/unit/test_primary_agent.py" in bundle.files_changed
 
+    def test_files_changed_prefers_structured_field(self) -> None:
+        result = _make_task_result(output="unrelated text")
+        result.files_changed = ["src/from_git.py"]
+        bundle = ralph_result_to_evidence(result, uuid4(), intent_version=1, loopback_attempt=0)
+        assert bundle.files_changed == ["src/from_git.py"]
+
     def test_agent_summary_includes_progress_summary(self) -> None:
         result = _make_task_result(progress_summary="All tasks complete", output="")
         bundle = ralph_result_to_evidence(result, uuid4(), intent_version=1, loopback_attempt=0)
@@ -311,9 +315,7 @@ class TestCheckRalphCliAvailable:
 
 
 class TestBuildVerificationLoopbackContext:
-    def _make_verification_result(
-        self, checks: list[tuple[str, bool, str]]
-    ) -> MagicMock:
+    def _make_verification_result(self, checks: list[tuple[str, bool, str]]) -> MagicMock:
         """Build a mock VerificationResult from (name, passed, details) tuples."""
         result = MagicMock()
         check_mocks = []
@@ -333,17 +335,13 @@ class TestBuildVerificationLoopbackContext:
         assert "no check details" in text.lower()
 
     def test_includes_failed_check_name(self) -> None:
-        result = self._make_verification_result(
-            [("ruff", False, "E501: line too long")]
-        )
+        result = self._make_verification_result([("ruff", False, "E501: line too long")])
         text = build_verification_loopback_context(result)
         assert "ruff" in text
         assert "FAILED" in text
 
     def test_includes_passed_check_name(self) -> None:
-        result = self._make_verification_result(
-            [("pytest", True, "All 42 tests passed")]
-        )
+        result = self._make_verification_result([("pytest", True, "All 42 tests passed")])
         text = build_verification_loopback_context(result)
         assert "pytest" in text
         assert "PASSED" in text

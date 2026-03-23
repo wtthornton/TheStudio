@@ -31,21 +31,56 @@ class RalphConfig(BaseModel):
     output_format: str = "json"
 
     # Tool permissions
-    allowed_tools: list[str] = Field(default_factory=lambda: [
-        "Write", "Read", "Edit", "Bash(git add *)", "Bash(git commit *)",
-        "Bash(git diff *)", "Bash(git log *)", "Bash(git status)",
-        "Bash(git status *)", "Bash(git push *)", "Bash(git pull *)",
-        "Bash(git fetch *)", "Bash(git checkout *)", "Bash(git branch *)",
-        "Bash(git stash *)", "Bash(git merge *)", "Bash(git tag *)",
-        "Bash(git -C *)", "Bash(grep *)", "Bash(find *)", "Bash(npm *)",
-        "Bash(pytest)", "Bash(xargs *)", "Bash(sort *)", "Bash(tee *)",
-        "Bash(rm *)", "Bash(touch *)", "Bash(sed *)", "Bash(awk *)",
-        "Bash(tr *)", "Bash(cut *)", "Bash(dirname *)", "Bash(basename *)",
-        "Bash(realpath *)", "Bash(test *)", "Bash(true)", "Bash(false)",
-        "Bash(sleep *)", "Bash(ls *)", "Bash(cat *)", "Bash(wc *)",
-        "Bash(head *)", "Bash(tail *)", "Bash(mkdir *)", "Bash(cp *)",
-        "Bash(mv *)",
-    ])
+    allowed_tools: list[str] = Field(
+        default_factory=lambda: [
+            "Write",
+            "Read",
+            "Edit",
+            "Bash(git add *)",
+            "Bash(git commit *)",
+            "Bash(git diff *)",
+            "Bash(git log *)",
+            "Bash(git status)",
+            "Bash(git status *)",
+            "Bash(git push *)",
+            "Bash(git pull *)",
+            "Bash(git fetch *)",
+            "Bash(git checkout *)",
+            "Bash(git branch *)",
+            "Bash(git stash *)",
+            "Bash(git merge *)",
+            "Bash(git tag *)",
+            "Bash(git -C *)",
+            "Bash(grep *)",
+            "Bash(find *)",
+            "Bash(npm *)",
+            "Bash(pytest)",
+            "Bash(xargs *)",
+            "Bash(sort *)",
+            "Bash(tee *)",
+            "Bash(rm *)",
+            "Bash(touch *)",
+            "Bash(sed *)",
+            "Bash(awk *)",
+            "Bash(tr *)",
+            "Bash(cut *)",
+            "Bash(dirname *)",
+            "Bash(basename *)",
+            "Bash(realpath *)",
+            "Bash(test *)",
+            "Bash(true)",
+            "Bash(false)",
+            "Bash(sleep *)",
+            "Bash(ls *)",
+            "Bash(cat *)",
+            "Bash(wc *)",
+            "Bash(head *)",
+            "Bash(tail *)",
+            "Bash(mkdir *)",
+            "Bash(cp *)",
+            "Bash(mv *)",
+        ]
+    )
 
     # Session management
     session_continuity: bool = True
@@ -57,6 +92,17 @@ class RalphConfig(BaseModel):
     cb_output_decline_threshold: int = Field(default=70, ge=0, le=100)
     cb_cooldown_minutes: int = Field(default=30, ge=1, le=1440)
     cb_auto_reset: bool = False
+
+    # Stall detection (CLI parity — Epic 51 P0)
+    stall_fast_trip_max: int = Field(default=3, ge=1, le=50)
+    stall_fast_trip_max_seconds: float = Field(default=30.0, ge=1.0, le=600.0)
+    stall_deferred_test_max: int = Field(default=5, ge=1, le=50)
+    stall_consecutive_timeout_max: int = Field(default=5, ge=1, le=50)
+
+    # Progressive fix_plan context
+    progressive_context_enabled: bool = True
+    progressive_context_max_items: int = Field(default=10, ge=1, le=100)
+    progressive_context_chars_per_token: int = Field(default=4, ge=1, le=16)
 
     # Log rotation
     log_max_size_mb: int = Field(default=10, ge=1, le=1000)
@@ -162,12 +208,12 @@ class RalphConfig(BaseModel):
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
-            match = re.match(r'^(?:export\s+)?([A-Z_]+)=(.*)$', line)
+            match = re.match(r"^(?:export\s+)?([A-Z_]+)=(.*)$", line)
             if not match:
                 continue
             key, value = match.group(1), match.group(2)
             value = value.strip('"').strip("'")
-            value = re.sub(r'\$\{[A-Z_]+:-([^}]*)\}', r'\1', value)
+            value = re.sub(r"\$\{[A-Z_]+:-([^}]*)\}", r"\1", value)
             if key in mapping:
                 attr_name, converter = mapping[key]
                 try:

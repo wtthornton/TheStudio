@@ -140,9 +140,7 @@ class CircuitBreaker:
 
         # Prune old entries outside the window
         cutoff = now - (self.failure_window_minutes * 60)
-        self._failure_window = [
-            (ts, r) for ts, r in self._failure_window if ts >= cutoff
-        ]
+        self._failure_window = [(ts, r) for ts, r in self._failure_window if ts >= cutoff]
 
         # Count same errors in window
         if reason:
@@ -169,7 +167,9 @@ class CircuitBreaker:
         if cb.no_progress_count >= self.no_progress_threshold:
             cb.trip(f"No progress threshold ({self.no_progress_threshold}) reached")
         else:
-            cb.last_transition = f"CLOSED: no progress ({cb.no_progress_count}/{self.no_progress_threshold})"
+            cb.last_transition = (
+                f"CLOSED: no progress ({cb.no_progress_count}/{self.no_progress_threshold})"
+            )
 
         await self._save_state(cb)
 
@@ -190,5 +190,93 @@ class CircuitBreaker:
             "last_error": cb.last_error,
             "opened_at": cb.opened_at,
             "last_transition": cb.last_transition,
-            "can_proceed": cb.state in (CircuitBreakerStateEnum.CLOSED, CircuitBreakerStateEnum.HALF_OPEN),
+            "can_proceed": cb.state
+            in (CircuitBreakerStateEnum.CLOSED, CircuitBreakerStateEnum.HALF_OPEN),
         }
+
+    async def open_circuit(self, reason: str) -> None:
+        """Force OPEN with *reason* (stall detection, operator trip, etc.)."""
+        cb = await self._load_state()
+        cb.trip(reason)
+        self._failure_window.clear()
+        await self._save_state(cb)
+
+
+class StallDetector:
+    """Fast-trip, deferred-test, and consecutive-timeout stall detection (CLI parity)."""
+
+    def __init__(
+        self,
+        circuit_breaker: CircuitBreaker,
+        *,
+        fast_trip_max: int = 3,
+        fast_trip_max_seconds: float = 30.0,
+        deferred_test_max: int = 5,
+        consecutive_timeout_max: int = 5,
+    ) -> None:
+        self._cb = circuit_breaker
+        self.fast_trip_max = fast_trip_max
+        self.fast_trip_max_seconds = fast_trip_max_seconds
+        self.deferred_test_max = deferred_test_max
+        self.consecutive_timeout_max = consecutive_timeout_max
+        self._fast_trip_streak = 0
+        self._deferred_streak = 0
+        self._timeout_streak = 0
+
+    def reset(self) -> None:
+        """Clear streak counters (e.g. at start of a new agent run)."""
+        self._fast_trip_streak = 0
+        self._deferred_streak = 0
+        self._timeout_streak = 0
+
+    async def evaluate_after_iteration(
+        self,
+        *,
+        iteration_duration_sec: float,
+        files_changed_count: int,
+        tests_status: str,
+        timed_out: bool,
+        cli_had_error: bool,
+    ) -> str | None:
+        """Trip the circuit and return a reason string if a stall threshold fired."""
+        if cli_had_error:
+            self._fast_trip_streak = 0
+            self._deferred_streak = 0
+            self._timeout_streak = 0
+            return None
+
+        if timed_out:
+            self._timeout_streak += 1
+            self._fast_trip_streak = 0
+            if self._timeout_streak >= self.consecutive_timeout_max:
+                reason = f"Consecutive timeouts ({self.consecutive_timeout_max})"
+                await self._cb.open_circuit(reason)
+                return reason
+            self._deferred_streak = 0
+            return None
+
+        self._timeout_streak = 0
+
+        if iteration_duration_sec < self.fast_trip_max_seconds and files_changed_count == 0:
+            self._fast_trip_streak += 1
+            if self._fast_trip_streak >= self.fast_trip_max:
+                reason = (
+                    f"Fast-trip: {self.fast_trip_max} iterations under "
+                    f"{self.fast_trip_max_seconds:.0f}s with no file changes"
+                )
+                await self._cb.open_circuit(reason)
+                return reason
+        else:
+            self._fast_trip_streak = 0
+
+        ts = (tests_status or "UNKNOWN").strip().upper()
+        if ts == "DEFERRED":
+            self._deferred_streak += 1
+            if self._deferred_streak >= self.deferred_test_max:
+                reason = f"Deferred test stall ({self.deferred_test_max} consecutive DEFERRED)"
+                await self._cb.open_circuit(reason)
+                return reason
+        else:
+            self._deferred_streak = 0
+
+        return None

@@ -9,11 +9,19 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
+
+
+def _norm_tests_status(raw: object) -> str:
+    if raw is None:
+        return "UNKNOWN"
+    s = str(raw).strip().upper()
+    return s if s else "UNKNOWN"
 
 
 class RalphLoopStatus(str, Enum):
     """Status of the Ralph loop iteration."""
+
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"
     ERROR = "ERROR"
@@ -23,6 +31,7 @@ class RalphLoopStatus(str, Enum):
 
 class WorkType(str, Enum):
     """Type of work performed in a loop iteration."""
+
     UNKNOWN = "UNKNOWN"
     IMPLEMENTATION = "IMPLEMENTATION"
     TESTING = "TESTING"
@@ -34,6 +43,7 @@ class WorkType(str, Enum):
 
 class CircuitBreakerStateEnum(str, Enum):
     """Circuit breaker state values."""
+
     CLOSED = "CLOSED"
     HALF_OPEN = "HALF_OPEN"
     OPEN = "OPEN"
@@ -56,6 +66,7 @@ class RalphStatus(BaseModel):
     circuit_breaker_state: str = "CLOSED"
     correlation_id: str = ""
     error: str = ""
+    tests_status: str = "UNKNOWN"
 
     def to_dict(self) -> dict[str, Any]:
         """Export as dictionary matching status.json schema."""
@@ -72,6 +83,7 @@ class RalphStatus(BaseModel):
             "circuit_breaker_state": self.circuit_breaker_state,
             "correlation_id": self.correlation_id,
             "error": self.error,
+            "TESTS_STATUS": self.tests_status,
         }
 
     @classmethod
@@ -90,6 +102,9 @@ class RalphStatus(BaseModel):
             circuit_breaker_state=data.get("circuit_breaker_state", "CLOSED"),
             correlation_id=data.get("correlation_id", ""),
             error=data.get("error", ""),
+            tests_status=_norm_tests_status(
+                data.get("TESTS_STATUS", data.get("tests_status", "UNKNOWN"))
+            ),
         )
 
     @classmethod
@@ -101,6 +116,7 @@ class RalphStatus(BaseModel):
         """
         if backend is not None:
             import asyncio
+
             try:
                 loop = asyncio.get_running_loop()
             except RuntimeError:
@@ -130,6 +146,7 @@ class RalphStatus(BaseModel):
         """
         if backend is not None:
             import asyncio
+
             try:
                 loop = asyncio.get_running_loop()
             except RuntimeError:
@@ -193,21 +210,22 @@ class CircuitBreakerState(BaseModel):
         )
 
     @classmethod
-    def load(cls, ralph_dir: str | Path = ".ralph", *, backend: Any | None = None) -> CircuitBreakerState:
+    def load(
+        cls, ralph_dir: str | Path = ".ralph", *, backend: Any | None = None
+    ) -> CircuitBreakerState:
         """Load from .ralph/.circuit_breaker_state or via state backend.
 
         Note: When using an async backend, use asyncio.run() or call backend directly.
         """
         if backend is not None:
             import asyncio
+
             try:
                 loop = asyncio.get_running_loop()
             except RuntimeError:
                 loop = None
             if loop and loop.is_running():
-                raise RuntimeError(
-                    "Cannot call sync load() with async backend from async context."
-                )
+                raise RuntimeError("Cannot call sync load() with async backend from async context.")
             data = asyncio.run(backend.read_circuit_breaker())
             return cls._from_state_dict(data) if data else cls()
 
@@ -224,14 +242,13 @@ class CircuitBreakerState(BaseModel):
         """Write circuit breaker state atomically or via state backend."""
         if backend is not None:
             import asyncio
+
             try:
                 loop = asyncio.get_running_loop()
             except RuntimeError:
                 loop = None
             if loop and loop.is_running():
-                raise RuntimeError(
-                    "Cannot call sync save() with async backend from async context."
-                )
+                raise RuntimeError("Cannot call sync save() with async backend from async context.")
             asyncio.run(backend.write_circuit_breaker(self._to_state_dict()))
             return
 

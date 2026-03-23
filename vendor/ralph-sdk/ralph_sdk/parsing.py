@@ -13,15 +13,16 @@ import logging
 import re
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, field_validator
 
-from ralph_sdk.status import RalphLoopStatus, RalphStatus, WorkType
+from ralph_sdk.status import RalphLoopStatus, RalphStatus, WorkType, _norm_tests_status
 
 logger = logging.getLogger("ralph.sdk.parsing")
 
 
 class TestsStatus(str, __import__("enum").Enum):
     """Status of test execution."""
+
     UNKNOWN = "UNKNOWN"
     PASSED = "PASSED"
     FAILED = "FAILED"
@@ -35,6 +36,7 @@ class RalphStatusBlock(BaseModel):
     This is the expected JSON output format from the agent, containing
     all status fields plus a version marker.
     """
+
     version: int = 1
     work_type: WorkType = WorkType.UNKNOWN
     completed_task: str = ""
@@ -57,6 +59,11 @@ class RalphStatusBlock(BaseModel):
 
     def to_ralph_status(self) -> RalphStatus:
         """Convert to RalphStatus for backward compatibility."""
+        ts = (
+            self.tests_status.value
+            if isinstance(self.tests_status, TestsStatus)
+            else str(self.tests_status)
+        )
         return RalphStatus(
             work_type=self.work_type,
             completed_task=self.completed_task,
@@ -64,6 +71,7 @@ class RalphStatusBlock(BaseModel):
             progress_summary=self.progress_summary,
             exit_signal=self.exit_signal,
             status=RalphLoopStatus.COMPLETED if self.exit_signal else RalphLoopStatus.IN_PROGRESS,
+            tests_status=_norm_tests_status(ts),
         )
 
 
@@ -94,7 +102,7 @@ def parse_ralph_status(text: str) -> RalphStatus:
 def _parse_json_block(text: str) -> RalphStatus | None:
     """Strategy 1: Extract JSON from fenced code block."""
     # Match ```json ... ``` or ``` ... ```
-    pattern = r'```(?:json)?\s*\n({[^`]+})\s*\n```'
+    pattern = r"```(?:json)?\s*\n({[^`]+})\s*\n```"
     match = re.search(pattern, text, re.DOTALL)
     if not match:
         return None
@@ -145,6 +153,7 @@ def _parse_text_fallback(text: str) -> RalphStatus:
         "next_task": r"NEXT_TASK:\s*(.+?)(?:\n|$)",
         "progress_summary": r"PROGRESS_SUMMARY:\s*(.+?)(?:\n|$)",
         "exit_signal": r"EXIT_SIGNAL:\s*(.+?)(?:\n|$)",
+        "tests_status": r"TESTS_STATUS:\s*(\w+)",
     }
 
     for field_name, pattern in field_patterns.items():
@@ -158,6 +167,8 @@ def _parse_text_fallback(text: str) -> RalphStatus:
                     status.work_type = WorkType(value.upper())
                 except ValueError:
                     status.work_type = WorkType.UNKNOWN
+            elif field_name == "tests_status":
+                status.tests_status = _norm_tests_status(value)
             else:
                 setattr(status, field_name, value)
 
