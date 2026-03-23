@@ -5,13 +5,26 @@ import { useBacklogStore, BOARD_COLUMNS, groupTasksByColumn } from '../../stores
 import { BacklogCard } from './BacklogCard'
 import CreateTaskModal from './CreateTaskModal'
 import { useRepoContext } from '../../contexts/RepoContext'
+import { EmptyState } from '../EmptyState'
+
+function BacklogIcon() {
+  return (
+    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" className="text-gray-500">
+      <rect x="4" y="10" width="10" height="28" rx="2" stroke="currentColor" strokeWidth="2" />
+      <rect x="19" y="16" width="10" height="22" rx="2" stroke="currentColor" strokeWidth="2" />
+      <rect x="34" y="6" width="10" height="32" rx="2" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  )
+}
 
 interface BacklogBoardProps {
   /** Called when the user clicks a card — passes the task UUID up to the parent. */
   onTaskClick: (taskId: string) => void
+  /** Called when the user clicks the "Go to Pipeline" CTA in the empty state. */
+  onNavigateToPipeline?: () => void
 }
 
-export default function BacklogBoard({ onTaskClick }: BacklogBoardProps) {
+export default function BacklogBoard({ onTaskClick, onNavigateToPipeline }: BacklogBoardProps) {
   const { tasks, loading, error, loadBoard } = useBacklogStore()
   const { selectedRepo } = useRepoContext()
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -44,6 +57,24 @@ export default function BacklogBoard({ onTaskClick }: BacklogBoardProps) {
 
   const groups = groupTasksByColumn(tasks)
   const totalTasks = tasks.length
+
+  // Empty board — no tasks at all
+  if (totalTasks === 0) {
+    return (
+      <EmptyState
+        icon={<BacklogIcon />}
+        heading="Backlog is Empty"
+        description="No tasks have been imported yet. Import a GitHub issue from the Pipeline tab to get started, then watch it move through Triage → Planning → Building."
+        primaryAction={
+          onNavigateToPipeline
+            ? { label: 'Go to Pipeline', onClick: onNavigateToPipeline }
+            : undefined
+        }
+        secondaryAction={{ label: '+ New Task', onClick: () => setShowCreateModal(true) }}
+        data-testid="backlog-empty-state"
+      />
+    )
+  }
 
   return (
     <div className="flex flex-col gap-4">

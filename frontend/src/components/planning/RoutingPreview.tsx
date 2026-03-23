@@ -4,10 +4,25 @@ import { useEffect } from 'react'
 import { useRoutingStore } from '../../stores/routing-store'
 import ExpertCard from './ExpertCard'
 import AddExpertDropdown from './AddExpertDropdown'
+import { EmptyState } from '../EmptyState'
+
+function RoutingIcon() {
+  return (
+    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" className="text-gray-500">
+      <circle cx="8" cy="24" r="4" stroke="currentColor" strokeWidth="2" />
+      <circle cx="40" cy="12" r="4" stroke="currentColor" strokeWidth="2" />
+      <circle cx="40" cy="36" r="4" stroke="currentColor" strokeWidth="2" />
+      <line x1="12" y1="22" x2="36" y2="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <line x1="12" y1="26" x2="36" y2="34" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
+}
 
 export interface RoutingPreviewProps {
   taskId: string
   onClose?: () => void
+  /** Called when the user clicks the "Go to Pipeline" CTA (no-routing empty state). */
+  onNavigateToPipeline?: () => void
 }
 
 /* ── icons ───────────────────────────────────────────────────── */
@@ -38,7 +53,7 @@ function SpinnerIcon() {
 
 /* ── component ───────────────────────────────────────────────── */
 
-export default function RoutingPreview({ taskId, onClose }: RoutingPreviewProps) {
+export default function RoutingPreview({ taskId, onClose, onNavigateToPipeline }: RoutingPreviewProps) {
   const { routing, loading, error, saving, loadRouting, approve, override } =
     useRoutingStore()
 
@@ -74,9 +89,17 @@ export default function RoutingPreview({ taskId, onClose }: RoutingPreviewProps)
   /* No data yet */
   if (!routing) {
     return (
-      <div className="rounded-lg border border-gray-700 bg-gray-900 p-6 text-center">
-        <p className="text-sm text-gray-500 italic">No routing data available for this task.</p>
-      </div>
+      <EmptyState
+        icon={<RoutingIcon />}
+        heading="No Routing Data Yet"
+        description="Expert routing hasn't been assigned for this task. Once the Router stage runs, you'll see which experts are selected and why."
+        primaryAction={
+          onNavigateToPipeline
+            ? { label: 'Go to Pipeline', onClick: onNavigateToPipeline }
+            : undefined
+        }
+        data-testid="routing-empty-state"
+      />
     )
   }
 

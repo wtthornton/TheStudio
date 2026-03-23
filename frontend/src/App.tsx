@@ -15,6 +15,7 @@ import { LoopbackOverlay } from './components/LoopbackArc'
 import { Minimap } from './components/Minimap'
 import { DisconnectionBanner } from './components/ErrorStates'
 import { EmptyPipelineRail } from './components/ErrorStates'
+import { EmptyState } from './components/EmptyState'
 import { TriageQueue } from './components/planning/TriageQueue'
 import IntentEditor from './components/planning/IntentEditor'
 import RoutingPreview from './components/planning/RoutingPreview'
@@ -200,43 +201,48 @@ function App() {
         /* Intent Review (Epic 36, Slice 2) */
         <div className="mx-auto max-w-6xl px-6 py-6">
           {selectedTaskId ? (
-            <IntentEditor taskId={selectedTaskId} />
+            <IntentEditor
+              taskId={selectedTaskId}
+              onNavigateToPipeline={() => setActiveTab('pipeline')}
+            />
           ) : (
-            <div className="flex flex-col items-center justify-center py-20 text-gray-500">
-              <p className="text-sm">Select a task from the Pipeline tab to review its intent specification.</p>
-              <button
-                onClick={() => setActiveTab('pipeline')}
-                className="mt-3 rounded bg-gray-700 px-3 py-1.5 text-xs text-gray-300 hover:bg-gray-600"
-              >
-                Go to Pipeline
-              </button>
-            </div>
+            <EmptyState
+              heading="No Task Selected"
+              description="Select a task from the Pipeline tab to review its intent specification. The intent spec defines what the agent should implement."
+              primaryAction={{ label: 'Go to Pipeline', onClick: () => setActiveTab('pipeline') }}
+              secondaryAction={{ label: 'Open Backlog', onClick: () => setActiveTab('board') }}
+              data-testid="intent-no-task-state"
+            />
           )}
         </div>
       ) : activeTab === 'routing' ? (
         /* Routing Review (Epic 36, Slice 3) */
         <div className="mx-auto max-w-6xl px-6 py-6">
           {selectedTaskId ? (
-            <RoutingPreview taskId={selectedTaskId} />
+            <RoutingPreview
+              taskId={selectedTaskId}
+              onNavigateToPipeline={() => setActiveTab('pipeline')}
+            />
           ) : (
-            <div className="flex flex-col items-center justify-center py-20 text-gray-500">
-              <p className="text-sm">Select a task from the Pipeline tab to review its expert routing.</p>
-              <button
-                onClick={() => setActiveTab('pipeline')}
-                className="mt-3 rounded bg-gray-700 px-3 py-1.5 text-xs text-gray-300 hover:bg-gray-600"
-              >
-                Go to Pipeline
-              </button>
-            </div>
+            <EmptyState
+              heading="No Task Selected"
+              description="Select a task from the Pipeline tab to review its expert routing. Routing determines which specialist agents work on the implementation."
+              primaryAction={{ label: 'Go to Pipeline', onClick: () => setActiveTab('pipeline') }}
+              secondaryAction={{ label: 'Open Backlog', onClick: () => setActiveTab('board') }}
+              data-testid="routing-no-task-state"
+            />
           )}
         </div>
       ) : activeTab === 'board' ? (
         /* Backlog Board (Epic 36, Slice 4) */
         <div className="mx-auto max-w-screen-2xl px-6 py-6">
-          <BacklogBoard onTaskClick={(taskId) => {
-            setSelectedTaskId(taskId)
-            setActiveTab('pipeline')
-          }} />
+          <BacklogBoard
+            onTaskClick={(taskId) => {
+              setSelectedTaskId(taskId)
+              setActiveTab('pipeline')
+            }}
+            onNavigateToPipeline={() => setActiveTab('pipeline')}
+          />
         </div>
       ) : activeTab === 'trust' ? (
         /* Trust Tier Configuration (Epic 37, Slice 3) */

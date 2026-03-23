@@ -8,7 +8,7 @@
 
 - [x] 46.1: Create `frontend/src/components/EmptyState.tsx` — reusable base component with icon/illustration slot, heading, description, primary CTA button (onClick or href), optional secondary link. Dark theme styling. **Files:** create EmptyState.tsx.
 - [x] 46.2: Pipeline + Triage empty states — replace `EmptyPipelineRail` in `ErrorStates.tsx` with EmptyState showing pipeline wireframe SVG + "Import an Issue" CTA opening ImportModal. Replace Triage placeholder with "Configure webhook" CTA. **Files:** modify ErrorStates.tsx, TriageQueue.tsx.
-- [ ] 46.3: Planning tab empty states — Intent Review, Routing Review, Backlog empty states with explanations and CTAs linking to Pipeline tab. **Files:** modify IntentEditor.tsx, RoutingPreview.tsx, BacklogBoard.tsx.
+- [x] 46.3: Planning tab empty states — Intent Review, Routing Review, Backlog empty states with explanations and CTAs linking to Pipeline tab. **Files:** modify IntentEditor.tsx, RoutingPreview.tsx, BacklogBoard.tsx.
 - [ ] 46.4: Configuration tab empty states — Trust Tiers, Budget, Repos with CTAs to registration/settings. **Files:** modify TrustConfiguration.tsx, BudgetDashboard.tsx, RepoSettings.tsx.
 - [ ] 46.5: Analytics + monitoring empty states + header hint — Analytics, Activity Log, Reputation. Header KPI onboarding hint when all zero. Vitest for all empty states. **Files:** modify Analytics.tsx, SteeringActivityLog.tsx, HeaderBar.tsx; create __tests__/EmptyState.test.tsx. **RUN TESTS.**
 - [ ] 46.6: Extend `empty_state.html` Jinja2 partial — add `cta_text`, `cta_url`, `cta_icon` parameters. **Files:** modify src/admin/templates/components/empty_state.html.

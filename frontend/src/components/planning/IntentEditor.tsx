@@ -10,12 +10,28 @@ import IntentEditMode from './IntentEditMode'
 import VersionSelector from './VersionSelector'
 import RefinementModal from './RefinementModal'
 import VersionDiff from './VersionDiff'
+import { EmptyState } from '../EmptyState'
+
+function IntentIcon() {
+  return (
+    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" className="text-gray-500">
+      <rect x="8" y="6" width="32" height="36" rx="3" stroke="currentColor" strokeWidth="2" />
+      <line x1="14" y1="16" x2="34" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <line x1="14" y1="22" x2="34" y2="22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <line x1="14" y1="28" x2="26" y2="28" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="36" cy="34" r="6" fill="none" stroke="currentColor" strokeWidth="2" />
+      <path d="M33 34l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
 
 interface IntentEditorProps {
   taskId: string
+  /** Called when the user clicks the "Go to Pipeline" CTA (no-intent empty state). */
+  onNavigateToPipeline?: () => void
 }
 
-export default function IntentEditor({ taskId }: IntentEditorProps) {
+export default function IntentEditor({ taskId, onNavigateToPipeline }: IntentEditorProps) {
   const [task, setTask] = useState<TaskPacketRead | null>(null)
   const [taskLoading, setTaskLoading] = useState(true)
   const [taskError, setTaskError] = useState<string | null>(null)
@@ -116,11 +132,17 @@ export default function IntentEditor({ taskId }: IntentEditorProps) {
   // No intent yet
   if (!current) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-sm text-gray-500 italic">
-          No intent specification found for this task.
-        </div>
-      </div>
+      <EmptyState
+        icon={<IntentIcon />}
+        heading="No Intent Specification Yet"
+        description="This task hasn't been through the Intent Builder yet. Once the pipeline processes the issue, you'll be able to review and approve the intent spec here."
+        primaryAction={
+          onNavigateToPipeline
+            ? { label: 'Go to Pipeline', onClick: onNavigateToPipeline }
+            : undefined
+        }
+        data-testid="intent-empty-state"
+      />
     )
   }
 
