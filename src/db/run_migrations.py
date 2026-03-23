@@ -66,6 +66,11 @@ MIGRATIONS = [
     "src.db.migrations.041_completed_at",
     "src.db.migrations.042_pr_merge_status",
     "src.db.migrations.043_outcome_signals",
+    "src.db.migrations.044_remote_verify_fields",
+    "src.db.migrations.045_execute_tier_fields",
+    "src.db.migrations.046_auto_merge_outcomes",
+    "src.db.migrations.047_rule_success_tracking",
+    "src.db.migrations.048_ralph_agent_state",
 ]
 
 

@@ -19,7 +19,7 @@
 > Order: 43.6 → 43.7 → 43.8 → 43.9 → 43.10 → 43.11 → 43.12
 > Gate: integration tests green, cost recording verified
 
-- [ ] 43.6: DB migration — `ralph_agent_state` table (id UUID PK, taskpacket_id UUID, key_name VARCHAR(64), value_json TEXT, updated_at TIMESTAMPTZ). Unique on (taskpacket_id, key_name).
+- [x] 43.6: DB migration — `ralph_agent_state` table (id UUID PK, taskpacket_id UUID, key_name VARCHAR(64), value_json TEXT, updated_at TIMESTAMPTZ). Unique on (taskpacket_id, key_name).
 - [ ] 43.7: `src/agent/ralph_state.py` — `PostgresStateBackend` implementing all 12 `RalphStateBackend` protocol methods via upsert/select on ralph_agent_state table.
 - [ ] 43.8: Wire PostgresStateBackend into primary_agent.py. Setting `THESTUDIO_RALPH_STATE_BACKEND` (postgres/null). Session ID TTL: discard if >2h old.
 - [ ] 43.9: Integration tests `tests/integration/test_ralph_state.py` — round-trip, isolation, concurrent upsert, TTL.
