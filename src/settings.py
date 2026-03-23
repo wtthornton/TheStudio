@@ -138,6 +138,10 @@ class Settings(BaseSettings):
     # Session IDs older than ralph_session_ttl_seconds are discarded on resume.
     ralph_state_backend: str = "null"  # "null" | "postgres"
     ralph_session_ttl_seconds: int = 7200  # 2 hours; discard stale session IDs
+    # Maximum wall-clock minutes the RalphAgent loop is allowed to run.
+    # The Temporal activity is scheduled with start_to_close_timeout =
+    # (ralph_timeout_minutes + 5) minutes to add a buffer for pre/post-run work.
+    ralph_timeout_minutes: int = 30  # env: THESTUDIO_RALPH_TIMEOUT_MINUTES
 
     # Container isolation (Epic 25)
     # Global mode: "process" (in-process, default) or "container" (Docker isolation)

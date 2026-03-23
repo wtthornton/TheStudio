@@ -877,11 +877,117 @@ async def preflight_activity(params: PreflightInput) -> PreflightActivityOutput:
     )
 
 
+async def _implement_ralph_with_heartbeat(
+    params: ImplementInput,
+    repo_tier: str,  # noqa: ARG001 — reserved for future per-tier config
+) -> ImplementOutput:
+    """Ralph SDK mode for implement_activity (Story 43.11).
+
+    Runs RalphAgent as an asyncio task and emits Temporal heartbeats every
+    30 s so the activity deadline is continuously extended.
+
+    Timeout cap:   ``(settings.ralph_timeout_minutes + 5) * 60`` seconds.
+                   Exceeding the cap signals ``agent.cancel()``, waits 10 s
+                   for graceful shutdown, then hard-cancels the asyncio task.
+
+    Cancellation:  When Temporal cancels the activity, ``asyncio.CancelledError``
+                   is raised inside the ``asyncio.wait`` call.  We catch it,
+                   invoke ``agent.cancel()`` for a clean stop, and re-raise so
+                   Temporal records the activity as cancelled.
+    """
+    import asyncio
+    import logging
+    from uuid import UUID
+
+    from temporalio import activity as temporal_activity
+
+    from src.agent.primary_agent import _implement_ralph
+    from src.db.connection import get_async_session
+    from src.intent.intent_crud import get_latest_for_taskpacket
+    from src.models.taskpacket_crud import get_by_id
+    from src.settings import settings
+
+    _log = logging.getLogger("thestudio.implement_ralph_activity")
+    task_id = UUID(params.taskpacket_id)
+
+    # Load the ORM objects required by _implement_ralph.
+    async with get_async_session() as session:
+        taskpacket = await get_by_id(session, task_id)
+        if taskpacket is None:
+            raise ValueError(f"TaskPacket {task_id} not found")
+        intent = await get_latest_for_taskpacket(session, task_id)
+        if intent is None:
+            raise ValueError(f"No IntentSpec found for TaskPacket {task_id}")
+
+    # agent_holder: _implement_ralph appends the RalphAgent here immediately
+    # before agent.run(), giving us a handle to call agent.cancel() on
+    # activity cancellation or wall-clock timeout.
+    agent_holder: list = []
+
+    timeout_s: int = (settings.ralph_timeout_minutes + 5) * 60
+    heartbeat_interval_s: int = 30
+    elapsed_s: int = 0
+
+    impl_task: asyncio.Task = asyncio.create_task(
+        _implement_ralph(
+            taskpacket=taskpacket,
+            intent=intent,
+            repo_path=params.repo_path or "",
+            loopback_context=params.qa_feedback or "",
+            agent_holder=agent_holder,
+        )
+    )
+
+    try:
+        while not impl_task.done():
+            temporal_activity.heartbeat(f"ralph_running elapsed={elapsed_s}s timeout={timeout_s}s")
+            done, _ = await asyncio.wait({impl_task}, timeout=heartbeat_interval_s)
+            if not done:
+                elapsed_s += heartbeat_interval_s
+                if elapsed_s >= timeout_s:
+                    _log.warning(
+                        "Ralph activity timed out after %ds for TaskPacket %s; requesting cancel",
+                        timeout_s,
+                        task_id,
+                    )
+                    if agent_holder:
+                        agent_holder[0].cancel()
+                    # Grace period: give the agent up to 10 s to stop cleanly.
+                    await asyncio.sleep(10)
+                    impl_task.cancel()
+                    await asyncio.gather(impl_task, return_exceptions=True)
+                    raise TimeoutError(
+                        f"Ralph agent exceeded {timeout_s}s wall-clock timeout "
+                        f"for TaskPacket {task_id}"
+                    )
+    except asyncio.CancelledError:
+        _log.info(
+            "Ralph activity cancelled for TaskPacket %s; signalling agent.cancel()",
+            task_id,
+        )
+        if agent_holder:
+            agent_holder[0].cancel()
+        impl_task.cancel()
+        await asyncio.gather(impl_task, return_exceptions=True)
+        raise  # re-raise so Temporal records the activity as cancelled
+
+    evidence = impl_task.result()  # re-raises if the task failed with an exception
+    return ImplementOutput(
+        taskpacket_id=params.taskpacket_id,
+        intent_version=evidence.intent_version,
+        files_changed=evidence.files_changed,
+        agent_summary=evidence.agent_summary,
+    )
+
+
 @activity.defn
 async def implement_activity(params: ImplementInput) -> ImplementOutput:
     """Step 6: Primary Agent implements changes.
 
-    Supports two modes controlled by THESTUDIO_AGENT_ISOLATION:
+    Supports three modes controlled by THESTUDIO_AGENT_MODE / THESTUDIO_AGENT_ISOLATION:
+
+    - "ralph" (Epic 43 Story 43.11): RalphAgent with Temporal heartbeat every 30 s.
+      Timeout = ralph_timeout_minutes + 5 min.  Cancel via agent.cancel().
     - "process" (default): Routes LLM calls through Model Gateway in-process.
     - "container": Serializes task to AgentTaskInput, launches an ephemeral
       Docker container via ContainerManager, collects results.
@@ -898,6 +1004,12 @@ async def implement_activity(params: ImplementInput) -> ImplementOutput:
     success = False
     try:
         repo_tier = getattr(params, "repo_tier", "observe")
+
+        # Ralph SDK mode (Epic 43 Story 43.11) — heartbeat every 30 s
+        if settings.agent_mode == "ralph":
+            result = await _implement_ralph_with_heartbeat(params, repo_tier)
+            success = True
+            return result
 
         # Resolve isolation mode based on settings and Docker availability
         if settings.agent_isolation == "container":

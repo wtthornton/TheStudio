@@ -146,6 +146,7 @@ async def _implement_ralph(
     loopback_context: str = "",
     complexity: str = "",
     pipeline_budget: PipelineBudget | None = None,
+    agent_holder: list | None = None,
 ) -> EvidenceBundle:
     """Implement using RalphAgent with configurable state backend.
 
@@ -159,6 +160,12 @@ async def _implement_ralph(
 
     Stale session IDs are cleared before the agent starts when using the
     Postgres backend (TTL controlled by ``settings.ralph_session_ttl_seconds``).
+
+    Activity-level cancellation (Story 43.11):
+    When *agent_holder* is provided (a mutable list), the ``RalphAgent``
+    instance is appended to it immediately before ``agent.run()`` starts.
+    The Temporal activity wrapper uses this reference to call
+    ``agent.cancel()`` on activity cancellation or timeout.
 
     Cost recording (Story 43.10):
     - Pre-launch: ``pipeline_budget.consume()`` reserves the max allowed spend.
@@ -261,6 +268,12 @@ async def _implement_ralph(
 
         # Ensure agent reads from our temp ralph_dir (not repo_path/.ralph)
         agent.ralph_dir = ralph_dir
+
+        # Expose agent reference for Temporal activity cancellation (Story 43.11).
+        # The activity wrapper monitors this list and calls agent.cancel() on
+        # activity cancellation or wall-clock timeout.
+        if agent_holder is not None:
+            agent_holder.append(agent)
 
         result = await agent.run()
 
