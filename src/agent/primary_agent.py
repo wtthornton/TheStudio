@@ -39,9 +39,17 @@ from src.models.taskpacket import TaskPacketStatus
 from src.models.taskpacket_crud import get_by_id, update_status
 from src.observability.conventions import (
     ATTR_CORRELATION_ID,
+    ATTR_RALPH_COST_USD,
+    ATTR_RALPH_DURATION_MS,
+    ATTR_RALPH_LOOPBACK_ATTEMPT,
+    ATTR_RALPH_MODEL,
+    ATTR_RALPH_STATE_BACKEND,
+    ATTR_RALPH_TOKENS_IN,
+    ATTR_RALPH_TOKENS_OUT,
     ATTR_TASKPACKET_ID,
     SPAN_AGENT_IMPLEMENT,
     SPAN_AGENT_LOOPBACK,
+    SPAN_RALPH_RUN,
 )
 from src.observability.tracing import get_tracer
 from src.settings import settings
@@ -194,145 +202,162 @@ async def _implement_ralph(
         taskpacket_to_ralph_input,
     )
 
-    packet_input, intent_input = taskpacket_to_ralph_input(
-        taskpacket,  # type: ignore[arg-type]
-        intent,  # type: ignore[arg-type]
-        loopback_context=loopback_context,
-        complexity_hint=complexity,
-    )
-
-    ralph_config = build_ralph_config(
-        model_id=settings.agent_model,
-        max_turns=settings.agent_max_turns,
-        complexity=packet_input.intent.complexity,
-    )
-
-    # Build the TaskInput the agent will read from .ralph/PROMPT.md
-    task_input = from_task_packet(
-        packet_input,
-        intent_input,
-        loopback_context=loopback_context,
-    )
-
-    # Pre-launch budget check (Story 43.10)
-    # Consume max_budget_usd from the pipeline budget before the run starts.
-    # This mirrors the AgentRunner pattern: reserve the max, record actual after.
+    # Extract IDs before entering the span so they're available for attributes.
     taskpacket_id = getattr(taskpacket, "id", None)
-    if pipeline_budget is not None:
-        if not pipeline_budget.consume(settings.agent_max_budget_usd):
-            raise BudgetExceededError(
-                task_id=str(taskpacket_id or "unknown"),
-                current_spend=pipeline_budget.used,
-                limit=pipeline_budget.max_total_usd,
-                step=_RALPH_PIPELINE_STEP,
-            )
-
-    # Select state backend (Story 43.8)
-    # "postgres" — persistent state across retries via ralph_agent_state table
-    # "null"     — no persistence (Slice 1 default)
-    taskpacket_id_for_state = taskpacket_id
-    if settings.ralph_state_backend == "postgres" and taskpacket_id_for_state is not None:
-        from src.agent.ralph_state import PostgresStateBackend
-
-        state_backend: object = PostgresStateBackend(taskpacket_id_for_state)
-        # Discard stale session IDs (TTL from settings, default 2h)
-        await state_backend.clear_session_if_stale(settings.ralph_session_ttl_seconds)  # type: ignore[attr-defined]
-        logger.info(
-            "Ralph using PostgresStateBackend for TaskPacket %s (ttl=%ds)",
-            taskpacket_id_for_state,
-            settings.ralph_session_ttl_seconds,
-        )
-    else:
-        state_backend = NullStateBackend()
-
-    # Write task input to a temp directory (RalphAgent reads from .ralph/)
-    with tempfile.TemporaryDirectory() as tmpdir:
-        ralph_dir = Path(tmpdir) / ".ralph"
-        ralph_dir.mkdir(parents=True, exist_ok=True)
-
-        # Write PROMPT.md with the full task prompt
-        (ralph_dir / "PROMPT.md").write_text(task_input.prompt, encoding="utf-8")
-
-        # Write agent instructions to AGENT.md if present
-        if task_input.agent_instructions:
-            (ralph_dir / "AGENT.md").write_text(
-                task_input.agent_instructions, encoding="utf-8"
-            )
-
-        agent = RalphAgent(
-            config=ralph_config,
-            project_dir=repo_path or tmpdir,
-            state_backend=state_backend,
-            correlation_id=str(getattr(taskpacket, "correlation_id", "")),
-        )
-
-        # Ensure agent reads from our temp ralph_dir (not repo_path/.ralph)
-        agent.ralph_dir = ralph_dir
-
-        # Expose agent reference for Temporal activity cancellation (Story 43.11).
-        # The activity wrapper monitors this list and calls agent.cancel() on
-        # activity cancellation or wall-clock timeout.
-        if agent_holder is not None:
-            agent_holder.append(agent)
-
-        result = await agent.run()
-
-    intent_version = intent.version
     loopback_attempt = getattr(taskpacket, "loopback_count", 0)
 
-    # Post-run cost recording (Story 43.10)
-    # Estimate cost from token counts returned by Ralph CLI.
-    # provider="claude_code" indicates Ralph's CLI path (not direct Anthropic API).
-    tokens_in = result.tokens_in
-    tokens_out = result.tokens_out
-    estimated_cost = (
-        tokens_in * _RALPH_COST_PER_1K_INPUT / 1000
-        + tokens_out * _RALPH_COST_PER_1K_OUTPUT / 1000
-    )
-    latency_ms = result.duration_seconds * 1000.0
+    with tracer.start_as_current_span(SPAN_RALPH_RUN) as ralph_span:
+        # Pre-run span attributes (Epic 43 Story 43.14)
+        ralph_span.set_attribute(ATTR_TASKPACKET_ID, str(taskpacket_id or ""))
+        ralph_span.set_attribute(
+            ATTR_CORRELATION_ID, str(getattr(taskpacket, "correlation_id", ""))
+        )
+        ralph_span.set_attribute(ATTR_RALPH_LOOPBACK_ATTEMPT, loopback_attempt)
+        ralph_span.set_attribute(ATTR_RALPH_STATE_BACKEND, settings.ralph_state_backend)
+        ralph_span.set_attribute(ATTR_RALPH_MODEL, settings.agent_model)
 
-    audit = ModelCallAudit(
-        correlation_id=getattr(taskpacket, "correlation_id", None),
-        task_id=taskpacket_id,
-        step=_RALPH_PIPELINE_STEP,
-        role="developer",
-        provider="claude_code",
-        model=settings.agent_model,
-        tokens_in=tokens_in,
-        tokens_out=tokens_out,
-        cost=estimated_cost,
-        latency_ms=latency_ms,
-    )
-    get_model_audit_store().record(audit)
+        packet_input, intent_input = taskpacket_to_ralph_input(
+            taskpacket,  # type: ignore[arg-type]
+            intent,  # type: ignore[arg-type]
+            loopback_context=loopback_context,
+            complexity_hint=complexity,
+        )
 
-    if taskpacket_id is not None:
-        try:
-            get_budget_enforcer().record_spend(
-                task_id=str(taskpacket_id),
-                step=_RALPH_PIPELINE_STEP,
-                cost=estimated_cost,
-                tokens=tokens_in + tokens_out,
-            )
-        except BudgetExceededError:
-            # Budget exceeded on recording (post-run); log and continue.
-            # The run already completed — we cannot undo it, but we warn loudly.
-            logger.warning(
-                "Budget exceeded on record_spend for TaskPacket %s after Ralph run "
-                "(cost=%.6f, tokens=%d). Run completed but budget limit was breached.",
+        ralph_config = build_ralph_config(
+            model_id=settings.agent_model,
+            max_turns=settings.agent_max_turns,
+            complexity=packet_input.intent.complexity,
+        )
+
+        # Build the TaskInput the agent will read from .ralph/PROMPT.md
+        task_input = from_task_packet(
+            packet_input,
+            intent_input,
+            loopback_context=loopback_context,
+        )
+
+        # Pre-launch budget check (Story 43.10)
+        # Consume max_budget_usd from the pipeline budget before the run starts.
+        # This mirrors the AgentRunner pattern: reserve the max, record actual after.
+        if pipeline_budget is not None:
+            if not pipeline_budget.consume(settings.agent_max_budget_usd):
+                raise BudgetExceededError(
+                    task_id=str(taskpacket_id or "unknown"),
+                    current_spend=pipeline_budget.used,
+                    limit=pipeline_budget.max_total_usd,
+                    step=_RALPH_PIPELINE_STEP,
+                )
+
+        # Select state backend (Story 43.8)
+        # "postgres" — persistent state across retries via ralph_agent_state table
+        # "null"     — no persistence (Slice 1 default)
+        if settings.ralph_state_backend == "postgres" and taskpacket_id is not None:
+            from src.agent.ralph_state import PostgresStateBackend
+
+            state_backend: object = PostgresStateBackend(taskpacket_id)
+            # Discard stale session IDs (TTL from settings, default 2h)
+            await state_backend.clear_session_if_stale(settings.ralph_session_ttl_seconds)  # type: ignore[attr-defined]
+            logger.info(
+                "Ralph using PostgresStateBackend for TaskPacket %s (ttl=%ds)",
                 taskpacket_id,
-                estimated_cost,
-                tokens_in + tokens_out,
+                settings.ralph_session_ttl_seconds,
+            )
+        else:
+            state_backend = NullStateBackend()
+
+        # Write task input to a temp directory (RalphAgent reads from .ralph/)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ralph_dir = Path(tmpdir) / ".ralph"
+            ralph_dir.mkdir(parents=True, exist_ok=True)
+
+            # Write PROMPT.md with the full task prompt
+            (ralph_dir / "PROMPT.md").write_text(task_input.prompt, encoding="utf-8")
+
+            # Write agent instructions to AGENT.md if present
+            if task_input.agent_instructions:
+                (ralph_dir / "AGENT.md").write_text(
+                    task_input.agent_instructions, encoding="utf-8"
+                )
+
+            agent = RalphAgent(
+                config=ralph_config,
+                project_dir=repo_path or tmpdir,
+                state_backend=state_backend,
+                correlation_id=str(getattr(taskpacket, "correlation_id", "")),
             )
 
-    logger.info(
-        "Ralph cost recorded for TaskPacket %s: tokens_in=%d tokens_out=%d cost=%.6f",
-        taskpacket_id,
-        tokens_in,
-        tokens_out,
-        estimated_cost,
-    )
+            # Ensure agent reads from our temp ralph_dir (not repo_path/.ralph)
+            agent.ralph_dir = ralph_dir
 
-    return ralph_result_to_evidence(result, taskpacket_id, intent_version, loopback_attempt)
+            # Expose agent reference for Temporal activity cancellation (Story 43.11).
+            # The activity wrapper monitors this list and calls agent.cancel() on
+            # activity cancellation or wall-clock timeout.
+            if agent_holder is not None:
+                agent_holder.append(agent)
+
+            result = await agent.run()
+
+        intent_version = intent.version
+
+        # Post-run cost recording (Story 43.10)
+        # Estimate cost from token counts returned by Ralph CLI.
+        # provider="claude_code" indicates Ralph's CLI path (not direct Anthropic API).
+        tokens_in = result.tokens_in
+        tokens_out = result.tokens_out
+        estimated_cost = (
+            tokens_in * _RALPH_COST_PER_1K_INPUT / 1000
+            + tokens_out * _RALPH_COST_PER_1K_OUTPUT / 1000
+        )
+        latency_ms = result.duration_seconds * 1000.0
+
+        # Post-run span attributes — token usage, cost, and duration (Story 43.14)
+        ralph_span.set_attribute(ATTR_RALPH_TOKENS_IN, tokens_in)
+        ralph_span.set_attribute(ATTR_RALPH_TOKENS_OUT, tokens_out)
+        ralph_span.set_attribute(ATTR_RALPH_COST_USD, estimated_cost)
+        ralph_span.set_attribute(ATTR_RALPH_DURATION_MS, latency_ms)
+
+        audit = ModelCallAudit(
+            correlation_id=getattr(taskpacket, "correlation_id", None),
+            task_id=taskpacket_id,
+            step=_RALPH_PIPELINE_STEP,
+            role="developer",
+            provider="claude_code",
+            model=settings.agent_model,
+            tokens_in=tokens_in,
+            tokens_out=tokens_out,
+            cost=estimated_cost,
+            latency_ms=latency_ms,
+        )
+        get_model_audit_store().record(audit)
+
+        if taskpacket_id is not None:
+            try:
+                get_budget_enforcer().record_spend(
+                    task_id=str(taskpacket_id),
+                    step=_RALPH_PIPELINE_STEP,
+                    cost=estimated_cost,
+                    tokens=tokens_in + tokens_out,
+                )
+            except BudgetExceededError:
+                # Budget exceeded on recording (post-run); log and continue.
+                # The run already completed — we cannot undo it, but we warn loudly.
+                logger.warning(
+                    "Budget exceeded on record_spend for TaskPacket %s after Ralph run "
+                    "(cost=%.6f, tokens=%d). Run completed but budget limit was breached.",
+                    taskpacket_id,
+                    estimated_cost,
+                    tokens_in + tokens_out,
+                )
+
+        logger.info(
+            "Ralph cost recorded for TaskPacket %s: tokens_in=%d tokens_out=%d cost=%.6f",
+            taskpacket_id,
+            tokens_in,
+            tokens_out,
+            estimated_cost,
+        )
+
+        return ralph_result_to_evidence(result, taskpacket_id, intent_version, loopback_attempt)
 
 
 # ---------------------------------------------------------------------------

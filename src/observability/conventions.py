@@ -86,3 +86,18 @@ ATTR_REMOTE_VERIFY_BRANCH = "thestudio.remote_verify.branch"
 ATTR_REMOTE_VERIFY_CHECKS_COUNT = "thestudio.remote_verify.checks_count"
 ATTR_REMOTE_VERIFY_ALL_PASSED = "thestudio.remote_verify.all_passed"
 ATTR_REMOTE_VERIFY_DURATION_MS = "thestudio.remote_verify.duration_ms"
+
+# Ralph SDK agent spans (Epic 43 Story 43.14)
+SPAN_RALPH_RUN = "ralph.run"
+SPAN_RALPH_ITERATION = "ralph.iteration"
+
+# Ralph span attribute keys
+ATTR_RALPH_MODEL = "thestudio.ralph.model"
+ATTR_RALPH_TURNS = "thestudio.ralph.turns"
+ATTR_RALPH_TOKENS_IN = "thestudio.ralph.tokens_in"
+ATTR_RALPH_TOKENS_OUT = "thestudio.ralph.tokens_out"
+ATTR_RALPH_COST_USD = "thestudio.ralph.cost_usd"
+ATTR_RALPH_DURATION_MS = "thestudio.ralph.duration_ms"
+ATTR_RALPH_STATE_BACKEND = "thestudio.ralph.state_backend"
+ATTR_RALPH_EXIT_STATUS = "thestudio.ralph.exit_status"
+ATTR_RALPH_LOOPBACK_ATTEMPT = "thestudio.ralph.loopback_attempt"
