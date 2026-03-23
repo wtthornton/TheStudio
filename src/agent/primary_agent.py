@@ -4,12 +4,19 @@ Uses the Unified Agent Framework (AgentRunner) with the Developer role
 to implement changes, produce an evidence bundle, and support verification
 loopbacks.
 
+When THESTUDIO_AGENT_MODE=ralph, dispatches to RalphAgent from ralph_sdk
+(Epic 43) instead of the legacy PrimaryAgentRunner. The function signatures
+for implement() and handle_loopback() are unchanged.
+
 Architecture reference: thestudioarc/08-agent-roles.md
 Epic reference: Story 0.5 — Primary Agent
 Epic 23 Story 1.8: Refactored to use AgentRunner framework.
+Epic 43 Story 43.4: Added Ralph SDK dispatch path.
 """
 
 import logging
+import tempfile
+from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -111,6 +118,100 @@ def _parse_changed_files(agent_summary: str) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
+# Ralph SDK dispatch (Epic 43 — Story 43.4)
+# ---------------------------------------------------------------------------
+
+
+async def _implement_ralph(
+    taskpacket: object,  # TaskPacketRow — avoid circular import at module level
+    intent: object,  # IntentSpecRead
+    repo_path: str,
+    loopback_context: str = "",
+    complexity: str = "",
+) -> EvidenceBundle:
+    """Implement using RalphAgent with NullStateBackend (Slice 1 — no persistence).
+
+    Builds the task input from the Ralph bridge, writes it to a temp directory
+    that RalphAgent expects, then runs the agent loop and converts the result
+    to an EvidenceBundle.
+
+    Session persistence (PostgresStateBackend) is added in Slice 2 (Story 43.6).
+
+    Args:
+        taskpacket: TaskPacketRow ORM object.
+        intent: IntentSpecRead for the current version.
+        repo_path: Local path to the target repository (working directory for Ralph).
+        loopback_context: Formatted verification failures for retry passes.
+        complexity: Complexity hint string from the caller.
+
+    Returns:
+        EvidenceBundle from the Ralph run.
+    """
+    # Late imports keep ralph_sdk out of the module-level dependency graph
+    # so legacy mode works without the SDK installed.
+    from ralph_sdk import NullStateBackend, RalphAgent
+    from ralph_sdk.converters import from_task_packet
+
+    from src.agent.ralph_bridge import (
+        build_ralph_config,
+        ralph_result_to_evidence,
+        taskpacket_to_ralph_input,
+    )
+
+    packet_input, intent_input = taskpacket_to_ralph_input(
+        taskpacket,  # type: ignore[arg-type]
+        intent,  # type: ignore[arg-type]
+        loopback_context=loopback_context,
+        complexity_hint=complexity,
+    )
+
+    ralph_config = build_ralph_config(
+        model_id=settings.agent_model,
+        max_turns=settings.agent_max_turns,
+        complexity=packet_input.intent.complexity,
+    )
+
+    # Build the TaskInput the agent will read from .ralph/PROMPT.md
+    task_input = from_task_packet(
+        packet_input,
+        intent_input,
+        loopback_context=loopback_context,
+    )
+
+    # Write task input to a temp directory (RalphAgent reads from .ralph/)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        ralph_dir = Path(tmpdir) / ".ralph"
+        ralph_dir.mkdir(parents=True, exist_ok=True)
+
+        # Write PROMPT.md with the full task prompt
+        (ralph_dir / "PROMPT.md").write_text(task_input.prompt, encoding="utf-8")
+
+        # Write agent instructions to AGENT.md if present
+        if task_input.agent_instructions:
+            (ralph_dir / "AGENT.md").write_text(
+                task_input.agent_instructions, encoding="utf-8"
+            )
+
+        agent = RalphAgent(
+            config=ralph_config,
+            project_dir=repo_path or tmpdir,
+            state_backend=NullStateBackend(),
+            correlation_id=str(getattr(taskpacket, "correlation_id", "")),
+        )
+
+        # Ensure agent reads from our temp ralph_dir (not repo_path/.ralph)
+        agent.ralph_dir = ralph_dir
+
+        result = await agent.run()
+
+    taskpacket_id = taskpacket.id
+    intent_version = intent.version
+    loopback_attempt = getattr(taskpacket, "loopback_count", 0)
+
+    return ralph_result_to_evidence(result, taskpacket_id, intent_version, loopback_attempt)
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -190,11 +291,30 @@ async def implement(
         )
 
         logger.info(
-            "Starting Primary Agent for TaskPacket %s (intent v%d)",
+            "Starting Primary Agent for TaskPacket %s (intent v%d, mode=%s)",
             taskpacket_id,
             intent.version,
+            settings.agent_mode,
         )
 
+        # Dispatch to Ralph SDK when agent_mode="ralph" (Epic 43)
+        if settings.agent_mode == "ralph":
+            evidence = await _implement_ralph(
+                taskpacket,
+                intent,
+                repo_path,
+                loopback_context="",
+                complexity=complexity,
+            )
+            span.set_attribute("thestudio.files_changed_count", len(evidence.files_changed))
+            logger.info(
+                "Primary Agent (ralph) completed for TaskPacket %s: %d files changed",
+                taskpacket_id,
+                len(evidence.files_changed),
+            )
+            return evidence
+
+        # Legacy path: PrimaryAgentRunner (default)
         runner = PrimaryAgentRunner(config)
         result = await runner.run(ctx)
 
@@ -300,11 +420,28 @@ async def handle_loopback(
         )
 
         logger.info(
-            "Starting loopback %d for TaskPacket %s",
+            "Starting loopback %d for TaskPacket %s (mode=%s)",
             taskpacket.loopback_count,
             taskpacket_id,
+            settings.agent_mode,
         )
 
+        # Dispatch to Ralph SDK when agent_mode="ralph" (Epic 43)
+        if settings.agent_mode == "ralph":
+            from src.agent.ralph_bridge import build_verification_loopback_context
+
+            loopback_ctx = build_verification_loopback_context(verification_result)
+            evidence = await _implement_ralph(
+                taskpacket,
+                intent,
+                repo_path,
+                loopback_context=loopback_ctx,
+                complexity=complexity,
+            )
+            span.set_attribute("thestudio.files_changed_count", len(evidence.files_changed))
+            return evidence
+
+        # Legacy path: PrimaryAgentRunner
         runner = PrimaryAgentRunner(config)
         result = await runner.run(ctx)
 

@@ -122,6 +122,15 @@ class Settings(BaseSettings):
     # Approval notification channels (Epic 24)
     slack_approval_webhook_url: str = ""  # Slack incoming webhook for approvals
 
+    # Primary Agent mode (Epic 43 — Ralph SDK Integration)
+    # Controls which implementation engine powers the Primary Agent:
+    #   "legacy"    — current PrimaryAgentRunner (Claude Agent SDK, single-call)
+    #   "ralph"     — RalphAgent from ralph_sdk (loop, session continuity, circuit breaking)
+    #   "container" — Docker-isolated agent (Epic 25)
+    # Default is "legacy" for safe rollout. Switch to "ralph" after validation.
+    # Requires THESTUDIO_AGENT_LLM_ENABLED__DEVELOPER=true to take effect.
+    agent_mode: str = "legacy"  # "legacy" | "ralph" | "container"
+
     # Container isolation (Epic 25)
     # Global mode: "process" (in-process, default) or "container" (Docker isolation)
     agent_isolation: str = "process"  # "process" or "container"
