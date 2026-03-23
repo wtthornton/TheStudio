@@ -55,7 +55,6 @@ from src.observability.tracing import get_tracer
 from src.settings import settings
 from src.verification.gate import VerificationResult
 
-
 # ---------------------------------------------------------------------------
 # Cost estimation constants for Ralph runs (Story 43.10)
 # ---------------------------------------------------------------------------
@@ -111,11 +110,11 @@ class PrimaryAgentRunner(AgentRunner):
 
     def build_system_prompt(self, context: AgentContext) -> str:
         """Return the pre-built system prompt from context.extra."""
-        return context.extra["system_prompt"]
+        return str(context.extra["system_prompt"])
 
     def build_user_prompt(self, context: AgentContext) -> str:
         """Return the pre-built user prompt from context.extra."""
-        return context.extra["user_prompt"]
+        return str(context.extra["user_prompt"])
 
 
 # ---------------------------------------------------------------------------
@@ -154,7 +153,7 @@ async def _implement_ralph(
     loopback_context: str = "",
     complexity: str = "",
     pipeline_budget: PipelineBudget | None = None,
-    agent_holder: list | None = None,
+    agent_holder: list[object] | None = None,
 ) -> EvidenceBundle:
     """Implement using RalphAgent with configurable state backend.
 
@@ -297,7 +296,7 @@ async def _implement_ralph(
 
             result = await agent.run()
 
-        intent_version = intent.version
+        intent_version = int(getattr(intent, "version", 1))
 
         # Post-run cost recording (Story 43.10)
         # Estimate cost from token counts returned by Ralph CLI.
@@ -357,7 +356,8 @@ async def _implement_ralph(
             estimated_cost,
         )
 
-        return ralph_result_to_evidence(result, taskpacket_id, intent_version, loopback_attempt)
+        evidence_tp_id: UUID = taskpacket_id if isinstance(taskpacket_id, UUID) else UUID(str(taskpacket_id))
+        return ralph_result_to_evidence(result, evidence_tp_id, intent_version, loopback_attempt)
 
 
 # ---------------------------------------------------------------------------

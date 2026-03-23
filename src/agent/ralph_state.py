@@ -13,15 +13,15 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
-
-logger = logging.getLogger(__name__)
 
 from sqlalchemy import text
 
 from src.db.connection import get_async_session
+
+logger = logging.getLogger(__name__)
 
 __all__ = ["PostgresStateBackend"]
 
@@ -119,7 +119,8 @@ class PostgresStateBackend:
         raw = await self._read_raw(key)
         if raw is None:
             return {}
-        return json.loads(raw)  # type: ignore[return-value]
+        loaded: dict[str, Any] = json.loads(raw)
+        return loaded
 
     async def _write_json(self, key: str, data: dict[str, Any]) -> None:
         """Write a dict as JSON."""
@@ -249,10 +250,10 @@ class PostgresStateBackend:
         if updated_at is None:
             return False
 
-        now = datetime.now(tz=timezone.utc)
+        now = datetime.now(tz=UTC)
         if updated_at.tzinfo is None:
             # Treat naive timestamps as UTC (matches the table's TIMESTAMPTZ default)
-            updated_at = updated_at.replace(tzinfo=timezone.utc)
+            updated_at = updated_at.replace(tzinfo=UTC)
 
         age_seconds = (now - updated_at).total_seconds()
         if age_seconds <= ttl_seconds:

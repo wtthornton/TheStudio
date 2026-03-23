@@ -50,7 +50,7 @@ _COMPLEXITY_BAND_MAP: dict[str, ComplexityBand] = {
 
 
 def _map_complexity(
-    complexity_index: dict | None,
+    complexity_index: dict[str, object] | None,
     complexity_hint: str = "",
 ) -> ComplexityBand:
     """Map TaskPacket complexity data to a Ralph ComplexityBand.
