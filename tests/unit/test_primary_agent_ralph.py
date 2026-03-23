@@ -58,6 +58,9 @@ def _mock_task_result(summary: str = "Done") -> MagicMock:
     result.error = ""
     result.loop_count = 2
     result.duration_seconds = 10.0
+    # Must be int so cost arithmetic in _implement_ralph (Story 43.10) works
+    result.tokens_in = 100
+    result.tokens_out = 200
     result.status = RalphStatus(
         progress_summary=summary,
         exit_signal=True,

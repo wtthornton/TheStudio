@@ -25,7 +25,7 @@
 - [x] 43.9: Integration tests `tests/integration/test_ralph_state.py` — round-trip, isolation, concurrent upsert, TTL.
 - [x] 43.10: Cost recording after Ralph run — `ModelCallAudit`, `BudgetEnforcer.record_spend()`, `PipelineBudget.consume()` check before launch.
 - [x] 43.11: `implement_activity` ralph mode with Temporal heartbeat every 30s. Timeout = `ralph_timeout_minutes + 5`. Cancel via `agent.cancel()`.
-- [ ] 43.12: Unit tests for cost recording + activity heartbeat.
+- [x] 43.12: Unit tests for cost recording + activity heartbeat.
 
 ---
 
