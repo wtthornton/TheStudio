@@ -2,10 +2,14 @@
  * S4.F10: SSE disconnection banner, S4.F11: Reconnection with full state refresh,
  * S4.F12: API error cards, S4.F13: Empty state Pipeline Rail,
  * S4.F14: Empty states for Activity Stream, Gate Inspector, Minimap
+ * Epic 46.2: EmptyPipelineRail uses EmptyState + ImportModal CTA
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { usePipelineStore } from '../stores/pipeline-store'
+import { EmptyState } from './EmptyState'
+
+const ImportModal = lazy(() => import('./github/ImportModal'))
 
 // --- S4.F10 + S4.F11: SSE Disconnection Banner ---
 
@@ -114,26 +118,66 @@ export function ErrorCard({ message, onRetry, onDismiss }: ErrorCardProps) {
   )
 }
 
-// --- S4.F13: Empty State Pipeline Rail ---
+// --- Pipeline wireframe SVG illustration ---
+
+function PipelineWireframeSVG() {
+  return (
+    <svg
+      width="80"
+      height="48"
+      viewBox="0 0 80 48"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      {/* Stage boxes */}
+      <rect x="2"  y="16" width="14" height="16" rx="3" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="22" y="16" width="14" height="16" rx="3" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="42" y="16" width="14" height="16" rx="3" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="62" y="16" width="14" height="16" rx="3" stroke="currentColor" strokeWidth="1.5" />
+      {/* Connector arrows */}
+      <line x1="16" y1="24" x2="22" y2="24" stroke="currentColor" strokeWidth="1.5" strokeDasharray="3 2" />
+      <line x1="36" y1="24" x2="42" y2="24" stroke="currentColor" strokeWidth="1.5" strokeDasharray="3 2" />
+      <line x1="56" y1="24" x2="62" y2="24" stroke="currentColor" strokeWidth="1.5" strokeDasharray="3 2" />
+      {/* Dots inside boxes to suggest content */}
+      <circle cx="9"  cy="24" r="2" fill="currentColor" opacity="0.4" />
+      <circle cx="29" cy="24" r="2" fill="currentColor" opacity="0.4" />
+      <circle cx="49" cy="24" r="2" fill="currentColor" opacity="0.4" />
+      <circle cx="69" cy="24" r="2" fill="currentColor" opacity="0.4" />
+    </svg>
+  )
+}
+
+// --- S4.F13 / Epic 46.2: Empty State Pipeline Rail ---
 
 export function EmptyPipelineRail() {
+  const [importOpen, setImportOpen] = useState(false)
+
   return (
-    <div className="flex flex-col items-center gap-4 py-12" data-testid="empty-pipeline-rail">
-      <svg width="64" height="64" viewBox="0 0 64 64" className="text-gray-600">
-        <rect x="8" y="24" width="48" height="16" rx="4" fill="none" stroke="currentColor" strokeWidth="2" />
-        <line x1="20" y1="32" x2="44" y2="32" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" />
-      </svg>
-      <p className="text-sm text-gray-500">No tasks in the pipeline</p>
-      <div className="flex gap-3">
-        <button className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-500" disabled>
-          Import Issues
-        </button>
-        <button className="rounded-lg border border-gray-600 px-4 py-2 text-sm text-gray-300 hover:border-gray-500" disabled>
-          Create Task
-        </button>
-      </div>
-      <p className="text-xs text-gray-600">Button actions available in Phase 2</p>
-    </div>
+    <>
+      <EmptyState
+        data-testid="empty-pipeline-rail"
+        icon={<PipelineWireframeSVG />}
+        heading="No tasks in the pipeline"
+        description="Import a GitHub issue to kick off the AI delivery pipeline — from intent to draft PR."
+        primaryAction={{
+          label: 'Import an Issue',
+          onClick: () => setImportOpen(true),
+        }}
+        secondaryAction={{
+          label: 'Learn about the pipeline',
+          href: '/admin/ui/settings',
+        }}
+      />
+      {importOpen && (
+        <Suspense fallback={null}>
+          <ImportModal
+            open={importOpen}
+            onClose={() => setImportOpen(false)}
+          />
+        </Suspense>
+      )}
+    </>
   )
 }
 

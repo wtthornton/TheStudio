@@ -6,6 +6,7 @@ import { TriageCard } from './TriageCard'
 import { EditPanel } from './EditPanel'
 import type { RejectionReason } from '../../lib/api'
 import { useRepoContext } from '../../contexts/RepoContext'
+import { EmptyState } from '../EmptyState'
 
 export function TriageQueue() {
   const { tasks, loading, error, loadTasks, accept, reject, edit } = useTriageStore()
@@ -78,10 +79,27 @@ export function TriageQueue() {
 
       {/* Empty state */}
       {tasks.length === 0 && !error && (
-        <div className="text-center py-12 text-gray-500">
-          <p className="text-lg mb-2">No issues awaiting triage</p>
-          <p className="text-sm">New issues will appear here when triage mode is enabled.</p>
-        </div>
+        <EmptyState
+          data-testid="empty-triage-queue"
+          icon={
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+              <rect x="6" y="10" width="36" height="28" rx="4" stroke="currentColor" strokeWidth="1.5" />
+              <line x1="13" y1="18" x2="35" y2="18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <line x1="13" y1="24" x2="29" y2="24" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <line x1="13" y1="30" x2="22" y2="30" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          }
+          heading="No issues awaiting triage"
+          description="Issues sent to the webhook endpoint will appear here for your review before entering the pipeline."
+          primaryAction={{
+            label: 'Configure Webhook',
+            href: '/admin/ui/settings',
+          }}
+          secondaryAction={{
+            label: 'Learn about triage mode',
+            href: '/admin/ui/settings#triage',
+          }}
+        />
       )}
 
       {/* Task list */}
