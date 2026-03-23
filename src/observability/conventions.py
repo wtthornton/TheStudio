@@ -72,3 +72,17 @@ ATTR_OUTCOME = "thestudio.outcome"
 ATTR_AUTO_MERGE_ENABLED = "thestudio.auto_merge_enabled"
 ATTR_MERGE_METHOD = "thestudio.merge_method"
 ATTR_EXECUTE_TIER_ACTIVE = "thestudio.execute_tier_active"
+
+# Remote verification spans (Epic 40 Story 40.13)
+SPAN_REMOTE_VERIFY = "remote_verify"
+SPAN_REMOTE_VERIFY_CLONE = "remote_verify.clone"
+SPAN_REMOTE_VERIFY_INSTALL = "remote_verify.install"
+SPAN_REMOTE_VERIFY_LINT = "remote_verify.lint"
+SPAN_REMOTE_VERIFY_TEST = "remote_verify.test"
+
+# Remote verification attribute keys
+ATTR_REMOTE_VERIFY_MODE = "thestudio.remote_verify.mode"
+ATTR_REMOTE_VERIFY_BRANCH = "thestudio.remote_verify.branch"
+ATTR_REMOTE_VERIFY_CHECKS_COUNT = "thestudio.remote_verify.checks_count"
+ATTR_REMOTE_VERIFY_ALL_PASSED = "thestudio.remote_verify.all_passed"
+ATTR_REMOTE_VERIFY_DURATION_MS = "thestudio.remote_verify.duration_ms"

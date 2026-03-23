@@ -508,3 +508,167 @@ async def list_experts_registry(
         "experts": [s.model_dump() for s in summaries],
         "total": len(summaries),
     }
+
+
+# ============================================================
+# Remote Verification API (Epic 40 Story 40.14)
+# ============================================================
+
+
+class VerifyRequest(BaseModel):
+    """Optional overrides for the remote verification trigger."""
+
+    branch: str = ""
+    changed_files: list[str] = Field(default_factory=list)
+    mode: str = "subprocess"  # "subprocess" or "container"
+
+
+class VerifyCheckResult(BaseModel):
+    """Single verification check result."""
+
+    name: str
+    passed: bool
+    details: str = ""
+    duration_ms: int = 0
+
+
+class VerifyResponse(BaseModel):
+    """Response from the admin verify endpoint."""
+
+    taskpacket_id: str
+    passed: bool
+    checks: list[VerifyCheckResult] = Field(default_factory=list)
+    error: str = ""
+
+
+@platform_router.post(
+    "/verify/{taskpacket_id}",
+    dependencies=[Depends(require_permission(Permission.RERUN_VERIFICATION))],
+    response_model=VerifyResponse,
+)
+async def admin_trigger_verify(
+    taskpacket_id: str,
+    body: VerifyRequest | None = None,
+    user_id: Annotated[str, Depends(get_current_user_id)] = "",
+) -> VerifyResponse:
+    """Trigger remote verification for a TaskPacket.
+
+    Looks up the TaskPacket and its repo profile, then runs the remote
+    verification pipeline. Returns the verification results as JSON.
+
+    Requires RERUN_VERIFICATION permission (Operator+).
+    """
+    from src.db.connection import get_async_session
+    from src.models.taskpacket_crud import get_by_id as get_taskpacket
+    from src.repo.repo_profile_crud import get_by_repo
+    from src.settings import settings
+    from src.verification.remote.orchestrator import verify_remote
+
+    request = body or VerifyRequest()
+
+    # Load TaskPacket
+    try:
+        from uuid import UUID as _UUID
+
+        tp_uuid = _UUID(taskpacket_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid UUID: {taskpacket_id}") from exc
+
+    async with get_async_session() as session:
+        tp = await get_taskpacket(session, tp_uuid)
+
+    if tp is None:
+        raise HTTPException(status_code=404, detail=f"TaskPacket {taskpacket_id} not found")
+
+    # Parse repo owner/name
+    try:
+        owner, repo_name = tp.repo.split("/", 1)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid repo format: {tp.repo} (expected owner/repo)",
+        ) from exc
+
+    # Load repo profile for verification config
+    async with get_async_session() as session:
+        profile = await get_by_repo(session, owner, repo_name)
+
+    if profile is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No repo profile found for {tp.repo}",
+        )
+
+    if not profile.remote_verification_enabled:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Remote verification is not enabled for {tp.repo}",
+        )
+
+    # Get GitHub token
+    token = settings.intake_poll_token
+    if not token:
+        raise HTTPException(
+            status_code=500,
+            detail="No GitHub token configured for remote verification",
+        )
+
+    # Determine branch and changed files
+    branch = request.branch or getattr(tp, "branch", "") or "main"
+    changed_files = request.changed_files or []
+
+    logger.info(
+        "admin.verify.start taskpacket=%s repo=%s branch=%s mode=%s user=%s",
+        taskpacket_id,
+        tp.repo,
+        branch,
+        request.mode,
+        user_id,
+    )
+
+    try:
+        check_results = await verify_remote(
+            owner=owner,
+            repo=repo_name,
+            branch=branch,
+            token=token,
+            changed_files=changed_files,
+            test_command=profile.test_command,
+            lint_command=profile.lint_command,
+            install_command=profile.install_command,
+            verify_timeout_seconds=profile.verify_timeout_seconds,
+            clone_depth=profile.clone_depth,
+            remote_verify_mode=request.mode,
+            taskpacket_id=taskpacket_id,
+            correlation_id=str(tp.correlation_id),
+        )
+    except Exception as exc:
+        logger.exception("admin.verify.error taskpacket=%s", taskpacket_id)
+        return VerifyResponse(
+            taskpacket_id=taskpacket_id,
+            passed=False,
+            error=str(exc),
+        )
+
+    all_passed = all(cr.passed for cr in check_results)
+
+    logger.info(
+        "admin.verify.complete taskpacket=%s passed=%s checks=%d",
+        taskpacket_id,
+        all_passed,
+        len(check_results),
+    )
+
+    return VerifyResponse(
+        taskpacket_id=taskpacket_id,
+        passed=all_passed,
+        checks=[
+            VerifyCheckResult(
+                name=cr.name,
+                passed=cr.passed,
+                details=cr.details,
+                duration_ms=cr.duration_ms,
+            )
+            for cr in check_results
+        ],
+    )
