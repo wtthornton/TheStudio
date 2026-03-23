@@ -63,20 +63,30 @@ cd infra
 cp .env.example .env
 # Edit .env — set THESTUDIO_ENCRYPTION_KEY (required), POSTGRES_PASSWORD, etc.
 
+# Vendor ralph-sdk (required before first build)
+cp -r /path/to/ralph-claude-code/sdk/* vendor/ralph-sdk/
+
 # Development (mock providers)
 docker compose up -d
 
-# Production (real providers, resource limits)
+# Production (real providers, Caddy TLS, resource limits)
 docker compose -f docker-compose.prod.yml up -d
 ```
 
-**Services:** app (`:8000`), postgres (`:5434`), temporal (`:7233`), temporal-ui (`:8088`), nats (`:4222`)
+**Services:** app, postgres, temporal, nats, caddy (TLS reverse proxy), backup sidecar
 
-**Health checks:** `/healthz` (liveness), `/readyz` (DB connectivity). **URLs:** Dev app and admin UI at `http://localhost:8000` (admin: `http://localhost:8000/admin/ui/`). Production (prod compose) uses ports 9080 (HTTP) and 9443 (HTTPS). See [docs/URLs.md](docs/URLs.md) for the full URL reference.
+**Health checks:**
+| Endpoint | Purpose |
+|----------|---------|
+| `/healthz` | Liveness (Docker healthcheck, load balancers) |
+| `/readyz` | Readiness (DB connectivity) |
+| `/health/ralph` | Ralph agent mode status (SDK + CLI availability) |
+
+**URLs:** Dev at `http://localhost:8000`. Production at `https://localhost:9443` (Caddy, self-signed TLS). See [docs/URLs.md](docs/URLs.md) for the full reference.
 
 **Database backup:**
 ```bash
-./backup-db.sh  # saves to infra/backups/, rotates last 30
+cd infra && ./backup-db.sh  # saves to infra/backups/, rotates last 30
 ```
 
 ## Project Structure

@@ -37,7 +37,7 @@ Automated tests that verify the full Docker Compose stack builds, starts, connec
 
 | Test file | What it proves |
 |-----------|---------------|
-| `test_api_smoke.py` | `/healthz`, `/admin/health`, `/docs`, and webhook endpoint respond correctly |
+| `test_api_smoke.py` | `/healthz`, `/admin/health`, `/health/ralph`, `/docs`, and webhook endpoint respond correctly |
 | `test_pipeline_smoke.py` | A webhook POST flows through intake and creates a TaskPacket (verified via admin API) |
 | `test_lifecycle.py` | Graceful shutdown (exit 0), restart recovery, and Temporal dependency failure handling |
 

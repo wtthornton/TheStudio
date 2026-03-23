@@ -73,7 +73,7 @@ services:
       temporal:
         condition: service_healthy
       nats:
-        condition: service_started
+        condition: service_healthy
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./github-app.pem:/app/infra/github-app.pem:ro
@@ -210,8 +210,10 @@ services:
   pg-proxy:
     image: alpine/socat
     command: "tcp-listen:5432,fork,reuseaddr tcp-connect:postgres:5432"
+    # Bind to localhost only — prevents external access to the database.
+    # Remove this service entirely if remote DB access is not needed.
     ports:
-      - "5434:5432"
+      - "127.0.0.1:5434:5432"
     depends_on:
       postgres:
         condition: service_healthy
@@ -221,9 +223,15 @@ services:
 
   nats:
     image: nats:2.10-alpine
-    command: ["--jetstream", "--store_dir", "/data"]
+    command: ["--jetstream", "--store_dir", "/data", "-m", "8222"]
     volumes:
       - natsdata:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8222/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
     restart: unless-stopped
     networks:
       - thestudio-net

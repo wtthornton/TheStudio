@@ -31,6 +31,18 @@ class TestWebhookDeployed:
         assert r.status_code == 200
         assert r.json()["status"] == "ok"
 
+    def test_ralph_health_through_caddy(self, p0_base_url: str) -> None:
+        """Ralph health endpoint is reachable through Caddy and reports status."""
+        r = httpx.get(f"{p0_base_url}/health/ralph", verify=False, timeout=5)
+        assert r.status_code == 200
+        data = r.json()
+        assert data["status"] in ("ok", "degraded", "unavailable")
+        assert "agent_mode" in data
+        assert "sdk_importable" in data
+        assert "cli_available" in data
+        # SDK must always be importable in the deployed image
+        assert data["sdk_importable"] is True
+
     def test_webhook_rejects_unsigned_payload(
         self, p0_base_url: str, registered_test_repo: dict,
     ) -> None:

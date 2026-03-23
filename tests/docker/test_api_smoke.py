@@ -31,6 +31,16 @@ class TestHealthEndpoints:
         data = r.json()
         assert "overall_status" in data
 
+    def test_ralph_health_returns_200(self, http_client: httpx.Client) -> None:
+        """Verify /health/ralph endpoint returns status and required fields."""
+        r = http_client.get("/health/ralph")
+        assert r.status_code == 200
+        data = r.json()
+        assert data["status"] in ("ok", "degraded", "unavailable")
+        assert "agent_mode" in data
+        assert "sdk_importable" in data
+        assert "cli_available" in data
+
 
 class TestOpenAPI:
     """Verify OpenAPI docs are served."""

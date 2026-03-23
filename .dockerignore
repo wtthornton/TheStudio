@@ -1,0 +1,54 @@
+# Git
+.git
+.gitignore
+
+# Tests & docs
+tests/
+docs/
+thestudioarc/
+experts/
+htmlcov/
+frontend/
+
+# IDE & tools
+.claude/
+.ralph/
+.vscode/
+.cursor/
+*.code-workspace
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Build artifacts
+dist/
+build/
+
+# Tool caches
+.tapps-mcp-cache/
+.tapps-mcp.yaml
+node_modules/
+
+# Infra (mounted separately, not baked into image)
+infra/
+
+# Env files (secrets)
+.env
+.env.*
+!.env.example
+
+# Other
+*.md
+!README.md
+LICENSE
+CLAUDE.local.md.example
+uv.lock
+scripts/
+thestudio-production-test-rig/
+docker/

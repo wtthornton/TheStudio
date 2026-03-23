@@ -434,6 +434,27 @@ docker --version        # Docker Engine 24+
 docker compose version  # Docker Compose v2.20+
 ```
 
+## Docker Image
+
+The `Dockerfile` uses a **multi-stage build** (builder + runtime) to minimize the production image:
+
+- **Builder stage:** installs `gcc`, `libpq-dev`, compiles native extensions, installs all Python deps.
+- **Runtime stage:** copies only `libpq5` (runtime) + `curl` (healthcheck) + installed site-packages. No compiler toolchain.
+
+### Vendored dependencies
+
+`ralph-sdk` is not on PyPI and is vendored locally. Before building:
+
+```bash
+cp -r /path/to/ralph-claude-code/sdk/* vendor/ralph-sdk/
+```
+
+The Dockerfile rewrites the local dev path in `pyproject.toml` to `vendor/ralph-sdk` at build time via `sed`.
+
+### .dockerignore
+
+A `.dockerignore` file excludes `.git/`, `tests/`, `docs/`, caches, `.env` files, and `infra/` from the build context (~7 MB vs full repo).
+
 ## Quick start (first-time production)
 
 To bring the production stack up with **mock** LLM/GitHub (no real API keys):
@@ -525,10 +546,11 @@ The startup order is:
 1. **postgres** — database (waits for healthcheck)
 2. **temporal-migrations** — one-shot schema setup (runs and exits)
 3. **temporal** — workflow engine (waits for migrations to complete)
-4. **nats** — message bus
-5. **app** — TheStudio application
+4. **nats** — JetStream message bus (waits for healthcheck)
+5. **app** — TheStudio application (waits for postgres, temporal, and nats healthy)
 6. **caddy** — TLS reverse proxy (waits for app healthcheck)
 7. **backup** — daily backup sidecar
+8. **pg-proxy** — optional socat proxy for host DB access (localhost:5434 only)
 
 ### Verify health
 ```bash
@@ -538,6 +560,15 @@ bash wait-for-stack.sh
 # Check HTTPS endpoint (shared-host ports: 9080 HTTP, 9443 HTTPS)
 curl -k https://localhost:9443/healthz
 # Expected: {"status":"ok"}
+
+# Check readiness (DB connectivity)
+curl -k https://localhost:9443/readyz
+# Expected: {"status":"ready"}
+
+# Check Ralph agent mode status
+curl -k https://localhost:9443/health/ralph
+# Expected: {"agent_mode":"legacy","sdk_importable":true,"cli_available":false,"status":"ok",...}
+
 # Full URL reference: docs/URLs.md
 
 # Check service status
@@ -586,10 +617,16 @@ In dev mode (`LLM_PROVIDER=mock`), auth is bypassed — the app auto-authenticat
    docker run --rm caddy:2.9-alpine caddy hash-password --plaintext 'YOUR_SECURE_PASSWORD'
    ```
 
-2. **Add credentials to `infra/.env`** (double all `$` signs to escape Docker Compose interpolation):
+2. **Add credentials to `infra/.env`**. Docker Compose interpolates `$` as variable references, so **double every `$` in the hash** (`$$2a$$14$$...`):
    ```ini
    ADMIN_USER=admin
-   ADMIN_PASSWORD_HASH=$$2a$$14$$...the hash from step 1 with $$ escaping...
+   ADMIN_PASSWORD=YourSecurePassword
+   # The hash below has every $ doubled for Docker Compose escaping:
+   ADMIN_PASSWORD_HASH=$$2a$$14$$abcdef...rest-of-hash...
+   ```
+   **Tip:** Use this one-liner to generate an already-escaped hash:
+   ```bash
+   docker run --rm caddy:2.9-alpine caddy hash-password --plaintext 'YOUR_PASSWORD' | sed 's/\$/\$\$/g'
    ```
 
 3. **Seed the admin user in the RBAC table** (first time only):

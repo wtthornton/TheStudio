@@ -71,6 +71,7 @@ MIGRATIONS = [
     "src.db.migrations.046_auto_merge_outcomes",
     "src.db.migrations.047_rule_success_tracking",
     "src.db.migrations.048_ralph_agent_state",
+    "src.db.migrations.049_taskpacket_triage_fields",
 ]
 
 
