@@ -80,6 +80,34 @@ class RepoProfileRow(Base):
         String(20), nullable=False, default="squash",
         comment="Preferred merge method: squash, merge, or rebase",
     )
+    remote_verification_enabled: Mapped[bool] = mapped_column(
+        nullable=False, default=False,
+        comment="When True, verify_activity clones the branch and runs the repo's own test suite",
+    )
+    test_command: Mapped[str] = mapped_column(
+        String(512), nullable=False, default="python -m pytest --tb=short -q",
+        comment="Command to run the repo's test suite in the cloned workspace",
+    )
+    lint_command: Mapped[str] = mapped_column(
+        String(512), nullable=False, default="ruff check .",
+        comment="Command to run the repo's linter in the cloned workspace",
+    )
+    install_command: Mapped[str] = mapped_column(
+        String(512), nullable=False, default="pip install -e .",
+        comment="Command to install repo dependencies before running tests/lint",
+    )
+    verify_timeout_seconds: Mapped[int] = mapped_column(
+        nullable=False, default=900,
+        comment="Total wall-clock timeout (seconds) for the entire remote verification run",
+    )
+    clone_depth: Mapped[int] = mapped_column(
+        nullable=False, default=1,
+        comment="Git shallow clone depth; set higher for repos that need full history",
+    )
+    remote_verify_mode: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="subprocess",
+        comment="Execution mode for remote verification: 'subprocess' or 'container'",
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -138,6 +166,13 @@ class RepoProfileRead(BaseModel):
     poll_interval_minutes: int | None = None
     readiness_gate_enabled: bool = False
     merge_method: str = "squash"
+    remote_verification_enabled: bool = False
+    test_command: str = "python -m pytest --tb=short -q"
+    lint_command: str = "ruff check ."
+    install_command: str = "pip install -e ."
+    verify_timeout_seconds: int = 900
+    clone_depth: int = 1
+    remote_verify_mode: str = "subprocess"
     created_at: datetime
     updated_at: datetime
     deleted_at: datetime | None = None
@@ -158,3 +193,10 @@ class RepoProfileUpdate(BaseModel):
     poll_interval_minutes: int | None = None
     readiness_gate_enabled: bool | None = None
     merge_method: str | None = None
+    remote_verification_enabled: bool | None = None
+    test_command: str | None = None
+    lint_command: str | None = None
+    install_command: str | None = None
+    verify_timeout_seconds: int | None = None
+    clone_depth: int | None = None
+    remote_verify_mode: str | None = None
