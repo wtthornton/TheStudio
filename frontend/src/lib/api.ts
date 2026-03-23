@@ -1092,8 +1092,10 @@ export interface SummaryResponse {
 export async function fetchAnalyticsThroughput(
   period: AnalyticsPeriod = '30d',
   bucket: AnalyticsBucket = 'day',
+  repo?: string | null,
 ): Promise<ThroughputResponse> {
-  const url = withToken(`${API_BASE}/analytics/throughput?period=${period}&bucket=${bucket}`)
+  let url = withToken(`${API_BASE}/analytics/throughput?period=${period}&bucket=${bucket}`)
+  if (repo) url += `&repo=${encodeURIComponent(repo)}`
   const res = await fetch(url)
   if (!res.ok) throw new Error(`Failed to fetch throughput: ${res.status}`)
   return res.json()
@@ -1101,8 +1103,10 @@ export async function fetchAnalyticsThroughput(
 
 export async function fetchAnalyticsBottlenecks(
   period: AnalyticsPeriod = '30d',
+  repo?: string | null,
 ): Promise<BottleneckResponse> {
-  const url = withToken(`${API_BASE}/analytics/bottlenecks?period=${period}`)
+  let url = withToken(`${API_BASE}/analytics/bottlenecks?period=${period}`)
+  if (repo) url += `&repo=${encodeURIComponent(repo)}`
   const res = await fetch(url)
   if (!res.ok) throw new Error(`Failed to fetch bottlenecks: ${res.status}`)
   return res.json()
@@ -1110,8 +1114,10 @@ export async function fetchAnalyticsBottlenecks(
 
 export async function fetchAnalyticsCategories(
   period: AnalyticsPeriod = '30d',
+  repo?: string | null,
 ): Promise<CategoryResponse> {
-  const url = withToken(`${API_BASE}/analytics/categories?period=${period}`)
+  let url = withToken(`${API_BASE}/analytics/categories?period=${period}`)
+  if (repo) url += `&repo=${encodeURIComponent(repo)}`
   const res = await fetch(url)
   if (!res.ok) throw new Error(`Failed to fetch categories: ${res.status}`)
   return res.json()
@@ -1119,8 +1125,10 @@ export async function fetchAnalyticsCategories(
 
 export async function fetchAnalyticsFailures(
   period: AnalyticsPeriod = '30d',
+  repo?: string | null,
 ): Promise<FailureResponse> {
-  const url = withToken(`${API_BASE}/analytics/failures?period=${period}`)
+  let url = withToken(`${API_BASE}/analytics/failures?period=${period}`)
+  if (repo) url += `&repo=${encodeURIComponent(repo)}`
   const res = await fetch(url)
   if (!res.ok) throw new Error(`Failed to fetch failures: ${res.status}`)
   return res.json()
@@ -1128,8 +1136,10 @@ export async function fetchAnalyticsFailures(
 
 export async function fetchAnalyticsSummary(
   period: AnalyticsPeriod = '30d',
+  repo?: string | null,
 ): Promise<SummaryResponse> {
-  const url = withToken(`${API_BASE}/analytics/summary?period=${period}`)
+  let url = withToken(`${API_BASE}/analytics/summary?period=${period}`)
+  if (repo) url += `&repo=${encodeURIComponent(repo)}`
   const res = await fetch(url)
   if (!res.ok) throw new Error(`Failed to fetch summary: ${res.status}`)
   return res.json()
@@ -1288,5 +1298,85 @@ export async function fetchAdminRepos(): Promise<AdminReposResponse> {
     // Return empty list on auth errors so the selector degrades gracefully
     return { repos: [], total: 0 }
   }
+  return res.json()
+}
+
+// --- Repo Detail & Config API (Epic 41, Story 41.11) ---
+
+export interface AdminRepoDetail extends AdminRepoItem {
+  default_branch: string
+  required_checks: string[]
+  tool_allowlist: string[]
+  writes_enabled: boolean
+  poll_enabled: boolean
+  poll_interval_minutes: number | null
+  created_at: string
+  updated_at: string
+}
+
+export interface RepoProfileUpdateRequest {
+  default_branch?: string
+  required_checks?: string[]
+  tool_allowlist?: string[]
+  poll_enabled?: boolean
+  poll_interval_minutes?: number | null
+}
+
+/** Fetch full profile for a single repo by ID. */
+export async function fetchAdminRepoDetail(repoId: string): Promise<AdminRepoDetail | null> {
+  const res = await fetch(`/admin/repos/${repoId}`)
+  if (!res.ok) return null
+  return res.json()
+}
+
+/** Update repo profile (default_branch, required_checks, tool_allowlist, poll settings). */
+export async function updateAdminRepoProfile(
+  repoId: string,
+  update: RepoProfileUpdateRequest,
+): Promise<{ id: string; message: string } | null> {
+  const res = await fetch(`/admin/repos/${repoId}/profile`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(update),
+  })
+  if (!res.ok) return null
+  return res.json()
+}
+
+/** Change repo tier (OBSERVE | SUGGEST | EXECUTE). */
+export async function changeAdminRepoTier(
+  repoId: string,
+  tier: string,
+): Promise<{ id: string; message: string } | null> {
+  const res = await fetch(`/admin/repos/${repoId}/tier`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tier }),
+  })
+  if (!res.ok) return null
+  return res.json()
+}
+
+// --- Repo Health API (Epic 41, Story 41.14) ---
+
+export interface RepoHealthItem {
+  id: string
+  full_name: string
+  tier: string
+  status: string
+  active_workflows: number
+  last_task_at: string | null
+  health: string  // "ok" | "degraded" | "idle"
+}
+
+export interface RepoHealthResponse {
+  repos: RepoHealthItem[]
+  total: number
+}
+
+/** Fetch per-repo health summary for fleet dashboard. */
+export async function fetchReposHealth(): Promise<RepoHealthResponse> {
+  const res = await fetch('/admin/repos/health')
+  if (!res.ok) return { repos: [], total: 0 }
   return res.json()
 }

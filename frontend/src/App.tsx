@@ -29,8 +29,9 @@ import { Reputation } from './components/reputation/Reputation'
 import { PIPELINE_STAGES } from './lib/constants'
 import { RepoContextProvider } from './contexts/RepoContext'
 import { RepoSelector } from './components/RepoSelector'
+import { RepoSettings } from './components/RepoSettings'
 
-type Tab = 'pipeline' | 'triage' | 'intent' | 'routing' | 'board' | 'trust' | 'budget' | 'activity' | 'analytics' | 'reputation'
+type Tab = 'pipeline' | 'triage' | 'intent' | 'routing' | 'board' | 'trust' | 'budget' | 'activity' | 'analytics' | 'reputation' | 'repos'
 
 function App() {
   useSSE()
@@ -123,6 +124,13 @@ function App() {
               className={`px-3 py-1.5 text-sm rounded ${activeTab === 'reputation' ? 'bg-gray-700 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}
             >
               Reputation
+            </button>
+            {/* Epic 41 — Repo Settings tab */}
+            <button
+              onClick={() => setActiveTab('repos')}
+              className={`px-3 py-1.5 text-sm rounded ${activeTab === 'repos' ? 'bg-gray-700 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}
+            >
+              Repos
             </button>
           </nav>
         </div>
@@ -242,6 +250,9 @@ function App() {
       ) : activeTab === 'reputation' ? (
         /* Reputation & Outcomes (Epic 39, Slice 2) */
         <Reputation />
+      ) : activeTab === 'repos' ? (
+        /* Repository Settings & Fleet Health (Epic 41, Slice 2 — 41.11 + 41.14) */
+        <RepoSettings />
       ) : (
         /* Steering Activity Log (Epic 37, Slice 5 — 37.28) */
         <SteeringActivityLog />

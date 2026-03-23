@@ -15,6 +15,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.admin.audit import (
@@ -42,6 +43,7 @@ from src.repo.repo_profile import (
     RepoStatus,
     RepoTier,
 )
+from src.models.taskpacket import TaskPacketRow, TaskPacketStatus
 from src.repo.repository import RepoDuplicateError, RepoNotFoundError, RepoRepository
 from src.settings import settings as _settings
 
@@ -1886,3 +1888,104 @@ async def delete_setting(
 
     await session.commit()
     return {"status": "deleted", "key": key}
+
+
+# ---------------------------------------------------------------------------
+# Repo health summary (Epic 41, Story 41.14)
+# ---------------------------------------------------------------------------
+
+# Terminal statuses: TaskPackets in these states are no longer active
+_TERMINAL_STATUSES = {
+    TaskPacketStatus.PUBLISHED,
+    TaskPacketStatus.REJECTED,
+    TaskPacketStatus.FAILED,
+    TaskPacketStatus.ABORTED,
+}
+
+
+class RepoHealthItem(BaseModel):
+    """Per-repo health summary row."""
+
+    id: UUID
+    full_name: str
+    tier: RepoTier
+    status: RepoStatus
+    active_workflows: int
+    last_task_at: datetime | None
+    health: str  # "ok" | "degraded" | "idle"
+
+
+class RepoHealthResponse(BaseModel):
+    """Response from GET /admin/repos/health."""
+
+    repos: list[RepoHealthItem]
+    total: int
+
+
+@router.get(
+    "/repos/health",
+    response_model=RepoHealthResponse,
+    dependencies=[Depends(require_permission(Permission.VIEW_REPOS))],
+)
+async def get_repos_health(
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> RepoHealthResponse:
+    """Per-repo health summary for the fleet dashboard.
+
+    Returns one row per registered repository with:
+    - tier and status
+    - active_workflows: count of TaskPackets in non-terminal states
+    - last_task_at: timestamp of the most recent TaskPacket for this repo
+    - health: "ok" (active + recent tasks), "degraded" (paused/disabled),
+              or "idle" (active but no recent activity)
+
+    Returns:
+        RepoHealthResponse with per-repo health rows.
+    """
+    repo_repository = get_repo_repository()
+    repos = await repo_repository.list_all(session)
+
+    health_items: list[RepoHealthItem] = []
+    for repo in repos:
+        full_name = repo.full_name
+
+        # Count active (non-terminal) workflows for this repo
+        active_count_result = await session.execute(
+            select(func.count(TaskPacketRow.id)).where(
+                TaskPacketRow.repo == full_name,
+                TaskPacketRow.status.notin_(
+                    [s.value for s in _TERMINAL_STATUSES]
+                ),
+            )
+        )
+        active_count: int = active_count_result.scalar_one() or 0
+
+        # Most recent TaskPacket creation timestamp for this repo
+        last_task_result = await session.execute(
+            select(func.max(TaskPacketRow.created_at)).where(
+                TaskPacketRow.repo == full_name
+            )
+        )
+        last_task_at = last_task_result.scalar_one()
+
+        # Determine health string
+        if repo.status != RepoStatus.ACTIVE:
+            health_label = "degraded"
+        elif active_count > 0 or last_task_at is not None:
+            health_label = "ok"
+        else:
+            health_label = "idle"
+
+        health_items.append(
+            RepoHealthItem(
+                id=repo.id,
+                full_name=full_name,
+                tier=repo.tier,
+                status=repo.status,
+                active_workflows=active_count,
+                last_task_at=last_task_at,
+                health=health_label,
+            )
+        )
+
+    return RepoHealthResponse(repos=health_items, total=len(health_items))

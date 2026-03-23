@@ -89,7 +89,7 @@
 > Duration: 3-4 weeks
 
 - [x] 41.1-41.7: Slice 1 MVP — Registration, webhook routing, dashboard repo selector, repo filtering (7 stories)
-- [ ] 41.8-41.14: Slice 2 — Per-repo config, concurrent pipeline isolation, smoke test, fleet health (7 stories)
+- [x] 41.8-41.14: Slice 2 — Per-repo config, concurrent pipeline isolation, smoke test, fleet health (7 stories)
 
 ### Epic 42 — Execute Tier Promotion: Auto-Merge with Human Gates (Meridian PASS 2026-03-22, 13 stories)
 
