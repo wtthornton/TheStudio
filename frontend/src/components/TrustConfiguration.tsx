@@ -12,6 +12,17 @@ import { useEffect, useState, useCallback } from 'react'
 import { useTrustStore, selectRule } from '../stores/trust-store'
 import type { TrustTierRuleRead, AssignedTier } from '../stores/trust-store'
 import type { RuleCondition, ConditionOperator, TrustTierRuleCreate } from '../lib/api'
+import { EmptyState } from './EmptyState'
+
+// Shield icon for trust-tier empty state
+function ShieldIcon() {
+  return (
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <path d="M9 12l2 2 4-4" />
+    </svg>
+  )
+}
 
 // ---------------------------------------------------------------------------
 // Helpers / constants
@@ -601,11 +612,16 @@ export function TrustConfiguration() {
         </div>
       )}
 
-      {/* Rule rows */}
+      {/* Rule rows — empty state */}
       {!loading && rules.length === 0 && !ruleFormOpen && (
-        <div className="rounded-lg border border-dashed border-gray-700 py-10 text-center text-sm text-gray-500">
-          No rules yet. The default tier applies to all tasks.
-        </div>
+        <EmptyState
+          icon={<ShieldIcon />}
+          heading="No trust rules yet"
+          description="Add rules to automatically assign trust tiers (Observe / Suggest / Execute) to tasks based on complexity, risk flags, or repository. Without rules, all tasks use the default tier above."
+          primaryAction={{ label: 'Add First Rule', onClick: () => openEditRule(null) }}
+          secondaryAction={{ label: 'Learn about trust tiers', href: '/admin/ui/settings' }}
+          data-testid="trust-rules-empty"
+        />
       )}
 
       <div className="flex flex-col gap-2">

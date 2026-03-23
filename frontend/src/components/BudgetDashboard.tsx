@@ -10,6 +10,7 @@
  */
 
 import { useEffect, useState, useCallback } from 'react'
+import { EmptyState } from './EmptyState'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -520,6 +521,7 @@ export function BudgetDashboard() {
   const period = useBudgetStore((s) => s.period)
   const loading = useBudgetStore((s) => s.loading)
   const error = useBudgetStore((s) => s.error)
+  const summary = useBudgetStore((s) => s.summary)
   const loadAll = useBudgetStore((s) => s.loadAll)
   const setPeriod = useBudgetStore((s) => s.setPeriod)
   const clearError = useBudgetStore((s) => s.clearError)
@@ -554,6 +556,25 @@ export function BudgetDashboard() {
             ✕
           </button>
         </div>
+      )}
+
+      {/* Empty state — no budget data yet and not loading */}
+      {!loading && !error && summary === null && (
+        <EmptyState
+          icon={
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="2" y="7" width="20" height="14" rx="2" />
+              <path d="M16 3H8a2 2 0 0 0-2 2v2h12V5a2 2 0 0 0-2-2z" />
+              <circle cx="12" cy="14" r="2" />
+            </svg>
+          }
+          heading="No spend data yet"
+          description="Budget metrics will appear here once tasks start processing. Configure alerts and spending caps to keep LLM costs in check."
+          primaryAction={{ label: 'Configure Budget Alerts', href: '/admin/ui/settings' }}
+          secondaryAction={{ label: 'View Admin Console', href: '/admin/ui/' }}
+          data-testid="budget-empty"
+          className="py-16"
+        />
       )}
 
       <div className="space-y-6">

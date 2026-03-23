@@ -16,6 +16,16 @@ import { useEffect, useState, useCallback } from 'react'
 import type { AdminRepoItem, AdminRepoDetail, RepoHealthItem } from '../lib/api'
 import { fetchAdminRepos, fetchAdminRepoDetail, fetchReposHealth } from '../lib/api'
 import { RepoConfigForm } from './RepoConfigForm'
+import { EmptyState } from './EmptyState'
+
+// Repo icon for empty state
+function RepoIcon() {
+  return (
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
+    </svg>
+  )
+}
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -97,18 +107,14 @@ function FleetHealthTable({
 }) {
   if (health.length === 0) {
     return (
-      <p className="text-xs text-gray-500">
-        No repositories registered.{' '}
-        <a
-          href="/docs/onboarding-new-repo.md"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline hover:text-gray-300"
-        >
-          See onboarding guide
-        </a>
-        .
-      </p>
+      <EmptyState
+        icon={<RepoIcon />}
+        heading="No repositories registered"
+        description="Connect a GitHub repository to start processing issues into evidence-backed draft PRs. You'll need your GitHub App installation ID."
+        primaryAction={{ label: 'Register Repository', href: '/admin/ui/repos' }}
+        secondaryAction={{ label: 'View onboarding guide', href: '/docs/onboarding-new-repo.md' }}
+        data-testid="repos-empty"
+      />
     )
   }
 
@@ -257,13 +263,7 @@ export function RepoSettings() {
             selectedRepoId={selectedRepoId}
           />
         )}
-        {repos.length === 0 && !loadingHealth && (
-          <p className="mt-2 text-xs text-gray-600">
-            Register a repository via{' '}
-            <code className="text-gray-400">POST /admin/repos</code> or see the{' '}
-            <span className="text-gray-400">onboarding guide</span>.
-          </p>
-        )}
+        {/* empty state rendered by FleetHealthTable when repos.length === 0 */}
       </div>
 
       {/* Per-repo config editor (Story 41.11) */}
