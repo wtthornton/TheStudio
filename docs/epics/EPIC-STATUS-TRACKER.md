@@ -159,7 +159,7 @@
 | Epic | Title | Status | Notes |
 |------|-------|--------|-------|
 | 43 | Ralph SDK as Primary Agent | Approved (2026-03-22) | Meridian PASS. Session continuity, CB, Temporal wrapper. See `epic-43-ralph-sdk-integration.md`. |
-| 51 | Ralph Vendored SDK Parity | Proposed (2026-03-23) | Stall detection, progressive `fix_plan` context, structured `files_changed`; from `ralph-sdk-upgrade-evaluation.md`. Meridian review pending. |
+| 51 | Ralph Vendored SDK Parity | Approved — Meridian PASS (2026-03-23) | Stall detection, progressive `fix_plan` context, structured `files_changed`. Upstream: [ralph-claude-code#226](https://github.com/frankbria/ralph-claude-code/issues/226). |
 
 ---
 
@@ -267,4 +267,4 @@ Phase 5 — COMPLETE (2026-03-17)
 30. ~~**Epic 34 (Phase 0: SSE PoC)**~~ — **Complete** (2026-03-21). 14 stories. SSE bridge, React scaffolding.
 31. ~~**Epic 35 (Phase 1: Pipeline Visibility)**~~ — **Complete** (2026-03-21). 63 stories across 4 slices.
 32. ~~**Epic 36 (Phase 2: Planning Experience)**~~ — **Complete** (2026-03-21). 29 stories across 4 slices. All frontend + backend delivered by Ralph (22 loops).
-33. **Epic 51 (Ralph vendored SDK parity)** — **Proposed** (2026-03-23). P0 vendor patches: stall detection, progressive context, structured `files_changed`. See `docs/epics/epic-51-ralph-vendored-sdk-parity.md`. Run Meridian review before scheduling.
+33. **Epic 51 (Ralph vendored SDK parity)** — **Approved** (2026-03-23). Meridian: `MERIDIAN-REVIEW-EPIC-51.md`. Upstream issue [#226](https://github.com/frankbria/ralph-claude-code/issues/226). WSL `~/.ralph`: use `scripts/wsl-setup-ralph-home.sh` if not a git clone.

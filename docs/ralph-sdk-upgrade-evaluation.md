@@ -357,6 +357,8 @@ wsl bash -lc 'cd ~/.ralph && git pull'
 ```
 If `~/.ralph` is not a git repository, clone your Ralph CLI source into that path first, then pull.
 
-**Tracking (executed 2026-03-23):** TheStudio epic **Epic 51** — [`docs/epics/epic-51-ralph-vendored-sdk-parity.md`](epics/epic-51-ralph-vendored-sdk-parity.md) — captures P0–P1 vendor work and bridge fixes. Rollup: [`docs/epics/EPIC-STATUS-TRACKER.md`](epics/EPIC-STATUS-TRACKER.md).
+**Tracking (executed 2026-03-23):** TheStudio epic **Epic 51** — [`docs/epics/epic-51-ralph-vendored-sdk-parity.md`](epics/epic-51-ralph-vendored-sdk-parity.md) — captures P0–P1 vendor work and bridge fixes. Rollup: [`docs/epics/EPIC-STATUS-TRACKER.md`](epics/EPIC-STATUS-TRACKER.md). Meridian review: [`docs/epics/MERIDIAN-REVIEW-EPIC-51.md`](epics/MERIDIAN-REVIEW-EPIC-51.md).
 
-**Next step:** Optionally file parallel upstream issues in the Ralph repo for the same requests; implement P0 in `vendor/ralph-sdk/` without blocking on upstream releases.
+**Upstream (executed 2026-03-23):** [frankbria/ralph-claude-code#226](https://github.com/frankbria/ralph-claude-code/issues/226) — SDK parity umbrella issue. Index: [`docs/ralph-upstream-issues.md`](ralph-upstream-issues.md).
+
+**Next step:** Implement P0 in `vendor/ralph-sdk/`; contribute patches upstream as issue #226 evolves.

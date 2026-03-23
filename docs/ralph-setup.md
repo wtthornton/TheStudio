@@ -1,6 +1,14 @@
 # Installing Ralph into TheStudio
 
-Ralph is already installed globally at `~/.ralph/`. These steps set up the project-level files.
+Ralph is expected globally at `~/.ralph/` (WSL/Linux), as a **git clone** of [frankbria/ralph-claude-code](https://github.com/frankbria/ralph-claude-code) so you can `git pull` for CLI updates.
+
+**WSL one-time fix:** If `~/.ralph` is not a git repository, run from Windows:
+
+`wsl bash -c "sed -i 's/\\r$//' /mnt/<drive>/<path-to-TheStudio>/scripts/wsl-setup-ralph-home.sh && bash /mnt/<drive>/<path-to-TheStudio>/scripts/wsl-setup-ralph-home.sh"`
+
+Example: `/mnt/c/cursor/TheStudio/...`. The script moves a non-git `~/.ralph` to `~/.ralph.backup.<timestamp>` and clones the upstream repo.
+
+These steps below set up the **project-level** files.
 
 ## 1. Create `.ralphrc`
 

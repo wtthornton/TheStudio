@@ -1,7 +1,7 @@
 # Epic 51: Ralph Vendored SDK Parity — Stall Detection, Progressive Context, and Structured Outputs
 
 <!-- docsmcp:start:metadata -->
-**Status:** Proposed — **Meridian review pending** (Saga-generated epic, 2026-03-23)
+**Status:** **APPROVED** — Meridian PASS (2026-03-23); see `MERIDIAN-REVIEW-EPIC-51.md`
 **Priority:** P0-P1 — Production quality and cost
 **Estimated LOE:** ~3-4 weeks (P0 slice 2.5-4.5 days; full backlog 17-21 days per evaluation)
 **Dependencies:** Epic 43 (Ralph SDK integration) — parallel or prerequisite for consuming new TaskResult fields
@@ -195,6 +195,8 @@ SIGTERM, CancelResult, Temporal alignment
 <!-- docsmcp:start:success-metrics -->
 ## Success Metrics
 
+**Primary success metric:** **Deferred-test stall visibility** — the SDK must surface or trip on repeated deferred-test / no-progress loops (see §1.1 in `docs/ralph-sdk-upgrade-evaluation.md`). Measured via harness + logs or circuit breaker state.
+
 | Metric | Baseline | Target | Measurement |
 |--------|----------|--------|-------------|
 | Deferred-test stall visibility | SDK does not trip on deferred tests | Harness / integration repro of deferred-test stall trips CB or surfaces metric | Tests + logs |
@@ -218,6 +220,8 @@ SIGTERM, CancelResult, Temporal alignment
 - `docs/ralph-sdk-upgrade-evaluation.md` — full gap analysis and prioritization
 - `docs/epics/epic-43-ralph-sdk-integration.md` — Primary Agent integration epic
 - `docs/architecture/RFC-001-ralph-sdk-integration.md`
+- `thestudioarc/personas/MERIDIAN-TEAM-REVIEW-AND-OKRS.md` — implementation quality / autonomous operation KRs
+- `docs/ralph-upstream-issues.md` — upstream GitHub tracking (frankbria/ralph-claude-code)
 
 <!-- docsmcp:end:references -->
 
@@ -240,6 +244,7 @@ SIGTERM, CancelResult, Temporal alignment
 |------|-------------|--------|------------|
 | Upstream drift when rebasing `vendor/ralph-sdk` | Medium | Medium | Document diff checkpoints; contribute patches upstream when stable |
 | Incomplete tool-use capture for `files_changed` | Medium | High | Fall back to `git diff` + explicit tests; align with Claude tool records when available |
+| Story stubs lack file-level tasks until Helm expands them | Medium | Medium | Follow §Implementation order; expand with `docs_generate_story` or sprint planning before bulk AI execution |
 
 **Expert-Identified Risks:**
 
