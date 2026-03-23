@@ -12,9 +12,14 @@ RALPH_DIR="${CLAUDE_PROJECT_DIR:-.}/.ralph"
 INPUT=$(cat)
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // ""')
 
-# Block destructive git commands
+# Block destructive git commands (allow --force-with-lease which is a safer alternative)
+if echo "$COMMAND" | grep -qE 'git push (--force|--force-if-includes|-f)(\s|$|")' 2>/dev/null && \
+   ! echo "$COMMAND" | grep -q 'force-with-lease' 2>/dev/null; then
+  echo "BLOCKED: Destructive git push not allowed: $COMMAND" >&2
+  exit 2
+fi
 case "$COMMAND" in
-  *"git clean"*|*"git rm"*|*"git reset --hard"*|*"git push --force"*|*"git push -f"*)
+  *"git clean"*|*"git rm"*|*"git reset --hard"*)
     echo "BLOCKED: Destructive git command not allowed: $COMMAND" >&2
     exit 2
     ;;

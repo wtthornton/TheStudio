@@ -38,7 +38,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/tapps-session-start.ps1"
+            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/tapps-session-start.ps1"
           }
         ]
       },
@@ -47,7 +47,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/tapps-session-compact.ps1"
+            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/tapps-session-compact.ps1"
           }
         ]
       },
@@ -67,7 +67,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/tapps-stop.ps1"
+            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/tapps-stop.ps1"
           }
         ]
       },
@@ -113,7 +113,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/tapps-post-edit.ps1"
+            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/tapps-post-edit.ps1"
           }
         ]
       },
@@ -122,7 +122,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/tapps-post-validate.ps1",
+            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/tapps-post-validate.ps1",
             "timeout": 10
           }
         ]
@@ -132,7 +132,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/tapps-post-report.ps1",
+            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/tapps-post-report.ps1",
             "timeout": 10
           }
         ]
@@ -143,7 +143,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/tapps-pre-compact.ps1"
+            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/tapps-pre-compact.ps1"
           }
         ]
       }
@@ -153,7 +153,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/tapps-subagent-start.ps1"
+            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/tapps-subagent-start.ps1"
           }
         ]
       }
@@ -163,7 +163,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/tapps-subagent-stop.ps1"
+            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/tapps-subagent-stop.ps1"
           },
           {
             "type": "command",
@@ -200,7 +200,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/tapps-task-completed.ps1"
+            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/tapps-task-completed.ps1"
           },
           {
             "type": "command",
