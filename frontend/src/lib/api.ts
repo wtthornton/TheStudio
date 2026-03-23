@@ -1001,3 +1001,247 @@ export async function requestChangesPR(
   }
   return res.json()
 }
+
+// --- Analytics API (Epic 39, Slice 1) ---
+
+export type AnalyticsPeriod = '7d' | '30d' | '90d'
+export type AnalyticsBucket = 'day' | 'week'
+export type TrendDirection = 'up' | 'down' | 'stable'
+
+export interface ThroughputDataPoint {
+  date: string
+  count: number
+}
+
+export interface ThroughputResponse {
+  period: string
+  bucket: string
+  data: ThroughputDataPoint[]
+}
+
+export interface BottleneckStage {
+  stage: string
+  avg_seconds: number
+  stddev_seconds: number
+  is_slowest: boolean
+  is_most_variable: boolean
+}
+
+export interface BottleneckResponse {
+  period: string
+  stages: BottleneckStage[]
+}
+
+export interface CategoryEntry {
+  category: string
+  count: number
+  merge_rate: number
+  avg_cost_usd: number
+  avg_pipeline_seconds: number
+  low_sample: boolean
+}
+
+export interface CategoryResponse {
+  period: string
+  categories: CategoryEntry[]
+}
+
+export interface FailureType {
+  type: string
+  count: number
+  trend: 'increasing' | 'decreasing' | 'stable'
+}
+
+export interface FailureStage {
+  stage: string
+  failures: FailureType[]
+}
+
+export interface FailureResponse {
+  period: string
+  by_stage: FailureStage[]
+}
+
+export interface SummaryCardValue {
+  value: number
+  trend: TrendDirection
+}
+
+export interface SummaryResponse {
+  period: string
+  cards: {
+    tasks_completed: SummaryCardValue
+    avg_pipeline_seconds: SummaryCardValue
+    pr_merge_rate: SummaryCardValue
+    total_spend_usd: SummaryCardValue
+  }
+}
+
+export async function fetchAnalyticsThroughput(
+  period: AnalyticsPeriod = '30d',
+  bucket: AnalyticsBucket = 'day',
+): Promise<ThroughputResponse> {
+  const url = withToken(`${API_BASE}/analytics/throughput?period=${period}&bucket=${bucket}`)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Failed to fetch throughput: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchAnalyticsBottlenecks(
+  period: AnalyticsPeriod = '30d',
+): Promise<BottleneckResponse> {
+  const url = withToken(`${API_BASE}/analytics/bottlenecks?period=${period}`)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Failed to fetch bottlenecks: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchAnalyticsCategories(
+  period: AnalyticsPeriod = '30d',
+): Promise<CategoryResponse> {
+  const url = withToken(`${API_BASE}/analytics/categories?period=${period}`)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Failed to fetch categories: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchAnalyticsFailures(
+  period: AnalyticsPeriod = '30d',
+): Promise<FailureResponse> {
+  const url = withToken(`${API_BASE}/analytics/failures?period=${period}`)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Failed to fetch failures: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchAnalyticsSummary(
+  period: AnalyticsPeriod = '30d',
+): Promise<SummaryResponse> {
+  const url = withToken(`${API_BASE}/analytics/summary?period=${period}`)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Failed to fetch summary: ${res.status}`)
+  return res.json()
+}
+
+// ---------------------------------------------------------------------------
+// Reputation & Outcomes types and API functions (Epic 39, Slice 2)
+// ---------------------------------------------------------------------------
+
+export type DriftSignal = 'improving' | 'stable' | 'declining'
+export type TrustTier = 'shadow' | 'probation' | 'trusted'
+export type DriftLevel = 'low' | 'moderate' | 'high'
+
+export interface ExpertRow {
+  expert_id: string
+  context_count: number
+  avg_weight: number
+  total_samples: number
+  avg_confidence: number
+  trust_tier: TrustTier
+  drift_signal: DriftSignal
+  last_updated_at: string | null
+}
+
+export interface ExpertsResponse {
+  experts: ExpertRow[]
+}
+
+export interface ExpertContextRow {
+  context_key: string
+  weight: number
+  sample_count: number
+  confidence: number
+  trust_tier: TrustTier
+  drift_signal: DriftSignal
+  weight_history: number[]
+  last_updated_at: string | null
+}
+
+export interface ExpertDetailResponse {
+  expert_id: string
+  contexts: ExpertContextRow[]
+}
+
+export interface OutcomeEntry {
+  id: string
+  task_id: string | null
+  signal_type: string
+  outcome_type: 'success' | 'failure' | 'loopback' | 'unknown'
+  signal_at: string | null
+  issue_id: number | null
+  repo: string | null
+  task_status: string | null
+  learnings: string | null
+}
+
+export interface OutcomesResponse {
+  outcomes: OutcomeEntry[]
+  total: number
+}
+
+export interface DriftAlert {
+  metric: string
+  direction: 'up' | 'down'
+  magnitude: number
+  current_value: number | null
+  previous_value: number | null
+  possible_cause: string
+}
+
+export interface DriftResponse {
+  window_days: number
+  drift_score: DriftLevel
+  composite_score: number
+  alerts: DriftAlert[]
+  insufficient_data: boolean
+  task_count: number
+  min_tasks_required?: number
+}
+
+export interface ReputationSummaryCards {
+  success_rate: SummaryCardValue
+  avg_loopbacks: SummaryCardValue
+  pr_merge_rate: SummaryCardValue
+  drift_score: { value: DriftLevel; score: DriftLevel }
+}
+
+export interface ReputationSummaryResponse {
+  cards: ReputationSummaryCards
+}
+
+export async function fetchReputationExperts(): Promise<ExpertsResponse> {
+  const url = withToken(`${API_BASE}/reputation/experts`)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Failed to fetch experts: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchExpertDetail(expertId: string): Promise<ExpertDetailResponse> {
+  const url = withToken(`${API_BASE}/reputation/experts/${expertId}`)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Failed to fetch expert detail: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchReputationOutcomes(
+  limit = 50,
+): Promise<OutcomesResponse> {
+  const url = withToken(`${API_BASE}/reputation/outcomes?limit=${limit}`)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Failed to fetch outcomes: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchReputationDrift(): Promise<DriftResponse> {
+  const url = withToken(`${API_BASE}/reputation/drift`)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Failed to fetch drift data: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchReputationSummary(): Promise<ReputationSummaryResponse> {
+  const url = withToken(`${API_BASE}/reputation/summary`)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Failed to fetch reputation summary: ${res.status}`)
+  return res.json()
+}

@@ -70,8 +70,8 @@
 > Duration: 5-6 weeks (includes Slice 0 data prerequisites)
 
 - [x] 39.0a-39.0c: Slice 0 — Data Prerequisites (3 stories: completed_at column, pr_merge_status field, outcome signal DB persistence)
-- [ ] 39.1-39.11: Slice 1 — Operational Analytics (11 stories: throughput, bottlenecks, categories, failures, summary cards, frontend)
-- [ ] 39.12-39.21: Slice 2 — Reputation & Outcomes (10 stories: expert performance, outcomes feed, drift detection, frontend)
+- [x] 39.1-39.11: Slice 1 — Operational Analytics (11 stories: throughput, bottlenecks, categories, failures, summary cards, frontend)
+- [x] 39.12-39.21: Slice 2 — Reputation & Outcomes (10 stories: expert performance, outcomes feed, drift detection, frontend)
 
 ### Epic 40 — Remote Verification & Advanced Issue Processing (Meridian PASS 2026-03-22, 15 stories)
 

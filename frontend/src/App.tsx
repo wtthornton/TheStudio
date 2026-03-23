@@ -24,9 +24,11 @@ import { BudgetDashboard } from './components/BudgetDashboard'
 import { NotificationBell } from './components/NotificationBell'
 import { SteeringActivityLog } from './components/SteeringActivityLog'
 import ImportModal from './components/github/ImportModal'
+import { Analytics } from './components/analytics/Analytics'
+import { Reputation } from './components/reputation/Reputation'
 import { PIPELINE_STAGES } from './lib/constants'
 
-type Tab = 'pipeline' | 'triage' | 'intent' | 'routing' | 'board' | 'trust' | 'budget' | 'activity'
+type Tab = 'pipeline' | 'triage' | 'intent' | 'routing' | 'board' | 'trust' | 'budget' | 'activity' | 'analytics' | 'reputation'
 
 function App() {
   useSSE()
@@ -106,6 +108,18 @@ function App() {
               className={`px-3 py-1.5 text-sm rounded ${activeTab === 'activity' ? 'bg-gray-700 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}
             >
               Activity Log
+            </button>
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`px-3 py-1.5 text-sm rounded ${activeTab === 'analytics' ? 'bg-gray-700 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}
+            >
+              Analytics
+            </button>
+            <button
+              onClick={() => setActiveTab('reputation')}
+              className={`px-3 py-1.5 text-sm rounded ${activeTab === 'reputation' ? 'bg-gray-700 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}
+            >
+              Reputation
             </button>
           </nav>
         </div>
@@ -217,6 +231,12 @@ function App() {
       ) : activeTab === 'budget' ? (
         /* Budget Dashboard (Epic 37, Slice 4) */
         <BudgetDashboard />
+      ) : activeTab === 'analytics' ? (
+        /* Operational Analytics (Epic 39, Slice 1) */
+        <Analytics />
+      ) : activeTab === 'reputation' ? (
+        /* Reputation & Outcomes (Epic 39, Slice 2) */
+        <Reputation />
       ) : (
         /* Steering Activity Log (Epic 37, Slice 5 — 37.28) */
         <SteeringActivityLog />
