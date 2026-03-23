@@ -79,7 +79,7 @@
 > Priority: P0 — blocks processing harder issues (multi-file, bug fixes, refactoring)
 > Duration: 3-4 weeks
 
-- [ ] 40.0-40.8: Slice 1 MVP — Local subprocess verification (9 stories: repo clone, test runner, lint runner, orchestrator, verify activity integration)
+- [x] 40.0-40.8: Slice 1 MVP — Local subprocess verification (9 stories: repo clone, test runner, lint runner, orchestrator, verify activity integration)
 - [ ] 40.9-40.14: Slice 2 — Container mode verification (6 stories: container Dockerfile, container runner, evidence enrichment, observability)
 
 ### Epic 41 — Second Repo Onboarding & Multi-Repo Foundation (Meridian PASS 2026-03-22, 14 stories)

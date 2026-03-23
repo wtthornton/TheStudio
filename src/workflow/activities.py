@@ -10,6 +10,7 @@ Others are stubs that delegate to module functions when wired in production.
 Architecture reference: thestudioarc/15-system-runtime-flow.md (runtime steps)
 """
 
+import logging
 from dataclasses import dataclass, field
 from datetime import UTC
 
@@ -252,6 +253,8 @@ class VerifyInput:
     taskpacket_id: str
     changed_files: list[str] = field(default_factory=list)
     repo_path: str = ""
+    repo: str = ""  # "owner/repo_name" format (Epic 40)
+    branch: str = ""  # branch pushed by implement stage (Epic 40)
 
 
 @dataclass
@@ -1156,9 +1159,12 @@ Generate the file changes to satisfy this issue."""
 async def verify_activity(params: VerifyInput) -> VerifyOutput:
     """Step 7: Verification gate checks.
 
-    Validates that the implement step produced actual file changes.
-    Remote verification (ruff/pytest on target repo) is not yet supported —
-    for now, passes if files were changed and fails if none were.
+    When remote_verification_enabled is True on the repo profile and a repo
+    field is provided, clones the branch and runs the repo's own test/lint
+    suite via the remote verification orchestrator (Epic 40).
+
+    Otherwise, falls back to the existing files_exist check: passes if
+    files were changed, fails if none were.
     """
     import logging
 
@@ -1177,26 +1183,111 @@ async def verify_activity(params: VerifyInput) -> VerifyOutput:
                 exhausted=False,
                 checks=[{"name": "files_exist", "passed": "false", "detail": "No files changed"}],
             )
-        else:
-            checks = [
-                {
-                    "name": "files_exist",
-                    "passed": "true",
-                    "detail": f"{len(params.changed_files)} file(s) pushed to branch",
-                },
-            ]
+            success = True
+            return verify_out
 
-            logger.info(
-                "verify.passed taskpacket=%s files=%d",
-                params.taskpacket_id,
-                len(params.changed_files),
-            )
-            verify_out = VerifyOutput(passed=True, checks=checks)
+        # Check if remote verification is enabled for this repo
+        if params.repo and params.branch:
+            try:
+                verify_out = await _try_remote_verify(params, logger)
+                if verify_out is not None:
+                    success = True
+                    return verify_out
+            except Exception:
+                logger.exception(
+                    "verify.remote_error taskpacket=%s — falling back to files_exist",
+                    params.taskpacket_id,
+                )
+
+        # Fallback: files_exist check
+        checks = [
+            {
+                "name": "files_exist",
+                "passed": "true",
+                "detail": f"{len(params.changed_files)} file(s) pushed to branch",
+            },
+        ]
+
+        logger.info(
+            "verify.passed taskpacket=%s files=%d",
+            params.taskpacket_id,
+            len(params.changed_files),
+        )
+        verify_out = VerifyOutput(passed=True, checks=checks)
 
         success = True
         return verify_out
     finally:
         await emit_stage_exit("verify", task_id, success=success)
+
+
+async def _try_remote_verify(
+    params: VerifyInput, logger: "logging.Logger"
+) -> VerifyOutput | None:
+    """Attempt remote verification if enabled on the repo profile.
+
+    Returns VerifyOutput if remote verification ran, None to fall back to
+    files_exist check.
+    """
+    from src.db.connection import get_async_session
+    from src.repo.repo_profile_crud import get_by_repo
+    from src.settings import settings
+    from src.verification.remote.orchestrator import verify_remote
+
+    owner, repo_name = params.repo.split("/", 1)
+
+    async with get_async_session() as session:
+        profile = await get_by_repo(session, owner, repo_name)
+
+    if profile is None or not profile.remote_verification_enabled:
+        return None
+
+    token = settings.intake_poll_token
+    if not token:
+        logger.error("verify.remote.no_token taskpacket=%s", params.taskpacket_id)
+        return None
+
+    logger.info(
+        "verify.remote.start taskpacket=%s repo=%s branch=%s",
+        params.taskpacket_id,
+        params.repo,
+        params.branch,
+    )
+
+    check_results = await verify_remote(
+        owner=owner,
+        repo=repo_name,
+        branch=params.branch,
+        token=token,
+        changed_files=params.changed_files,
+        test_command=profile.test_command,
+        lint_command=profile.lint_command,
+        install_command=profile.install_command,
+        verify_timeout_seconds=profile.verify_timeout_seconds,
+        clone_depth=profile.clone_depth,
+    )
+
+    # Map CheckResult objects to serializable dicts
+    checks = [
+        {
+            "name": cr.name,
+            "passed": str(cr.passed),
+            "details": cr.details,
+            "duration_ms": str(cr.duration_ms),
+        }
+        for cr in check_results
+    ]
+
+    all_passed = all(cr.passed for cr in check_results)
+
+    logger.info(
+        "verify.remote.complete taskpacket=%s passed=%s checks=%d",
+        params.taskpacket_id,
+        all_passed,
+        len(check_results),
+    )
+
+    return VerifyOutput(passed=all_passed, checks=checks)
 
 
 @activity.defn
