@@ -40,18 +40,21 @@ _COMMENT_TRIGGER_ACTIONS = frozenset({"created"})
 # Epic 38.15: Projects v2 item event type for inbound sync
 _PROJECTS_V2_ITEM_EVENT = "projects_v2_item"
 # Epic 38.24: Webhook bridge — event types published to NATS github.event.* subjects
-_BRIDGE_EVENT_TYPES = frozenset({
-    "pull_request",
-    "pull_request_review",
-    "pull_request_review_comment",
-    "check_run",
-    "check_suite",
-    "issue_comment",
-})
+_BRIDGE_EVENT_TYPES = frozenset(
+    {
+        "pull_request",
+        "pull_request_review",
+        "pull_request_review_comment",
+        "check_run",
+        "check_suite",
+        "issue_comment",
+    }
+)
 
 
 def normalize_webhook_payload(
-    event_type: str, payload: dict,
+    event_type: str,
+    payload: dict,
 ) -> dict:
     """Extract normalized issue data from webhook payload.
 
@@ -144,7 +147,12 @@ async def _publish_github_event_to_nats(
         )
 
 
-@router.post("/webhook/github")
+@router.post(
+    "/webhook/github",
+    tags=["Webhooks"],
+    summary="GitHub webhook ingress",
+    response_description="Acknowledges receipt; may start pipeline workflows.",
+)
 async def github_webhook(
     request: Request,
     x_hub_signature_256: str | None = Header(None),
@@ -225,7 +233,11 @@ async def github_webhook(
         # 8. Check if this is a re-evaluation trigger for a held issue
         if _is_reevaluation_trigger(x_github_event, action):
             return await _handle_reevaluation(
-                session, span, repo_full_name, normalized, x_github_delivery,
+                session,
+                span,
+                repo_full_name,
+                normalized,
+                x_github_delivery,
             )
 
         # 9. For new issue events (issues.opened), proceed with standard flow
@@ -273,19 +285,26 @@ async def github_webhook(
             from src.context.prescan import prescan_issue
 
             enrichment = prescan_issue(
-                issue_title, issue_body, normalized.get("labels", []),
+                issue_title,
+                issue_body,
+                normalized.get("labels", []),
             )
             task_data.triage_enrichment = enrichment
 
             taskpacket = await create_taskpacket(
-                session, task_data, initial_status=TaskPacketStatus.TRIAGE,
+                session,
+                task_data,
+                initial_status=TaskPacketStatus.TRIAGE,
             )
 
             # Emit SSE event for real-time triage queue updates
             from src.dashboard.events_publisher import emit_triage_created
 
             await emit_triage_created(
-                str(taskpacket.id), issue_title, issue_id, repo_full_name,
+                str(taskpacket.id),
+                issue_title,
+                issue_id,
+                repo_full_name,
             )
 
             from opentelemetry import context as otel_context

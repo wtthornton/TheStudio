@@ -1,7 +1,15 @@
 {# Empty state: shown when a table or list has no data. Use Unicode symbol (not HTML entity) to avoid double-escaping. #}
-{% macro empty_state(message, icon="☐") %}
+{# Optional CTA params: cta_text (button label), cta_url (href), cta_icon (Unicode symbol shown before label). #}
+{% macro empty_state(message, icon="☐", cta_text="", cta_url="", cta_icon="") %}
 <div class="text-center py-12 text-gray-400">
     <p class="text-4xl mb-3">{{ icon }}</p>
     <p class="text-sm">{{ message }}</p>
+    {% if cta_text and cta_url %}
+    <a href="{{ cta_url }}"
+       class="inline-flex items-center gap-1 mt-4 px-4 py-2 text-sm font-medium rounded-md bg-indigo-600 text-white hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-900 transition-colors">
+        {% if cta_icon %}<span aria-hidden="true">{{ cta_icon }}</span>{% endif %}
+        {{ cta_text }}
+    </a>
+    {% endif %}
 </div>
 {% endmacro %}

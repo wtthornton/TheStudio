@@ -9,6 +9,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from scalar_fastapi import AgentScalarConfig, Theme, get_scalar_api_reference
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -181,7 +182,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         poll_task.cancel()
 
 
-app = FastAPI(title="TheStudio", version="0.1.0", lifespan=lifespan)
+app = FastAPI(
+    title="TheStudio",
+    version="0.1.0",
+    lifespan=lifespan,
+    docs_url=None,
+    redoc_url="/redoc",
+)
 app.state.limiter = limiter
 
 
@@ -191,6 +198,20 @@ async def _rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONR
 
 
 app.add_middleware(CorrelationMiddleware)
+
+
+@app.get("/docs", include_in_schema=False)
+async def scalar_api_docs() -> HTMLResponse:
+    """Interactive OpenAPI docs (Scalar). Replaces default Swagger UI at /docs."""
+    return get_scalar_api_reference(
+        openapi_url="/openapi.json",
+        title="TheStudio API",
+        theme=Theme.DEEP_SPACE,
+        dark_mode=True,
+        agent=AgentScalarConfig(disabled=True),
+    )
+
+
 app.include_router(ingress_router)
 app.include_router(compliance_router)
 app.include_router(admin_router)
@@ -251,13 +272,21 @@ else:
     )
 
 
-@app.get("/healthz")
+@app.get(
+    "/healthz",
+    tags=["Health"],
+    summary="Liveness probe",
+)
 async def healthz() -> dict[str, str]:
     """Unauthenticated liveness probe for load balancers and Docker health checks."""
     return {"status": "ok"}
 
 
-@app.get("/readyz")
+@app.get(
+    "/readyz",
+    tags=["Health"],
+    summary="Readiness probe",
+)
 async def readyz() -> JSONResponse:
     """Readiness probe — checks database connectivity."""
     from sqlalchemy import text
@@ -272,7 +301,11 @@ async def readyz() -> JSONResponse:
         return JSONResponse(status_code=503, content={"status": "not ready", "detail": str(exc)})
 
 
-@app.get("/health/ralph")
+@app.get(
+    "/health/ralph",
+    tags=["Health"],
+    summary="Ralph agent runtime probe",
+)
 async def ralph_health() -> JSONResponse:
     """Ralph-mode readiness probe.
 

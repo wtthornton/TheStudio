@@ -5,6 +5,7 @@
 <span class="htmx-indicator text-gray-400 text-xs">Loading...</span>
 {% endblock %}
 {% block content %}
+<p class="text-sm text-gray-500 mb-4">Quarantine holds risky or policy-blocked payloads. Use the audit log for a full history of admin actions.</p>
 <div hx-get="/admin/ui/partials/quarantine" hx-trigger="load" hx-swap="innerHTML" hx-indicator="closest div">
     <div class="text-center py-12 text-gray-400 text-sm htmx-indicator">Loading quarantine events...</div>
 </div>

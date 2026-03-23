@@ -37,18 +37,18 @@ from src.admin.workflow_console import (
 )
 from src.admin.workflow_metrics import WorkflowMetricsService
 from src.db.connection import get_session
+from src.models.taskpacket import TaskPacketRow, TaskPacketStatus
 from src.repo.repo_profile import (
     RepoProfileCreate,
     RepoProfileUpdate,
     RepoStatus,
     RepoTier,
 )
-from src.models.taskpacket import TaskPacketRow, TaskPacketStatus
 from src.repo.repository import RepoDuplicateError, RepoNotFoundError, RepoRepository
 from src.settings import settings as _settings
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/admin", tags=["admin"])
+router = APIRouter(prefix="/admin", tags=["Admin"])
 
 # Service instances (lazy initialization)
 _health_service: HealthService | None = None
@@ -144,6 +144,8 @@ class HealthResponse(BaseModel):
     "/health",
     response_model=HealthResponse,
     dependencies=[Depends(require_permission(Permission.VIEW_HEALTH))],
+    tags=["Admin", "Health"],
+    summary="Aggregated platform health",
 )
 async def get_system_health() -> HealthResponse:
     """Get system health status.
@@ -480,12 +482,8 @@ class WorkflowDetailResponse(BaseModel):
 class RerunVerificationRequest(BaseModel):
     """Request to rerun verification for a workflow."""
 
-    reason: str = Field(
-        ..., min_length=1, max_length=500, description="Reason for rerun"
-    )
-    actor: str = Field(
-        ..., min_length=1, max_length=255, description="User initiating the rerun"
-    )
+    reason: str = Field(..., min_length=1, max_length=500, description="Reason for rerun")
+    actor: str = Field(..., min_length=1, max_length=255, description="User initiating the rerun")
 
 
 class RerunVerificationResponse(BaseModel):
@@ -502,12 +500,8 @@ class RerunVerificationResponse(BaseModel):
 class SendToAgentRequest(BaseModel):
     """Request to send workflow back to agent for fix."""
 
-    reason: str = Field(
-        ..., min_length=1, max_length=500, description="Reason for sending back"
-    )
-    actor: str = Field(
-        ..., min_length=1, max_length=255, description="User initiating the action"
-    )
+    reason: str = Field(..., min_length=1, max_length=500, description="Reason for sending back")
+    actor: str = Field(..., min_length=1, max_length=255, description="User initiating the action")
     reset_workspace: bool = Field(
         default=False, description="Whether to reset workspace before rerun"
     )
@@ -527,12 +521,8 @@ class SendToAgentResponse(BaseModel):
 class EscalateRequest(BaseModel):
     """Request to escalate workflow to human."""
 
-    reason: str = Field(
-        ..., min_length=1, max_length=500, description="Reason for escalation"
-    )
-    actor: str = Field(
-        ..., min_length=1, max_length=255, description="User initiating escalation"
-    )
+    reason: str = Field(..., min_length=1, max_length=500, description="Reason for escalation")
+    actor: str = Field(..., min_length=1, max_length=255, description="User initiating escalation")
     owner: str | None = Field(
         default=None,
         max_length=255,
@@ -577,6 +567,8 @@ class AuditLogListResponse(BaseModel):
     "/workflows/metrics",
     response_model=WorkflowMetricsResponse,
     dependencies=[Depends(require_permission(Permission.VIEW_METRICS))],
+    tags=["Admin", "Metrics"],
+    summary="Fleet workflow metrics and hot alerts",
 )
 async def get_workflow_metrics(
     session: Annotated[AsyncSession, Depends(get_session)],
@@ -674,6 +666,8 @@ async def _emit_repo_audit_event(
     "/repos",
     response_model=RepoListResponse,
     dependencies=[Depends(require_permission(Permission.VIEW_REPOS))],
+    tags=["Admin", "Repositories"],
+    summary="List registered repositories",
 )
 async def list_repos(
     session: Annotated[AsyncSession, Depends(get_session)],
@@ -710,6 +704,8 @@ async def list_repos(
     response_model=RepoRegisterResponse,
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_permission(Permission.REGISTER_REPO))],
+    tags=["Admin", "Repositories"],
+    summary="Register a new repository",
 )
 async def register_repo(
     request: Annotated[RepoRegisterRequest, Depends(_parse_repo_register_request)],
@@ -779,6 +775,8 @@ async def register_repo(
     "/repos/{repo_id}",
     response_model=RepoProfileResponse,
     dependencies=[Depends(require_permission(Permission.VIEW_REPOS))],
+    tags=["Admin", "Repositories"],
+    summary="Get repository profile",
 )
 async def get_repo_detail(
     repo_id: UUID,
@@ -827,6 +825,8 @@ async def get_repo_detail(
     "/repos/{repo_id}/profile",
     response_model=RepoProfileUpdateResponse,
     dependencies=[Depends(require_permission(Permission.UPDATE_REPO_PROFILE))],
+    tags=["Admin", "Repositories"],
+    summary="Update repository profile",
 )
 async def update_repo_profile(
     repo_id: UUID,
@@ -908,6 +908,8 @@ async def update_repo_profile(
     "/poll/run",
     response_model=PollRunResponse,
     dependencies=[Depends(require_permission(Permission.UPDATE_REPO_PROFILE))],
+    tags=["Admin", "Repositories"],
+    summary="Run one GitHub poll cycle",
 )
 async def run_poll_cycle_endpoint() -> PollRunResponse:
     """Trigger one poll cycle for repos with poll_enabled (testing / manual run).
@@ -931,6 +933,8 @@ async def run_poll_cycle_endpoint() -> PollRunResponse:
     "/repos/{repo_id}/tier",
     response_model=RepoTierChangeResponse,
     dependencies=[Depends(require_permission(Permission.CHANGE_REPO_TIER))],
+    tags=["Admin", "Repositories"],
+    summary="Change repository trust tier",
 )
 async def change_repo_tier(
     repo_id: UUID,
@@ -1005,6 +1009,8 @@ async def change_repo_tier(
     "/repos/{repo_id}/pause",
     response_model=RepoStatusChangeResponse,
     dependencies=[Depends(require_permission(Permission.PAUSE_REPO))],
+    tags=["Admin", "Repositories"],
+    summary="Pause repository",
 )
 async def pause_repo(
     repo_id: UUID,
@@ -1062,6 +1068,8 @@ async def pause_repo(
     "/repos/{repo_id}/resume",
     response_model=RepoStatusChangeResponse,
     dependencies=[Depends(require_permission(Permission.RESUME_REPO))],
+    tags=["Admin", "Repositories"],
+    summary="Resume repository",
 )
 async def resume_repo(
     repo_id: UUID,
@@ -1119,6 +1127,8 @@ async def resume_repo(
     "/repos/{repo_id}/writes",
     response_model=RepoWritesChangeResponse,
     dependencies=[Depends(require_permission(Permission.TOGGLE_WRITES))],
+    tags=["Admin", "Repositories"],
+    summary="Toggle writes enabled for repository",
 )
 async def toggle_repo_writes(
     repo_id: UUID,
@@ -1145,9 +1155,7 @@ async def toggle_repo_writes(
     repo_repository = get_repo_repository()
 
     try:
-        repo = await repo_repository.set_writes_enabled(
-            session, repo_id, enabled=request.enabled
-        )
+        repo = await repo_repository.set_writes_enabled(session, repo_id, enabled=request.enabled)
     except RepoNotFoundError as err:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -1185,6 +1193,8 @@ async def toggle_repo_writes(
     "/workflows",
     response_model=WorkflowListResponse,
     dependencies=[Depends(require_permission(Permission.VIEW_WORKFLOWS))],
+    tags=["Admin", "Workflows"],
+    summary="List workflows",
 )
 async def list_workflows(
     session: Annotated[AsyncSession, Depends(get_session)],
@@ -1241,6 +1251,8 @@ async def list_workflows(
     "/workflows/{workflow_id}",
     response_model=WorkflowDetailResponse,
     dependencies=[Depends(require_permission(Permission.VIEW_WORKFLOWS))],
+    tags=["Admin", "Workflows"],
+    summary="Get workflow detail and timeline",
 )
 async def get_workflow_detail(
     workflow_id: str,
@@ -1346,6 +1358,8 @@ async def _emit_workflow_audit_event(
     "/workflows/{workflow_id}/rerun-verification",
     response_model=RerunVerificationResponse,
     dependencies=[Depends(require_permission(Permission.RERUN_VERIFICATION))],
+    tags=["Admin", "Workflows"],
+    summary="Rerun verification for a workflow",
 )
 async def rerun_verification(
     workflow_id: str,
@@ -1419,6 +1433,8 @@ async def rerun_verification(
     "/workflows/{workflow_id}/send-to-agent",
     response_model=SendToAgentResponse,
     dependencies=[Depends(require_permission(Permission.SEND_TO_AGENT))],
+    tags=["Admin", "Workflows"],
+    summary="Send workflow back to Primary Agent",
 )
 async def send_to_agent(
     workflow_id: str,
@@ -1492,6 +1508,8 @@ async def send_to_agent(
     "/workflows/{workflow_id}/escalate",
     response_model=EscalateResponse,
     dependencies=[Depends(require_permission(Permission.ESCALATE_WORKFLOW))],
+    tags=["Admin", "Workflows"],
+    summary="Escalate workflow for human review",
 )
 async def escalate_workflow(
     workflow_id: str,
@@ -1561,17 +1579,15 @@ async def escalate_workflow(
     "/audit",
     response_model=AuditLogListResponse,
     dependencies=[Depends(require_permission(Permission.VIEW_AUDIT))],
+    tags=["Admin", "Audit"],
+    summary="Query audit log",
 )
 async def list_audit_log(
     session: Annotated[AsyncSession, Depends(get_session)],
-    event_type: Annotated[
-        AuditEventType | None, Query(description="Filter by event type")
-    ] = None,
+    event_type: Annotated[AuditEventType | None, Query(description="Filter by event type")] = None,
     actor: Annotated[str | None, Query(description="Filter by actor")] = None,
     target_id: Annotated[str | None, Query(description="Filter by target ID")] = None,
-    hours: Annotated[
-        int | None, Query(description="Filter to last N hours", ge=1, le=720)
-    ] = None,
+    hours: Annotated[int | None, Query(description="Filter to last N hours", ge=1, le=720)] = None,
     limit: Annotated[int, Query(description="Max entries to return", ge=1, le=1000)] = 100,
     offset: Annotated[int, Query(description="Offset for pagination", ge=0)] = 0,
 ) -> AuditLogListResponse:
@@ -1626,7 +1642,11 @@ async def list_audit_log(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/metrics/single-pass")
+@router.get(
+    "/metrics/single-pass",
+    tags=["Admin", "Metrics"],
+    summary="Single-pass success rate metrics",
+)
 async def get_single_pass_metrics(
     request: Request,
     repo: str | None = Query(None, description="Filter by repo ID"),
@@ -1638,7 +1658,11 @@ async def get_single_pass_metrics(
     return svc.get_single_pass(repo_filter=repo).to_dict()
 
 
-@router.get("/metrics/loopbacks")
+@router.get(
+    "/metrics/loopbacks",
+    tags=["Admin", "Metrics"],
+    summary="Verification loopback breakdown",
+)
 async def get_loopback_metrics(
     request: Request,
     repo: str | None = Query(None, description="Filter by repo ID"),
@@ -1650,7 +1674,11 @@ async def get_loopback_metrics(
     return svc.get_loopbacks(repo_filter=repo).to_dict()
 
 
-@router.get("/metrics/reopen")
+@router.get(
+    "/metrics/reopen",
+    tags=["Admin", "Metrics"],
+    summary="Reopen rate metrics",
+)
 async def get_reopen_metrics(
     request: Request,
     repo: str | None = Query(None, description="Filter by repo ID"),
@@ -1662,7 +1690,11 @@ async def get_reopen_metrics(
     return svc.get_reopen(repo_filter=repo).to_dict()
 
 
-@router.get("/metrics/success-gate")
+@router.get(
+    "/metrics/success-gate",
+    tags=["Admin", "Metrics"],
+    summary="Success gate status",
+)
 async def get_success_gate(
     request: Request,
     repo: str | None = Query(None, description="Filter by repo ID"),
@@ -1694,7 +1726,11 @@ def _emit_success_gate_signal(result: Any) -> None:
 # ---------------------------------------------------------------------------
 
 
-@router.get("/experts")
+@router.get(
+    "/experts",
+    tags=["Admin", "Experts"],
+    summary="List experts with metrics",
+)
 async def list_experts(
     request: Request,
     repo: str | None = Query(None, description="Filter by repo ID"),
@@ -1707,7 +1743,11 @@ async def list_experts(
     return [e.to_dict() for e in svc.list_experts(repo_filter=repo, tier_filter=tier)]
 
 
-@router.get("/experts/{expert_id}")
+@router.get(
+    "/experts/{expert_id}",
+    tags=["Admin", "Experts"],
+    summary="Get expert detail",
+)
 async def get_expert_detail(
     request: Request,
     expert_id: str,
@@ -1722,7 +1762,11 @@ async def get_expert_detail(
     return detail.to_dict()
 
 
-@router.get("/experts/{expert_id}/drift")
+@router.get(
+    "/experts/{expert_id}/drift",
+    tags=["Admin", "Experts"],
+    summary="Get expert drift data",
+)
 async def get_expert_drift(
     request: Request,
     expert_id: str,
@@ -1769,6 +1813,8 @@ class SettingsListResponse(BaseModel):
     "/settings",
     response_model=SettingsListResponse,
     dependencies=[Depends(require_permission(Permission.MANAGE_SETTINGS))],
+    tags=["Admin", "Settings"],
+    summary="List configuration settings",
 )
 async def list_settings(
     session: Annotated[AsyncSession, Depends(get_session)],
@@ -1795,10 +1841,7 @@ async def list_settings(
             values.extend(await svc.list_by_category(session, cat))
 
     return SettingsListResponse(
-        settings=[
-            SettingResponse(**sv.to_dict())
-            for sv in values
-        ],
+        settings=[SettingResponse(**sv.to_dict()) for sv in values],
         category=category,
     )
 
@@ -1807,6 +1850,8 @@ async def list_settings(
     "/settings/{key}",
     response_model=SettingResponse,
     dependencies=[Depends(require_permission(Permission.MANAGE_SETTINGS))],
+    tags=["Admin", "Settings"],
+    summary="Get one setting by key",
 )
 async def get_setting(
     key: str,
@@ -1824,6 +1869,8 @@ async def get_setting(
     "/settings/{key}",
     response_model=SettingResponse,
     dependencies=[Depends(require_permission(Permission.MANAGE_SETTINGS))],
+    tags=["Admin", "Settings"],
+    summary="Update a setting",
 )
 async def update_setting(
     key: str,
@@ -1864,6 +1911,8 @@ async def update_setting(
 @router.delete(
     "/settings/{key}",
     dependencies=[Depends(require_permission(Permission.MANAGE_SETTINGS))],
+    tags=["Admin", "Settings"],
+    summary="Delete DB override for a setting",
 )
 async def delete_setting(
     key: str,
@@ -1926,6 +1975,8 @@ class RepoHealthResponse(BaseModel):
     "/repos/health",
     response_model=RepoHealthResponse,
     dependencies=[Depends(require_permission(Permission.VIEW_REPOS))],
+    tags=["Admin", "Repositories"],
+    summary="Per-repository health summary",
 )
 async def get_repos_health(
     session: Annotated[AsyncSession, Depends(get_session)],
@@ -1953,18 +2004,14 @@ async def get_repos_health(
         active_count_result = await session.execute(
             select(func.count(TaskPacketRow.id)).where(
                 TaskPacketRow.repo == full_name,
-                TaskPacketRow.status.notin_(
-                    [s.value for s in _TERMINAL_STATUSES]
-                ),
+                TaskPacketRow.status.notin_([s.value for s in _TERMINAL_STATUSES]),
             )
         )
         active_count: int = active_count_result.scalar_one() or 0
 
         # Most recent TaskPacket creation timestamp for this repo
         last_task_result = await session.execute(
-            select(func.max(TaskPacketRow.created_at)).where(
-                TaskPacketRow.repo == full_name
-            )
+            select(func.max(TaskPacketRow.created_at)).where(TaskPacketRow.repo == full_name)
         )
         last_task_at = last_task_result.scalar_one()
 

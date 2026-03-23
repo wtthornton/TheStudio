@@ -14,7 +14,8 @@
 {% endblock %}
 
 {% block content %}
-<!-- Register Form (hidden by default) -->
+<!-- Register Form (hidden by default); anchor for empty-state CTA (Epic 46.7) -->
+<div id="register-repo-section"></div>
 <div id="register-form" class="hidden mb-6 bg-white rounded-lg border border-gray-200 p-6">
     <h3 class="text-sm font-semibold text-gray-700 mb-4">Register New Repository</h3>
     <form hx-post="/admin/repos" hx-target="#register-result" hx-swap="innerHTML"
@@ -57,4 +58,20 @@
 <div id="repos-content">
     <div class="text-center py-12 text-gray-400 text-sm">Loading repos...</div>
 </div>
+<script>
+(function () {
+  function revealRegisterFromHash() {
+    if (window.location.hash === "#register-repo-section") {
+      var form = document.getElementById("register-form");
+      if (form) form.classList.remove("hidden");
+    }
+  }
+  window.addEventListener("hashchange", revealRegisterFromHash);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", revealRegisterFromHash);
+  } else {
+    revealRegisterFromHash();
+  }
+})();
+</script>
 {% endblock %}

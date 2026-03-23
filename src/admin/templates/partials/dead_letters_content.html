@@ -1,4 +1,5 @@
 <!-- Dead-letter list partial — loaded via HTMX -->
+{% from "components/empty_state.html" import empty_state %}
 <div class="space-y-4 fade-in">
     <div class="text-sm text-gray-500">
         {{ events | length }} dead-letter event(s)
@@ -40,7 +41,13 @@
         </tbody>
     </table>
     {% else %}
-    <div class="text-center py-12 text-gray-400 text-sm">No dead-letter events.</div>
+    {{ empty_state(
+        "No dead-letter events. Failed deliveries land here after retries are exhausted — check workflows if issues persist.",
+        icon="✕",
+        cta_text="View workflows",
+        cta_url="/admin/ui/workflows",
+        cta_icon="→",
+    ) }}
     {% endif %}
 
     <!-- Detail panel -->

@@ -4,15 +4,15 @@
 
 > Order: 46.1 → 46.2 → 46.3 → 46.4 → 46.5 → 46.6 → 46.7
 > Gate: `cd frontend && npx vitest run` green + manual visual audit
-> TESTS_STATUS: DEFERRED until 46.5 (last React story) and 46.7 (last Admin story)
+> TESTS_STATUS: Ran `pytest tests/unit/test_admin_ui.py`; `cd frontend && npx vitest run` green after 46.7 + 48.5
 
 - [x] 46.1: Create `frontend/src/components/EmptyState.tsx` — reusable base component with icon/illustration slot, heading, description, primary CTA button (onClick or href), optional secondary link. Dark theme styling. **Files:** create EmptyState.tsx.
 - [x] 46.2: Pipeline + Triage empty states — replace `EmptyPipelineRail` in `ErrorStates.tsx` with EmptyState showing pipeline wireframe SVG + "Import an Issue" CTA opening ImportModal. Replace Triage placeholder with "Configure webhook" CTA. **Files:** modify ErrorStates.tsx, TriageQueue.tsx.
 - [x] 46.3: Planning tab empty states — Intent Review, Routing Review, Backlog empty states with explanations and CTAs linking to Pipeline tab. **Files:** modify IntentEditor.tsx, RoutingPreview.tsx, BacklogBoard.tsx.
 - [x] 46.4: Configuration tab empty states — Trust Tiers, Budget, Repos with CTAs to registration/settings. **Files:** modify TrustConfiguration.tsx, BudgetDashboard.tsx, RepoSettings.tsx.
 - [x] 46.5: Analytics + monitoring empty states + header hint — Analytics, Activity Log, Reputation. Header KPI onboarding hint when all zero. Vitest for all empty states. **Files:** modify Analytics.tsx, SteeringActivityLog.tsx, HeaderBar.tsx; create __tests__/EmptyState.test.tsx. **RUN TESTS.**
-- [ ] 46.6: Extend `empty_state.html` Jinja2 partial — add `cta_text`, `cta_url`, `cta_icon` parameters. **Files:** modify src/admin/templates/components/empty_state.html.
-- [ ] 46.7: Update Admin UI pages — repos, workflows, quarantine, dead-letters with specific CTAs. **Files:** modify repos.html, workflows.html, quarantine.html, dead-letters.html. **RUN TESTS.**
+- [x] 46.6: Extend `empty_state.html` Jinja2 partial — add `cta_text`, `cta_url`, `cta_icon` parameters. **Files:** modify src/admin/templates/components/empty_state.html.
+- [x] 46.7: Update Admin UI pages — repos, workflows, quarantine, dead-letters with specific CTAs. **Files:** modify repos.html, workflows.html, quarantine.html, dead-letters.html. **RUN TESTS.**
 
 ---
 
@@ -20,14 +20,16 @@
 
 > Order: 48.1 → 48.2a → 48.2b → 48.3 → 48.4 → 48.5
 > Gate: `/docs` renders Scalar, `cd frontend && npx vitest run` green
-> TESTS_STATUS: DEFERRED until 48.5
+> TESTS_STATUS: `cd frontend && npx vitest run` green (48.5)
 
-- [ ] 48.1: Install `scalar-fastapi`, replace Swagger UI mount in `src/app.py`. Verify `/docs` renders Scalar. **Files:** modify pyproject.toml, src/app.py.
-- [ ] 48.2a: Add tags/descriptions to core routes — `src/app.py` (health), `src/ingress/webhook_handler.py` (webhooks), `src/admin/router.py` (admin top-level). ~15 routes. **Files:** modify app.py, webhook_handler.py, router.py.
-- [ ] 48.2b: Add tags/descriptions to admin sub-routers — `src/admin/repos_router.py`, `src/admin/workflow_router.py`, `src/admin/settings_router.py`. ~20 routes. **Files:** modify 3 router files.
-- [ ] 48.3: Install `@scalar/api-reference`. Create `frontend/src/components/ApiReference.tsx` with dark theme. **Files:** modify frontend/package.json; create ApiReference.tsx.
-- [ ] 48.4: Add "API" tab to `frontend/src/App.tsx`. Render ApiReference pointing at `/openapi.json`. **Files:** modify App.tsx.
-- [ ] 48.5: Verify "Try It" against live endpoints. Vitest for ApiReference mount. **Files:** create __tests__/ApiReference.test.tsx. **RUN TESTS.**
+- [x] 48.1: Install `scalar-fastapi`, replace Swagger UI mount in `src/app.py`. Verify `/docs` renders Scalar. **Files:** modify pyproject.toml, src/app.py.
+- [x] 48.2a: Add tags/descriptions to core routes — `src/app.py` (health), `src/ingress/webhook_handler.py` (webhooks), `src/admin/router.py` (admin top-level). ~15 routes. **Files:** modify app.py, webhook_handler.py, router.py.
+- [x] 48.2b: Add tags/descriptions to admin sub-routers — `src/admin/repos_router.py`, `src/admin/workflow_router.py`, `src/admin/settings_router.py`. ~20 routes. **Files:** modify 3 router files.
+  - *Implemented in `src/admin/router.py` only (no separate repos/workflow/settings router modules in this repo).*
+- [x] 48.3: Install `@scalar/api-reference`. Create `frontend/src/components/ApiReference.tsx` with dark theme. **Files:** modify frontend/package.json; create ApiReference.tsx.
+  - *React: `@scalar/api-reference-react` (official React wrapper for Scalar reference).*
+- [x] 48.4: Add "API" tab to `frontend/src/App.tsx`. Render ApiReference pointing at `/openapi.json`. **Files:** modify App.tsx.
+- [x] 48.5: Verify "Try It" against live endpoints. Vitest for ApiReference mount. **Files:** create __tests__/ApiReference.test.tsx. **RUN TESTS.**
 
 ---
 

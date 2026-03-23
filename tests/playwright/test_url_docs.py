@@ -46,8 +46,8 @@ DOCUMENTED_URLS = [
     ),
     (
         "/docs", 200, None,
-        "API documentation (Swagger/OpenAPI)",
-        ["swagger", "openapi", "API", "endpoint"],
+        "API documentation (Scalar/OpenAPI interactive reference)",
+        ["openapi.json", "Scalar", "API"],
     ),
 ]
 
@@ -91,6 +91,9 @@ def test_documented_url_delivers_purpose(
 
     page.wait_for_load_state("domcontentloaded")
     body = page.locator("body").inner_text()
+    # Include raw HTML so /docs (Scalar) matches config in inline scripts, not only visible text
+    html = page.content()
+    haystack = f"{body}\n{html}"
 
     # Check explicit expected text (backwards compatible)
     if expected_text:
@@ -99,9 +102,9 @@ def test_documented_url_delivers_purpose(
         )
 
     # Check purpose keywords — the page must contain at least one
-    body_lower = body.lower()
+    haystack_lower = haystack.lower()
     has_purpose = any(
-        kw in body or kw.lower() in body_lower for kw in purpose_keywords
+        kw in haystack or kw.lower() in haystack_lower for kw in purpose_keywords
     )
     assert has_purpose, (
         f"{url} should serve as {purpose_desc} "

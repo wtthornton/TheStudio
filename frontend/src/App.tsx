@@ -31,8 +31,21 @@ import { PIPELINE_STAGES } from './lib/constants'
 import { RepoContextProvider } from './contexts/RepoContext'
 import { RepoSelector } from './components/RepoSelector'
 import { RepoSettings } from './components/RepoSettings'
+import { ApiReference } from './components/ApiReference'
 
-type Tab = 'pipeline' | 'triage' | 'intent' | 'routing' | 'board' | 'trust' | 'budget' | 'activity' | 'analytics' | 'reputation' | 'repos'
+type Tab =
+  | 'pipeline'
+  | 'triage'
+  | 'intent'
+  | 'routing'
+  | 'board'
+  | 'trust'
+  | 'budget'
+  | 'activity'
+  | 'analytics'
+  | 'reputation'
+  | 'repos'
+  | 'api'
 
 function App() {
   useSSE()
@@ -132,6 +145,12 @@ function App() {
               className={`px-3 py-1.5 text-sm rounded ${activeTab === 'repos' ? 'bg-gray-700 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}
             >
               Repos
+            </button>
+            <button
+              onClick={() => setActiveTab('api')}
+              className={`px-3 py-1.5 text-sm rounded ${activeTab === 'api' ? 'bg-gray-700 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}
+            >
+              API
             </button>
           </nav>
         </div>
@@ -259,6 +278,11 @@ function App() {
       ) : activeTab === 'repos' ? (
         /* Repository Settings & Fleet Health (Epic 41, Slice 2 — 41.11 + 41.14) */
         <RepoSettings />
+      ) : activeTab === 'api' ? (
+        <div className="mx-auto max-w-[100rem] px-6 py-6">
+          <h2 className="mb-4 text-sm font-medium text-gray-300">HTTP API (OpenAPI)</h2>
+          <ApiReference />
+        </div>
       ) : (
         /* Steering Activity Log (Epic 37, Slice 5 — 37.28) */
         <SteeringActivityLog />

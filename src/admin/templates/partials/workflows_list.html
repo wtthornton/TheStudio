@@ -33,5 +33,11 @@
     </table>
 </div>
 {% else %}
-{{ empty_state("No workflows match your filters.") }}
+{{ empty_state(
+    "No workflows yet, or none match your filters. Trigger the pipeline from the dashboard or adjust filters above.",
+    icon="◎",
+    cta_text="Open Pipeline Dashboard",
+    cta_url="/dashboard/?tab=pipeline",
+    cta_icon="→",
+) }}
 {% endif %}

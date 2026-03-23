@@ -5,6 +5,7 @@
 <span class="htmx-indicator text-gray-400 text-xs">Loading...</span>
 {% endblock %}
 {% block content %}
+<p class="text-sm text-gray-500 mb-4">Dead letters are messages that failed after maximum retries. Inspect workflow details to find the root cause.</p>
 <div hx-get="/admin/ui/partials/dead-letters" hx-trigger="load" hx-swap="innerHTML" hx-indicator="closest div">
     <div class="text-center py-12 text-gray-400 text-sm htmx-indicator">Loading dead-letter events...</div>
 </div>

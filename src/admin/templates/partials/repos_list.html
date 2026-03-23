@@ -31,5 +31,11 @@
     </table>
 </div>
 {% else %}
-{{ empty_state("No repos registered. Register your first repo to get started.") }}
+{{ empty_state(
+    "No repositories are registered yet. Add a GitHub repo so webhooks and the pipeline can run against it.",
+    icon="◇",
+    cta_text="Register a repository",
+    cta_url="/admin/ui/repos#register-repo-section",
+    cta_icon="+",
+) }}
 {% endif %}
