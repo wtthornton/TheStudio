@@ -293,3 +293,107 @@ class GitHubClient:
             "Enabled auto-merge (%s) on PR #%d for %s/%s",
             method_upper, pr_number, owner, repo,
         )
+
+    async def get_pr_merge_status(
+        self, owner: str, repo: str, pr_number: int
+    ) -> dict[str, Any]:
+        """Get the current state and merge status of a pull request.
+
+        Returns a dict with keys: state (open/closed), merged (bool),
+        merge_commit_sha (str|None), merged_at (str|None).
+
+        Epic 42 Story 42.8 — post-merge monitoring.
+        """
+        data = await self._request("GET", f"/repos/{owner}/{repo}/pulls/{pr_number}")
+        return {
+            "state": data.get("state", ""),
+            "merged": data.get("merged", False),
+            "merge_commit_sha": data.get("merge_commit_sha"),
+            "merged_at": data.get("merged_at"),
+        }
+
+    async def check_for_reverts(
+        self,
+        owner: str,
+        repo: str,
+        pr_number: int,
+        since_iso: str,
+    ) -> str | None:
+        """Check for revert commits on the default branch referencing this PR.
+
+        Fetches commits since *since_iso* and looks for commit messages that
+        match the GitHub revert pattern: ``Revert "<title>" (#<pr_number>)``.
+        Also matches commits that contain ``Revert`` and reference the PR
+        number directly.
+
+        Returns the revert commit SHA if found, ``None`` otherwise.
+
+        Epic 42 Story 42.8 — post-merge monitoring.
+        """
+        resp = await self._client.get(
+            f"/repos/{owner}/{repo}/commits",
+            params={"since": since_iso, "per_page": 50},
+        )
+        resp.raise_for_status()
+        commits = resp.json()
+
+        pr_ref = f"#{pr_number}"
+        for commit in commits:
+            message: str = commit.get("commit", {}).get("message", "")
+            first_line = message.split("\n")[0]
+            # Match GitHub's revert message format: Revert "..." and references PR
+            if first_line.startswith("Revert ") and pr_ref in message:
+                sha: str = commit.get("sha", "")
+                logger.info(
+                    "Revert detected for PR #%d on %s/%s: sha=%s",
+                    pr_number, owner, repo, sha,
+                )
+                return sha
+
+        return None
+
+    async def check_for_linked_issues(
+        self,
+        owner: str,
+        repo: str,
+        pr_number: int,
+        since_iso: str,
+    ) -> int | None:
+        """Check for new issues opened that reference this PR.
+
+        Fetches issues opened since *since_iso* and checks if the body
+        references the PR number (``#<pr_number>``).
+
+        Returns the linked issue number if found, ``None`` otherwise.
+
+        Epic 42 Story 42.8 — post-merge monitoring.
+        """
+        resp = await self._client.get(
+            f"/repos/{owner}/{repo}/issues",
+            params={
+                "state": "open",
+                "since": since_iso,
+                "per_page": 30,
+                "sort": "created",
+                "direction": "desc",
+            },
+        )
+        resp.raise_for_status()
+        issues = resp.json()
+
+        pr_ref = f"#{pr_number}"
+        for issue in issues:
+            # Exclude pull requests from the issues list
+            if "pull_request" in issue:
+                continue
+            body: str = issue.get("body") or ""
+            title: str = issue.get("title") or ""
+            if pr_ref in body or pr_ref in title:
+                issue_number: int = issue.get("number", 0)
+                logger.info(
+                    "Linked issue #%d detected for PR #%d on %s/%s",
+                    issue_number, pr_number, owner, repo,
+                )
+                return issue_number
+
+        return None

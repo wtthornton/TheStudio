@@ -4,6 +4,7 @@ from fastapi import APIRouter
 
 from src.dashboard.activity import router as activity_router
 from src.dashboard.analytics_router import router as analytics_router
+from src.dashboard.auto_merge_router import router as auto_merge_router
 from src.dashboard.board import router as board_router
 from src.dashboard.budget_router import router as budget_router
 from src.dashboard.events import router as events_router
@@ -32,6 +33,7 @@ router.include_router(github_router)
 router.include_router(pr_router)
 router.include_router(analytics_router)
 router.include_router(reputation_router)
+router.include_router(auto_merge_router)
 
 
 @router.get("/health")

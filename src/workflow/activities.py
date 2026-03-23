@@ -307,6 +307,34 @@ class PublishOutput:
     pr_url: str = ""
     created: bool = False
     marked_ready: bool = False
+    auto_merge_enabled: bool = False  # True when auto-merge was enabled (Execute tier)
+
+
+@dataclass
+class PostMergeMonitorInput:
+    """Input for the post-merge monitoring activity (Epic 42 Story 42.8).
+
+    Passed from the pipeline after auto-merge is enabled on a PR.
+    """
+
+    taskpacket_id: str
+    pr_number: int
+    repo: str  # "owner/repo" format
+    merged_at_iso: str  # ISO-8601 UTC timestamp of when auto-merge was enabled
+    rule_id: str = ""  # UUID of the matched trust-tier rule (may be empty)
+
+
+@dataclass
+class PostMergeMonitorOutput:
+    """Output of the post-merge monitoring activity (Epic 42 Story 42.8).
+
+    Outcome is one of: "succeeded", "reverted", "issue_detected", or "unknown".
+    """
+
+    outcome: str = "succeeded"  # succeeded | reverted | issue_detected
+    detected_at_iso: str = ""  # ISO-8601 UTC when the event was detected
+    revert_sha: str = ""  # Git SHA of the revert commit (if reverted)
+    linked_issue_number: int = 0  # GitHub issue number (if issue_detected)
 
 
 @dataclass
@@ -1515,7 +1543,208 @@ async def _publish_real(
             pr_url=result.pr_url,
             created=result.created,
             marked_ready=result.marked_ready,
+            auto_merge_enabled=result.auto_merge_enabled,
         )
+
+
+@activity.defn
+async def monitor_post_merge_activity(
+    params: PostMergeMonitorInput,
+) -> PostMergeMonitorOutput:
+    """Post-merge monitoring activity (Epic 42 Story 42.8).
+
+    After an auto-merged PR lands, this activity:
+    1. Waits 30 minutes (initial quiet period after merge).
+    2. Polls GitHub every 15 minutes for up to 24 hours, checking for:
+       - Revert commits that reference the PR number.
+       - New issues opened that reference the PR.
+    3. Emits a MERGE_SUCCEEDED, MERGE_REVERTED, or POST_MERGE_ISSUE outcome
+       signal to the outcome ingestor.
+    4. Persists the result to the auto_merge_outcomes table.
+    5. Triggers rule health evaluation (may auto-deactivate the matched rule).
+
+    The activity heartbeats every poll iteration to extend the Temporal
+    activity deadline. Schedule with a start_to_close_timeout >= 26 hours.
+
+    Returns a PostMergeMonitorOutput describing the final outcome.
+    """
+    import asyncio
+    import logging
+    from datetime import UTC, datetime
+    from uuid import UUID
+
+    _log = logging.getLogger("thestudio.post_merge_monitor")
+    _log.info(
+        "post_merge_monitor.start taskpacket_id=%s pr=%d repo=%s",
+        params.taskpacket_id,
+        params.pr_number,
+        params.repo,
+    )
+
+    # Parse repo into owner/name parts
+    repo_parts = params.repo.split("/", 1)
+    if len(repo_parts) != 2:
+        _log.error("post_merge_monitor.invalid_repo repo=%s", params.repo)
+        return PostMergeMonitorOutput(outcome="succeeded")
+
+    owner, repo_name = repo_parts
+    pr_number = params.pr_number
+
+    # Build the "since" timestamp for GitHub API calls (merge time)
+    try:
+        merged_at = datetime.fromisoformat(params.merged_at_iso)
+    except ValueError:
+        merged_at = datetime.now(UTC)
+    since_iso = merged_at.isoformat()
+
+    # Configurable timing constants (seconds) — overridden in tests via env
+    import os
+    initial_wait_s = int(os.environ.get("POST_MERGE_INITIAL_WAIT_S", 1800))   # 30 min
+    poll_interval_s = int(os.environ.get("POST_MERGE_POLL_INTERVAL_S", 900))  # 15 min
+    max_polls = int(os.environ.get("POST_MERGE_MAX_POLLS", 96))               # 24 hours
+
+    outcome = "succeeded"
+    detected_at_iso = ""
+    revert_sha = ""
+    linked_issue_number = 0
+
+    from src.settings import settings
+
+    if settings.github_provider != "real":
+        # Stub mode — no real GitHub to poll; return success immediately
+        _log.info("post_merge_monitor.stub_mode — returning succeeded immediately")
+        outcome = "succeeded"
+        detected_at_iso = datetime.now(UTC).isoformat()
+    else:
+        from src.publisher.github_client import GitHubClient
+
+        token = settings.intake_poll_token
+        if not token:
+            _log.error("post_merge_monitor.no_token — cannot poll GitHub")
+            return PostMergeMonitorOutput(outcome="succeeded")
+
+        # Step 1: Initial quiet period
+        _log.info("post_merge_monitor.waiting initial_wait_s=%d", initial_wait_s)
+        await asyncio.sleep(initial_wait_s)
+
+        # Step 2: Polling loop using publisher GitHubClient (has check_for_reverts etc.)
+        async with GitHubClient(token) as github:
+            for poll_num in range(max_polls):
+                # Heartbeat to extend Temporal activity deadline
+                activity.heartbeat(f"poll {poll_num + 1}/{max_polls}")
+
+                try:
+                    revert = await github.check_for_reverts(
+                        owner, repo_name, pr_number, since_iso
+                    )
+                    if revert:
+                        outcome = "reverted"
+                        detected_at_iso = datetime.now(UTC).isoformat()
+                        revert_sha = revert
+                        _log.warning(
+                            "post_merge_monitor.revert_detected pr=%d sha=%s",
+                            pr_number, revert,
+                        )
+                        break
+
+                    linked = await github.check_for_linked_issues(
+                        owner, repo_name, pr_number, since_iso
+                    )
+                    if linked:
+                        outcome = "issue_detected"
+                        detected_at_iso = datetime.now(UTC).isoformat()
+                        linked_issue_number = linked
+                        _log.warning(
+                            "post_merge_monitor.issue_detected pr=%d issue=%d",
+                            pr_number, linked,
+                        )
+                        break
+
+                except Exception:
+                    _log.warning(
+                        "post_merge_monitor.poll_error poll=%d pr=%d",
+                        poll_num + 1, pr_number,
+                        exc_info=True,
+                    )
+
+                if poll_num < max_polls - 1:
+                    await asyncio.sleep(poll_interval_s)
+
+        if not detected_at_iso:
+            detected_at_iso = datetime.now(UTC).isoformat()
+
+    _log.info(
+        "post_merge_monitor.complete taskpacket_id=%s outcome=%s",
+        params.taskpacket_id, outcome,
+    )
+
+    # Step 3: Persist outcome to auto_merge_outcomes table
+    try:
+        from src.dashboard.models.auto_merge_outcomes import (
+            AutoMergeOutcomeCreate,
+            create_outcome,
+        )
+        from src.db.connection import get_async_session
+
+        rule_uuid = None
+        if params.rule_id:
+            try:
+                rule_uuid = UUID(params.rule_id)
+            except ValueError:
+                pass
+
+        outcome_data = AutoMergeOutcomeCreate(
+            taskpacket_id=UUID(params.taskpacket_id),
+            rule_id=rule_uuid,
+            pr_number=pr_number,
+            repo=params.repo,
+            merged_at=merged_at,
+            outcome=outcome,
+            detected_at=(
+                datetime.fromisoformat(detected_at_iso) if detected_at_iso else None
+            ),
+            revert_sha=revert_sha or None,
+            linked_issue_number=linked_issue_number or None,
+        )
+
+        async with get_async_session() as session:
+            await create_outcome(session, outcome_data)
+            await session.commit()
+
+    except Exception:
+        _log.warning(
+            "post_merge_monitor.persist_failed taskpacket_id=%s",
+            params.taskpacket_id,
+            exc_info=True,
+        )
+
+    # Step 4: Rule health evaluation (auto-deactivation)
+    if params.rule_id and outcome in ("succeeded", "reverted"):
+        try:
+            from src.dashboard.rule_health import update_rule_success_metrics
+            from src.db.connection import get_async_session
+
+            async with get_async_session() as session:
+                await update_rule_success_metrics(
+                    session,
+                    rule_id=UUID(params.rule_id),
+                    outcome=outcome,
+                    taskpacket_id=UUID(params.taskpacket_id),
+                )
+                await session.commit()
+        except Exception:
+            _log.warning(
+                "post_merge_monitor.rule_health_failed rule_id=%s",
+                params.rule_id,
+                exc_info=True,
+            )
+
+    return PostMergeMonitorOutput(
+        outcome=outcome,
+        detected_at_iso=detected_at_iso,
+        revert_sha=revert_sha,
+        linked_issue_number=linked_issue_number,
+    )
 
 
 @activity.defn

@@ -51,6 +51,10 @@ def _make_rule_row(**overrides: Any) -> MagicMock:
     row.assigned_tier = overrides.get("assigned_tier", AssignedTier.OBSERVE)
     row.active = overrides.get("active", True)
     row.description = overrides.get("description", None)
+    # Epic 42 Story 42.11 — rule success tracking fields
+    row.merge_count = overrides.get("merge_count", 0)
+    row.revert_count = overrides.get("revert_count", 0)
+    row.deactivation_reason = overrides.get("deactivation_reason", None)
     row.created_at = overrides.get("created_at", _NOW)
     row.updated_at = overrides.get("updated_at", _NOW)
     return row

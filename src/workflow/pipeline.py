@@ -48,6 +48,7 @@ with workflow.unsafe.imports_passed_through():
         IntentInput,
         IntentOutput,
         PersistSteeringAuditInput,
+        PostMergeMonitorInput,
         PostPipelineCommentInput,
         PreflightActivityOutput,
         PreflightInput,
@@ -68,6 +69,7 @@ with workflow.unsafe.imports_passed_through():
         implement_activity,
         intake_activity,
         intent_activity,
+        monitor_post_merge_activity,
         persist_steering_audit_activity,
         post_approval_request_activity,
         post_pipeline_comment_activity,
@@ -1135,12 +1137,17 @@ class TheStudioPipelineWorkflow:
                 output.rejection_reason = f"aborted: {self._abort_reason}"
                 return output
             verify_policy = STEP_POLICIES[WorkflowStep.VERIFY]
+            # Construct branch name from taskpacket_id (matches implement step)
+            _short_id = params.taskpacket_id[:8]
+            _verify_branch = f"thestudio/{_short_id}/v1"
             verify_result: VerifyOutput = await workflow.execute_activity(
                 verify_activity,
                 VerifyInput(
                     taskpacket_id=params.taskpacket_id,
                     changed_files=impl_result.files_changed,
                     repo_path=params.repo_path,
+                    repo=params.repo,
+                    branch=_verify_branch,
                 ),
                 start_to_close_timeout=verify_policy.timeout,
                 retry_policy=verify_policy.to_retry_policy(),
@@ -1339,4 +1346,45 @@ class TheStudioPipelineWorkflow:
             pr_url=publish_result.pr_url,
         )
 
+        # Epic 42 Story 42.9: Schedule post-merge monitor for Execute-tier tasks.
+        # Fire-and-forget — never blocks the pipeline return or raises.
+        if publish_result.auto_merge_enabled and publish_result.pr_number:
+            await self._start_post_merge_monitor(params, publish_result)
+
         return output
+
+    async def _start_post_merge_monitor(
+        self,
+        params: PipelineInput,
+        publish_result: PublishOutput,
+    ) -> None:
+        """Schedule post-merge monitoring as a best-effort fire-and-forget activity.
+
+        Runs after auto-merge is enabled (Execute tier only). Detached from the
+        main pipeline — any failure here is logged but never propagates.
+
+        Activity timeout is 26 hours: 30-min initial wait + 24 hours polling + 1h margin.
+        """
+        try:
+            monitor_policy = StepPolicy(
+                timeout=timedelta(hours=26),  # 30-min wait + 24h polling + margin
+                max_retries=0,  # Do not retry — outcome is already stored on first run
+            )
+            await workflow.execute_activity(
+                monitor_post_merge_activity,
+                PostMergeMonitorInput(
+                    taskpacket_id=params.taskpacket_id,
+                    pr_number=publish_result.pr_number,
+                    repo=params.repo,
+                    merged_at_iso=workflow.now().isoformat(),
+                    rule_id="",  # Populated from TaskPacket in activity when available
+                ),
+                start_to_close_timeout=monitor_policy.timeout,
+                retry_policy=monitor_policy.to_retry_policy(),
+            )
+        except Exception:
+            workflow.logger.warning(
+                "post_merge_monitor.failed_to_start taskpacket_id=%s pr=%d",
+                params.taskpacket_id,
+                publish_result.pr_number,
+            )

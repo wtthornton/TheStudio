@@ -84,6 +84,14 @@ class TrustTierRuleRow(Base):
         Boolean, nullable=False, default=False, server_default="false"
     )
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Epic 42 Story 42.11 — rule success tracking for auto-deactivation
+    merge_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    revert_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    deactivation_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
@@ -175,6 +183,10 @@ class TrustTierRuleRead(BaseModel):
     active: bool
     dry_run: bool = False
     description: str | None
+    # Epic 42 Story 42.11 — rule success metrics
+    merge_count: int = 0
+    revert_count: int = 0
+    deactivation_reason: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -411,6 +423,9 @@ def _rule_read(row: TrustTierRuleRow) -> TrustTierRuleRead:
         active=row.active,
         dry_run=getattr(row, "dry_run", False),
         description=row.description,
+        merge_count=getattr(row, "merge_count", 0),
+        revert_count=getattr(row, "revert_count", 0),
+        deactivation_reason=getattr(row, "deactivation_reason", None),
         created_at=row.created_at,
         updated_at=row.updated_at,
     )
