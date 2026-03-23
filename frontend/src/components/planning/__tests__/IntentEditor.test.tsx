@@ -202,6 +202,8 @@ describe('IntentEditor', () => {
 
   // 11. Compare Versions toggle hidden for single version
   it('hides Compare Versions button when only one version exists', async () => {
+    // Override mock to return only v1 so the API fetch won't replace store state with v2
+    mockFetchIntent.mockResolvedValue({ current: specV1, versions: [specV1] })
     setupStore({ versions: [specV1], current: specV1, selectedVersion: 1 })
     render(<IntentEditor taskId="task-1" />)
     await waitFor(() => {
@@ -246,9 +248,9 @@ describe('IntentEditor', () => {
 
   // 14. Error state
   it('shows error message when intent fails to load', async () => {
-    setupStore({ error: 'Network error', current: null })
-    // Need to also set loading=false so we don't get stuck in loading
-    useIntentStore.setState({ loading: false })
+    // Simulate API failure so the component itself sets the error state
+    mockFetchIntent.mockRejectedValue(new Error('Network error'))
+    setupStore({ current: null, error: null })
     render(<IntentEditor taskId="task-1" />)
     await waitFor(() => {
       expect(screen.getByText('Network error')).toBeInTheDocument()
@@ -257,11 +259,12 @@ describe('IntentEditor', () => {
 
   // 15. No intent state
   it('shows no-intent message when current is null with no error', async () => {
-    setupStore({ current: null, error: null })
-    useIntentStore.setState({ loading: false })
+    // API returns no current intent
+    mockFetchIntent.mockResolvedValue({ current: null, versions: [] })
+    setupStore({ current: null, error: null, versions: [] })
     render(<IntentEditor taskId="task-1" />)
     await waitFor(() => {
-      expect(screen.getByText(/no intent specification found/i)).toBeInTheDocument()
+      expect(screen.getByText(/no intent specification yet/i)).toBeInTheDocument()
     })
   })
 })

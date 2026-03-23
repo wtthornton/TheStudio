@@ -252,7 +252,7 @@ function App() {
         <BudgetDashboard />
       ) : activeTab === 'analytics' ? (
         /* Operational Analytics (Epic 39, Slice 1) */
-        <Analytics />
+        <Analytics onNavigateToPipeline={() => setActiveTab('pipeline')} />
       ) : activeTab === 'reputation' ? (
         /* Reputation & Outcomes (Epic 39, Slice 2) */
         <Reputation />

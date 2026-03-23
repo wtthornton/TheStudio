@@ -66,7 +66,7 @@ export const useIntentStore = create<IntentState & IntentActions>((set, get) => 
       set({
         current: data.current,
         versions: data.versions,
-        selectedVersion: data.current.version,
+        selectedVersion: data.current?.version ?? null,
         loading: false,
       })
     } catch (err) {

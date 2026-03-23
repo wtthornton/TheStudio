@@ -100,8 +100,9 @@ describe('RoutingPreview', () => {
   it('5. shows empty-state message when routing is null', () => {
     setupStore({ routing: null })
     render(<RoutingPreview taskId="task-1" />)
+    // EmptyState heading from Epic 46.3
     expect(
-      screen.getByText(/no routing data available/i),
+      screen.getByText(/no routing data yet/i),
     ).toBeInTheDocument()
   })
 

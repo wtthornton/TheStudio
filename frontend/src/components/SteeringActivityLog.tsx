@@ -9,6 +9,7 @@
  */
 
 import { useEffect, useState, useCallback } from 'react'
+import { EmptyState } from './EmptyState'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -198,10 +199,12 @@ function AuditTable({ entries, loading, error }: AuditTableProps) {
 
   if (entries.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-gray-500">
-        <span className="mb-2 text-3xl">🔧</span>
-        <p className="text-sm">No steering actions recorded yet.</p>
-      </div>
+      <EmptyState
+        icon={<span className="text-4xl">🔧</span>}
+        heading="No steering actions yet"
+        description="Steering actions (pause, resume, abort, redirect, retry, trust tier changes) will appear here once the pipeline is active."
+        data-testid="activity-log-empty-state"
+      />
     )
   }
 
