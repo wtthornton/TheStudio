@@ -11,8 +11,8 @@ export interface TriageState {
 }
 
 export interface TriageActions {
-  /** Fetch triage tasks from the API. */
-  loadTasks: () => Promise<void>
+  /** Fetch triage tasks from the API, optionally filtered by repo full_name. */
+  loadTasks: (repo?: string | null) => Promise<void>
   /** Accept a task (transition to pipeline). */
   accept: (taskId: string) => Promise<void>
   /** Reject a task with a reason. */
@@ -30,10 +30,10 @@ export const useTriageStore = create<TriageState & TriageActions>((set, get) => 
   loading: false,
   error: null,
 
-  loadTasks: async () => {
+  loadTasks: async (repo?: string | null) => {
     set({ loading: true, error: null })
     try {
-      const { items } = await fetchTriageTasks()
+      const { items } = await fetchTriageTasks(repo)
       set({ tasks: items, loading: false })
     } catch (err) {
       set({ error: err instanceof Error ? err.message : 'Failed to load', loading: false })

@@ -20,6 +20,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from src.dashboard.events import _verify_token
 from src.db.base import Base
 from src.db.connection import get_session
+from src.models.taskpacket import TaskPacketRow
 
 logger = logging.getLogger(__name__)
 
@@ -113,56 +114,66 @@ async def list_task_gates(
 async def gate_metrics(
     token: str | None = Query(None),
     window_hours: int = Query(24, ge=1, le=720),
+    repo: str | None = Query(None, description="Filter by repo full_name (owner/repo)"),
     session: AsyncSession = Depends(get_session),
 ) -> GateMetrics:
     """Aggregated gate health metrics over a configurable window (S2.B5).
 
     Computes pass rate, average issues per gate, top failure type,
     and loopback rate within the specified time window.
+
+    Query params:
+    - ``window_hours``: lookback window in hours (default 24, max 720).
+    - ``repo``: optional filter by repo full_name (owner/repo). When provided,
+      only gate events for TaskPackets belonging to that repo are included.
     """
     _verify_token(token)
 
     cutoff = datetime.now(UTC) - timedelta(hours=window_hours)
 
+    def _base_gate_stmt():
+        """Return a base gate statement, joining to TaskPacket if repo filter is set."""
+        if repo is not None:
+            return (
+                select(GateEvidenceRow)
+                .join(TaskPacketRow, GateEvidenceRow.task_id == TaskPacketRow.id)
+                .where(GateEvidenceRow.created_at >= cutoff)
+                .where(TaskPacketRow.repo == repo)
+            )
+        return select(GateEvidenceRow).where(GateEvidenceRow.created_at >= cutoff)
+
     # Total gates in window
-    count_stmt = (
-        select(func.count())
-        .select_from(GateEvidenceRow)
-        .where(GateEvidenceRow.created_at >= cutoff)
-    )
+    base = _base_gate_stmt()
+    count_stmt = select(func.count()).select_from(base.subquery())
     total_gates = (await session.execute(count_stmt)).scalar_one()
 
     if total_gates == 0:
         return GateMetrics(window_hours=window_hours, total_gates=0)
 
     # Pass count
-    pass_count_stmt = (
-        select(func.count())
-        .select_from(GateEvidenceRow)
-        .where(GateEvidenceRow.created_at >= cutoff)
-        .where(GateEvidenceRow.result == "pass")
-    )
+    pass_base = _base_gate_stmt().where(GateEvidenceRow.result == "pass")
+    pass_count_stmt = select(func.count()).select_from(pass_base.subquery())
     pass_count = (await session.execute(pass_count_stmt)).scalar_one()
     pass_rate = pass_count / total_gates if total_gates > 0 else None
 
     # Average issues: count non-null defect_category entries as "issues"
-    issue_count_stmt = (
-        select(func.count())
-        .select_from(GateEvidenceRow)
-        .where(GateEvidenceRow.created_at >= cutoff)
-        .where(GateEvidenceRow.defect_category.isnot(None))
-    )
+    issue_base = _base_gate_stmt().where(GateEvidenceRow.defect_category.isnot(None))
+    issue_count_stmt = select(func.count()).select_from(issue_base.subquery())
     issue_count = (await session.execute(issue_count_stmt)).scalar_one()
     avg_issues = issue_count / total_gates if total_gates > 0 else None
 
     # Top failure type: most common defect_category among failures
     top_failure_type: str | None = None
-    top_fail_stmt = (
-        select(GateEvidenceRow.defect_category, func.count().label("cnt"))
-        .where(GateEvidenceRow.created_at >= cutoff)
+    top_fail_base = (
+        _base_gate_stmt()
         .where(GateEvidenceRow.result == "fail")
         .where(GateEvidenceRow.defect_category.isnot(None))
-        .group_by(GateEvidenceRow.defect_category)
+    )
+    top_fail_sub = top_fail_base.subquery()
+    top_fail_stmt = (
+        select(top_fail_sub.c.defect_category, func.count().label("cnt"))
+        .select_from(top_fail_sub)
+        .group_by(top_fail_sub.c.defect_category)
         .order_by(func.count().desc())
         .limit(1)
     )
@@ -173,16 +184,15 @@ async def gate_metrics(
     # Loopback rate: tasks that have >1 gate entry for the same stage
     # (indicates a retry / loopback)
     loopback_rate: float | None = None
-    loopback_stmt = select(func.count(func.distinct(GateEvidenceRow.task_id))).where(
-        GateEvidenceRow.created_at >= cutoff
-    )
-    unique_tasks = (await session.execute(loopback_stmt)).scalar_one()
+    base_sub = _base_gate_stmt().subquery()
+    unique_tasks_stmt = select(func.count(func.distinct(base_sub.c.task_id))).select_from(base_sub)
+    unique_tasks = (await session.execute(unique_tasks_stmt)).scalar_one()
     if unique_tasks > 0:
         # Count tasks with duplicate stage entries (same task + stage > 1 row)
         loopback_sub = (
-            select(GateEvidenceRow.task_id)
-            .where(GateEvidenceRow.created_at >= cutoff)
-            .group_by(GateEvidenceRow.task_id, GateEvidenceRow.stage)
+            select(base_sub.c.task_id)
+            .select_from(base_sub)
+            .group_by(base_sub.c.task_id, base_sub.c.stage)
             .having(func.count() > 1)
         )
         loopback_count_stmt = select(func.count(func.distinct(loopback_sub.c.task_id))).select_from(
@@ -229,17 +239,31 @@ async def list_gates(
     task_id: uuid.UUID | None = Query(None),
     created_after: datetime | None = Query(None),
     created_before: datetime | None = Query(None),
+    repo: str | None = Query(None, description="Filter by repo full_name (owner/repo)"),
     session: AsyncSession = Depends(get_session),
 ) -> dict:
     """List all gate events with pagination and filters (S2.B3).
 
-    Supports filtering by result (pass/fail), stage, task_id, and date range.
+    Supports filtering by result (pass/fail), stage, task_id, date range, and repo.
     Returns newest-first ordering.
     """
     _verify_token(token)
 
-    stmt = select(GateEvidenceRow)
-    count_stmt = select(func.count()).select_from(GateEvidenceRow)
+    if repo is not None:
+        stmt = (
+            select(GateEvidenceRow)
+            .join(TaskPacketRow, GateEvidenceRow.task_id == TaskPacketRow.id)
+            .where(TaskPacketRow.repo == repo)
+        )
+        count_stmt = (
+            select(func.count())
+            .select_from(GateEvidenceRow)
+            .join(TaskPacketRow, GateEvidenceRow.task_id == TaskPacketRow.id)
+            .where(TaskPacketRow.repo == repo)
+        )
+    else:
+        stmt = select(GateEvidenceRow)
+        count_stmt = select(func.count()).select_from(GateEvidenceRow)
 
     # Apply filters
     if result is not None:

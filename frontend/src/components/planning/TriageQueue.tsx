@@ -5,14 +5,16 @@ import { useTriageStore } from '../../stores/triage-store'
 import { TriageCard } from './TriageCard'
 import { EditPanel } from './EditPanel'
 import type { RejectionReason } from '../../lib/api'
+import { useRepoContext } from '../../contexts/RepoContext'
 
 export function TriageQueue() {
   const { tasks, loading, error, loadTasks, accept, reject, edit } = useTriageStore()
+  const { selectedRepo } = useRepoContext()
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
 
   useEffect(() => {
-    void loadTasks()
-  }, [loadTasks])
+    void loadTasks(selectedRepo)
+  }, [loadTasks, selectedRepo])
 
   const handleAccept = useCallback((taskId: string) => {
     void accept(taskId)

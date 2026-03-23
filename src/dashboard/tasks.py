@@ -51,6 +51,14 @@ class ManualTaskCreate(BaseModel):
     skip_triage: bool = Field(
         False, description="When True, bypasses TRIAGE and starts the workflow immediately"
     )
+    repo: str | None = Field(
+        None,
+        max_length=200,
+        description=(
+            "Optional repo full_name (owner/repo) to associate this task with. "
+            "Defaults to '__manual__' when omitted."
+        ),
+    )
 
 
 class ManualTaskCreateResponse(BaseModel):
@@ -85,10 +93,10 @@ async def create_manual_task(
     if body.acceptance_criteria:
         enrichment["acceptance_criteria"] = [ac for ac in body.acceptance_criteria if ac.strip()]
 
-    # Use a UUID-based delivery_id for uniqueness; repo="__manual__" marks origin
+    # Use a UUID-based delivery_id for uniqueness; repo defaults to "__manual__"
     delivery_id = f"manual-{uuid4()}"
     task_data = TaskPacketCreate(
-        repo="__manual__",
+        repo=body.repo or "__manual__",
         issue_id=0,
         delivery_id=delivery_id,
         source_name="manual",
@@ -524,12 +532,14 @@ async def historical_comparison(
 async def stage_metrics(
     token: str | None = Query(None),
     window_hours: int = Query(24, ge=1, le=720),
+    repo: str | None = Query(None, description="Filter by repo full_name (owner/repo)"),
     session: AsyncSession = Depends(get_session),
 ) -> StageMetricsResponse:
     """Per-stage pass rate, avg duration, and throughput over a configurable window.
 
     Query params:
     - ``window_hours``: lookback window in hours (default 24, max 720).
+    - ``repo``: optional filter by repo full_name (owner/repo).
     - ``token``: auth token (required when dashboard_token is configured).
     """
     _verify_token(token)
@@ -540,6 +550,8 @@ async def stage_metrics(
         .where(TaskPacketRow.stage_timings.isnot(None))
         .where(TaskPacketRow.created_at >= cutoff)
     )
+    if repo is not None:
+        stmt = stmt.where(TaskPacketRow.repo == repo)
     result = await session.execute(stmt)
     rows = result.scalars().all()
 

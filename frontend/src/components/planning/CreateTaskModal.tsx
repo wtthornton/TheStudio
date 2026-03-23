@@ -1,7 +1,11 @@
-/** CreateTaskModal — modal for manually creating a task from the Backlog Board (Epic 36, 36.19). */
+/** CreateTaskModal — modal for manually creating a task from the Backlog Board (Epic 36, 36.19).
+ *
+ * Epic 41 (Story 41.7): Added repo dropdown to associate tasks with a registered repo.
+ */
 
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { createManualTask } from '../../lib/api'
+import { createManualTask, fetchAdminRepos } from '../../lib/api'
+import type { AdminRepoItem } from '../../lib/api'
 
 interface CreateTaskModalProps {
   open: boolean
@@ -22,6 +26,8 @@ export default function CreateTaskModal({ open, onClose, onCreated }: CreateTask
   const [skipTriage, setSkipTriage] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [selectedRepo, setSelectedRepo] = useState<string>('')
+  const [availableRepos, setAvailableRepos] = useState<AdminRepoItem[]>([])
 
   const titleRef = useRef<HTMLInputElement>(null)
 
@@ -34,6 +40,16 @@ export default function CreateTaskModal({ open, onClose, onCreated }: CreateTask
     setSkipTriage(false)
     setSaving(false)
     setError(null)
+    setSelectedRepo('')
+  }, [])
+
+  // Load available repos on first open
+  useEffect(() => {
+    fetchAdminRepos().then((data) => {
+      setAvailableRepos(data.repos)
+    }).catch(() => {
+      // Silently fail — repo selector will just be hidden
+    })
   }, [])
 
   // Reset + focus when modal opens
@@ -98,6 +114,7 @@ export default function CreateTaskModal({ open, onClose, onCreated }: CreateTask
         priority: priority || null,
         acceptance_criteria: filteredCriteria.length > 0 ? filteredCriteria : null,
         skip_triage: skipTriage,
+        repo: selectedRepo || null,
       })
       onCreated()
       onClose()
@@ -105,7 +122,7 @@ export default function CreateTaskModal({ open, onClose, onCreated }: CreateTask
       setError(err instanceof Error ? err.message : 'Failed to create task')
       setSaving(false)
     }
-  }, [title, description, category, priority, criteria, skipTriage, saving, isValid, onCreated, onClose])
+  }, [title, description, category, priority, criteria, skipTriage, selectedRepo, saving, isValid, onCreated, onClose])
 
   if (!open) return null
 
@@ -192,6 +209,30 @@ export default function CreateTaskModal({ open, onClose, onCreated }: CreateTask
             </select>
           </div>
         </div>
+
+        {/* Repo selector (Epic 41, Story 41.7) — only shown when 2+ repos are registered */}
+        {availableRepos.length >= 2 && (
+          <div className="mb-4">
+            <label className="mb-1 block text-xs font-medium text-gray-300">Repository</label>
+            <select
+              value={selectedRepo}
+              onChange={(e) => setSelectedRepo(e.target.value)}
+              disabled={saving}
+              className="w-full rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-gray-200 focus:border-blue-500 focus:outline-none disabled:opacity-50"
+              data-testid="create-task-repo"
+            >
+              <option value="">— manual (no repo) —</option>
+              {availableRepos.map((r) => {
+                const fullName = `${r.owner}/${r.repo}`
+                return (
+                  <option key={r.id} value={fullName}>
+                    {fullName}
+                  </option>
+                )
+              })}
+            </select>
+          </div>
+        )}
 
         {/* Acceptance Criteria list */}
         <div className="mb-4">

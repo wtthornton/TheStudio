@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useBacklogStore, BOARD_COLUMNS, groupTasksByColumn } from '../../stores/backlog-store'
 import { BacklogCard } from './BacklogCard'
 import CreateTaskModal from './CreateTaskModal'
+import { useRepoContext } from '../../contexts/RepoContext'
 
 interface BacklogBoardProps {
   /** Called when the user clicks a card — passes the task UUID up to the parent. */
@@ -12,11 +13,12 @@ interface BacklogBoardProps {
 
 export default function BacklogBoard({ onTaskClick }: BacklogBoardProps) {
   const { tasks, loading, error, loadBoard } = useBacklogStore()
+  const { selectedRepo } = useRepoContext()
   const [showCreateModal, setShowCreateModal] = useState(false)
 
   useEffect(() => {
-    void loadBoard()
-  }, [loadBoard])
+    void loadBoard(selectedRepo)
+  }, [loadBoard, selectedRepo])
 
   if (loading && tasks.length === 0) {
     return (

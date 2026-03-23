@@ -81,7 +81,8 @@ export interface BacklogState {
 }
 
 export interface BacklogActions {
-  loadBoard: () => Promise<void>
+  /** Load tasks, optionally filtered by repo full_name. */
+  loadBoard: (repo?: string | null) => Promise<void>
   reset: () => void
 }
 
@@ -95,10 +96,10 @@ const initialState: BacklogState = {
 export const useBacklogStore = create<BacklogState & BacklogActions>((set) => ({
   ...initialState,
 
-  loadBoard: async () => {
+  loadBoard: async (repo?: string | null) => {
     set({ loading: true, error: null })
     try {
-      const result = await fetchTasks({ limit: 200 })
+      const result = await fetchTasks({ limit: 200, repo })
       set({ tasks: result.items, loading: false, lastLoaded: Date.now() })
     } catch (err) {
       set({

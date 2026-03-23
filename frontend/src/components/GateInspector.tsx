@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { PIPELINE_STAGES } from '../lib/constants'
 import { fetchGates, fetchGateMetrics } from '../lib/api'
 import type { GateEvidenceRead, GateMetrics } from '../lib/api'
+import { useRepoContext } from '../contexts/RepoContext'
 
 // --- Filter Bar (S2.F9) ---
 
@@ -162,6 +163,7 @@ function GateDetail({ gate }: { gate: GateEvidenceRead }) {
 // --- Main Gate Inspector ---
 
 export function GateInspector() {
+  const { selectedRepo } = useRepoContext()
   const [gates, setGates] = useState<GateEvidenceRead[]>([])
   const [metrics, setMetrics] = useState<GateMetrics | null>(null)
   const [loading, setLoading] = useState(true)
@@ -182,8 +184,9 @@ export function GateInspector() {
           result: filters.result || undefined,
           stage: filters.stage || undefined,
           task_id: filters.taskId || undefined,
+          repo: selectedRepo,
         }),
-        fetchGateMetrics(24).catch(() => null),
+        fetchGateMetrics(24, selectedRepo).catch(() => null),
       ])
       setGates(gateData.items)
       setMetrics(metricData)
@@ -192,7 +195,7 @@ export function GateInspector() {
     } finally {
       setLoading(false)
     }
-  }, [page, filters])
+  }, [page, filters, selectedRepo])
 
   useEffect(() => { void loadData() }, [loadData])
 

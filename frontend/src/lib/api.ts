@@ -98,11 +98,13 @@ export async function fetchTasks(params: {
   offset?: number
   limit?: number
   status?: string
+  repo?: string | null
 } = {}): Promise<{ items: TaskPacketRead[]; total: number; offset: number; limit: number }> {
   const query = new URLSearchParams()
   if (params.offset != null) query.set('offset', String(params.offset))
   if (params.limit != null) query.set('limit', String(params.limit))
   if (params.status) query.set('status', params.status)
+  if (params.repo) query.set('repo', params.repo)
   const qs = query.toString()
   const url = withToken(`${API_BASE}/tasks${qs ? `?${qs}` : ''}`)
   const res = await fetch(url)
@@ -117,8 +119,10 @@ export async function fetchTaskDetail(taskId: string): Promise<TaskPacketDetail>
   return res.json()
 }
 
-export async function fetchStageMetrics(windowHours = 24): Promise<StageMetricsResponse> {
-  const url = withToken(`${API_BASE}/stages/metrics?window_hours=${windowHours}`)
+export async function fetchStageMetrics(windowHours = 24, repo?: string | null): Promise<StageMetricsResponse> {
+  const query = new URLSearchParams({ window_hours: String(windowHours) })
+  if (repo) query.set('repo', repo)
+  const url = withToken(`${API_BASE}/stages/metrics?${query.toString()}`)
   const res = await fetch(url)
   if (!res.ok) throw new Error(`Failed to fetch metrics: ${res.status}`)
   return res.json()
@@ -137,6 +141,7 @@ export async function fetchGates(params: {
   result?: string
   stage?: string
   task_id?: string
+  repo?: string | null
 } = {}): Promise<{ items: GateEvidenceRead[]; total: number }> {
   const query = new URLSearchParams()
   if (params.offset != null) query.set('offset', String(params.offset))
@@ -144,6 +149,7 @@ export async function fetchGates(params: {
   if (params.result) query.set('result', params.result)
   if (params.stage) query.set('stage', params.stage)
   if (params.task_id) query.set('task_id', params.task_id)
+  if (params.repo) query.set('repo', params.repo)
   const qs = query.toString()
   const url = withToken(`${API_BASE}/gates${qs ? `?${qs}` : ''}`)
   const res = await fetch(url)
@@ -158,8 +164,10 @@ export async function fetchGateDetail(gateId: string): Promise<GateEvidenceRead>
   return res.json()
 }
 
-export async function fetchGateMetrics(windowHours = 24): Promise<GateMetrics> {
-  const url = withToken(`${API_BASE}/gates/metrics?window_hours=${windowHours}`)
+export async function fetchGateMetrics(windowHours = 24, repo?: string | null): Promise<GateMetrics> {
+  const query = new URLSearchParams({ window_hours: String(windowHours) })
+  if (repo) query.set('repo', repo)
+  const url = withToken(`${API_BASE}/gates/metrics?${query.toString()}`)
   const res = await fetch(url)
   if (!res.ok) throw new Error(`Failed to fetch gate metrics: ${res.status}`)
   return res.json()
@@ -167,8 +175,10 @@ export async function fetchGateMetrics(windowHours = 24): Promise<GateMetrics> {
 
 // --- Triage API (Epic 36) ---
 
-export async function fetchTriageTasks(): Promise<{ items: TriageTask[]; total: number }> {
-  const url = withToken(`${API_BASE}/tasks?status=triage&limit=100`)
+export async function fetchTriageTasks(repo?: string | null): Promise<{ items: TriageTask[]; total: number }> {
+  const query = new URLSearchParams({ status: 'triage', limit: '100' })
+  if (repo) query.set('repo', repo)
+  const url = withToken(`${API_BASE}/tasks?${query.toString()}`)
   const res = await fetch(url)
   if (!res.ok) throw new Error(`Failed to fetch triage tasks: ${res.status}`)
   return res.json()
@@ -342,6 +352,8 @@ export interface ManualTaskCreate {
   priority?: string | null
   acceptance_criteria?: string[] | null
   skip_triage?: boolean
+  /** Optional repo full_name (owner/repo). Defaults to '__manual__' when omitted. */
+  repo?: string | null
 }
 
 export interface ManualTaskCreateResponse {
@@ -1243,5 +1255,38 @@ export async function fetchReputationSummary(): Promise<ReputationSummaryRespons
   const url = withToken(`${API_BASE}/reputation/summary`)
   const res = await fetch(url)
   if (!res.ok) throw new Error(`Failed to fetch reputation summary: ${res.status}`)
+  return res.json()
+}
+
+// --- Admin Repos API (Epic 41) ---
+
+export interface AdminRepoItem {
+  id: string
+  owner: string
+  repo: string
+  tier: string
+  status: string
+  installation_id: number | null
+  health: string
+}
+
+export interface AdminReposResponse {
+  repos: AdminRepoItem[]
+  total: number
+}
+
+/** Fetch all registered repositories from the admin API.
+ *
+ * In dev mode (llm_provider=mock) this works without authentication.
+ * In production, the caller must provide an X-User-ID header or a valid
+ * bearer token. Gracefully returns an empty list on auth failure so the
+ * RepoSelector degrades to a no-op rather than crashing.
+ */
+export async function fetchAdminRepos(): Promise<AdminReposResponse> {
+  const res = await fetch('/admin/repos')
+  if (!res.ok) {
+    // Return empty list on auth errors so the selector degrades gracefully
+    return { repos: [], total: 0 }
+  }
   return res.json()
 }

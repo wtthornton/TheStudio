@@ -27,6 +27,8 @@ import ImportModal from './components/github/ImportModal'
 import { Analytics } from './components/analytics/Analytics'
 import { Reputation } from './components/reputation/Reputation'
 import { PIPELINE_STAGES } from './lib/constants'
+import { RepoContextProvider } from './contexts/RepoContext'
+import { RepoSelector } from './components/RepoSelector'
 
 type Tab = 'pipeline' | 'triage' | 'intent' | 'routing' | 'board' | 'trust' | 'budget' | 'activity' | 'analytics' | 'reputation'
 
@@ -52,6 +54,7 @@ function App() {
   }, [])
 
   return (
+    <RepoContextProvider>
     <div className="min-h-screen bg-gray-950 text-gray-100 pb-16">
       {/* S4.F10: Disconnection banner */}
       <DisconnectionBanner />
@@ -124,6 +127,8 @@ function App() {
           </nav>
         </div>
         <div className="flex items-center gap-4">
+          {/* Epic 41 — Repo Selector */}
+          <RepoSelector />
           {/* Epic 38 — Import GitHub Issues */}
           <button
             onClick={() => setImportModalOpen(true)}
@@ -253,6 +258,7 @@ function App() {
         }}
       />
     </div>
+    </RepoContextProvider>
   )
 }
 
