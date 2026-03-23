@@ -131,6 +131,14 @@ class Settings(BaseSettings):
     # Requires THESTUDIO_AGENT_LLM_ENABLED__DEVELOPER=true to take effect.
     agent_mode: str = "legacy"  # "legacy" | "ralph" | "container"
 
+    # Ralph state backend (Epic 43 Story 43.8 — State persistence)
+    # Controls which state backend is used when agent_mode="ralph":
+    #   "null"     — NullStateBackend: no persistence (Slice 1 default)
+    #   "postgres" — PostgresStateBackend: persists state in ralph_agent_state table
+    # Session IDs older than ralph_session_ttl_seconds are discarded on resume.
+    ralph_state_backend: str = "null"  # "null" | "postgres"
+    ralph_session_ttl_seconds: int = 7200  # 2 hours; discard stale session IDs
+
     # Container isolation (Epic 25)
     # Global mode: "process" (in-process, default) or "container" (Docker isolation)
     agent_isolation: str = "process"  # "process" or "container"

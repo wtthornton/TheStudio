@@ -12,8 +12,12 @@ Epic reference: Epic 43 Story 43.7 — PostgresStateBackend
 from __future__ import annotations
 
 import json
+import logging
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
+
+logger = logging.getLogger(__name__)
 
 from sqlalchemy import text
 
@@ -49,6 +53,23 @@ _SELECT_SQL = text(
     """
     SELECT value_json
     FROM ralph_agent_state
+    WHERE taskpacket_id = :tid
+      AND key_name = :key
+    """
+)
+
+_SELECT_WITH_TS_SQL = text(
+    """
+    SELECT value_json, updated_at
+    FROM ralph_agent_state
+    WHERE taskpacket_id = :tid
+      AND key_name = :key
+    """
+)
+
+_DELETE_SQL = text(
+    """
+    DELETE FROM ralph_agent_state
     WHERE taskpacket_id = :tid
       AND key_name = :key
     """
@@ -191,3 +212,64 @@ class PostgresStateBackend:
     async def write_fix_plan(self, content: str) -> None:
         """Write the fix plan content."""
         await self._write_raw(_KEY_FIX_PLAN, content)
+
+    # ------------------------------------------------------------------
+    # Session TTL (Story 43.8)
+    # ------------------------------------------------------------------
+
+    async def clear_session_if_stale(self, ttl_seconds: int = 7200) -> bool:
+        """Discard the stored session ID if it is older than *ttl_seconds*.
+
+        Reads the ``updated_at`` timestamp for the ``session_id`` row and
+        deletes the row when the session has expired.  Called by
+        ``_implement_ralph()`` before constructing a ``RalphAgent`` so that
+        stale Claude session IDs are not accidentally resumed.
+
+        Args:
+            ttl_seconds: Maximum age of a session ID in seconds.
+                Defaults to 7200 (2 hours).
+
+        Returns:
+            ``True`` if a stale session was found and cleared, ``False``
+            otherwise (including when no session ID is stored at all).
+        """
+        async with get_async_session() as session:
+            result = await session.execute(
+                _SELECT_WITH_TS_SQL,
+                {"tid": self._taskpacket_id, "key": _KEY_SESSION_ID},
+            )
+            row = result.fetchone()
+
+        if row is None:
+            return False  # nothing stored — nothing to clear
+
+        _value_json, updated_at = row
+
+        # updated_at may be a timezone-aware or naive datetime from the DB driver
+        if updated_at is None:
+            return False
+
+        now = datetime.now(tz=timezone.utc)
+        if updated_at.tzinfo is None:
+            # Treat naive timestamps as UTC (matches the table's TIMESTAMPTZ default)
+            updated_at = updated_at.replace(tzinfo=timezone.utc)
+
+        age_seconds = (now - updated_at).total_seconds()
+        if age_seconds <= ttl_seconds:
+            return False  # session is still fresh
+
+        # Session is stale — delete it
+        async with get_async_session() as session:
+            await session.execute(
+                _DELETE_SQL,
+                {"tid": self._taskpacket_id, "key": _KEY_SESSION_ID},
+            )
+            await session.commit()
+
+        logger.info(
+            "Discarded stale Ralph session_id for taskpacket %s (age=%.0fs, ttl=%ds)",
+            self._taskpacket_id,
+            age_seconds,
+            ttl_seconds,
+        )
+        return True

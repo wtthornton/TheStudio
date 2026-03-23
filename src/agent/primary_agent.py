@@ -129,13 +129,18 @@ async def _implement_ralph(
     loopback_context: str = "",
     complexity: str = "",
 ) -> EvidenceBundle:
-    """Implement using RalphAgent with NullStateBackend (Slice 1 — no persistence).
+    """Implement using RalphAgent with configurable state backend.
 
     Builds the task input from the Ralph bridge, writes it to a temp directory
     that RalphAgent expects, then runs the agent loop and converts the result
     to an EvidenceBundle.
 
-    Session persistence (PostgresStateBackend) is added in Slice 2 (Story 43.6).
+    The state backend is selected by ``settings.ralph_state_backend``:
+    - ``"postgres"`` → ``PostgresStateBackend`` (persistent, session continuity)
+    - ``"null"``     → ``NullStateBackend`` (no persistence, default)
+
+    Stale session IDs are cleared before the agent starts when using the
+    Postgres backend (TTL controlled by ``settings.ralph_session_ttl_seconds``).
 
     Args:
         taskpacket: TaskPacketRow ORM object.
@@ -178,6 +183,24 @@ async def _implement_ralph(
         loopback_context=loopback_context,
     )
 
+    # Select state backend (Story 43.8)
+    # "postgres" — persistent state across retries via ralph_agent_state table
+    # "null"     — no persistence (Slice 1 default)
+    taskpacket_id_for_state = getattr(taskpacket, "id", None)
+    if settings.ralph_state_backend == "postgres" and taskpacket_id_for_state is not None:
+        from src.agent.ralph_state import PostgresStateBackend
+
+        state_backend: object = PostgresStateBackend(taskpacket_id_for_state)
+        # Discard stale session IDs (TTL from settings, default 2h)
+        await state_backend.clear_session_if_stale(settings.ralph_session_ttl_seconds)  # type: ignore[attr-defined]
+        logger.info(
+            "Ralph using PostgresStateBackend for TaskPacket %s (ttl=%ds)",
+            taskpacket_id_for_state,
+            settings.ralph_session_ttl_seconds,
+        )
+    else:
+        state_backend = NullStateBackend()
+
     # Write task input to a temp directory (RalphAgent reads from .ralph/)
     with tempfile.TemporaryDirectory() as tmpdir:
         ralph_dir = Path(tmpdir) / ".ralph"
@@ -195,7 +218,7 @@ async def _implement_ralph(
         agent = RalphAgent(
             config=ralph_config,
             project_dir=repo_path or tmpdir,
-            state_backend=NullStateBackend(),
+            state_backend=state_backend,
             correlation_id=str(getattr(taskpacket, "correlation_id", "")),
         )
 
