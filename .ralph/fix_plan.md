@@ -31,7 +31,7 @@
 
 ## Sprint 3 — Epic 43 Slice 4: Validation (future, ~8h)
 
-- [ ] 43.13: `/health/ralph` endpoint + startup probe
+- [x] 43.13: `/health/ralph` endpoint + startup probe
 - [ ] 43.14: Observability spans (SPAN_RALPH_RUN, SPAN_RALPH_ITERATION, etc.)
 - [ ] 43.15: E2E integration test — implement + loopback via Ralph, full path
 

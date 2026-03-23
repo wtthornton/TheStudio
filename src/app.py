@@ -131,6 +131,30 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception:
         _logger.warning("Failed to start notification generator", exc_info=True)
 
+    # Startup probe: warn if ralph mode is active but runtime is not ready
+    if settings.agent_mode == "ralph":
+        try:
+            from src.agent.ralph_bridge import check_ralph_cli_available
+
+            if not check_ralph_cli_available():
+                _logger.warning(
+                    "ralph.startup_probe.cli_missing",
+                    extra={
+                        "detail": (
+                            "agent_mode='ralph' but 'claude' CLI not found in PATH. "
+                            "Ralph mode will fail at runtime. "
+                            "Set THESTUDIO_AGENT_MODE=legacy or install the Claude CLI."
+                        )
+                    },
+                )
+            else:
+                _logger.info(
+                    "ralph.startup_probe.ok",
+                    extra={"agent_mode": "ralph", "cli_available": True},
+                )
+        except Exception:
+            _logger.warning("ralph.startup_probe.error", exc_info=True)
+
     yield
 
     if worker_task is not None:
@@ -246,3 +270,65 @@ async def readyz() -> JSONResponse:
         return JSONResponse(content={"status": "ready"})
     except Exception as exc:
         return JSONResponse(status_code=503, content={"status": "not ready", "detail": str(exc)})
+
+
+@app.get("/health/ralph")
+async def ralph_health() -> JSONResponse:
+    """Ralph-mode readiness probe.
+
+    Checks whether the Ralph agent runtime is available and correctly configured.
+    Returns 200 when Ralph mode is usable (or when agent_mode is not 'ralph').
+    Returns 503 when agent_mode='ralph' but required components are missing.
+
+    Response fields:
+    - agent_mode: current THESTUDIO_AGENT_MODE setting
+    - ralph_state_backend: current THESTUDIO_RALPH_STATE_BACKEND setting
+    - cli_available: whether 'claude' binary is on PATH
+    - sdk_importable: whether ralph_sdk can be imported
+    - status: "ok" | "degraded" | "unavailable"
+    """
+    from src.agent.ralph_bridge import check_ralph_cli_available
+    from src.settings import settings
+
+    agent_mode = settings.agent_mode
+    ralph_state_backend = settings.ralph_state_backend
+
+    # Check CLI availability
+    cli_available = check_ralph_cli_available()
+
+    # Check SDK importability
+    sdk_importable: bool
+    try:
+        import ralph_sdk  # noqa: F401
+
+        sdk_importable = True
+    except ImportError:
+        sdk_importable = False
+
+    payload: dict = {
+        "agent_mode": agent_mode,
+        "ralph_state_backend": ralph_state_backend,
+        "cli_available": cli_available,
+        "sdk_importable": sdk_importable,
+    }
+
+    if agent_mode != "ralph":
+        # Ralph mode is not active — probe passes (no requirements to enforce)
+        payload["status"] = "ok"
+        payload["detail"] = f"agent_mode={agent_mode!r}; ralph checks not required"
+        return JSONResponse(content=payload)
+
+    # agent_mode == "ralph": both SDK and CLI must be available
+    if sdk_importable and cli_available:
+        payload["status"] = "ok"
+        return JSONResponse(content=payload)
+
+    missing: list[str] = []
+    if not sdk_importable:
+        missing.append("ralph_sdk not importable")
+    if not cli_available:
+        missing.append("claude CLI not found in PATH")
+
+    payload["status"] = "unavailable"
+    payload["missing"] = missing
+    return JSONResponse(status_code=503, content=payload)
