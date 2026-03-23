@@ -364,7 +364,7 @@ class TestRalphLoopbackE2E:
                 # Capture PROMPT.md before cleanup
                 prompt_path = _Path(self._name) / ".ralph" / "PROMPT.md"
                 if prompt_path.exists():
-                    captured_prompt.append(prompt_path.read_text())
+                    captured_prompt.append(prompt_path.read_text(encoding="utf-8"))
                 self._real.__exit__(*args)
 
         with (
