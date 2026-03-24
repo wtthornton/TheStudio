@@ -24,6 +24,8 @@
                 <td class="px-4 py-3">{{ health_badge(repo.health) }}</td>
                 <td class="px-4 py-3 text-right">
                     <a href="/admin/ui/repos/{{ repo.id }}" class="text-blue-600 hover:underline text-sm">View</a>
+                    <span class="mx-1 text-gray-300">|</span>
+                    <a href="/dashboard/?tab=pipeline&repo={{ (repo.owner ~ '/' ~ repo.repo) | urlencode }}" class="text-indigo-600 hover:underline text-sm">View Pipeline</a>
                 </td>
             </tr>
             {% endfor %}

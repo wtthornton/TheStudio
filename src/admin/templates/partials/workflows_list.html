@@ -26,6 +26,10 @@
                 <td class="px-4 py-3 text-sm text-right">{{ wf.attempt_count | default(1) }}</td>
                 <td class="px-4 py-3 text-right">
                     <a href="/admin/ui/workflows/{{ wf.id }}" class="text-blue-600 hover:underline text-sm">Detail</a>
+                    {% if wf.repo_name %}
+                    <span class="mx-1 text-gray-300">|</span>
+                    <a href="/dashboard/?tab=pipeline&repo={{ wf.repo_name | urlencode }}" class="text-indigo-600 hover:underline text-sm">View Pipeline</a>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}
