@@ -59,7 +59,7 @@
 > TESTS_STATUS: DEFERRED until 49.6
 
 - [x] 49.1: Create `AppSwitcher.tsx` dropdown in HeaderBar — "Pipeline Dashboard" (current) + "Admin Console" link to `/admin/ui/`. **Files:** create AppSwitcher.tsx; modify HeaderBar.tsx.
-- [ ] 49.2: Add "Pipeline Dashboard" link to `base.html` sidebar. **Files:** modify src/admin/templates/base.html.
+- [x] 49.2: Add "Pipeline Dashboard" link to `base.html` sidebar. **Files:** modify src/admin/templates/base.html.
 - [ ] 49.3: URL query parameter handling in App.tsx — parse `?tab=` and `?repo=` on mount, `replaceState` on tab change. **Files:** modify App.tsx.
 - [ ] 49.4: Deep links from SPA to Admin — repo names link to `/admin/ui/repos/{id}`, Settings link to `/admin/ui/settings`. **Files:** modify RepoSettings.tsx, HeaderBar.tsx (or HelpMenu).
 - [ ] 49.5: Deep links from Admin to SPA — "View Pipeline" on workflow rows links to `/dashboard/?tab=pipeline&repo={repo}`. **Files:** modify src/admin/templates/workflows.html, repos.html.
