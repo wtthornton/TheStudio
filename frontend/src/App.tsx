@@ -28,7 +28,7 @@ import ImportModal from './components/github/ImportModal'
 import { Analytics } from './components/analytics/Analytics'
 import { Reputation } from './components/reputation/Reputation'
 import { PIPELINE_STAGES } from './lib/constants'
-import { RepoContextProvider } from './contexts/RepoContext'
+import { useRepoContext } from './contexts/RepoContext'
 import { RepoSelector } from './components/RepoSelector'
 import { RepoSettings } from './components/RepoSettings'
 import { ApiReference } from './components/ApiReference'
@@ -61,15 +61,42 @@ type Tab =
   | 'repos'
   | 'api'
 
+const VALID_TABS: Tab[] = [
+  'pipeline', 'triage', 'intent', 'routing', 'board',
+  'trust', 'budget', 'activity', 'analytics', 'reputation', 'repos', 'api',
+]
+
+/** Parse ?tab= from the current URL, returning it if valid or 'pipeline'. */
+function getInitialTab(): Tab {
+  const param = new URLSearchParams(window.location.search).get('tab')
+  return param && (VALID_TABS as string[]).includes(param) ? (param as Tab) : 'pipeline'
+}
+
 function App() {
   useSSE()
   useInitialLoad()
 
+  const { setSelectedRepo } = useRepoContext()
   const stages = usePipelineStore((s) => s.stages)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<Tab>('pipeline')
+  const [activeTab, setActiveTab] = useState<Tab>(getInitialTab)
   const [importModalOpen, setImportModalOpen] = useState(false)
   const [showSetupWizard, setShowSetupWizard] = useState(false)
+
+  // Sync ?tab= into URL whenever activeTab changes (Epic 49.3).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    params.set('tab', activeTab)
+    window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`)
+  }, [activeTab])
+
+  // Parse ?repo= on mount and apply to repo context (Epic 49.3).
+  useEffect(() => {
+    const repoParam = new URLSearchParams(window.location.search).get('repo')
+    if (repoParam) {
+      setSelectedRepo(decodeURIComponent(repoParam))
+    }
+  }, [setSelectedRepo])
 
   useEffect(() => {
     if (isSetupWizardComplete() || isSetupWizardSkipped()) {
@@ -107,7 +134,6 @@ function App() {
   }, [])
 
   return (
-    <RepoContextProvider>
     <div className="min-h-screen bg-gray-950 text-gray-100 pb-16">
       {showSetupWizard ? (
         <div
@@ -372,7 +398,6 @@ function App() {
         }}
       />
     </div>
-    </RepoContextProvider>
   )
 }
 
