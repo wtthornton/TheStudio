@@ -108,6 +108,14 @@ class RepoProfileRow(Base):
         String(32), nullable=False, default="subprocess",
         comment="Execution mode for remote verification: 'subprocess' or 'container'",
     )
+    pipeline_comments_enabled: Mapped[bool | None] = mapped_column(
+        nullable=True, default=None,
+        comment=(
+            "Per-repo override for pipeline status comments (Epic 38.23). "
+            "None = inherit global setting (THESTUDIO_PIPELINE_COMMENTS_ENABLED). "
+            "True/False = explicit per-repo enable/disable."
+        ),
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -173,6 +181,7 @@ class RepoProfileRead(BaseModel):
     verify_timeout_seconds: int = 900
     clone_depth: int = 1
     remote_verify_mode: str = "subprocess"
+    pipeline_comments_enabled: bool | None = None
     created_at: datetime
     updated_at: datetime
     deleted_at: datetime | None = None
@@ -200,3 +209,4 @@ class RepoProfileUpdate(BaseModel):
     verify_timeout_seconds: int | None = None
     clone_depth: int | None = None
     remote_verify_mode: str | None = None
+    pipeline_comments_enabled: bool | None = None

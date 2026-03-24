@@ -24,7 +24,7 @@ from src.observability.conventions import (
 )
 from src.observability.correlation import attach_correlation_id, generate_correlation_id
 from src.observability.tracing import get_tracer
-from src.repo.repo_profile_crud import get_webhook_secret
+from src.repo.repo_profile_crud import get_pipeline_comments_enabled, get_webhook_secret
 from src.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -321,6 +321,11 @@ async def github_webhook(
         # 11c. Normal mode: create in RECEIVED status
         taskpacket = await create_taskpacket(session, task_data)
 
+        # 11d. Resolve per-repo pipeline_comments_enabled override (Epic 38.23).
+        # get_pipeline_comments_enabled returns None if the repo has no override
+        # (inherit global setting), or True/False for an explicit per-repo setting.
+        repo_pipeline_comments = await get_pipeline_comments_enabled(session, owner, repo_name)
+
         # 12. Start Temporal workflow
         try:
             await start_workflow(
@@ -330,6 +335,7 @@ async def github_webhook(
                 issue_title=issue_title,
                 issue_body=issue_body,
                 labels=normalized.get("labels", []),
+                pipeline_comments_override=repo_pipeline_comments,
             )
         except Exception:
             logger.exception(

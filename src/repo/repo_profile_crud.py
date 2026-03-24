@@ -65,6 +65,24 @@ async def get_webhook_secret(session: AsyncSession, owner: str, repo_name: str) 
     return decrypt_secret(encrypted)
 
 
+async def get_pipeline_comments_enabled(
+    session: AsyncSession, owner: str, repo_name: str
+) -> bool | None:
+    """Get the per-repo pipeline_comments_enabled override.
+
+    Returns None if the repo is not found or has no override set (inherit global).
+    """
+    stmt = select(RepoProfileRow.pipeline_comments_enabled).where(
+        RepoProfileRow.owner == owner,
+        RepoProfileRow.repo_name == repo_name,
+    )
+    result = await session.execute(stmt)
+    row = result.one_or_none()
+    if row is None:
+        return None
+    return row[0]  # scalar from single-column select
+
+
 async def get_active_repos(session: AsyncSession) -> list[RepoProfileRead]:
     """Get all active repo profiles."""
     stmt = select(RepoProfileRow).where(RepoProfileRow.status == RepoStatus.ACTIVE)

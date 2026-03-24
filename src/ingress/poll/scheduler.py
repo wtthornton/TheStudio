@@ -115,7 +115,12 @@ async def run_poll_cycle() -> tuple[int, int, bool]:
                     last_modified=repo.poll_last_modified,
                 )
                 result = await fetch_issues(config)
-                count = await feed_issues_to_pipeline(session, result.issues, repo.full_name)
+                count = await feed_issues_to_pipeline(
+                    session,
+                    result.issues,
+                    repo.full_name,
+                    pipeline_comments_override=repo.pipeline_comments_enabled,
+                )
 
                 # Persist poll state for next cycle
                 if result.etag:

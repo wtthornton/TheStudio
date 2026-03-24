@@ -42,6 +42,7 @@ async def feed_issues_to_pipeline(
     session: AsyncSession,
     issues: list[dict],
     repo_full_name: str,
+    pipeline_comments_override: bool | None = None,
 ) -> int:
     """Feed polled issues into the pipeline (TaskPacket + workflow).
 
@@ -52,6 +53,8 @@ async def feed_issues_to_pipeline(
         session: Database session.
         issues: List of issue dicts from GitHub API (number, updated_at).
         repo_full_name: owner/repo format.
+        pipeline_comments_override: Per-repo pipeline comments setting (Epic 38.23).
+            None = inherit global setting. True/False = explicit per-repo override.
 
     Returns:
         Count of TaskPackets created.
@@ -91,6 +94,7 @@ async def feed_issues_to_pipeline(
                 issue_title=issue.get("title", ""),
                 issue_body=issue.get("body", "") or "",
                 labels=labels,
+                pipeline_comments_override=pipeline_comments_override,
             )
             count += 1
             otel_context.detach(token)
