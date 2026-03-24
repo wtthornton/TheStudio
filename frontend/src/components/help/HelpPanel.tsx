@@ -1,30 +1,43 @@
 /**
  * HelpPanel — slide-in contextual help panel.
  * Epic 45.1: slide-in/out animation, close button, Escape key handler.
- * Epic 45.4: route-aware content loaded via react-markdown (extended in 45.4).
+ * Epic 45.4: route-aware content loaded via react-markdown + ?raw imports.
  * Epic 45.5: Fuse.js search (extended in 45.5).
  */
 
 import { useEffect, useRef } from 'react'
+import ReactMarkdown from 'react-markdown'
+import { HELP_CONTENT, HELP_TITLES } from '../../help/index'
 
 interface HelpPanelProps {
   /** Whether the panel is currently open. */
   open: boolean
   /** Called when the user closes the panel. */
   onClose: () => void
-  /** Optional title shown in the panel header. */
+  /**
+   * The active tab key (e.g. 'pipeline', 'triage').
+   * When provided, the panel loads the matching help article.
+   * When omitted, falls back to `children` or a generic message.
+   */
+  activeTab?: string
+  /** Optional title shown in the panel header (overrides tab-derived title). */
   title?: string
-  /** Optional content to render inside the panel (will be replaced by MD in 45.4). */
+  /** Optional content to render inside the panel (used when activeTab not provided). */
   children?: React.ReactNode
 }
 
 export function HelpPanel({
   open,
   onClose,
-  title = 'Help',
+  activeTab,
+  title,
   children,
 }: HelpPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null)
+
+  // Resolve content and title from activeTab
+  const tabContent = activeTab ? (HELP_CONTENT[activeTab] ?? null) : null
+  const resolvedTitle = title ?? (activeTab ? (HELP_TITLES[activeTab] ?? 'Help') : 'Help')
 
   // Close on Escape key
   useEffect(() => {
@@ -60,7 +73,7 @@ export function HelpPanel({
         ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-label={title}
+        aria-label={resolvedTitle}
         tabIndex={-1}
         data-testid="help-panel"
         className={[
@@ -73,7 +86,7 @@ export function HelpPanel({
       >
         {/* Panel header */}
         <div className="flex items-center justify-between border-b border-gray-700 px-5 py-4">
-          <h2 className="text-base font-semibold text-gray-100">{title}</h2>
+          <h2 className="text-base font-semibold text-gray-100">{resolvedTitle}</h2>
           <button
             type="button"
             onClick={onClose}
@@ -102,7 +115,25 @@ export function HelpPanel({
 
         {/* Panel body — scrollable */}
         <div className="flex-1 overflow-y-auto px-5 py-4 text-sm text-gray-300">
-          {children ?? (
+          {tabContent != null ? (
+            <div
+              className="prose prose-invert prose-sm max-w-none
+                prose-headings:text-gray-100
+                prose-p:text-gray-300
+                prose-li:text-gray-300
+                prose-a:text-indigo-400 prose-a:no-underline hover:prose-a:underline
+                prose-strong:text-gray-100
+                prose-code:text-indigo-300 prose-code:bg-gray-800 prose-code:px-1 prose-code:rounded
+                prose-table:text-xs
+                prose-th:text-gray-200 prose-td:text-gray-400
+                prose-hr:border-gray-700"
+              data-testid="help-panel-markdown"
+            >
+              <ReactMarkdown>{tabContent}</ReactMarkdown>
+            </div>
+          ) : children != null ? (
+            children
+          ) : (
             <p className="text-gray-500">
               No help content available for this page.
             </p>

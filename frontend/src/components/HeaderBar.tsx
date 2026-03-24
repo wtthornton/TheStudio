@@ -23,9 +23,14 @@ interface HeaderBarProps {
   onResumeWizard?: () => void
   /** Called when the user selects "API Docs" from the HelpMenu (switches App tab). */
   onOpenApiDocs?: () => void
+  /**
+   * The currently active tab key (e.g. 'pipeline', 'triage').
+   * Passed to HelpPanel so it can display route-aware content (Epic 45.4).
+   */
+  activeTab?: string
 }
 
-export function HeaderBar({ onResumeWizard, onOpenApiDocs }: HeaderBarProps = {}) {
+export function HeaderBar({ onResumeWizard, onOpenApiDocs, activeTab }: HeaderBarProps = {}) {
   const stages = usePipelineStore((s) => s.stages)
   const totalCost = usePipelineStore((s) => s.totalCost)
 
@@ -96,8 +101,12 @@ export function HeaderBar({ onResumeWizard, onOpenApiDocs }: HeaderBarProps = {}
         }}
       />
 
-      {/* Epic 45.3: Slide-in help panel */}
-      <HelpPanel open={helpPanelOpen} onClose={() => setHelpPanelOpen(false)} />
+      {/* Epic 45.3: Slide-in help panel (45.4: activeTab for route-aware content) */}
+      <HelpPanel
+        open={helpPanelOpen}
+        onClose={() => setHelpPanelOpen(false)}
+        activeTab={activeTab}
+      />
     </div>
   )
 }
