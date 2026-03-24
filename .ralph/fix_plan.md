@@ -112,7 +112,7 @@
 
 - [x] 50.1: `npm install driver.js`. Create `SpotlightProvider.tsx` + `registry.ts`. Version comparison logic. **Files:** modify package.json; create 2 files.
 - [x] 50.2: Inject app version in `vite.config.ts` from pyproject.toml as `VITE_APP_VERSION`. **Files:** modify vite.config.ts.
-- [ ] 50.3: Define 2-3 initial spotlight entries targeting help panel, wizard, API tab. **Files:** modify registry.ts; add `data-spotlight` attrs to target components.
+- [x] 50.3: Define 2-3 initial spotlight entries targeting help panel, wizard, API tab. **Files:** modify registry.ts; add `data-spotlight` attrs to target components.
 - [ ] 50.4: Dark theme CSS for Driver.js popovers. **Files:** modify frontend/src/index.css.
 - [ ] 50.5: Vitest: version mismatch fires, same version skips, registry schema validation. **Files:** create __tests__/spotlights.test.tsx. **RUN TESTS.**
 

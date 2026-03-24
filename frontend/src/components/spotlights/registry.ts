@@ -60,11 +60,47 @@ export interface SpotlightEntry {
 /**
  * All registered spotlights in display order.
  *
- * Entries for v1.0.0 features will be added by Epic 50.3.
- * This array intentionally ships empty in 50.1 so the provider can be
- * wired up and tested before content is authored.
+ * Each entry corresponds to a `data-spotlight` attribute on a DOM element.
+ * Add new entries here; add matching `data-spotlight="<id>"` attributes to
+ * the target component.
+ *
+ * Initial entries (v1.0.0) added by Epic 50.3:
+ *   - help-panel  → HelpMenu trigger button
+ *   - setup-wizard → Setup Wizard menu item
+ *   - api-tab      → API nav tab in App.tsx
  */
-export const SPOTLIGHT_REGISTRY: readonly SpotlightEntry[] = []
+export const SPOTLIGHT_REGISTRY: readonly SpotlightEntry[] = [
+  {
+    id: 'help-panel',
+    sinceVersion: '1.0.0',
+    title: '📖 Contextual Help Panel',
+    description:
+      'Click the ? button to open the Help Panel — tab-aware documentation, full-text search, and concept articles are one click away.',
+    target: '[data-spotlight="help-panel"]',
+    side: 'bottom',
+    align: 'end',
+  },
+  {
+    id: 'setup-wizard',
+    sinceVersion: '1.0.0',
+    title: '🧙 Setup Wizard',
+    description:
+      'Need to re-run onboarding? Open the Help menu and choose Setup Wizard to register a repo, configure your webhook, and set your trust tier.',
+    target: '[data-spotlight="setup-wizard"]',
+    side: 'bottom',
+    align: 'end',
+  },
+  {
+    id: 'api-tab',
+    sinceVersion: '1.0.0',
+    title: '🔌 Interactive API Docs',
+    description:
+      'The API tab embeds the full Scalar reference — browse every endpoint, inspect schemas, and send live requests directly from your browser.',
+    target: '[data-spotlight="api-tab"]',
+    side: 'bottom',
+    align: 'center',
+  },
+]
 
 // ── Storage keys ──────────────────────────────────────────────────────────────
 

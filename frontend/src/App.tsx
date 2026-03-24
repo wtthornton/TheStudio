@@ -265,6 +265,7 @@ function App() {
             <button
               onClick={() => setActiveTab('api')}
               className={`px-3 py-1.5 text-sm rounded ${activeTab === 'api' ? 'bg-gray-700 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}
+              data-spotlight="api-tab"
             >
               API
             </button>

@@ -223,6 +223,7 @@ export function HelpMenu({
         aria-label="Help menu"
         className="flex h-8 w-8 items-center justify-center rounded border border-gray-700 bg-gray-900 text-gray-400 hover:border-gray-500 hover:bg-gray-800 hover:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         data-testid="help-menu-trigger"
+        data-spotlight="help-panel"
       >
         <QuestionMarkIcon className="h-4 w-4" />
       </button>
@@ -257,6 +258,7 @@ export function HelpMenu({
             onClick={handleWizard}
             className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-gray-800 hover:text-gray-100 focus:outline-none focus:bg-gray-800"
             data-testid="help-menu-wizard"
+            data-spotlight="setup-wizard"
           >
             <WizardIcon className="h-4 w-4 shrink-0 text-indigo-400" />
             <div>
