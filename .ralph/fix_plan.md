@@ -49,7 +49,7 @@
 
 > **Slice 0** before Slices 1–2 per epic. **Depends:** Phase 1 timing/gate data; Phase 4 helps `pr_merge_status` (39.0b).
 
-- [ ] **39.0a:** `completed_at` on `TaskPacketRow` + migration + backfill.
+- [x] **39.0a:** `completed_at` on `TaskPacketRow` + migration + backfill.
 - [ ] **39.0b:** `pr_merge_status` field + migration; wire to Epic 38 webhook or polling fallback.
 - [ ] **39.0c:** Persist outcome signals to PostgreSQL (`OutcomeSignalRow`, migrate ingestor).
 - [ ] **39.1–39.5:** Operational analytics APIs — throughput, bottlenecks, categories, failures, summary cards (`analytics_router` / `analytics_queries`).
