@@ -75,7 +75,7 @@
 
 - [x] 45.1: `npm install react-tooltip react-markdown fuse.js`. Create `HelpPanel.tsx` — slide-in/out, close button, Escape handler. **Files:** modify package.json; create frontend/src/components/help/HelpPanel.tsx.
 - [x] 45.2: Create `HelpMenu.tsx` — dropdown with items: Help Panel, Setup Wizard, Guided Tours, API Docs. **Owns the shared help menu for Epics 44, 47, 50.** **Files:** create frontend/src/components/help/HelpMenu.tsx.
-- [ ] 45.3: Mount HelpMenu in HeaderBar, wire HelpPanel toggle. **Files:** modify HeaderBar.tsx, App.tsx.
+- [x] 45.3: Mount HelpMenu in HeaderBar, wire HelpPanel toggle. **Files:** modify HeaderBar.tsx, App.tsx.
 - [ ] 45.4: Route-aware content loading — create `frontend/src/help/` with 11 `.md` files. HelpPanel renders matching content via `react-markdown` + Vite `?raw` import. **Files:** create 11 .md files; modify HelpPanel.tsx.
 - [ ] 45.5: Fuse.js search — index all articles, search bar in panel, click result switches tab. **Files:** modify HelpPanel.tsx.
 - [ ] 45.6: Author 11 tab help articles (200-400 words each). **Files:** write 11 .md files in frontend/src/help/.

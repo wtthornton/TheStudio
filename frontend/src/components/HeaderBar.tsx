@@ -4,8 +4,10 @@
  * Epic 44.9: "Setup incomplete" badge when wizard was skipped.
  * Epic 49.1: AppSwitcher for cross-app navigation.
  * Epic 49.4: Settings deep link to /admin/ui/settings.
+ * Epic 45.3: HelpMenu + HelpPanel mounted here.
  */
 
+import { useState } from 'react'
 import { usePipelineStore } from '../stores/pipeline-store'
 import { PIPELINE_STAGES } from '../lib/constants'
 import {
@@ -13,13 +15,17 @@ import {
   isSetupWizardComplete,
 } from './wizard/wizardStorage'
 import { AppSwitcher } from './AppSwitcher'
+import { HelpMenu } from './help/HelpMenu'
+import { HelpPanel } from './help/HelpPanel'
 
 interface HeaderBarProps {
   /** Called when the user clicks the "Setup incomplete" resume link. */
   onResumeWizard?: () => void
+  /** Called when the user selects "API Docs" from the HelpMenu (switches App tab). */
+  onOpenApiDocs?: () => void
 }
 
-export function HeaderBar({ onResumeWizard }: HeaderBarProps = {}) {
+export function HeaderBar({ onResumeWizard, onOpenApiDocs }: HeaderBarProps = {}) {
   const stages = usePipelineStore((s) => s.stages)
   const totalCost = usePipelineStore((s) => s.totalCost)
 
@@ -35,6 +41,9 @@ export function HeaderBar({ onResumeWizard }: HeaderBarProps = {}) {
   const allZero = activeCount === 0 && queuedCount === 0 && totalCost === 0
 
   const setupSkipped = isSetupWizardSkipped() && !isSetupWizardComplete()
+
+  // Epic 45.3: local toggle state for HelpPanel
+  const [helpPanelOpen, setHelpPanelOpen] = useState(false)
 
   return (
     <div className="flex items-center gap-6 text-sm" data-testid="header-bar">
@@ -75,6 +84,20 @@ export function HeaderBar({ onResumeWizard }: HeaderBarProps = {}) {
       >
         ⚙ Settings
       </a>
+
+      {/* Epic 45.3: Help menu */}
+      <HelpMenu
+        onOpenHelpPanel={() => setHelpPanelOpen(true)}
+        onOpenWizard={() => {
+          onResumeWizard?.()
+        }}
+        onOpenApiDocs={() => {
+          onOpenApiDocs?.()
+        }}
+      />
+
+      {/* Epic 45.3: Slide-in help panel */}
+      <HelpPanel open={helpPanelOpen} onClose={() => setHelpPanelOpen(false)} />
     </div>
   )
 }

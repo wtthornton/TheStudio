@@ -251,19 +251,11 @@ function App() {
           >
             ↓ Import Issues
           </button>
-          <HeaderBar onResumeWizard={handleSetupWizardResume} />
-          {/* Epic 44.10: Re-launch Setup Wizard (replaced by HelpMenu when Epic 45 ships) */}
-          {!showSetupWizard && (
-            <button
-              type="button"
-              onClick={handleSetupWizardResume}
-              className="rounded border border-gray-700 px-3 py-1.5 text-sm text-gray-500 hover:border-gray-500 hover:text-gray-300"
-              data-testid="relaunch-wizard-btn"
-              title="Re-launch Setup Wizard"
-            >
-              ⚙ Setup
-            </button>
-          )}
+          {/* Epic 45.3: HelpMenu mounted inside HeaderBar; onOpenApiDocs switches tab */}
+          <HeaderBar
+            onResumeWizard={handleSetupWizardResume}
+            onOpenApiDocs={() => setActiveTab('api')}
+          />
           <NotificationBell onNavigate={handleNotificationNavigate} />
           <ConnectionIndicator />
         </div>
