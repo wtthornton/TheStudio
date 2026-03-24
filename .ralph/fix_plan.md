@@ -110,7 +110,7 @@
 > TESTS_STATUS: DEFERRED until 50.5
 > BLOCKED BY: Epics 44, 45, 48 must be COMPLETE (they create the UI elements to spotlight)
 
-- [ ] 50.1: `npm install driver.js`. Create `SpotlightProvider.tsx` + `registry.ts`. Version comparison logic. **Files:** modify package.json; create 2 files.
+- [x] 50.1: `npm install driver.js`. Create `SpotlightProvider.tsx` + `registry.ts`. Version comparison logic. **Files:** modify package.json; create 2 files.
 - [ ] 50.2: Inject app version in `vite.config.ts` from pyproject.toml as `VITE_APP_VERSION`. **Files:** modify vite.config.ts.
 - [ ] 50.3: Define 2-3 initial spotlight entries targeting help panel, wizard, API tab. **Files:** modify registry.ts; add `data-spotlight` attrs to target components.
 - [ ] 50.4: Dark theme CSS for Driver.js popovers. **Files:** modify frontend/src/index.css.
