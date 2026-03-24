@@ -17,10 +17,13 @@
         Evaluate
     </button>
 </div>
-<div hx-get="/admin/ui/partials/compliance?repo_id=default" hx-trigger="load" hx-target="#compliance-content" hx-swap="innerHTML">
-</div>
-<div id="compliance-content">
-    <div class="text-center py-12 text-gray-400">
+<div id="compliance-content"
+     data-admin-htmx-section="true"
+     aria-label="Compliance scorecard"
+     hx-get="/admin/ui/partials/compliance?repo_id=default"
+     hx-trigger="load"
+     hx-swap="innerHTML">
+    <div class="text-center py-12 text-gray-400" role="status" aria-live="polite">
         <p class="text-sm">Loading compliance scorecard...</p>
     </div>
 </div>

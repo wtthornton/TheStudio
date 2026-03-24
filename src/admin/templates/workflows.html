@@ -49,10 +49,13 @@
 </div>
 
 <!-- Workflow List -->
-<div hx-get="/admin/ui/partials/workflows" hx-trigger="load" hx-target="#workflows-content" hx-swap="innerHTML"
+<div id="workflows-content"
+     data-admin-htmx-section="true"
+     aria-label="Workflow list"
+     hx-get="/admin/ui/partials/workflows"
+     hx-trigger="load"
+     hx-swap="innerHTML"
      hx-headers='{"X-User-ID": "{{ current_user_id }}"}'>
-</div>
-<div id="workflows-content">
-    <div class="text-center py-12 text-gray-400 text-sm">Loading workflows...</div>
+    <div class="text-center py-12 text-gray-400 text-sm" role="status" aria-live="polite">Loading workflows...</div>
 </div>
 {% endblock %}

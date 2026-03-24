@@ -1,3 +1,14 @@
+# ---- frontend builder stage: compile dashboard SPA ----
+FROM node:22-alpine AS frontend-builder
+
+WORKDIR /app/frontend
+
+# Install frontend deps and build static assets for /dashboard/
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
 # ---- builder stage: compile native extensions ----
 FROM python:3.12-slim AS builder
 
@@ -40,6 +51,7 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application source and entrypoint
 COPY src/ src/
+COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
 COPY docker-entrypoint.sh .
 RUN chmod +x docker-entrypoint.sh
 

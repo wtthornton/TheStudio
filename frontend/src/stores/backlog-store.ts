@@ -1,7 +1,8 @@
 /** Backlog board Zustand store — groups all TaskPackets into Kanban columns. */
 
 import { create } from 'zustand'
-import { fetchTasks, TaskPacketRead } from '../lib/api'
+import { fetchTasks } from '../lib/api'
+import type { TaskPacketRead } from '../lib/api'
 
 // Column definitions: id, display label, and the set of backend statuses they capture.
 export const BOARD_COLUMNS = [

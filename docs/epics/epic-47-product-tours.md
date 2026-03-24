@@ -37,6 +37,7 @@ React Joyride v3 (released March 2026) provides ARIA roles, keyboard navigation,
 | Source | `frontend/src/components/planning/TriageQueue.tsx` | Triage workflow elements |
 | Source | `frontend/src/components/analytics/Analytics.tsx` | Analytics dashboard elements |
 | Source | `frontend/src/components/TrustConfiguration.tsx` | Trust tier config elements |
+| Standard | `docs/design/07-THESTUDIO-UI-UX-STYLE-GUIDE.md` (Section 10) | Canonical guidance UX rules for tours (step budget, layering, accessibility, replay) |
 | Pattern | UX best practice | Max 5-7 steps per tour, action-oriented |
 
 ---
@@ -76,6 +77,7 @@ Each tour can be re-launched from the help menu: "Replay Pipeline Tour", "Replay
 - Tours do not span across tabs (each tour is contained within one tab).
 - No tours for the setup wizard itself (it is already guided).
 - Tour step content is hardcoded in TypeScript, not loaded from Markdown.
+- Tours must comply with style-guide guidance standards: single active guidance layer, concise step budget, explicit dismiss/replay behavior, and keyboard-first accessibility.
 
 ---
 

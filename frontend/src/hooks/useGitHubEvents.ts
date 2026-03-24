@@ -192,9 +192,8 @@ export function useGitHubEvents(taskId?: string): UseGitHubEventsResult {
       es.close()
       esRef.current = null
     }
-    // Re-connect only when lastEventId changes to trigger a new connection
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lastEventId])
+    // Reconnect when task context changes so consumers get a fresh stream lifecycle.
+  }, [lastEventId, taskId, handleMessage])
 
   return { prStatus, reviewStatus, checkStatus, lastEvent, eventCount }
 }

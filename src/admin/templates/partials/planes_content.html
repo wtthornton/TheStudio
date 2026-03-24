@@ -1,3 +1,4 @@
+{% from "components/empty_state.html" import empty_state %}
 <!-- Execution Planes partial — loaded via HTMX -->
 <div class="space-y-6 fade-in">
     <!-- Summary -->
@@ -89,9 +90,9 @@
             {% endfor %}
         </div>
         {% else %}
-        <div class="text-center py-12 text-gray-400 text-sm">
-            No execution planes registered. Register one above.
-        </div>
+        {{ empty_state(
+            "No execution planes registered yet. Use the form above to add a plane, then assign repos to it.",
+            icon="✈") }}
         {% endif %}
     </div>
 

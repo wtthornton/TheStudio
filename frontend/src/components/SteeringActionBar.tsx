@@ -70,11 +70,19 @@ function AbortConfirmDialog() {
       onClick={handleBackdropClick}
       data-testid="abort-confirm-backdrop"
     >
-      <div className="w-full max-w-md rounded-lg border border-red-800 bg-gray-900 p-6 shadow-xl">
+      <div
+        className="w-full max-w-md rounded-lg border border-red-800 bg-gray-900 p-6 shadow-xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="steering-abort-heading"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="mb-4 flex items-center gap-3">
-          <span className="text-xl">⚠️</span>
+          <span className="text-xl" aria-hidden="true">⚠️</span>
           <div>
-            <h3 className="text-sm font-semibold text-red-400">Abort Task</h3>
+            <h3 id="steering-abort-heading" className="text-sm font-semibold text-red-400">
+              Abort Task
+            </h3>
             <p className="mt-0.5 text-xs text-gray-400">
               This will permanently abort the task. This action cannot be undone.
             </p>
@@ -108,17 +116,19 @@ function AbortConfirmDialog() {
 
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={() => setAbortModalOpen(false)}
               disabled={saving}
-              className="rounded px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200 disabled:opacity-50"
+              className="rounded px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
               data-testid="abort-cancel-btn"
             >
               Cancel
             </button>
             <button
+              type="button"
               onClick={handleSubmit}
               disabled={!isValid || saving}
-              className="rounded bg-red-700 px-3 py-1.5 text-xs font-medium text-red-100 hover:bg-red-600 disabled:opacity-50"
+              className="rounded bg-red-700 px-3 py-1.5 text-xs font-medium text-red-100 hover:bg-red-600 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
               data-testid="abort-confirm-btn"
             >
               {saving ? 'Aborting…' : 'Abort Task'}
@@ -204,11 +214,19 @@ function RedirectModal() {
       onClick={handleBackdropClick}
       data-testid="redirect-modal-backdrop"
     >
-      <div className="w-full max-w-lg rounded-lg border border-violet-800 bg-gray-900 p-6 shadow-xl">
+      <div
+        className="w-full max-w-lg rounded-lg border border-violet-800 bg-gray-900 p-6 shadow-xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="steering-redirect-heading"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="mb-4 flex items-center gap-3">
-          <span className="text-xl">↩️</span>
+          <span className="text-xl" aria-hidden="true">↩️</span>
           <div>
-            <h3 className="text-sm font-semibold text-violet-300">Redirect Task to Earlier Stage</h3>
+            <h3 id="steering-redirect-heading" className="text-sm font-semibold text-violet-300">
+              Redirect Task to Earlier Stage
+            </h3>
             <p className="mt-0.5 text-xs text-gray-400">
               Currently at <span className="font-medium text-gray-300">{currentLabel}</span>. Select an earlier stage to re-enter.
             </p>
@@ -287,17 +305,19 @@ function RedirectModal() {
 
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={() => setRedirectModalOpen(false)}
               disabled={saving}
-              className="rounded px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200 disabled:opacity-50"
+              className="rounded px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
               data-testid="redirect-cancel-btn"
             >
               Cancel
             </button>
             <button
+              type="button"
               onClick={handleSubmit}
               disabled={!isValid || saving || validTargets.length === 0}
-              className="rounded bg-violet-700 px-3 py-1.5 text-xs font-medium text-violet-100 hover:bg-violet-600 disabled:opacity-50"
+              className="rounded bg-violet-700 px-3 py-1.5 text-xs font-medium text-violet-100 hover:bg-violet-600 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
               data-testid="redirect-confirm-btn"
             >
               {saving ? 'Redirecting…' : 'Redirect Task'}
@@ -356,11 +376,19 @@ function RetryConfirmDialog() {
       onClick={handleBackdropClick}
       data-testid="retry-confirm-backdrop"
     >
-      <div className="w-full max-w-md rounded-lg border border-amber-800 bg-gray-900 p-6 shadow-xl">
+      <div
+        className="w-full max-w-md rounded-lg border border-amber-800 bg-gray-900 p-6 shadow-xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="steering-retry-heading"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="mb-4 flex items-center gap-3">
-          <span className="text-xl">🔄</span>
+          <span className="text-xl" aria-hidden="true">🔄</span>
           <div>
-            <h3 className="text-sm font-semibold text-amber-400">Retry Stage</h3>
+            <h3 id="steering-retry-heading" className="text-sm font-semibold text-amber-400">
+              Retry Stage
+            </h3>
             <p className="mt-0.5 text-xs text-gray-400">
               Re-run the <span className="font-medium text-gray-300">{currentLabel}</span> stage from the
               beginning. Existing stage artifacts will be cleared.
@@ -382,17 +410,19 @@ function RetryConfirmDialog() {
 
         <div className="flex items-center justify-end gap-2">
           <button
+            type="button"
             onClick={() => setRetryModalOpen(false)}
             disabled={saving}
-            className="rounded px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200 disabled:opacity-50"
+            className="rounded px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
             data-testid="retry-cancel-btn"
           >
             Cancel
           </button>
           <button
+            type="button"
             onClick={handleConfirm}
             disabled={saving}
-            className="rounded bg-amber-700 px-3 py-1.5 text-xs font-medium text-amber-100 hover:bg-amber-600 disabled:opacity-50"
+            className="rounded bg-amber-700 px-3 py-1.5 text-xs font-medium text-amber-100 hover:bg-amber-600 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
             data-testid="retry-confirm-btn"
           >
             {saving ? 'Retrying…' : `Retry ${currentLabel}`}

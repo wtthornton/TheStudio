@@ -8,10 +8,13 @@
 {% endblock %}
 
 {% block content %}
-<div hx-get="/admin/ui/partials/dashboard" hx-trigger="load, every 5s" hx-target="#dashboard-content" hx-swap="innerHTML">
-</div>
-<div id="dashboard-content">
-    <div class="text-center py-12 text-gray-400">
+<div id="dashboard-content"
+     data-admin-htmx-section="true"
+     aria-label="Fleet dashboard"
+     hx-get="/admin/ui/partials/dashboard"
+     hx-trigger="load, every 5s"
+     hx-swap="innerHTML">
+    <div class="text-center py-12 text-gray-400" role="status" aria-live="polite">
         <p class="text-sm">Loading dashboard...</p>
         <span class="htmx-indicator">Refreshing...</span>
     </div>

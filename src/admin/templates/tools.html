@@ -4,10 +4,13 @@
 {% block page_title %}Tool Hub{% endblock %}
 
 {% block content %}
-<div hx-get="/admin/ui/partials/tools" hx-trigger="load" hx-target="#tools-content" hx-swap="innerHTML">
-</div>
-<div id="tools-content">
-    <div class="text-center py-12 text-gray-400">
+<div id="tools-content"
+     data-admin-htmx-section="true"
+     aria-label="Tool Hub catalog and access check"
+     hx-get="/admin/ui/partials/tools"
+     hx-trigger="load"
+     hx-swap="innerHTML">
+    <div class="text-center py-12 text-gray-400" role="status" aria-live="polite">
         <p class="text-sm">Loading tool catalog...</p>
     </div>
 </div>

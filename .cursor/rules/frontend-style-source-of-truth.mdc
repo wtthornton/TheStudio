@@ -1,0 +1,25 @@
+# Frontend Style Source of Truth
+
+When working on frontend code in this repository, the canonical standard is:
+
+- `docs/design/07-THESTUDIO-UI-UX-STYLE-GUIDE.md`
+
+This applies to:
+
+- `/admin/ui/*` templates and partials (`src/admin/templates/**`)
+- `/dashboard/*` React frontend (`frontend/src/**`)
+
+## Required behavior
+
+1. Read the style guide before implementing UI changes.
+2. Reuse existing patterns from the guide (layout, color semantics, tables, badges, states).
+2.5. For AI-assisted UI flows, use the guide's prompt-first intent model (intent capture -> intent preview -> mode -> evidence -> user decision).
+3. Keep status color meaning consistent across all pages.
+4. Always implement explicit loading, empty, and error states.
+5. Ensure keyboard accessibility and visible focus indicators.
+6. If adding a new reusable visual/interaction pattern, update the style guide in the same change.
+
+## Conflict resolution
+
+If this guide conflicts with older docs or examples, follow
+`docs/design/07-THESTUDIO-UI-UX-STYLE-GUIDE.md`.

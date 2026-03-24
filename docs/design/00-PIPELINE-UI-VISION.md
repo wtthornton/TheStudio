@@ -105,6 +105,7 @@ This vision is broken into five detailed design specifications:
 | [04-GITHUB-INTEGRATION-ANALYTICS.md](04-GITHUB-INTEGRATION-ANALYTICS.md) | Bidirectional GitHub Projects sync, PR evidence explorer, issue import, analytics dashboards, webhook real-time bridge | Deep GitHub integration and operational metrics |
 | [05-TECHNOLOGY-ARCHITECTURE.md](05-TECHNOLOGY-ARCHITECTURE.md) | Frontend stack, real-time data flow, API contracts, component architecture, deployment model, migration path from current admin panel | How to build it |
 | [06-BACKEND-REQUIREMENTS.md](06-BACKEND-REQUIREMENTS.md) | All backend work required to power the frontend: SSE/NATS bridge, event emission, dashboard API, Temporal signals, data model changes | What the backend needs to build (83 stories) |
+| [07-THESTUDIO-UI-UX-STYLE-GUIDE.md](07-THESTUDIO-UI-UX-STYLE-GUIDE.md) | Formal UI/UX standards and single source of truth for frontend visual + interaction patterns across Admin Console and Pipeline app | Keep visuals and behavior consistent across all frontend surfaces |
 
 ---
 

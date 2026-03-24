@@ -52,11 +52,14 @@
 </div>
 
 <!-- Repo List -->
-<div hx-get="/admin/ui/partials/repos" hx-trigger="load" hx-target="#repos-content" hx-swap="innerHTML"
+<div id="repos-content"
+     data-admin-htmx-section="true"
+     aria-label="Repository list"
+     hx-get="/admin/ui/partials/repos"
+     hx-trigger="load"
+     hx-swap="innerHTML"
      hx-headers='{"X-User-ID": "{{ current_user_id }}"}'>
-</div>
-<div id="repos-content">
-    <div class="text-center py-12 text-gray-400 text-sm">Loading repos...</div>
+    <div class="text-center py-12 text-gray-400 text-sm" role="status" aria-live="polite">Loading repos...</div>
 </div>
 <script>
 (function () {

@@ -71,6 +71,7 @@ src/outcome/       Signal ingestor, quarantine, replay
 ## Key References
 
 - **URLs (dev, prod, admin, API):** `docs/URLs.md`
+- **Frontend UI/UX style source of truth:** `docs/design/07-THESTUDIO-UI-UX-STYLE-GUIDE.md`
 - Reset / canonical index: `thestudioarc/personas/TEAM.md`
 - Training: `thestudioarc/personas/TRAINING.md`
 - OKRs and team review: `thestudioarc/personas/MERIDIAN-TEAM-REVIEW-AND-OKRS.md`
@@ -78,6 +79,12 @@ src/outcome/       Signal ingestor, quarantine, replay
 - Tooling guide: `thestudioarc/personas/tooling-guide.md`
 - Agent roles: `thestudioarc/08-agent-roles.md`
 - Intent layer: `thestudioarc/11-intent-layer.md`
+
+## Frontend Rule
+
+When creating or editing frontend UI, follow `docs/design/07-THESTUDIO-UI-UX-STYLE-GUIDE.md` as the canonical standard.
+Do not invent new visual or interaction patterns unless they are added to that guide in the same change.
+For AI UI features, enforce the prompt-first intent flow defined in that guide.
 
 ## Principles (from SOUL.md)
 

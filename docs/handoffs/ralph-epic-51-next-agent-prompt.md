@@ -72,6 +72,14 @@ ruff check vendor/ralph-sdk/ralph_sdk/ src/agent/ralph_bridge.py src/agent/prima
 - Scope to **Epic 51** + **evaluation**; avoid drive-by changes outside Ralph vendor, bridge, activities, primary agent Ralph path, and tests.
 - **WSL Ralph home:** `scripts/wsl-setup-ralph-home.sh` and `docs/ralph-setup.md` if `~/.ralph` is not a git clone of `frankbria/ralph-claude-code`.
 
+### Execution checklist (any agent — before “done”)
+
+1. Run the **Verification (local)** `pytest` + `ruff` block above; fix failures in scope.
+2. Re-read **`docs/ralph-sdk-upgrade-evaluation.md`** for the gap you are closing; note the section id (e.g. §1.9) in the commit or PR.
+3. If you changed **`vendor/ralph-sdk`**, reinstall per **Dependency** (wheel cache pitfall) before tests.
+4. Update **`docs/epics/epic-51-ralph-vendored-sdk-parity.md`** / **`EPIC-STATUS-TRACKER.md`** only if your team process requires it for the slice you shipped.
+5. Optional upstream: **`docs/ralph-upstream-issues.md`** / issue **#226** when contributing patches outward.
+
 ---
 
 *This file lives at `docs/handoffs/ralph-epic-51-next-agent-prompt.md` for version control and sharing.*

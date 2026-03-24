@@ -16,20 +16,27 @@
         <option value="">All Repos</option>
     </select>
 </div>
-<div hx-get="/admin/ui/partials/metrics" hx-trigger="load" hx-target="#metrics-content" hx-swap="innerHTML">
-</div>
-<div id="metrics-content">
-    <div class="text-center py-12 text-gray-400">
+<div id="metrics-content"
+     data-admin-htmx-section="true"
+     aria-label="Metrics and trends"
+     hx-get="/admin/ui/partials/metrics"
+     hx-trigger="load"
+     hx-swap="innerHTML">
+    <div class="text-center py-12 text-gray-400" role="status" aria-live="polite">
         <p class="text-sm">Loading metrics...</p>
     </div>
 </div>
 
 <!-- Operational Targets Section -->
 <h3 class="text-lg font-semibold mt-8 mb-4">Operational Targets</h3>
-<div hx-get="/admin/ui/partials/targets" hx-trigger="load" hx-target="#targets-content" hx-swap="innerHTML">
-</div>
-<div id="targets-content" class="space-y-4">
-    <div class="text-center py-8 text-gray-400">
+<div id="targets-content"
+     class="space-y-4"
+     data-admin-htmx-section="true"
+     aria-label="Operational targets"
+     hx-get="/admin/ui/partials/targets"
+     hx-trigger="load"
+     hx-swap="innerHTML">
+    <div class="text-center py-8 text-gray-400" role="status" aria-live="polite">
         <p class="text-sm">Loading targets...</p>
     </div>
 </div>

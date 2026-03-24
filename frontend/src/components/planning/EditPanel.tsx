@@ -27,11 +27,23 @@ export function EditPanel({ task, onSave, onSaveAndAccept, onClose }: EditPanelP
   const hasChanges = Object.keys(fields).length > 0
 
   return (
-    <div className="fixed inset-y-0 right-0 w-[480px] bg-gray-900 border-l border-gray-700 shadow-xl z-50 flex flex-col animate-slide-in">
+    <div
+      className="fixed inset-y-0 right-0 w-[480px] bg-gray-900 border-l border-gray-700 shadow-xl z-50 flex flex-col animate-slide-in"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="edit-panel-title"
+    >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
-        <h2 className="font-medium text-gray-100">Edit Issue #{task.issue_id}</h2>
-        <button onClick={onClose} className="text-gray-500 hover:text-gray-300 text-lg">
+        <h2 id="edit-panel-title" className="font-medium text-gray-100">
+          Edit Issue #{task.issue_id}
+        </h2>
+        <button
+          type="button"
+          onClick={onClose}
+          className="text-gray-500 hover:text-gray-300 text-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded px-1"
+          aria-label="Close edit panel"
+        >
           &times;
         </button>
       </div>
@@ -61,21 +73,24 @@ export function EditPanel({ task, onSave, onSaveAndAccept, onClose }: EditPanelP
       {/* Footer */}
       <div className="flex items-center gap-2 px-4 py-3 border-t border-gray-700">
         <button
+          type="button"
           onClick={() => { onSave(task.id, fields); onClose() }}
           disabled={!hasChanges}
-          className="px-3 py-1.5 text-sm rounded bg-blue-700 text-blue-100 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-3 py-1.5 text-sm rounded bg-blue-700 text-blue-100 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
         >
           Save
         </button>
         <button
+          type="button"
           onClick={() => onSaveAndAccept(task.id, fields)}
-          className="px-3 py-1.5 text-sm rounded bg-emerald-700 text-emerald-100 hover:bg-emerald-600"
+          className="px-3 py-1.5 text-sm rounded bg-emerald-700 text-emerald-100 hover:bg-emerald-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
         >
           Save & Accept
         </button>
         <button
+          type="button"
           onClick={onClose}
-          className="px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200"
+          className="px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500"
         >
           Cancel
         </button>

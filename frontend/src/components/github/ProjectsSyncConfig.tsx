@@ -6,7 +6,7 @@
  * and POST /api/v1/dashboard/github/projects/sync.
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface ProjectsSyncConfigData {
   enabled: boolean;

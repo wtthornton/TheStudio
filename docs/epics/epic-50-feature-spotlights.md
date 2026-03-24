@@ -36,6 +36,7 @@ The version is read from the app's build metadata (injected by Vite at build tim
 | Source | `frontend/src/App.tsx` | Entry point for spotlight trigger |
 | Source | `frontend/vite.config.ts` | Build-time version injection |
 | Source | `pyproject.toml` | Version source (`version = "0.1.0"`) |
+| Standard | `docs/design/07-THESTUDIO-UI-UX-STYLE-GUIDE.md` (Section 10) | Canonical guidance UX rules for spotlights (frequency, step budget, layering, replay) |
 | Source | `CHANGELOG.md` | Source of what changed per version |
 
 ---
@@ -79,6 +80,7 @@ Vite injects the version from `pyproject.toml` as `import.meta.env.VITE_APP_VERS
 - No "What's New" page or modal with a list of changes (just element highlights).
 - Spotlights do not block the UI -- users can click away to dismiss at any time.
 - Maximum 3 highlights per version (respect user attention).
+- Spotlights must comply with style-guide guidance standards: concise per-version budget, explicit dismiss/replay behavior, and non-overlapping primary guidance layers.
 
 ---
 

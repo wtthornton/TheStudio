@@ -67,7 +67,7 @@ const initialState: TrustState = {
   ruleFormOpen: false,
 }
 
-export const useTrustStore = create<TrustState & TrustActions>((set, get) => ({
+export const useTrustStore = create<TrustState & TrustActions>((set) => ({
   ...initialState,
 
   load: async () => {

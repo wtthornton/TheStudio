@@ -1,6 +1,6 @@
 /** BacklogCard — compact Kanban card for a single TaskPacket. */
 
-import { TaskPacketRead } from '../../lib/api'
+import type { TaskPacketRead } from '../../lib/api'
 
 interface BacklogCardProps {
   task: TaskPacketRead

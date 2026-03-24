@@ -53,10 +53,13 @@
 </div>
 
 <!-- Audit Log Table -->
-<div hx-get="/admin/ui/partials/audit" hx-trigger="load" hx-target="#audit-content" hx-swap="innerHTML"
+<div id="audit-content"
+     data-admin-htmx-section="true"
+     aria-label="Audit log"
+     hx-get="/admin/ui/partials/audit"
+     hx-trigger="load"
+     hx-swap="innerHTML"
      hx-headers='{"X-User-ID": "{{ current_user_id }}"}'>
-</div>
-<div id="audit-content">
-    <div class="text-center py-12 text-gray-400 text-sm">Loading audit log...</div>
+    <div class="text-center py-12 text-gray-400 text-sm" role="status" aria-live="polite">Loading audit log...</div>
 </div>
 {% endblock %}

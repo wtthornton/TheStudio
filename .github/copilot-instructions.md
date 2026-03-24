@@ -1,9 +1,22 @@
-<!-- tapps-generated: v1.10.0 -->
+<!-- tapps-generated: v1.12.0 -->
 # Copilot Instructions
 
 This project uses **TappsMCP** (Code Quality MCP Server) for automated
 quality analysis. When TappsMCP is available as an MCP server, follow
 the pipeline below.
+
+## Frontend UI/UX Standard (Single Source of Truth)
+
+For all frontend work, use:
+
+- `docs/design/07-THESTUDIO-UI-UX-STYLE-GUIDE.md`
+
+Applies to:
+
+- `/admin/ui/*` (HTMX Admin Console)
+- `/dashboard/*` (React Pipeline app)
+
+Do not introduce new visual or interaction patterns unless the style guide is updated in the same change.
 
 ## TappsMCP Quality Pipeline
 

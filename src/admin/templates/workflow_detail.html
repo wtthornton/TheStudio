@@ -5,10 +5,13 @@
 {% block page_title %}Workflow Detail{% endblock %}
 
 {% block content %}
-<div hx-get="/admin/ui/partials/workflow/{{ workflow_id }}" hx-trigger="load" hx-target="#wf-detail-content" hx-swap="innerHTML"
+<div id="wf-detail-content"
+     data-admin-htmx-section="true"
+     aria-label="Workflow detail"
+     hx-get="/admin/ui/partials/workflow/{{ workflow_id }}"
+     hx-trigger="load"
+     hx-swap="innerHTML"
      hx-headers='{"X-User-ID": "{{ current_user_id }}"}'>
-</div>
-<div id="wf-detail-content">
-    <div class="text-center py-12 text-gray-400 text-sm">Loading workflow...</div>
+    <div class="text-center py-12 text-gray-400 text-sm" role="status" aria-live="polite">Loading workflow...</div>
 </div>
 {% endblock %}

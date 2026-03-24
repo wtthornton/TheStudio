@@ -16,19 +16,26 @@
             hx-get="/admin/ui/partials/cost-dashboard?window=720"
             hx-target="#cost-dashboard-content" hx-swap="innerHTML">30d</button>
 </div>
-<div hx-get="/admin/ui/partials/cost-dashboard?window=24" hx-trigger="load" hx-target="#cost-dashboard-content" hx-swap="innerHTML">
-</div>
-<div id="cost-dashboard-content">
-    <div class="text-center py-12 text-gray-400">
+<div id="cost-dashboard-content"
+     data-admin-htmx-section="true"
+     aria-label="Cost dashboard"
+     hx-get="/admin/ui/partials/cost-dashboard?window=24"
+     hx-trigger="load"
+     hx-swap="innerHTML">
+    <div class="text-center py-12 text-gray-400" role="status" aria-live="polite">
         <p class="text-sm">Loading cost dashboard...</p>
     </div>
 </div>
 
 <!-- Budget Utilization Widget (Story 32.14) -->
-<div class="mt-6" hx-get="/admin/ui/partials/budget-utilization?window=24" hx-trigger="load" hx-target="#budget-utilization-content" hx-swap="innerHTML">
-</div>
-<div id="budget-utilization-content">
-    <div class="text-center py-6 text-gray-400">
+<div id="budget-utilization-content"
+     class="mt-6"
+     data-admin-htmx-section="true"
+     aria-label="Budget utilization"
+     hx-get="/admin/ui/partials/budget-utilization?window=24"
+     hx-trigger="load"
+     hx-swap="innerHTML">
+    <div class="text-center py-6 text-gray-400" role="status" aria-live="polite">
         <p class="text-sm">Loading budget utilization...</p>
     </div>
 </div>

@@ -40,6 +40,7 @@ No external services. No API calls. All content is static Markdown shipped with 
 | Library | `fuse.js` (MIT, 18k stars) | Client-side fuzzy search |
 | Library | `react-markdown` (MIT) | Markdown renderer for React |
 | Source | `frontend/src/App.tsx` | Panel toggle integration |
+| Standard | `docs/design/07-THESTUDIO-UI-UX-STYLE-GUIDE.md` (Section 10) | Canonical guidance UX rules for help panels and tooltips |
 | Source | `thestudioarc/` | Source content for help articles |
 | Source | `docs/deployment.md` | Source content for configuration help |
 
@@ -86,6 +87,7 @@ The Jinja2 Admin UI at `/admin/ui/` gets `title` attributes and a lightweight to
 - No video tutorials or animated GIFs in help content.
 - Help panel is React SPA only; Admin UI gets tooltips only (no panel).
 - Internationalization is not in scope.
+- Help/tooltip behavior must comply with style-guide guidance standards (concise copy, accessible interaction, replay path, and no overlapping primary guidance layers).
 
 ---
 

@@ -4,10 +4,13 @@
 {% block page_title %}Meridian Portfolio Health{% endblock %}
 
 {% block content %}
-<div hx-get="/admin/ui/partials/portfolio-health" hx-trigger="load" hx-target="#portfolio-health-content" hx-swap="innerHTML">
-</div>
-<div id="portfolio-health-content">
-    <div class="text-center py-12 text-gray-400">
+<div id="portfolio-health-content"
+     data-admin-htmx-section="true"
+     aria-label="Meridian portfolio health"
+     hx-get="/admin/ui/partials/portfolio-health"
+     hx-trigger="load"
+     hx-swap="innerHTML">
+    <div class="text-center py-12 text-gray-400" role="status" aria-live="polite">
         <p class="text-sm">Loading portfolio health data...</p>
     </div>
 </div>

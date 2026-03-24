@@ -4,10 +4,13 @@
 {% block page_title %}Model Gateway{% endblock %}
 
 {% block content %}
-<div hx-get="/admin/ui/partials/models" hx-trigger="load" hx-target="#models-content" hx-swap="innerHTML">
-</div>
-<div id="models-content">
-    <div class="text-center py-12 text-gray-400">
+<div id="models-content"
+     data-admin-htmx-section="true"
+     aria-label="Model gateway providers and routing"
+     hx-get="/admin/ui/partials/models"
+     hx-trigger="load"
+     hx-swap="innerHTML">
+    <div class="text-center py-12 text-gray-400" role="status" aria-live="polite">
         <p class="text-sm">Loading model gateway...</p>
     </div>
 </div>

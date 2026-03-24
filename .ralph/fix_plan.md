@@ -135,3 +135,9 @@
 
 Epics 0-43 (280+ stories). Epic 27 deferred by design.
 Deployment hardening: multi-stage Dockerfile, .dockerignore, vendor/ralph-sdk, migration 049, NATS healthcheck, pg-proxy localhost binding, /health/ralph test coverage.
+
+---
+
+## Documentation sync (2026-03-24)
+
+Rolled up canonical UI standard (`docs/design/07-THESTUDIO-UI-UX-STYLE-GUIDE.md`), MCP frontend experts brief, Cursor `frontend-style-source-of-truth` rule, `EPIC-STATUS-TRACKER.md`, `TAPPS_HANDOFF.md`, `TAPPS_RUNLOG.md`, Story **53.3** header, and README / AGENTS / Copilot pointers. Local `.tapps-brain/` excluded via `.gitignore`.

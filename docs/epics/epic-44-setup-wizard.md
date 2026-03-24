@@ -38,6 +38,7 @@ Why now: TheStudio is deployed to production (Epic 43 complete, Docker hardened)
 | Source | `frontend/src/App.tsx` | Entry point where wizard gate checks localStorage |
 | Source | `frontend/src/lib/api.ts` | Existing API client for health/repo calls |
 | Source | `src/admin/router.py` | Admin API endpoints the wizard calls |
+| Standard | `docs/design/07-THESTUDIO-UI-UX-STYLE-GUIDE.md` (Section 10) | Canonical guidance/onboarding UX rules (layering, persistence, accessibility, replay) |
 | Docs | `docs/deployment.md` | Steps the wizard must automate |
 | Docs | `docs/URLs.md` | Health endpoints the wizard validates |
 | Epic | `docs/epics/epic-41-multi-repo-onboarding.md` | Repo registration flow |
@@ -91,6 +92,7 @@ A "Skip setup" link is visible on every step. Clicking it sets the completion fl
 - Wizard does not create GitHub Apps or generate webhook secrets. It guides users to the right place and validates the result.
 - No analytics or telemetry on wizard completion rates (future).
 - The wizard does not handle multi-tenant or team onboarding.
+- Wizard must comply with style-guide guidance standards: single active guidance layer, clear dismiss/replay paths, and keyboard-accessible interaction.
 
 ---
 

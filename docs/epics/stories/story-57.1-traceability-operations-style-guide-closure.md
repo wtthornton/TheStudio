@@ -1,6 +1,6 @@
 # Story 57.1 -- Traceability operations for style-guide requirement closure
 
-> **Delivery status:** In progress (2026-03-24) — primary artifact: `docs/epics/epic-52-traceability-matrix-style-guide-mapping.md` (SG 3.3 **Verified** for admin; SG 4.4–6.x **Partial** with Wave 2 evidence notes). Story AC and full **Verified** roll-up remain open until 53.3/54.2 sweeps finish and 57.2 regression gates exist.  
+> **Delivery status:** In progress (2026-03-24) — primary artifact: `docs/epics/epic-52-traceability-matrix-style-guide-mapping.md` (SG 3.3 **Verified** for admin; SG 4.4–6.x **Partial** with Wave 2–6 evidence: admin HTMX shells, repo nested loaders, 54.2 Wave 3 dialogs, empty_state Wave 6 on fleet dashboard / experts / planes). Story AC and full **Verified** roll-up remain open until 53.3/54.2 formal sign-off and **57.2** regression gates exist.  
 > **Doc sync:** `epic-52-frontend-ui-modernization-master-plan.md`, `epic-52-gap-report-admin-vs-dashboard.md`, `epic-57-rollout-governance-and-regression-safety.md`, `EPIC-STATUS-TRACKER.md` (Epics 52–57 row).
 
 <!-- docsmcp:start:user-story -->

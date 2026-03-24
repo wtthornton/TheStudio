@@ -3,7 +3,7 @@
 # Use: tapps_consult_expert(domain="<domain-name>", question="...")
 
 experts:
-  - expert_id: intent-specification
+  - expert_id: expert-intent-specification
     expert_name: Intent Specification Expert
     primary_domain: software-architecture
     description: >
@@ -18,10 +18,8 @@ experts:
       - invariants
       - non-goals
       - scope
-    rag_sources:
-      - thestudioarc/11-intent-layer.md
 
-  - expert_id: agent-roles-routing
+  - expert_id: expert-agent-roles-routing
     expert_name: Agent Roles & Routing Expert
     primary_domain: software-architecture
     description: >
@@ -37,10 +35,8 @@ experts:
       - tool allowlist
       - expert routing
       - primary agent
-    rag_sources:
-      - thestudioarc/08-agent-roles.md
 
-  - expert_id: verification-qa
+  - expert_id: expert-verification-qa
     expert_name: Verification & QA Expert
     primary_domain: testing-strategies
     description: >
@@ -56,11 +52,8 @@ experts:
       - ruff
       - pytest
       - JetStream
-    rag_sources:
-      - thestudioarc/13-verification-gate.md
-      - thestudioarc/14-qa-quality-layer.md
 
-  - expert_id: workflow-orchestration
+  - expert_id: expert-workflow-orchestration
     expert_name: Workflow Orchestration Expert
     primary_domain: software-architecture
     description: >
@@ -76,10 +69,8 @@ experts:
       - correlation_id
       - TaskPacket
       - durable
-    rag_sources:
-      - thestudioarc/15-system-runtime-flow.md
 
-  - expert_id: epic-planning
+  - expert_id: expert-epic-planning
     expert_name: Epic Planning Expert
     primary_domain: development-workflow
     description: >
@@ -96,13 +87,8 @@ experts:
       - OKR
       - review checklist
       - persona
-    rag_sources:
-      - thestudioarc/personas/saga-epic-creator.md
-      - thestudioarc/personas/helm-planner-dev-manager.md
-      - thestudioarc/personas/meridian-vp-success.md
-      - thestudioarc/personas/TEAM.md
 
-  - expert_id: publisher-github
+  - expert_id: expert-publisher-github
     expert_name: Publisher & GitHub Expert
     primary_domain: github
     description: >
@@ -118,5 +104,51 @@ experts:
       - idempotency
       - github app
       - webhook
-    rag_sources:
-      - thestudioarc/15-system-runtime-flow.md
+
+  - expert_id: expert-frontend-style-governance
+    expert_name: Frontend Style Governance Expert
+    primary_domain: user-experience
+    description: >
+      Expert on enforcing TheStudio frontend style source of truth. Advises on
+      cross-surface consistency, semantic color mappings, dashboard readability,
+      accessibility, and update discipline for docs/design/07-THESTUDIO-UI-UX-STYLE-GUIDE.md.
+    keywords:
+      - frontend style guide
+      - style governance
+      - design standard
+      - admin ui
+      - pipeline ui
+      - semantic colors
+      - accessibility
+
+  - expert_id: expert-prompt-first-ux
+    expert_name: Prompt-First UX Expert
+    primary_domain: user-experience
+    description: >
+      Expert on prompt-first AI interaction design in TheStudio. Advises on intent
+      capture, intent preview, execution-mode control, trust calibration signals,
+      human override, and evidence-backed outputs for agentic UX.
+    keywords:
+      - prompt-first
+      - AI UX
+      - intent preview
+      - autonomy dial
+      - trust calibration
+      - human in the loop
+      - explainability
+
+  - expert_id: expert-admin-ui-patterns
+    expert_name: Admin UI Patterns Expert
+    primary_domain: user-experience
+    description: >
+      Expert on TheStudio Admin Console interaction patterns. Advises on layout
+      shell, dashboard composition, table density, command palette patterns,
+      loading/empty/error states, and responsive behavior.
+    keywords:
+      - admin console
+      - dashboard patterns
+      - command palette
+      - htmx
+      - table UX
+      - loading state
+      - responsive design

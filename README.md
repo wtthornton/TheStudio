@@ -28,6 +28,19 @@ Architecture docs live in [`thestudioarc/`](thestudioarc/). Key references:
 | [23-admin-control-ui](thestudioarc/23-admin-control-ui.md) | Admin console |
 | [SOUL.md](thestudioarc/SOUL.md) | Core principles |
 
+## Frontend Style Standard
+
+Frontend UI/UX standards are defined in one canonical document:
+
+- `docs/design/07-THESTUDIO-UI-UX-STYLE-GUIDE.md`
+
+This is the single source of truth for style and interaction patterns across:
+
+- `/admin/ui/*` (HTMX Admin Console)
+- `/dashboard/*` (React Pipeline app)
+
+If any other doc conflicts with it, the style guide takes precedence.
+
 ## Tech Stack
 
 - **Runtime:** Python 3.12+, FastAPI, Pydantic

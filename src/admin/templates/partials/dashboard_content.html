@@ -1,4 +1,5 @@
 {% from "components/status_badge.html" import status_badge, tier_badge %}
+{% from "components/empty_state.html" import empty_state %}
 
 <!-- Global Health -->
 <div class="mb-6">
@@ -87,7 +88,14 @@
                 {% endfor %}
                 {% else %}
                 <tr>
-                    <td colspan="7" class="px-4 py-8 text-center text-gray-400 text-sm">No repos registered</td>
+                    <td colspan="7" class="px-0 py-0 align-top">
+                        {{ empty_state(
+                            "No repositories registered yet. Add a repo to see queue depth, running workflows, and pass rates here.",
+                            icon="◇",
+                            cta_text="Open Repos",
+                            cta_url="/admin/ui/repos#register-repo-section",
+                            cta_icon="→") }}
+                    </td>
                 </tr>
                 {% endif %}
             </tbody>

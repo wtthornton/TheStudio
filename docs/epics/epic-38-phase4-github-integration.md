@@ -1,7 +1,7 @@
 # Epic 38 — GitHub Deep Integration: Issue Import, PR Evidence, Projects Sync, and Pipeline Comments
 
-> **Phase:** UI Phase 4 | **Status:** Approved — Meridian Round 2 PASS (2026-03-22)
-> **Estimated duration:** 5-7 weeks | **Stories:** 27 across 4 slices (MVP: Slices 1+2)
+> **Phase:** UI Phase 4 | **Status:** **MVP delivered in repo** (Slices 1–2, stories **38.1–38.12**); Meridian R2 PASS (2026-03-22). **Slices 3–4** (Projects sync, pipeline comments, webhook bridge) not started.
+> **Estimated duration:** 5-7 weeks (full epic) | **Stories:** 27 across 4 slices (MVP: Slices 1+2 — **shipped**)
 > **Depends on:** Epic 34 (COMPLETE), Epic 35 (COMPLETE), Epic 36 (COMPLETE), Epic 37 (COMPLETE)
 > **Kill Criterion:** If after MVP delivery (Slices 1+2), fewer than 20% of pipeline tasks use manual import within 2 weeks, defer Slices 3-4 and proceed to Epic 39. Slices 1+2 shipping alone constitutes a successful epic.
 
@@ -258,6 +258,16 @@ The existing `ProjectsV2Client` (Epic 29, feature-flagged off at `src/github/pro
 4. ~~**Unmeasurable success metrics.**~~ **FIXED:** PR evidence engagement and Projects sync accuracy metrics replaced with server-side measurable proxies
 5. ~~**Intake boundary unclear.**~~ **FIXED:** Story 38.2 now specifies import creates TaskPackets via `taskpacket_crud.py` directly, sets `source_name="dashboard_import"`, respects triage mode
 6. ~~**Missing field-creation capability.**~~ **FIXED:** Story 38.14 now explicitly notes `create_custom_field()` is net-new GraphQL mutation work
+
+### Implementation rollup (MVP — 2026-03-24)
+
+| Area | Location |
+|------|----------|
+| Issue list + import API | `src/dashboard/github_router.py`, `tests/dashboard/test_github_router.py`, `tests/integration/test_issue_import.py` |
+| Import UI | `frontend/src/components/github/ImportModal.tsx` |
+| Evidence JSON + Markdown | `src/publisher/evidence_payload.py`, `src/publisher/evidence_comment.py`, `tests/publisher/test_evidence_payload.py`, `tests/publisher/test_evidence_json.py` |
+| Evidence API | `src/dashboard/tasks.py` (`GET /tasks/{id}/evidence`), `tests/dashboard/test_evidence_endpoint.py` |
+| PR explorer + reviewer actions | `frontend/src/components/pr/EvidenceExplorer.tsx`, `ReviewerActions.tsx`, `src/dashboard/pr_router.py`, `tests/integration/test_pr_evidence_explorer.py` |
 
 ### Round 2: PASS (2026-03-22)
 

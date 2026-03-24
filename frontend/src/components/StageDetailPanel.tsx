@@ -93,22 +93,32 @@ export function StageDetailPanel() {
       <div className="fixed inset-0 bg-black/30" onClick={close} />
 
       {/* Panel */}
-      <div className="relative ml-auto flex h-full w-96 flex-col bg-gray-900 shadow-xl animate-slide-in-right">
+      <div
+        className="relative ml-auto flex h-full w-96 flex-col bg-gray-900 shadow-xl animate-slide-in-right"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="stage-detail-title"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-700 px-4 py-3">
           <div className="flex items-center gap-2">
             <div
               className="h-3 w-3 rounded-full"
               style={{ backgroundColor: stageConfig?.color ?? '#6b7280' }}
+              aria-hidden="true"
             />
-            <h2 className="text-lg font-semibold">{stageConfig?.label ?? selectedStage}</h2>
+            <h2 id="stage-detail-title" className="text-lg font-semibold">
+              {stageConfig?.label ?? selectedStage}
+            </h2>
             <span className="rounded bg-gray-700 px-2 py-0.5 text-xs text-gray-300">
               {stageState.status}
             </span>
           </div>
           <button
+            type="button"
             onClick={close}
-            className="rounded p-1 text-gray-400 hover:bg-gray-800 hover:text-gray-200"
+            className="rounded p-1 text-gray-400 hover:bg-gray-800 hover:text-gray-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
             aria-label="Close panel"
             data-testid="panel-close"
           >

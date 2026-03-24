@@ -172,18 +172,6 @@
         ]
       }
     ],
-    "StopFailure": [
-      {
-        "matcher": "rate_limit|server_error",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .ralph/hooks/on-stop-failure.sh",
-            "statusMessage": "Handling API error..."
-          }
-        ]
-      }
-    ],
     "TeammateIdle": [
       {
         "hooks": [

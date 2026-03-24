@@ -1,8 +1,8 @@
 # Story 54.2 -- Dashboard explicit state handling and accessibility hardening
 
-> **Delivery status:** Partially complete (2026-03-24) — Wave 1 + Wave 2 (intent modals)  
-> **Done:** `EmptyState.tsx` focus-visible rings; `TriageQueue.tsx` `role="alert"`, Retry passes `selectedRepo`, focus ring; `CreateTaskModal.tsx` `role="dialog"` / `aria-modal` / `aria-labelledby`, `role="alert"` on errors, button `type` + focus rings. **Wave 2:** `RefinementModal.tsx` — same dialog/backdrop pattern, Escape respects `saving`, focus-visible on actions; `IntentEditor.tsx` — reject flow as modal dialog, loading `role="status"`, error `role="alert"`, toolbar `type="button"` + focus-visible rings.  
-> **Remaining:** Any other dashboard modals/panels not yet aligned; optional focus trap where product requires strict modal containment.  
+> **Delivery status:** Partially complete (2026-03-24) — Waves 1–3  
+> **Done:** `EmptyState.tsx` focus-visible rings; `TriageQueue.tsx` `role="alert"`, Retry passes `selectedRepo`, focus ring; `CreateTaskModal.tsx` `role="dialog"` / `aria-modal` / `aria-labelledby`, `role="alert"` on errors, button `type` + focus rings. **Wave 2:** `RefinementModal.tsx` — same dialog/backdrop pattern, Escape respects `saving`, focus-visible on actions; `IntentEditor.tsx` — reject flow as modal dialog, loading `role="status"`, error `role="alert"`, toolbar `type="button"` + focus-visible rings. **Wave 3:** `ImportModal.tsx`, `SteeringActionBar.tsx` (abort/redirect/retry), `StageDetailPanel.tsx`, `EditPanel.tsx` — `role="dialog"` / `aria-modal` / `aria-labelledby`, `type="button"` + focus-visible, decorative emoji `aria-hidden` where added.  
+> **Remaining:** Optional focus trap where product requires strict modal containment; SG checklist sign-off.  
 > **Doc sync:** Status mirrored in `epic-52-frontend-ui-modernization-master-plan.md`, `epic-52-gap-report-admin-vs-dashboard.md`, `epic-54-dashboard-ui-canonical-compliance.md`, traceability matrix SG 5.x / 6.x rows.
 
 <!-- docsmcp:start:user-story -->

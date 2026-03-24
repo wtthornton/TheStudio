@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useState } from 'react'
-import type { ExpertRow, ExpertsResponse, DriftSignal, TrustTier } from '../../lib/api'
+import type { ExpertsResponse, DriftSignal, TrustTier } from '../../lib/api'
 import { fetchReputationExperts } from '../../lib/api'
 
 type SortKey = 'avg_weight' | 'total_samples' | 'avg_confidence' | 'trust_tier'

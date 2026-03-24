@@ -5,7 +5,13 @@
 <span class="htmx-indicator text-gray-400 text-xs">Loading...</span>
 {% endblock %}
 {% block content %}
-<div hx-get="/admin/ui/partials/planes" hx-trigger="load" hx-swap="innerHTML" hx-indicator="closest div">
-    <div class="text-center py-12 text-gray-400 text-sm htmx-indicator">Loading execution planes...</div>
+<div id="planes-content"
+     data-admin-htmx-section="true"
+     aria-label="Execution planes"
+     hx-get="/admin/ui/partials/planes"
+     hx-trigger="load"
+     hx-swap="innerHTML"
+     hx-indicator="closest div">
+    <div class="text-center py-12 text-gray-400 text-sm htmx-indicator" role="status" aria-live="polite">Loading execution planes...</div>
 </div>
 {% endblock %}

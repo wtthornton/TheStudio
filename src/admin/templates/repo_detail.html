@@ -5,10 +5,13 @@
 {% block page_title %}Repo Detail{% endblock %}
 
 {% block content %}
-<div hx-get="/admin/ui/partials/repo/{{ repo_id }}" hx-trigger="load" hx-target="#repo-detail-content" hx-swap="innerHTML"
+<div id="repo-detail-content"
+     data-admin-htmx-section="true"
+     aria-label="Repository detail"
+     hx-get="/admin/ui/partials/repo/{{ repo_id }}"
+     hx-trigger="load"
+     hx-swap="innerHTML"
      hx-headers='{"X-User-ID": "{{ current_user_id }}"}'>
-</div>
-<div id="repo-detail-content">
-    <div class="text-center py-12 text-gray-400 text-sm">Loading repo...</div>
+    <div class="text-center py-12 text-gray-400 text-sm" role="status" aria-live="polite">Loading repo...</div>
 </div>
 {% endblock %}

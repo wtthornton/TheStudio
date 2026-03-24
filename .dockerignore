@@ -8,7 +8,6 @@ docs/
 thestudioarc/
 experts/
 htmlcov/
-frontend/
 
 # IDE & tools
 .claude/
@@ -34,6 +33,8 @@ build/
 .tapps-mcp-cache/
 .tapps-mcp.yaml
 node_modules/
+frontend/node_modules/
+frontend/dist/
 
 # Infra (mounted separately, not baked into image)
 infra/

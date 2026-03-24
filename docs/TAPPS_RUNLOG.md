@@ -214,3 +214,15 @@
 [2026-03-17T01:12:00] [verify] updated MERIDIAN-ROADMAP-AGGRESSIVE.md — Phase 5 marked Complete, all blockers resolved
 [2026-03-17T01:13:00] [verify] updated TAPPS_HANDOFF.md — Phase 5 completion summary, next actions for Phase 6
 [2026-03-17T01:14:00] [verify] updated TAPPS_RUNLOG.md — added this session entry
+
+### Documentation rollup + canonical UI standard (2026-03-24)
+
+[2026-03-24T12:00:00] [discover] tapps_session_start — TappsMCP v1.12.0, quick mode, standard preset
+[2026-03-24T12:05:00] [verify] published `docs/design/07-THESTUDIO-UI-UX-STYLE-GUIDE.md` and `docs/TAPPS_MCP_FRONTEND_EXPERTS_BRIEF.md`; added `.cursor/rules/frontend-style-source-of-truth.mdc`
+[2026-03-24T12:10:00] [verify] synchronized README, AGENTS.md, CLAUDE.md, Copilot/GitHub agent instructions with style-guide pointers; expanded `.tapps-mcp/experts.yaml`
+[2026-03-24T12:15:00] [verify] updated `docs/epics/EPIC-STATUS-TRACKER.md` (Phase 9 notes, Epic 53 shell pass); refreshed `docs/TAPPS_HANDOFF.md` addenda and epic table through Epic 51
+[2026-03-24T12:20:00] [develop] admin HTMX templates — self-loading `data-admin-htmx-section` shells, `aria-label`, loading `role="status"` across fleet/detail pages (Story 53.3 alignment)
+[2026-03-24T12:25:00] [develop] dashboard React — SteeringActionBar, StageDetailPanel, EditPanel, ImportModal, stores/hooks and related components (Epic 54 alignment)
+[2026-03-24T12:30:00] [develop] `tests/playwright/conftest.py` — fixture/test rig adjustments
+[2026-03-24T12:35:00] [verify] `.gitignore` — ignore `.tapps-brain/` (local consolidation timestamps)
+[2026-03-24T12:40:00] [verify] appended TAPPS_RUNLOG — this session entry

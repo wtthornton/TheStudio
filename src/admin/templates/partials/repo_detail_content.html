@@ -107,8 +107,13 @@
     <!-- Merge Mode -->
     <div class="bg-white rounded-lg border border-gray-200 p-6">
         <h4 class="text-sm font-semibold text-gray-700 mb-4">Merge Mode</h4>
-        <div hx-get="/admin/ui/partials/merge-mode/{{ repo.id }}" hx-trigger="load" hx-swap="innerHTML">
-            <span class="text-gray-400 text-sm">Loading...</span>
+        <div id="merge-mode-{{ repo.id }}"
+             data-admin-htmx-section="true"
+             aria-label="Merge mode for this repository"
+             hx-get="/admin/ui/partials/merge-mode/{{ repo.id }}"
+             hx-trigger="load"
+             hx-swap="innerHTML">
+            <span class="text-gray-400 text-sm" role="status" aria-live="polite">Loading merge mode…</span>
         </div>
     </div>
 
@@ -180,8 +185,13 @@
     <!-- Promotion History -->
     <div class="bg-white rounded-lg border border-gray-200 p-6">
         <h4 class="text-sm font-semibold text-gray-700 mb-4">Promotion History</h4>
-        <div hx-get="/admin/ui/partials/promotion-history/{{ repo.id }}" hx-trigger="load" hx-swap="innerHTML">
-            <span class="text-gray-400 text-sm">Loading...</span>
+        <div id="promotion-history-{{ repo.id }}"
+             data-admin-htmx-section="true"
+             aria-label="Trust tier promotion history"
+             hx-get="/admin/ui/partials/promotion-history/{{ repo.id }}"
+             hx-trigger="load"
+             hx-swap="innerHTML">
+            <span class="text-gray-400 text-sm" role="status" aria-live="polite">Loading promotion history…</span>
         </div>
     </div>
 </div>
