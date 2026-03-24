@@ -51,7 +51,7 @@
 
 - [x] **39.0a:** `completed_at` on `TaskPacketRow` + migration + backfill.
 - [x] **39.0b:** `pr_merge_status` field + migration; wire to Epic 38 webhook or polling fallback.
-- [ ] **39.0c:** Persist outcome signals to PostgreSQL (`OutcomeSignalRow`, migrate ingestor).
+- [x] **39.0c:** Persist outcome signals to PostgreSQL (`OutcomeSignalRow`, migrate ingestor).
 - [ ] **39.1–39.5:** Operational analytics APIs — throughput, bottlenecks, categories, failures, summary cards (`analytics_router` / `analytics_queries`).
 - [ ] **39.6–39.11:** Operational analytics UI — charts, tables, period selector, summary row.
 - [ ] **39.12–39.16:** Reputation & drift APIs — experts, outcomes, drift, composite drift score, summary cards.
