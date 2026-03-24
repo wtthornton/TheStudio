@@ -8,12 +8,10 @@ Covers:
 
 from __future__ import annotations
 
-import asyncio
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from ralph_sdk.agent import RalphAgent
 from ralph_sdk.config import RalphConfig
 from ralph_sdk.state import NullStateBackend
@@ -21,13 +19,13 @@ from ralph_sdk.state import NullStateBackend
 
 def _make_agent(tmp_path: Path) -> RalphAgent:
     """Create a minimal RalphAgent wired to a temp directory."""
+    # The agent derives ralph_dir as project_dir / config.ralph_dir (".ralph")
     ralph_dir = tmp_path / ".ralph"
     ralph_dir.mkdir()
     (ralph_dir / "logs").mkdir()
     cfg = RalphConfig(max_iterations=1)
     return RalphAgent(
         project_dir=tmp_path,
-        ralph_dir=ralph_dir,
         config=cfg,
         state_backend=NullStateBackend(),
     )
@@ -167,7 +165,7 @@ async def test_pre_iteration_delta_excludes_pre_existing_dirty_files(
                                     "asyncio.wait_for",
                                     new=AsyncMock(return_value=(stdout_bytes, b"")),
                                 ):
-                                    from ralph_sdk.task import TaskInput
+                                    from ralph_sdk.agent import TaskInput
 
                                     task_input = TaskInput(prompt="test task")
                                     await agent.run_iteration(task_input)
@@ -225,7 +223,7 @@ async def test_pre_iteration_delta_all_new_when_pre_was_clean(
                                     "asyncio.wait_for",
                                     new=AsyncMock(return_value=(stdout_bytes, b"")),
                                 ):
-                                    from ralph_sdk.task import TaskInput
+                                    from ralph_sdk.agent import TaskInput
 
                                     task_input = TaskInput(prompt="test task")
                                     await agent.run_iteration(task_input)
