@@ -42,7 +42,7 @@
 - [x] 44.1: `npm install react-use-wizard`. Create `frontend/src/components/wizard/WizardShell.tsx` — step navigation, progress bar, skip button. **Files:** modify package.json; create WizardShell.tsx.
 - [x] 44.2: Wizard gate in `App.tsx` — check localStorage flag, render WizardShell overlay when falsy, completion callback. **Files:** modify App.tsx.
 - [x] 44.3: `HealthCheckStep.tsx` — calls `/healthz` + `/readyz`, green/red status, enables Next on both green. **Files:** create HealthCheckStep.tsx.
-- [ ] 44.4: `RepoRegistrationStep.tsx` — form (owner/repo/installation_id), POST `/admin/repos`, handles 201/409. **Files:** create RepoRegistrationStep.tsx.
+- [x] 44.4: `RepoRegistrationStep.tsx` — form (owner/repo/installation_id), POST `/admin/repos`, handles 201/409. **Files:** create RepoRegistrationStep.tsx.
 - [ ] 44.5: `WebhookConfigStep.tsx` — displays webhook URL, copy button, manual checkbox. **Files:** create WebhookConfigStep.tsx.
 - [ ] 44.6: `TrustTierStep.tsx` — Observe/Suggest/Execute dropdown, PATCH profile. **Files:** create TrustTierStep.tsx.
 - [ ] 44.7: `LLMProviderStep.tsx` — GET `/admin/health`, shows Anthropic key status. **Files:** create LLMProviderStep.tsx.
