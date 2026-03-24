@@ -9,12 +9,13 @@ from src.db.connection import get_session
 from src.ingress.dedupe import is_duplicate
 from src.ingress.signature import validate_signature
 from src.ingress.workflow_trigger import start_workflow
-from src.models.taskpacket import TaskPacketCreate, TaskPacketStatus
+from src.models.taskpacket import PrMergeStatus, TaskPacketCreate, TaskPacketStatus
 from src.models.taskpacket_crud import (
     create as create_taskpacket,
 )
 from src.models.taskpacket_crud import (
     get_by_repo_and_issue,
+    get_by_repo_and_pr_number,
 )
 from src.observability.conventions import (
     ATTR_CORRELATION_ID,
@@ -147,6 +148,68 @@ async def _publish_github_event_to_nats(
         )
 
 
+async def _handle_pull_request_status_update(
+    session: AsyncSession,
+    payload: dict,
+    repo: str,
+) -> None:
+    """Update pr_merge_status on the matching TaskPacket for a pull_request event.
+
+    Epic 39.0b — wires the Epic 38.24 webhook bridge to the pr_merge_status field.
+
+    Handles:
+      * ``opened`` / ``reopened`` → PrMergeStatus.OPEN
+      * ``closed`` with ``pull_request.merged == true`` → PrMergeStatus.MERGED
+      * ``closed`` with ``pull_request.merged == false`` → PrMergeStatus.CLOSED
+
+    Silently skips if:
+      * The action is not one of the above.
+      * No TaskPacket has a matching (repo, pr_number) — e.g. the PR was created
+        outside TheStudio.
+      * Any unexpected error — bridge events must never raise.
+    """
+    try:
+        action = payload.get("action", "")
+        pr_data = payload.get("pull_request", {})
+        pr_number = pr_data.get("number")
+        if not pr_number:
+            return
+
+        if action in {"opened", "reopened"}:
+            new_status = PrMergeStatus.OPEN
+        elif action == "closed":
+            merged = pr_data.get("merged", False)
+            new_status = PrMergeStatus.MERGED if merged else PrMergeStatus.CLOSED
+        else:
+            return  # unhandled action (synchronize, labeled, etc.)
+
+        row = await get_by_repo_and_pr_number(session, repo, pr_number)
+        if row is None:
+            logger.debug(
+                "pr_merge_status.no_match repo=%s pr=%d action=%s",
+                repo,
+                pr_number,
+                action,
+            )
+            return
+
+        row.pr_merge_status = new_status
+        await session.commit()
+        logger.info(
+            "pr_merge_status.updated task_id=%s pr=%d status=%s",
+            row.id,
+            pr_number,
+            new_status.value,
+        )
+    except Exception:
+        logger.warning(
+            "pr_merge_status.update_failed repo=%s action=%s",
+            repo,
+            payload.get("action", ""),
+            exc_info=True,
+        )
+
+
 @router.post(
     "/webhook/github",
     tags=["Webhooks"],
@@ -215,6 +278,10 @@ async def github_webhook(
 
         # 6. Filter for handled event types; bridge supported events to NATS (38.24)
         if x_github_event not in _REEVALUATION_EVENTS:
+            # Epic 39.0b: Update pr_merge_status from pull_request open/close/merge events
+            if x_github_event == "pull_request":
+                await _handle_pull_request_status_update(session, payload, repo_full_name)
+
             # Epic 38.24: Publish bridge-eligible events to NATS before returning
             if x_github_event in _BRIDGE_EVENT_TYPES and settings.pipeline_webhook_bridge_enabled:
                 await _publish_github_event_to_nats(

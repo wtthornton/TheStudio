@@ -21,7 +21,7 @@ from src.intent.intent_crud import get_latest_for_taskpacket
 from src.intent.intent_spec import IntentSpecRead
 from src.dashboard.models.trust_config import AssignedTier, SafeBoundsRead, get_safety_bounds
 from src.dashboard.trust_engine import _cap_tier
-from src.models.taskpacket import TaskPacketStatus, TaskTrustTier
+from src.models.taskpacket import PrMergeStatus, TaskPacketStatus, TaskTrustTier
 from src.models.taskpacket_crud import get_by_id, update_status
 from src.observability.conventions import (
     ATTR_CORRELATION_ID,
@@ -406,6 +406,8 @@ async def publish(
         if tp_row is not None:
             tp_row.pr_number = pr_number
             tp_row.pr_url = pr_url
+            # Epic 39.0b: initialise merge status to OPEN on PR creation
+            tp_row.pr_merge_status = PrMergeStatus.OPEN
             # Persist auto_merged flag (Epic 42 — Story 42.3d)
             if auto_merge_enabled:
                 tp_row.auto_merged = True

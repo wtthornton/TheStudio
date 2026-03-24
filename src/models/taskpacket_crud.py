@@ -302,6 +302,27 @@ async def list_active(session: AsyncSession) -> list[TaskPacketRow]:
     return list(result.scalars().all())
 
 
+async def get_by_repo_and_pr_number(
+    session: AsyncSession, repo: str, pr_number: int
+) -> TaskPacketRow | None:
+    """Get the TaskPacket for a repo + PR number.
+
+    Used by the Epic 38 webhook bridge to resolve a pull_request event
+    back to the originating TaskPacket for pr_merge_status updates (Epic 39.0b).
+
+    Returns the raw ORM row (not a Pydantic read model) so callers can
+    update fields directly in the same session.
+    """
+    stmt = (
+        select(TaskPacketRow)
+        .where(TaskPacketRow.repo == repo, TaskPacketRow.pr_number == pr_number)
+        .order_by(TaskPacketRow.created_at.desc())
+        .limit(1)
+    )
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
+
+
 async def update_pr_merge_status(
     session: AsyncSession,
     task_id: UUID,
