@@ -92,7 +92,7 @@
 > Gate: `cd frontend && npx vitest run` green + 4 tours defined
 > TESTS_STATUS: DEFERRED until 47.8
 
-- [ ] 47.1: `npm install react-joyride`. Create `TourProvider.tsx` wrapping App with Joyride context. Dark tooltip styles. **Files:** modify package.json; create frontend/src/components/tours/TourProvider.tsx.
+- [x] 47.1: `npm install react-joyride`. Create `TourProvider.tsx` wrapping App with Joyride context. Dark tooltip styles. **Files:** modify package.json; create frontend/src/components/tours/TourProvider.tsx.
 - [ ] 47.2: Create tour registry + `useTourState` hook — localStorage flags, start/complete lifecycle. **Files:** create registry.ts, useTourState.ts.
 - [ ] 47.3: Pipeline tour (6 steps) — pipeline rail, stage node, active pulse, gate inspector, activity stream, minimap. Add `data-tour` attrs. **Files:** modify PipelineStatus.tsx, GateInspector.tsx, ActivityStream.tsx, Minimap.tsx; update registry.ts.
 - [ ] 47.4: Tour beacon component — pulses on first visit, click starts tour, hidden after completion. **Files:** create TourBeacon.tsx; modify App.tsx to place beacons per-tab.
