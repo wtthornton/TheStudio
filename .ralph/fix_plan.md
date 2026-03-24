@@ -1,5 +1,113 @@
 # Fix Plan — TheStudio
 
+## Open epics — active backlog
+
+> **Rollup:** `docs/epics/EPIC-STATUS-TRACKER.md` (2026-03-24). All non-complete epics from that tracker are listed here so Ralph and humans share one queue.
+
+| Epic | Status | Canonical doc |
+|------|--------|---------------|
+| **51** | In progress — vendor parity + evaluation backlog | `docs/epics/epic-51-ralph-vendored-sdk-parity.md`, `docs/handoffs/ralph-epic-51-next-agent-prompt.md`, `docs/ralph-sdk-upgrade-evaluation.md` |
+| **38** | MVP done (38.1–38.12); **Slices 3–4 open** | `docs/epics/epic-38-phase4-github-integration.md` |
+| **39** | Approved — not started | `docs/epics/epic-39-phase5-analytics-learning.md` |
+| **43** | **Integration delivered** in tree (43.1–43.15); **default `THESTUDIO_AGENT_MODE=ralph`** and primary-agent *rollout* still **gated on Epic 51** + ops | `docs/epics/epic-43-ralph-sdk-integration.md` |
+| **52–57** | Canonical UI modernization (52 master; 53–57 child tracks) | `docs/epics/epic-52-frontend-ui-modernization-master-plan.md`, `epic-53-admin-ui-canonical-compliance.md`, `epic-54-dashboard-ui-canonical-compliance.md`, `epic-55-cross-surface-ai-prompt-first-and-trust-layer.md`, `epic-56-cross-surface-2026-capability-modules.md`, `epic-57-rollout-governance-and-regression-safety.md` |
+| **27** | Deferred on demand | `docs/epics/` (multi-source webhooks — see tracker) |
+
+### Epic 51 — Ralph vendored SDK parity (remaining)
+
+> P0/P1 stories **51.1–51.6** shipped per `docs/handoffs/ralph-epic-51-next-agent-prompt.md`. **Parsing tests** for `TESTS_STATUS: DEFERRED` live in `tests/unit/test_ralph_parsing_tests_status.py` (**done**). **Still open:** evaluation doc gaps + cancel/git hardening below. **Gate:** `docs/ralph-sdk-upgrade-evaluation.md`. **Verify:** handoff “Verification (local)” block.
+
+- [x] **51-eval:** Close open gaps in `docs/ralph-sdk-upgrade-evaluation.md` — prioritize §1.5 dynamic model routing, §1.8 prompt cache split, §1.9 metrics JSONL, §1.10 session lifecycle / Continue-As-New, §1.7 error categorization (P2), §2.3 ProgressSnapshot / heartbeat (P2).
+- [ ] **51-cancel:** Cancel hardening — `CancelResult.partial_output` (stream/buffer), optional grace wait inside SDK (`docs/ralph-sdk-upgrade-evaluation.md` §2.2).
+- [ ] **51-git:** Harden `files_changed` / stall when `git` missing or repo dirty; add/adjust unit tests.
+- [x] **51-tests:** `tests/unit/test_ralph_parsing_tests_status.py` — DEFERRED / case-insensitive / JSON / JSONL coverage for `tests_status` parsing.
+
+### Epic 38 — Phase 4 GitHub integration (Slice 3: Projects sync)
+
+> **Done in tree:** 38.1–38.12. Order below follows epic story map.
+
+- [ ] **38.13:** Enable `ProjectsV2Client` — remove feature-flag guard when `projects_v2_enabled=True`; validate token scopes.
+- [ ] **38.14:** Extend field mapping — Cost + Complexity fields; `create_custom_field()` GraphQL; auto-create on first sync.
+- [ ] **38.15:** GitHub→TheStudio sync — `projects_v2_item` webhooks; update TaskPacket; skip self-triggered events.
+- [ ] **38.16:** `GET`/`PUT` `/api/v1/dashboard/github/projects/config` — project selection, field mapping, behaviors.
+- [ ] **38.17:** `POST .../projects/sync` — force full sync of active TaskPackets.
+- [ ] **38.18:** Projects sync configuration UI — `ProjectsSyncConfig.tsx`.
+- [ ] **38.19:** Feedback loop guard — `thestudio-sync` mutation id; skip own webhooks.
+- [ ] **38.20:** Integration test — stage push, manual GitHub status update, self-trigger skip.
+
+### Epic 38 — Phase 4 (Slice 4: Pipeline comments + webhook bridge)
+
+- [ ] **38.21:** Pipeline comment template + idempotent marker (`pipeline_comment.py`).
+- [ ] **38.22:** Pipeline comment Temporal activity — create/edit comment; final update with PR link.
+- [ ] **38.23:** `pipeline_comments_enabled` flag + per-repo config.
+- [ ] **38.24:** Webhook bridge — PR/issue events → NATS `github.event.*`.
+- [ ] **38.25:** SSE — extend `src/dashboard/events.py` for `github.event.*` / stream subjects.
+- [ ] **38.26:** Dashboard consumers — PR Evidence + triage real-time updates (`useGitHubEvents.ts`).
+- [ ] **38.27:** Integration test — comments + NATS publish.
+
+### Epic 39 — Phase 5 analytics & learning
+
+> **Slice 0** before Slices 1–2 per epic. **Depends:** Phase 1 timing/gate data; Phase 4 helps `pr_merge_status` (39.0b).
+
+- [ ] **39.0a:** `completed_at` on `TaskPacketRow` + migration + backfill.
+- [ ] **39.0b:** `pr_merge_status` field + migration; wire to Epic 38 webhook or polling fallback.
+- [ ] **39.0c:** Persist outcome signals to PostgreSQL (`OutcomeSignalRow`, migrate ingestor).
+- [ ] **39.1–39.5:** Operational analytics APIs — throughput, bottlenecks, categories, failures, summary cards (`analytics_router` / `analytics_queries`).
+- [ ] **39.6–39.11:** Operational analytics UI — charts, tables, period selector, summary row.
+- [ ] **39.12–39.16:** Reputation & drift APIs — experts, outcomes, drift, composite drift score, summary cards.
+- [ ] **39.17–39.21:** Reputation UI — expert table/detail, outcome feed, drift alerts, reuse summary cards.
+
+### Epic 43 — Ralph SDK as primary agent
+
+> **Implementation status (2026-03-24):** Stories **43.1–43.15** are **implemented in tree** (vendor `ralph-sdk`, `ralph_bridge.py`, `agent_mode`, `PostgresStateBackend`, activity heartbeat, cost audit, `/health/ralph`, OTel attrs, `test_ralph_*` / `test_ralph_e2e`). **Operational:** keep **`THESTUDIO_AGENT_MODE=legacy`** for production until **Epic 51** exit criteria + ops sign-off; use `ralph` in dev/staging to validate. Canonical spec: `docs/epics/epic-43-ralph-sdk-integration.md`.
+
+#### Slice 1 — Ralph replaces PrimaryAgentRunner (flag-gated)
+
+- [x] **43.1:** `ralph-sdk @ file:./vendor/ralph-sdk` in `pyproject.toml` + vendor layout.
+- [x] **43.2:** `src/agent/ralph_bridge.py` — CLI probe, `taskpacket_to_ralph_input`, `ralph_result_to_evidence`, `build_ralph_config`, loopback context.
+- [x] **43.3:** `THESTUDIO_AGENT_MODE` (`legacy` / `ralph` / `container`) + precedence vs `THESTUDIO_AGENT_ISOLATION` in `src/settings.py`.
+- [x] **43.4:** `implement()` / `handle_loopback()` Ralph dispatch in `src/agent/primary_agent.py`.
+- [x] **43.5:** Unit tests — `tests/unit/test_ralph_bridge.py`, `tests/unit/test_primary_agent_ralph.py`.
+
+#### Slice 2 — PostgresStateBackend
+
+- [x] **43.6:** Migration `048_ralph_agent_state.py` — `ralph_agent_state` table.
+- [x] **43.7:** `src/agent/ralph_state.py` — `PostgresStateBackend` (12 protocol methods).
+- [x] **43.8:** Wire postgres vs `NullStateBackend` via `ralph_state_backend` + session TTL in primary agent.
+- [x] **43.9:** `tests/integration/test_ralph_state.py`.
+
+#### Slice 3 — Cost + Temporal activity
+
+- [x] **43.10:** Cost / audit / budget hooks after Ralph in `primary_agent` (see Story 43.10 comments).
+- [x] **43.11:** `_implement_ralph_with_heartbeat` in `src/workflow/activities.py` (30 s heartbeat, timeout, cancel).
+- [x] **43.12:** `tests/unit/test_ralph_cost_and_heartbeat.py` (cost recording + heartbeat + timeout/cancel).
+
+#### Slice 4 — Validation + observability
+
+- [x] **43.13:** `GET /health/ralph` on main app + startup warning when `agent_mode=ralph` but CLI missing (`src/app.py`).
+- [x] **43.14:** OTel — `SPAN_RALPH_RUN` / `SPAN_RALPH_ITERATION` + `ATTR_RALPH_*` in `src/observability/conventions.py`; `primary_agent` wraps Ralph `run()` with **`SPAN_RALPH_RUN`** and sets cost/token/backend attrs. *(Separate per-iteration / circuit-breaker spans from the epic text are not duplicated in TheStudio — SDK subprocess may own fine-grained spans.)*
+- [x] **43.15:** `tests/integration/test_ralph_e2e.py` — implement + loopback path with mocked `RalphAgent.run`.
+
+### Epics 52–57 — Canonical UI / style guide
+
+> Execution log: `docs/epics/epic-52-frontend-ui-modernization-master-plan.md` (last updated 2026-03-24).
+
+- [ ] **53.1:** Admin shell/nav conformance — **not started** (epic 52 log).
+- [x] **53.2:** Status / role badges, `base.html` nav — **complete** (epic 52 log).
+- [ ] **53.3:** Admin HTMX — **partial** — remaining partials, `empty_state` sweep, formal keyboard/SR AC (`epic-53-admin-ui-canonical-compliance.md`).
+- [x] **54.1:** Dashboard `STATUS_COLORS`, trust-tier UI, `StageNode` `aria-label` — **complete** (epic 52 log).
+- [ ] **54.2:** Pipeline app — **partial** — remaining modals/panels, SG §11 sign-off, optional focus traps (`epic-54-dashboard-ui-canonical-compliance.md`).
+- [ ] **55:** Cross-surface AI prompt-first + trust — **not started** — `epic-55-cross-surface-ai-prompt-first-and-trust-layer.md`.
+- [ ] **56:** 2026 capability modules — **not started** — `epic-56-cross-surface-2026-capability-modules.md`.
+- [ ] **57.1:** Rollout governance matrix — **in progress** (`epic-57-rollout-governance-and-regression-safety.md`).
+- [ ] **57.2:** Full regression / AC closure — **pending** 53.3 + 54.2 sweeps per epic 52 log.
+
+### Deferred (no sprint checkbox — pull when demand exists)
+
+- **Epic 27:** Multi-source webhooks — see `docs/epics/EPIC-STATUS-TRACKER.md` and epic files under `docs/epics/`.
+
+---
+
 ## Sprint 4 — Epic 46: Actionable Empty States (week of 2026-03-24)
 
 > Order: 46.1 → 46.2 → 46.3 → 46.4 → 46.5 → 46.6 → 46.7
@@ -103,12 +211,12 @@
 
 ---
 
-## Sprint 10 — Epic 50: Feature Spotlights (DEFERRED — after Epics 44+45+48 complete)
+## Sprint 10 — Epic 50: Feature Spotlights *(complete — was deferred until Epics 44+45+48)*
 
 > Order: 50.1 → 50.2 → 50.3 → 50.4 → 50.5
 > Gate: `cd frontend && npx vitest run` green
-> TESTS_STATUS: DEFERRED until 50.5
-> BLOCKED BY: Epics 44, 45, 48 must be COMPLETE (they create the UI elements to spotlight)
+> TESTS_STATUS: Ran with 50.5
+> Originally BLOCKED BY: Epics 44, 45, 48 (now complete)
 
 - [x] 50.1: `npm install driver.js`. Create `SpotlightProvider.tsx` + `registry.ts`. Version comparison logic. **Files:** modify package.json; create 2 files.
 - [x] 50.2: Inject app version in `vite.config.ts` from pyproject.toml as `VITE_APP_VERSION`. **Files:** modify vite.config.ts.
@@ -133,8 +241,13 @@
 
 ## Completed
 
-Epics 0-43 (280+ stories). Epic 27 deferred by design.
-Deployment hardening: multi-stage Dockerfile, .dockerignore, vendor/ralph-sdk, migration 049, NATS healthcheck, pg-proxy localhost binding, /health/ralph test coverage.
+**Sprints in this file (below):** Epics **44, 45, 46, 47, 48, 49, 50** — all checklist items marked `[x]`.
+
+**Other closed work (not duplicated as tasks here):** Epics **0–37**, **28–29**, **30–33**, **34–37** (pipeline UI phases 0–3), per `docs/epics/EPIC-STATUS-TRACKER.md`.
+
+**Still open:** See **Open epics** at top — **38** (slices 3–4), **39**, **51** (vendor parity + eval backlog), **52–57** (53.1 / 53.3 / 54.2 / 55–57 partial or not started). **Epic 43** stories **43.1–43.15** are **done in code**; **Ralph as default in prod** remains **gated on Epic 51** + ops. **Epic 27** is **deferred** (not scheduled).
+
+Deployment hardening (reference): multi-stage Dockerfile, `.dockerignore`, `vendor/ralph-sdk`, migrations **048** (`ralph_agent_state`) + **049**, NATS healthcheck, pg-proxy localhost binding, `/health/ralph` coverage.
 
 ---
 
