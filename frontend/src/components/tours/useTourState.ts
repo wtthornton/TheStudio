@@ -64,12 +64,13 @@ export interface TourState {
  * @returns       Lifecycle helpers and state flags for the given tour.
  */
 export function useTourState(tourId: TourId): TourState {
-  const meta = getTourMeta(tourId)
-  if (!meta) {
+  const maybeMeta = getTourMeta(tourId)
+  if (!maybeMeta) {
     throw new Error(
       `useTourState: unknown tourId "${tourId}". Register it in registry.ts first.`,
     )
   }
+  const meta = maybeMeta
 
   const { startTour, stopTour, activeTourId } = useTour()
 

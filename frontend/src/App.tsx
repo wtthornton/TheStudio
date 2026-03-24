@@ -291,7 +291,7 @@ function App() {
             activeTab={activeTab}
             onSwitchTab={(tab) => setActiveTab(tab as Tab)}
             onStartTour={handleStartTour}
-            tours={TOUR_REGISTRY as Array<{ id: string; label: string; description?: string }>}
+            tours={TOUR_REGISTRY as unknown as Array<{ id: string; label: string; description?: string }>}
           />
           <NotificationBell onNavigate={handleNotificationNavigate} />
           <ConnectionIndicator />

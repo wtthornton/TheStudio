@@ -7,7 +7,6 @@
  * Epic 55.1
  */
 
-import { useState } from 'react'
 import type { PromptObject } from './PromptObject'
 
 const MODE_BADGE: Record<PromptObject['mode'], { label: string; className: string }> = {

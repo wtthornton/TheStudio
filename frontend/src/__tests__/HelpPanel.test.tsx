@@ -5,7 +5,7 @@
  */
 
 import { render, screen, fireEvent, act } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 // ---------------------------------------------------------------------------
 // Mock ?raw imports — Vite raw imports are not supported in jsdom test env.

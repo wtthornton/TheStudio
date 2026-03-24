@@ -131,7 +131,7 @@ export const REPO_TRUST_TOUR_STEPS: Step[] = [
     title: 'Fleet Health Table',
     content:
       'This table shows every repository connected to TheStudio. The health dot indicates current activity: green = active with recent tasks, yellow = idle, red = degraded or paused. Click any row to open its configuration panel below.',
-    disableBeacon: true,
+    skipBeacon: true,
     placement: 'bottom',
   },
   {
@@ -182,7 +182,7 @@ export const ANALYTICS_TOUR_STEPS: Step[] = [
     title: 'Period Selector',
     content:
       'Choose the time window for all analytics data: last 7, 30, or 90 days. Every chart and KPI on this page updates instantly when you switch periods.',
-    disableBeacon: true,
+    skipBeacon: true,
     placement: 'bottom',
   },
   {
@@ -232,7 +232,7 @@ export const TRIAGE_TOUR_STEPS: Step[] = [
     title: 'Triage Queue',
     content:
       'This is your triage queue — all GitHub issues that have been received by the webhook and are waiting for your review before entering the pipeline. Only issues you accept will be processed.',
-    disableBeacon: true,
+    skipBeacon: true,
     placement: 'bottom',
   },
   {
@@ -283,7 +283,7 @@ export const PIPELINE_TOUR_STEPS: Step[] = [
     title: 'The Pipeline Rail',
     content:
       'This 9-stage rail shows the full journey of every GitHub issue — from Intake all the way to a draft PR on GitHub. Each stage runs automatically in sequence.',
-    disableBeacon: true,
+    skipBeacon: true,
     placement: 'bottom',
   },
   {
