@@ -27,7 +27,7 @@
 > **Done in tree:** 38.1–38.12. Order below follows epic story map.
 
 - [x] **38.13:** Enable `ProjectsV2Client` — remove feature-flag guard when `projects_v2_enabled=True`; validate token scopes.
-- [ ] **38.14:** Extend field mapping — Cost + Complexity fields; `create_custom_field()` GraphQL; auto-create on first sync.
+- [x] **38.14:** Extend field mapping — Cost + Complexity fields; `create_custom_field()` GraphQL; auto-create on first sync.
 - [ ] **38.15:** GitHub→TheStudio sync — `projects_v2_item` webhooks; update TaskPacket; skip self-triggered events.
 - [ ] **38.16:** `GET`/`PUT` `/api/v1/dashboard/github/projects/config` — project selection, field mapping, behaviors.
 - [ ] **38.17:** `POST .../projects/sync` — force full sync of active TaskPackets.

@@ -316,3 +316,205 @@ class TestGetConfiguredFields:
         assert "Priority" in fields
         assert "Owner" in fields
         assert "Repo" in fields
+
+
+class TestCreateCustomField:
+    """Epic 38.14: create_custom_field() GraphQL mutation."""
+
+    @pytest.mark.asyncio
+    async def test_create_number_field(self) -> None:
+        """NUMBER field creates correctly and returns ProjectField."""
+        client = ProjectsV2Client("test-token")
+        client._graphql = AsyncMock(return_value={
+            "createProjectV2Field": {
+                "projectV2Field": {
+                    "id": "FIELD_COST",
+                    "name": "Cost",
+                    "dataType": "NUMBER",
+                }
+            }
+        })
+
+        pf = await client.create_custom_field("PVT_123", "Cost", "NUMBER")
+
+        assert pf.id == "FIELD_COST"
+        assert pf.name == "Cost"
+        assert pf.data_type == "NUMBER"
+        assert pf.options == []
+
+    @pytest.mark.asyncio
+    async def test_create_single_select_field(self) -> None:
+        """SINGLE_SELECT field creates with options and returns ProjectField."""
+        client = ProjectsV2Client("test-token")
+        client._graphql = AsyncMock(return_value={
+            "createProjectV2Field": {
+                "projectV2Field": {
+                    "id": "FIELD_COMPLEXITY",
+                    "name": "Complexity",
+                    "dataType": "SINGLE_SELECT",
+                    "options": [
+                        {"id": "OPT_LOW", "name": "Low"},
+                        {"id": "OPT_MEDIUM", "name": "Medium"},
+                        {"id": "OPT_HIGH", "name": "High"},
+                    ],
+                }
+            }
+        })
+
+        pf = await client.create_custom_field(
+            "PVT_123",
+            "Complexity",
+            "SINGLE_SELECT",
+            single_select_options=["Low", "Medium", "High"],
+        )
+
+        assert pf.id == "FIELD_COMPLEXITY"
+        assert pf.name == "Complexity"
+        assert pf.data_type == "SINGLE_SELECT"
+        assert len(pf.options) == 3
+        option_names = [o.name for o in pf.options]
+        assert option_names == ["Low", "Medium", "High"]
+
+    @pytest.mark.asyncio
+    async def test_create_field_empty_response_raises(self) -> None:
+        """Empty projectV2Field data raises ProjectsV2Error."""
+        client = ProjectsV2Client("test-token")
+        client._graphql = AsyncMock(return_value={
+            "createProjectV2Field": {"projectV2Field": {}}
+        })
+
+        with pytest.raises(ProjectsV2Error, match="Failed to create field 'Cost'"):
+            await client.create_custom_field("PVT_123", "Cost", "NUMBER")
+
+    @pytest.mark.asyncio
+    async def test_set_number_field_value(self) -> None:
+        """NUMBER field set_field_value uses float value format."""
+        client = ProjectsV2Client("test-token")
+        client._graphql = AsyncMock(return_value={
+            "updateProjectV2ItemFieldValue": {"projectV2Item": {"id": "PVTI_456"}}
+        })
+
+        cost_field = ProjectField(id="FIELD_COST", name="Cost", data_type="NUMBER")
+        await client.set_field_value("PVT_123", "PVTI_456", cost_field, "1.2346")
+
+        call_args = client._graphql.call_args
+        variables = call_args[1]["variables"] if "variables" in call_args[1] else call_args[0][1]
+        assert variables["value"] == {"number": 1.2346}
+
+
+class TestEnsureCostAndComplexityFields:
+    """Epic 38.14: ensure_cost_and_complexity_fields() auto-create on first sync."""
+
+    @pytest.mark.asyncio
+    async def test_creates_both_fields_when_missing(self) -> None:
+        """Both Cost and Complexity are created when absent from project."""
+        client = ProjectsV2Client("test-token")
+        client._cache["myorg/1"] = ProjectInfo(
+            project_id="PVT_123", project_number=1, title="Test", fields={}
+        )
+        client.create_custom_field = AsyncMock(side_effect=[
+            ProjectField(id="FIELD_COST", name="Cost", data_type="NUMBER"),
+            ProjectField(
+                id="FIELD_COMPLEXITY",
+                name="Complexity",
+                data_type="SINGLE_SELECT",
+                options=[FieldOption(id="OPT_LOW", name="Low")],
+            ),
+        ])
+
+        await client.ensure_cost_and_complexity_fields("myorg", 1)
+
+        assert client.create_custom_field.call_count == 2
+        project = client._cache["myorg/1"]
+        assert "Cost" in project.fields
+        assert "Complexity" in project.fields
+        assert project.fields["Cost"].id == "FIELD_COST"
+        assert project.fields["Complexity"].id == "FIELD_COMPLEXITY"
+
+    @pytest.mark.asyncio
+    async def test_skips_existing_fields(self) -> None:
+        """No API calls when both fields already exist."""
+        client = ProjectsV2Client("test-token")
+        client._cache["myorg/1"] = ProjectInfo(
+            project_id="PVT_123",
+            project_number=1,
+            title="Test",
+            fields={
+                "Cost": ProjectField(id="FIELD_COST", name="Cost", data_type="NUMBER"),
+                "Complexity": ProjectField(
+                    id="FIELD_COMPLEXITY",
+                    name="Complexity",
+                    data_type="SINGLE_SELECT",
+                    options=[],
+                ),
+            },
+        )
+        client.create_custom_field = AsyncMock()
+
+        await client.ensure_cost_and_complexity_fields("myorg", 1)
+
+        client.create_custom_field.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_creates_only_cost_when_complexity_exists(self) -> None:
+        """Only missing field (Cost) is created when Complexity already exists."""
+        client = ProjectsV2Client("test-token")
+        client._cache["myorg/1"] = ProjectInfo(
+            project_id="PVT_123",
+            project_number=1,
+            title="Test",
+            fields={
+                "Complexity": ProjectField(
+                    id="FIELD_COMPLEXITY",
+                    name="Complexity",
+                    data_type="SINGLE_SELECT",
+                    options=[],
+                ),
+            },
+        )
+        client.create_custom_field = AsyncMock(return_value=ProjectField(
+            id="FIELD_COST", name="Cost", data_type="NUMBER"
+        ))
+
+        await client.ensure_cost_and_complexity_fields("myorg", 1)
+
+        assert client.create_custom_field.call_count == 1
+        call_args = client.create_custom_field.call_args
+        # Called with project_id, field_name, data_type
+        assert call_args[0][1] == "Cost"
+        assert call_args[0][2] == "NUMBER"
+
+    @pytest.mark.asyncio
+    async def test_complexity_field_created_with_options(self) -> None:
+        """Complexity field is created with Low/Medium/High options."""
+        client = ProjectsV2Client("test-token")
+        client._cache["myorg/1"] = ProjectInfo(
+            project_id="PVT_123",
+            project_number=1,
+            title="Test",
+            fields={
+                "Cost": ProjectField(id="FIELD_COST", name="Cost", data_type="NUMBER"),
+            },
+        )
+        client.create_custom_field = AsyncMock(return_value=ProjectField(
+            id="FIELD_COMPLEXITY",
+            name="Complexity",
+            data_type="SINGLE_SELECT",
+            options=[
+                FieldOption(id="OPT_LOW", name="Low"),
+                FieldOption(id="OPT_MEDIUM", name="Medium"),
+                FieldOption(id="OPT_HIGH", name="High"),
+            ],
+        ))
+
+        await client.ensure_cost_and_complexity_fields("myorg", 1)
+
+        assert client.create_custom_field.call_count == 1
+        call_args = client.create_custom_field.call_args
+        assert call_args[0][1] == "Complexity"
+        assert call_args[0][2] == "SINGLE_SELECT"
+        # Should pass the complexity option names
+        options_passed = call_args[1].get("single_select_options") or call_args[0][3]
+        assert "Low" in options_passed
+        assert "Medium" in options_passed
+        assert "High" in options_passed
