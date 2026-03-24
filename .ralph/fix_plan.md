@@ -79,7 +79,7 @@
 - [x] 45.4: Route-aware content loading — create `frontend/src/help/` with 11 `.md` files. HelpPanel renders matching content via `react-markdown` + Vite `?raw` import. **Files:** create 11 .md files; modify HelpPanel.tsx.
 - [x] 45.5: Fuse.js search — index all articles, search bar in panel, click result switches tab. **Files:** modify HelpPanel.tsx.
 - [x] 45.6: Author 11 tab help articles (200-400 words each). **Files:** write 11 .md files in frontend/src/help/.
-- [ ] 45.7: Author 4 cross-cutting concept articles (Trust Tiers, Webhooks, Evidence Bundles, Pipeline Stages). **Files:** write 4 .md files.
+- [x] 45.7: Author 4 cross-cutting concept articles (Trust Tiers, Webhooks, Evidence Bundles, Pipeline Stages). **Files:** write 4 .md files.
 - [ ] 45.8: Add react-tooltip to React SPA — 30+ tooltips across HeaderBar, PipelineStatus, TrustConfiguration, BudgetDashboard. **Files:** modify ~6 component files.
 - [ ] 45.9: Add CSS tooltips to Admin UI — 15+ `data-tooltip` attrs on dashboard, repos, workflow templates. **Files:** modify ~5 template files + add tooltip CSS to base.html.
 - [ ] 45.10: Vitest for HelpPanel, HelpMenu, search, route-awareness, tooltip render. **Files:** create __tests__/HelpPanel.test.tsx, __tests__/HelpMenu.test.tsx. **RUN TESTS.**
