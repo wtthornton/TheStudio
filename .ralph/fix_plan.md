@@ -19,7 +19,7 @@
 
 - [x] **51-eval:** Close open gaps in `docs/ralph-sdk-upgrade-evaluation.md` — prioritize §1.5 dynamic model routing, §1.8 prompt cache split, §1.9 metrics JSONL, §1.10 session lifecycle / Continue-As-New, §1.7 error categorization (P2), §2.3 ProgressSnapshot / heartbeat (P2).
 - [x] **51-cancel:** Cancel hardening — `CancelResult.partial_output` (stream/buffer), optional grace wait inside SDK (`docs/ralph-sdk-upgrade-evaluation.md` §2.2).
-- [ ] **51-git:** Harden `files_changed` / stall when `git` missing or repo dirty; add/adjust unit tests.
+- [x] **51-git:** Harden `files_changed` / stall when `git` missing or repo dirty; add/adjust unit tests.
 - [x] **51-tests:** `tests/unit/test_ralph_parsing_tests_status.py` — DEFERRED / case-insensitive / JSON / JSONL coverage for `tests_status` parsing.
 
 ### Epic 38 — Phase 4 GitHub integration (Slice 3: Projects sync)

@@ -237,8 +237,16 @@ class StallDetector:
         tests_status: str,
         timed_out: bool,
         cli_had_error: bool,
+        git_unavailable: bool = False,
     ) -> str | None:
-        """Trip the circuit and return a reason string if a stall threshold fired."""
+        """Trip the circuit and return a reason string if a stall threshold fired.
+
+        ``git_unavailable`` should be True when the git binary was not found or
+        failed during the file-change snapshot.  In that case the fast-trip
+        streak is reset (we cannot distinguish "agent made no changes" from
+        "we couldn't measure changes") while deferred-test and timeout streaks
+        continue normally.
+        """
         if cli_had_error:
             self._fast_trip_streak = 0
             self._deferred_streak = 0
@@ -257,7 +265,11 @@ class StallDetector:
 
         self._timeout_streak = 0
 
-        if iteration_duration_sec < self.fast_trip_max_seconds and files_changed_count == 0:
+        if git_unavailable:
+            # Cannot determine whether files changed — reset the fast-trip
+            # streak so a missing git binary does not falsely trip the circuit.
+            self._fast_trip_streak = 0
+        elif iteration_duration_sec < self.fast_trip_max_seconds and files_changed_count == 0:
             self._fast_trip_streak += 1
             if self._fast_trip_streak >= self.fast_trip_max:
                 reason = (

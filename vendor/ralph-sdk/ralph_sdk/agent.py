@@ -287,6 +287,9 @@ class RalphAgent:
         # Updated at the end of every _run_iteration so cancel() can surface
         # partial work even when the active communicate() is still in-flight.
         self._output_buffer: str = ""
+        # Tracks whether the last _git_changed_paths() call succeeded.  False
+        # when the git binary is missing or the subprocess otherwise failed.
+        self._last_git_available: bool = True
 
         # Ensure .ralph directory exists
         self.ralph_dir.mkdir(parents=True, exist_ok=True)
@@ -472,6 +475,7 @@ class RalphAgent:
                     tests_status=iteration_status.tests_status,
                     timed_out=_status_is_timeout(iteration_status),
                     cli_had_error=_status_is_error(iteration_status),
+                    git_unavailable=not self._last_git_available,
                 )
                 if stall_reason:
                     logger.warning("Stall detector tripped: %s", stall_reason)
@@ -526,6 +530,12 @@ class RalphAgent:
         self._last_iteration_duration_sec = 0.0
         self._last_iteration_files_changed = []
 
+        # Snapshot dirty files BEFORE the agent runs so we can compute a
+        # per-iteration delta.  Pre-existing repo dirt (staged or unstaged
+        # changes from before this loop) should not be credited to this
+        # iteration when evaluating stall conditions.
+        pre_iteration_dirty: frozenset[str] = frozenset(await self._git_changed_paths())
+
         # Build the prompt for this iteration
         prompt = self._build_iteration_prompt(task_input)
 
@@ -576,9 +586,20 @@ class RalphAgent:
             self._log_output(stdout, stderr, self.loop_count)
 
             self._last_iteration_duration_sec = time.monotonic() - iteration_t0
-            changed = await self._git_changed_paths()
+            post_dirty = await self._git_changed_paths()
+            # Only count files that are *newly* dirty since the pre-iteration
+            # snapshot.  This prevents pre-existing repo dirt from masking a
+            # true no-progress iteration in the stall detector.
+            if self._last_git_available:
+                changed = [p for p in post_dirty if p not in pre_iteration_dirty]
+                # Also include any file that was already dirty pre-iteration
+                # but is now gone from the diff (shouldn't happen often, but
+                # preserve full session accounting via post_dirty union).
+                self._files_changed_session.update(post_dirty)
+            else:
+                changed = []
+                self._files_changed_session.update(post_dirty)
             self._last_iteration_files_changed = changed
-            self._files_changed_session.update(changed)
 
             return status
 
@@ -758,7 +779,12 @@ class RalphAgent:
                 continue
 
     async def _git_changed_paths(self) -> list[str]:
-        """List paths changed vs HEAD in project_dir (working tree)."""
+        """List paths changed vs HEAD in project_dir (working tree).
+
+        Sets ``self._last_git_available`` to *False* when the git binary is
+        missing or the subprocess fails so callers can distinguish "no changes
+        detected" from "measurement was impossible".
+        """
         try:
             proc = await asyncio.create_subprocess_exec(
                 "git",
@@ -772,7 +798,9 @@ class RalphAgent:
             )
             stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=30.0)
         except (FileNotFoundError, TimeoutError, OSError):
+            self._last_git_available = False
             return []
+        self._last_git_available = True
         if proc.returncode != 0:
             return []
         text = stdout.decode("utf-8", errors="replace").strip()
