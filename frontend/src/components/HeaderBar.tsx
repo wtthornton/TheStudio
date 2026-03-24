@@ -2,6 +2,7 @@
  * Updated via SSE cost events. Zero state: "0 active / 0 queued / $0.00".
  * Epic 46.5: Onboarding hint shown when all KPIs are zero.
  * Epic 44.9: "Setup incomplete" badge when wizard was skipped.
+ * Epic 49.1: AppSwitcher for cross-app navigation.
  */
 
 import { usePipelineStore } from '../stores/pipeline-store'
@@ -10,6 +11,7 @@ import {
   isSetupWizardSkipped,
   isSetupWizardComplete,
 } from './wizard/wizardStorage'
+import { AppSwitcher } from './AppSwitcher'
 
 interface HeaderBarProps {
   /** Called when the user clicks the "Setup incomplete" resume link. */
@@ -35,6 +37,7 @@ export function HeaderBar({ onResumeWizard }: HeaderBarProps = {}) {
 
   return (
     <div className="flex items-center gap-6 text-sm" data-testid="header-bar">
+      <AppSwitcher />
       <span className="text-gray-400" data-testid="active-count">
         <span className="font-medium text-emerald-400">{activeCount}</span> active
       </span>
