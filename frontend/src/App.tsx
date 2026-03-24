@@ -34,6 +34,10 @@ import { RepoSettings } from './components/RepoSettings'
 import { ApiReference } from './components/ApiReference'
 import { WizardShell } from './components/wizard/WizardShell'
 import { HealthCheckStep } from './components/wizard/HealthCheckStep'
+import { RepoRegistrationStep } from './components/wizard/RepoRegistrationStep'
+import { WebhookConfigStep } from './components/wizard/WebhookConfigStep'
+import { TrustTierStep } from './components/wizard/TrustTierStep'
+import { LLMProviderStep } from './components/wizard/LLMProviderStep'
 import {
   isSetupWizardComplete,
   isSetupWizardSkipped,
@@ -111,6 +115,10 @@ function App() {
             onSkip={handleSetupWizardSkip}
           >
             <HealthCheckStep />
+            <RepoRegistrationStep />
+            <WebhookConfigStep />
+            <TrustTierStep />
+            <LLMProviderStep />
           </WizardShell>
         </div>
       ) : null}
