@@ -28,9 +28,14 @@ interface HeaderBarProps {
    * Passed to HelpPanel so it can display route-aware content (Epic 45.4).
    */
   activeTab?: string
+  /**
+   * Called when the user clicks a search result in HelpPanel (Epic 45.5).
+   * The caller (App.tsx) switches to the target tab.
+   */
+  onSwitchTab?: (tabKey: string) => void
 }
 
-export function HeaderBar({ onResumeWizard, onOpenApiDocs, activeTab }: HeaderBarProps = {}) {
+export function HeaderBar({ onResumeWizard, onOpenApiDocs, activeTab, onSwitchTab }: HeaderBarProps = {}) {
   const stages = usePipelineStore((s) => s.stages)
   const totalCost = usePipelineStore((s) => s.totalCost)
 
@@ -101,11 +106,12 @@ export function HeaderBar({ onResumeWizard, onOpenApiDocs, activeTab }: HeaderBa
         }}
       />
 
-      {/* Epic 45.3: Slide-in help panel (45.4: activeTab for route-aware content) */}
+      {/* Epic 45.3: Slide-in help panel (45.4: activeTab, 45.5: onSwitchTab search) */}
       <HelpPanel
         open={helpPanelOpen}
         onClose={() => setHelpPanelOpen(false)}
         activeTab={activeTab}
+        onSwitchTab={onSwitchTab}
       />
     </div>
   )

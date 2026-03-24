@@ -2,12 +2,36 @@
  * HelpPanel — slide-in contextual help panel.
  * Epic 45.1: slide-in/out animation, close button, Escape key handler.
  * Epic 45.4: route-aware content loaded via react-markdown + ?raw imports.
- * Epic 45.5: Fuse.js search (extended in 45.5).
+ * Epic 45.5: Fuse.js full-text search across all articles; click result switches tab.
  */
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
+import Fuse from 'fuse.js'
 import ReactMarkdown from 'react-markdown'
 import { HELP_CONTENT, HELP_TITLES } from '../../help/index'
+
+interface SearchArticle {
+  key: string
+  title: string
+  content: string
+}
+
+/** Build a flat list of all indexed articles once at module load time. */
+const ARTICLES: SearchArticle[] = Object.keys(HELP_CONTENT).map((key) => ({
+  key,
+  title: HELP_TITLES[key] ?? key,
+  content: HELP_CONTENT[key],
+}))
+
+const FUSE = new Fuse<SearchArticle>(ARTICLES, {
+  keys: [
+    { name: 'title', weight: 2 },
+    { name: 'content', weight: 1 },
+  ],
+  threshold: 0.35,
+  minMatchCharLength: 2,
+  includeScore: true,
+})
 
 interface HelpPanelProps {
   /** Whether the panel is currently open. */
@@ -24,6 +48,12 @@ interface HelpPanelProps {
   title?: string
   /** Optional content to render inside the panel (used when activeTab not provided). */
   children?: React.ReactNode
+  /**
+   * Called when the user clicks a search result that maps to a tab.
+   * The caller (App.tsx) should switch to that tab.
+   * Epic 45.5
+   */
+  onSwitchTab?: (tabKey: string) => void
 }
 
 export function HelpPanel({
@@ -32,29 +62,69 @@ export function HelpPanel({
   activeTab,
   title,
   children,
+  onSwitchTab,
 }: HelpPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
 
-  // Resolve content and title from activeTab
-  const tabContent = activeTab ? (HELP_CONTENT[activeTab] ?? null) : null
-  const resolvedTitle = title ?? (activeTab ? (HELP_TITLES[activeTab] ?? 'Help') : 'Help')
+  const [query, setQuery] = useState('')
+  /** When the user clicks a search result, show its content in-panel. */
+  const [searchTab, setSearchTab] = useState<string | null>(null)
 
-  // Close on Escape key
+  // Resolved display state: prefer searchTab override, then activeTab prop
+  const displayTab = searchTab ?? activeTab
+  const tabContent = displayTab ? (HELP_CONTENT[displayTab] ?? null) : null
+  const resolvedTitle = title ?? (displayTab ? (HELP_TITLES[displayTab] ?? 'Help') : 'Help')
+
+  // Fuse.js search results (only when query is non-empty)
+  const searchResults = useMemo(() => {
+    const q = query.trim()
+    if (!q) return []
+    return FUSE.search(q).slice(0, 6)
+  }, [query])
+
+  const isSearching = query.trim().length > 0
+
+  // Reset search state when panel closes
+  useEffect(() => {
+    if (!open) {
+      setQuery('')
+      setSearchTab(null)
+    }
+  }, [open])
+
+  // Close on Escape key; if searching, clear search first
   useEffect(() => {
     if (!open) return
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') {
+        if (query) {
+          setQuery('')
+          setSearchTab(null)
+        } else {
+          onClose()
+        }
+      }
     }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
-  }, [open, onClose])
+  }, [open, onClose, query])
 
-  // Trap focus inside panel when open
+  // Trap focus inside panel when open; autofocus search box
   useEffect(() => {
-    if (open && panelRef.current) {
-      panelRef.current.focus()
+    if (open) {
+      // Small delay so CSS transition doesn't fight focus
+      const id = setTimeout(() => searchRef.current?.focus(), 50)
+      return () => clearTimeout(id)
     }
   }, [open])
+
+  function handleResultClick(article: SearchArticle) {
+    setQuery('')
+    setSearchTab(article.key)
+    // Also switch the main app tab so the user lands on the right page
+    onSwitchTab?.(article.key)
+  }
 
   return (
     <>
@@ -113,9 +183,74 @@ export function HelpPanel({
           </button>
         </div>
 
+        {/* Search bar — Epic 45.5 */}
+        <div className="border-b border-gray-700 px-5 py-3">
+          <div className="relative">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-gray-500"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"
+              />
+            </svg>
+            <input
+              ref={searchRef}
+              type="search"
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value)
+                setSearchTab(null)
+              }}
+              placeholder="Search help articles…"
+              aria-label="Search help articles"
+              data-testid="help-search-input"
+              className="w-full rounded border border-gray-700 bg-gray-800 py-2 pl-8 pr-3 text-sm text-gray-200 placeholder-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+          </div>
+        </div>
+
         {/* Panel body — scrollable */}
         <div className="flex-1 overflow-y-auto px-5 py-4 text-sm text-gray-300">
-          {tabContent != null ? (
+          {isSearching ? (
+            /* Search results list */
+            searchResults.length > 0 ? (
+              <ul
+                role="list"
+                className="space-y-1"
+                data-testid="help-search-results"
+              >
+                {searchResults.map(({ item }) => (
+                  <li key={item.key}>
+                    <button
+                      type="button"
+                      onClick={() => handleResultClick(item)}
+                      className="w-full rounded px-3 py-2.5 text-left hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      data-testid={`help-result-${item.key}`}
+                    >
+                      <span className="block font-medium text-gray-100">
+                        {item.title}
+                      </span>
+                      <span className="mt-0.5 block line-clamp-2 text-xs text-gray-500">
+                        {item.content.slice(0, 120).replace(/[#*`\n]/g, ' ')}…
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-gray-500" data-testid="help-search-empty">
+                No articles match "<span className="text-gray-400">{query}</span>".
+              </p>
+            )
+          ) : tabContent != null ? (
             <div
               className="prose prose-invert prose-sm max-w-none
                 prose-headings:text-gray-100

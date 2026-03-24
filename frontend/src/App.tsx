@@ -253,10 +253,12 @@ function App() {
           </button>
           {/* Epic 45.3: HelpMenu mounted inside HeaderBar; onOpenApiDocs switches tab */}
           {/* Epic 45.4: activeTab passed for route-aware help content */}
+          {/* Epic 45.5: onSwitchTab wires help search results to tab navigation */}
           <HeaderBar
             onResumeWizard={handleSetupWizardResume}
             onOpenApiDocs={() => setActiveTab('api')}
             activeTab={activeTab}
+            onSwitchTab={(tab) => setActiveTab(tab as Tab)}
           />
           <NotificationBell onNavigate={handleNotificationNavigate} />
           <ConnectionIndicator />

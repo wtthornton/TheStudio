@@ -77,7 +77,7 @@
 - [x] 45.2: Create `HelpMenu.tsx` — dropdown with items: Help Panel, Setup Wizard, Guided Tours, API Docs. **Owns the shared help menu for Epics 44, 47, 50.** **Files:** create frontend/src/components/help/HelpMenu.tsx.
 - [x] 45.3: Mount HelpMenu in HeaderBar, wire HelpPanel toggle. **Files:** modify HeaderBar.tsx, App.tsx.
 - [x] 45.4: Route-aware content loading — create `frontend/src/help/` with 11 `.md` files. HelpPanel renders matching content via `react-markdown` + Vite `?raw` import. **Files:** create 11 .md files; modify HelpPanel.tsx.
-- [ ] 45.5: Fuse.js search — index all articles, search bar in panel, click result switches tab. **Files:** modify HelpPanel.tsx.
+- [x] 45.5: Fuse.js search — index all articles, search bar in panel, click result switches tab. **Files:** modify HelpPanel.tsx.
 - [ ] 45.6: Author 11 tab help articles (200-400 words each). **Files:** write 11 .md files in frontend/src/help/.
 - [ ] 45.7: Author 4 cross-cutting concept articles (Trust Tiers, Webhooks, Evidence Bundles, Pipeline Stages). **Files:** write 4 .md files.
 - [ ] 45.8: Add react-tooltip to React SPA — 30+ tooltips across HeaderBar, PipelineStatus, TrustConfiguration, BudgetDashboard. **Files:** modify ~6 component files.
