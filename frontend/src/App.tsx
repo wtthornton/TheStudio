@@ -33,7 +33,7 @@ import { RepoSelector } from './components/RepoSelector'
 import { RepoSettings } from './components/RepoSettings'
 import { ApiReference } from './components/ApiReference'
 import { TourBeacon } from './components/tours/TourBeacon'
-import { PIPELINE_TOUR_STEPS } from './components/tours/registry'
+import { PIPELINE_TOUR_STEPS, REPO_TRUST_TOUR_STEPS } from './components/tours/registry'
 import { WizardShell } from './components/wizard/WizardShell'
 import { HealthCheckStep } from './components/wizard/HealthCheckStep'
 import { RepoRegistrationStep } from './components/wizard/RepoRegistrationStep'
@@ -381,8 +381,13 @@ function App() {
         <Reputation />
       ) : activeTab === 'repos' ? (
         /* Repository Settings & Fleet Health (Epic 41, Slice 2 — 41.11 + 41.14) */
-        /* Epic 47.7 — Repo & Trust tour beacon added here */
-        <RepoSettings />
+        <>
+          {/* Epic 47.7 — Repo & Trust tour beacon */}
+          <div className="flex justify-end px-6 pt-3">
+            <TourBeacon tourId="repo-trust" steps={REPO_TRUST_TOUR_STEPS} label="Repo & Trust tour" />
+          </div>
+          <RepoSettings />
+        </>
       ) : activeTab === 'api' ? (
         <div className="mx-auto max-w-[100rem] px-6 py-6">
           <h2 className="mb-4 text-sm font-medium text-gray-300">HTTP API (OpenAPI)</h2>

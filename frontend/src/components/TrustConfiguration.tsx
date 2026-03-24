@@ -618,7 +618,7 @@ export function TrustConfiguration() {
       )}
 
       {/* Default tier */}
-      <div className="mb-4">
+      <div className="mb-4" data-tour="trust-tier">
         <ActiveTierDisplay />
       </div>
 
@@ -628,7 +628,7 @@ export function TrustConfiguration() {
       </div>
 
       {/* Rule list */}
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between" data-tour="trust-rules">
         <h3 className="text-sm font-semibold text-gray-200">
           Rules
           <span

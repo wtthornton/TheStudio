@@ -254,7 +254,7 @@ export function RepoSettings() {
       </div>
 
       {/* Fleet Health Table (Story 41.14) */}
-      <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
+      <div className="rounded-lg border border-gray-700 bg-gray-900 p-4" data-tour="repo-selector">
         <h3 className="text-sm font-semibold text-gray-200 mb-3">Fleet Health</h3>
         <div className="mb-2 flex items-center gap-4 text-xs text-gray-500">
           <span><span className="inline-block h-2 w-2 rounded-full bg-green-500 mr-1" />ok — active with tasks</span>
@@ -277,7 +277,7 @@ export function RepoSettings() {
 
       {/* Per-repo config editor (Story 41.11) */}
       {selectedRepoId && (
-        <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
+        <div className="rounded-lg border border-gray-700 bg-gray-900 p-4" data-tour="repo-config">
           <h3 className="text-sm font-semibold text-gray-200 mb-3">
             Repo Configuration{' '}
             <span className="text-xs text-gray-500 font-normal">

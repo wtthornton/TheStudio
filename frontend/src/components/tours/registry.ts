@@ -113,6 +113,57 @@ export function resetAllTours(): void {
   }
 }
 
+// ── Repo & Trust Tour Steps (Epic 47.7) ───────────────────────────────────────
+
+/**
+ * Five-step guided tour of the Repos & Trust tabs.
+ *
+ * Targets use `data-tour` attributes added to:
+ *   RepoSettings.tsx        → data-tour="repo-selector"  (fleet health table)
+ *   RepoSettings.tsx        → data-tour="repo-config"    (per-repo config form)
+ *   TrustConfiguration.tsx  → data-tour="trust-tier"     (default tier selector)
+ *   TrustConfiguration.tsx  → data-tour="trust-rules"    (rule list header)
+ *   BudgetDashboard.tsx     → data-tour="budget-dashboard" (budget header row)
+ */
+export const REPO_TRUST_TOUR_STEPS: Step[] = [
+  {
+    target: '[data-tour="repo-selector"]',
+    title: 'Fleet Health Table',
+    content:
+      'This table shows every repository connected to TheStudio. The health dot indicates current activity: green = active with recent tasks, yellow = idle, red = degraded or paused. Click any row to open its configuration panel below.',
+    disableBeacon: true,
+    placement: 'bottom',
+  },
+  {
+    target: '[data-tour="repo-config"]',
+    title: 'Repository Configuration',
+    content:
+      'After selecting a repo from the table, its full configuration loads here. You can update the default trust tier for that repository, adjust webhook settings, or change its active status. Changes take effect immediately.',
+    placement: 'top',
+  },
+  {
+    target: '[data-tour="trust-tier"]',
+    title: 'Default Trust Tier',
+    content:
+      'The default trust tier is the fallback applied to every task when no rule matches. Observe = read-only reporting, Suggest = agent proposes changes that need human approval, Execute = agent applies changes automatically. Start conservative and raise the tier as confidence grows.',
+    placement: 'bottom',
+  },
+  {
+    target: '[data-tour="trust-rules"]',
+    title: 'Trust Tier Rules',
+    content:
+      'Rules override the default tier based on task properties — complexity index, risk flags, repository name, or file count. Rules are evaluated in ascending priority order and the first match wins. Use rules to automatically tighten trust for high-risk work.',
+    placement: 'bottom',
+  },
+  {
+    target: '[data-tour="budget-dashboard"]',
+    title: 'Budget Controls',
+    content:
+      'Track LLM API spend across the pipeline in real time. Set a weekly budget cap, per-task cost warning, and auto-pause threshold. The period selector lets you compare spend over 1, 7, or 30 days. Keeping an eye on costs here prevents surprise invoices.',
+    placement: 'bottom',
+  },
+]
+
 // ── Analytics Tour Steps (Epic 47.6) ──────────────────────────────────────────
 
 /**
