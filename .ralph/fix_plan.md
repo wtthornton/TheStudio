@@ -55,7 +55,7 @@
 - [x] **39.1–39.5:** Operational analytics APIs — throughput, bottlenecks, categories, failures, summary cards (`analytics_router` / `analytics_queries`).
 - [x] **39.6–39.11:** Operational analytics UI — charts, tables, period selector, summary row.
 - [x] **39.12–39.16:** Reputation & drift APIs — experts, outcomes, drift, composite drift score, summary cards.
-- [ ] **39.17–39.21:** Reputation UI — expert table/detail, outcome feed, drift alerts, reuse summary cards.
+- [x] **39.17–39.21:** Reputation UI — expert table/detail, outcome feed, drift alerts, reuse summary cards.
 
 ### Epic 43 — Ralph SDK as primary agent
 
