@@ -1,3 +1,4 @@
+{% from "components/empty_state.html" import empty_state %}
 <!-- Cost Dashboard partial — loaded via HTMX (Story 32.13) -->
 <div class="space-y-6 fade-in">
     <!-- Summary Cards -->
@@ -39,12 +40,12 @@
         <table class="w-full text-sm">
             <thead>
                 <tr class="border-b border-gray-200 text-left text-xs text-gray-500 uppercase tracking-wide">
-                    <th class="pb-2 pr-4">Date</th>
-                    <th class="pb-2 pr-4">Cost</th>
-                    <th class="pb-2 pr-4">Calls</th>
-                    <th class="pb-2 pr-4">Tokens In</th>
-                    <th class="pb-2 pr-4">Tokens Out</th>
-                    <th class="pb-2">Errors</th>
+                    <th scope="col" class="pb-2 pr-4">Date</th>
+                    <th scope="col" class="pb-2 pr-4">Cost</th>
+                    <th scope="col" class="pb-2 pr-4">Calls</th>
+                    <th scope="col" class="pb-2 pr-4">Tokens In</th>
+                    <th scope="col" class="pb-2 pr-4">Tokens Out</th>
+                    <th scope="col" class="pb-2">Errors</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
@@ -67,7 +68,7 @@
             </tbody>
         </table>
         {% else %}
-        <p class="text-gray-400 text-sm">No spend data in window.</p>
+        {{ empty_state("No spend data in the selected window. Cost events appear once the pipeline processes LLM requests.", icon="◇") }}
         {% endif %}
     </div>
 
@@ -79,10 +80,10 @@
             <table class="w-full text-sm">
                 <thead>
                     <tr class="border-b border-gray-200 text-left text-xs text-gray-500 uppercase tracking-wide">
-                        <th class="pb-2 pr-4">Provider</th>
-                        <th class="pb-2 pr-4">Cost</th>
-                        <th class="pb-2 pr-4">Calls</th>
-                        <th class="pb-2">Errors</th>
+                        <th scope="col" class="pb-2 pr-4">Provider</th>
+                        <th scope="col" class="pb-2 pr-4">Cost</th>
+                        <th scope="col" class="pb-2 pr-4">Calls</th>
+                        <th scope="col" class="pb-2">Errors</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
@@ -103,7 +104,7 @@
                 </tbody>
             </table>
             {% else %}
-            <p class="text-gray-400 text-sm">No data.</p>
+            {{ empty_state("No provider data available.", icon="◇") }}
             {% endif %}
         </div>
 
@@ -114,10 +115,10 @@
             <table class="w-full text-sm">
                 <thead>
                     <tr class="border-b border-gray-200 text-left text-xs text-gray-500 uppercase tracking-wide">
-                        <th class="pb-2 pr-4">Model</th>
-                        <th class="pb-2 pr-4">Cost</th>
-                        <th class="pb-2 pr-4">Calls</th>
-                        <th class="pb-2">Avg Latency</th>
+                        <th scope="col" class="pb-2 pr-4">Model</th>
+                        <th scope="col" class="pb-2 pr-4">Cost</th>
+                        <th scope="col" class="pb-2 pr-4">Calls</th>
+                        <th scope="col" class="pb-2">Avg Latency</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
@@ -132,7 +133,7 @@
                 </tbody>
             </table>
             {% else %}
-            <p class="text-gray-400 text-sm">No data.</p>
+            {{ empty_state("No model data available.", icon="◇") }}
             {% endif %}
         </div>
     </div>
@@ -145,10 +146,10 @@
             <table class="w-full text-sm">
                 <thead>
                     <tr class="border-b border-gray-200 text-left text-xs text-gray-500 uppercase tracking-wide">
-                        <th class="pb-2 pr-4">Step</th>
-                        <th class="pb-2 pr-4">Cost</th>
-                        <th class="pb-2 pr-4">Calls</th>
-                        <th class="pb-2">Errors</th>
+                        <th scope="col" class="pb-2 pr-4">Step</th>
+                        <th scope="col" class="pb-2 pr-4">Cost</th>
+                        <th scope="col" class="pb-2 pr-4">Calls</th>
+                        <th scope="col" class="pb-2">Errors</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
@@ -169,7 +170,7 @@
                 </tbody>
             </table>
             {% else %}
-            <p class="text-gray-400 text-sm">No data.</p>
+            {{ empty_state("No pipeline step data available.", icon="◇") }}
             {% endif %}
         </div>
 
@@ -180,10 +181,10 @@
             <table class="w-full text-sm">
                 <thead>
                     <tr class="border-b border-gray-200 text-left text-xs text-gray-500 uppercase tracking-wide">
-                        <th class="pb-2 pr-4">Repository</th>
-                        <th class="pb-2 pr-4">Cost</th>
-                        <th class="pb-2 pr-4">Calls</th>
-                        <th class="pb-2">Errors</th>
+                        <th scope="col" class="pb-2 pr-4">Repository</th>
+                        <th scope="col" class="pb-2 pr-4">Cost</th>
+                        <th scope="col" class="pb-2 pr-4">Calls</th>
+                        <th scope="col" class="pb-2">Errors</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
@@ -204,7 +205,7 @@
                 </tbody>
             </table>
             {% else %}
-            <p class="text-gray-400 text-sm">No data.</p>
+            {{ empty_state("No repository data available.", icon="◇") }}
             {% endif %}
         </div>
     </div>

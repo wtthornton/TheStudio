@@ -1,3 +1,4 @@
+{% from "components/empty_state.html" import empty_state %}
 <!-- Model Spend partial — loaded via HTMX -->
 <div class="space-y-6 fade-in">
     <!-- Summary -->
@@ -32,12 +33,12 @@
         <table class="w-full text-sm">
             <thead>
                 <tr class="border-b border-gray-200 text-left text-xs text-gray-500 uppercase tracking-wide">
-                    <th class="pb-2 pr-4">Provider</th>
-                    <th class="pb-2 pr-4">Cost</th>
-                    <th class="pb-2 pr-4">Calls</th>
-                    <th class="pb-2 pr-4">Tokens</th>
-                    <th class="pb-2 pr-4">Avg Latency</th>
-                    <th class="pb-2">Errors</th>
+                    <th scope="col" class="pb-2 pr-4">Provider</th>
+                    <th scope="col" class="pb-2 pr-4">Cost</th>
+                    <th scope="col" class="pb-2 pr-4">Calls</th>
+                    <th scope="col" class="pb-2 pr-4">Tokens</th>
+                    <th scope="col" class="pb-2 pr-4">Avg Latency</th>
+                    <th scope="col" class="pb-2">Errors</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
@@ -60,7 +61,7 @@
             </tbody>
         </table>
         {% else %}
-        <p class="text-gray-400 text-sm">No spend data in window.</p>
+        {{ empty_state("No spend data in the selected window.", icon="◇") }}
         {% endif %}
     </div>
 
@@ -71,11 +72,11 @@
         <table class="w-full text-sm">
             <thead>
                 <tr class="border-b border-gray-200 text-left text-xs text-gray-500 uppercase tracking-wide">
-                    <th class="pb-2 pr-4">Step</th>
-                    <th class="pb-2 pr-4">Cost</th>
-                    <th class="pb-2 pr-4">Calls</th>
-                    <th class="pb-2 pr-4">Tokens</th>
-                    <th class="pb-2">Errors</th>
+                    <th scope="col" class="pb-2 pr-4">Step</th>
+                    <th scope="col" class="pb-2 pr-4">Cost</th>
+                    <th scope="col" class="pb-2 pr-4">Calls</th>
+                    <th scope="col" class="pb-2 pr-4">Tokens</th>
+                    <th scope="col" class="pb-2">Errors</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
@@ -91,7 +92,7 @@
             </tbody>
         </table>
         {% else %}
-        <p class="text-gray-400 text-sm">No spend data in window.</p>
+        {{ empty_state("No step spend data in the selected window.", icon="◇") }}
         {% endif %}
     </div>
 
@@ -102,10 +103,10 @@
         <table class="w-full text-sm">
             <thead>
                 <tr class="border-b border-gray-200 text-left text-xs text-gray-500 uppercase tracking-wide">
-                    <th class="pb-2 pr-4">Model</th>
-                    <th class="pb-2 pr-4">Cost</th>
-                    <th class="pb-2 pr-4">Calls</th>
-                    <th class="pb-2">Avg Latency</th>
+                    <th scope="col" class="pb-2 pr-4">Model</th>
+                    <th scope="col" class="pb-2 pr-4">Cost</th>
+                    <th scope="col" class="pb-2 pr-4">Calls</th>
+                    <th scope="col" class="pb-2">Avg Latency</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
@@ -120,7 +121,7 @@
             </tbody>
         </table>
         {% else %}
-        <p class="text-gray-400 text-sm">No spend data in window.</p>
+        {{ empty_state("No model spend data in the selected window.", icon="◇") }}
         {% endif %}
     </div>
 </div>

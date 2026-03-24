@@ -1,3 +1,4 @@
+{% from "components/empty_state.html" import empty_state %}
 <!-- Metrics Dashboard Partial -->
 <div class="space-y-6 fade-in">
 
@@ -63,9 +64,9 @@
         <table class="w-full text-sm">
             <thead>
                 <tr class="text-left text-gray-500 border-b">
-                    <th class="py-2">Category</th>
-                    <th class="py-2 text-right">Count</th>
-                    <th class="py-2 text-right">%</th>
+                    <th scope="col" class="py-2">Category</th>
+                    <th scope="col" class="py-2 text-right">Count</th>
+                    <th scope="col" class="py-2 text-right">%</th>
                 </tr>
             </thead>
             <tbody>
@@ -79,7 +80,7 @@
             </tbody>
         </table>
         {% else %}
-        <p class="text-sm text-gray-400">No loopback data available.</p>
+        {{ empty_state("No loopback data yet. Verification loopbacks appear when the QA gate returns a defect for re-processing.", icon="◇") }}
         {% endif %}
     </div>
 
