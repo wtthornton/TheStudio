@@ -30,10 +30,10 @@
 - [x] **38.14:** Extend field mapping — Cost + Complexity fields; `create_custom_field()` GraphQL; auto-create on first sync.
 - [x] **38.15:** GitHub→TheStudio sync — `projects_v2_item` webhooks; update TaskPacket; skip self-triggered events.
 - [x] **38.16:** `GET`/`PUT` `/api/v1/dashboard/github/projects/config` — project selection, field mapping, behaviors.
-- [ ] **38.17:** `POST .../projects/sync` — force full sync of active TaskPackets.
-- [ ] **38.18:** Projects sync configuration UI — `ProjectsSyncConfig.tsx`.
-- [ ] **38.19:** Feedback loop guard — `thestudio-sync` mutation id; skip own webhooks.
-- [ ] **38.20:** Integration test — stage push, manual GitHub status update, self-trigger skip.
+- [x] **38.17:** `POST .../projects/sync` — force full sync of active TaskPackets.
+- [x] **38.18:** Projects sync configuration UI — `ProjectsSyncConfig.tsx`.
+- [x] **38.19:** Feedback loop guard — `thestudio-sync` mutation id; skip own webhooks.
+- [x] **38.20:** Integration test — stage push, manual GitHub status update, self-trigger skip.
 
 ### Epic 38 — Phase 4 (Slice 4: Pipeline comments + webhook bridge)
 
