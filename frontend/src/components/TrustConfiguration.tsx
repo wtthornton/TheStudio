@@ -9,6 +9,7 @@
  */
 
 import { useEffect, useState, useCallback } from 'react'
+import { Tooltip } from 'react-tooltip'
 import { useTrustStore, selectRule } from '../stores/trust-store'
 import type { TrustTierRuleRead, AssignedTier } from '../stores/trust-store'
 import type { RuleCondition, ConditionOperator, TrustTierRuleCreate } from '../lib/api'
@@ -29,6 +30,11 @@ function ShieldIcon() {
 // ---------------------------------------------------------------------------
 
 const TIERS: AssignedTier[] = ['observe', 'suggest', 'execute']
+const TIER_DESCRIPTIONS: Record<AssignedTier, string> = {
+  observe: 'Read-only: agent observes but takes no automated action',
+  suggest: 'Agent suggests changes; a human must approve before merging',
+  execute: 'Agent executes changes automatically without requiring approval',
+}
 const TIER_COLORS: Record<AssignedTier, string> = {
   observe: 'bg-blue-900/40 text-blue-300 border border-blue-700',
   suggest: 'bg-amber-900/40 text-amber-300 border border-amber-700',
@@ -108,6 +114,8 @@ function ActiveTierDisplay() {
                 ? TIER_COLORS[tier] + ' font-semibold'
                 : 'border border-gray-600 text-gray-400 hover:border-gray-400 hover:text-gray-200'
             } disabled:opacity-50`}
+            data-tooltip-id="trust-tip"
+            data-tooltip-content={TIER_DESCRIPTIONS[tier]}
           >
             {tier}
           </button>
@@ -166,7 +174,13 @@ function SafetyBoundsPanel() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-gray-400">Max auto-merge lines</span>
+          <span
+            className="text-xs text-gray-400"
+            data-tooltip-id="trust-tip"
+            data-tooltip-content="PRs with more changed lines than this limit require manual approval"
+          >
+            Max auto-merge lines
+          </span>
           <input
             type="number"
             min={1}
@@ -177,7 +191,13 @@ function SafetyBoundsPanel() {
           />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-gray-400">Max auto-merge cost (¢)</span>
+          <span
+            className="text-xs text-gray-400"
+            data-tooltip-id="trust-tip"
+            data-tooltip-content="Tasks exceeding this cost (in cents) require manual approval"
+          >
+            Max auto-merge cost (¢)
+          </span>
           <input
             type="number"
             min={0}
@@ -188,7 +208,13 @@ function SafetyBoundsPanel() {
           />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-gray-400">Max loopbacks</span>
+          <span
+            className="text-xs text-gray-400"
+            data-tooltip-id="trust-tip"
+            data-tooltip-content="Max QA→implement cycles before a task is escalated for human review"
+          >
+            Max loopbacks
+          </span>
           <input
             type="number"
             min={0}
@@ -201,7 +227,11 @@ function SafetyBoundsPanel() {
       </div>
 
       <label className="mt-4 flex flex-col gap-1">
-        <span className="text-xs text-gray-400">
+        <span
+          className="text-xs text-gray-400"
+          data-tooltip-id="trust-tip"
+          data-tooltip-content="Files matching these glob patterns always require a human review step, regardless of tier"
+        >
           Mandatory review patterns (one glob per line — files matching these always require human
           review)
         </span>
@@ -380,6 +410,8 @@ function RuleBuilder({ existingRule, onSave, onCancel, saving }: RuleBuilderProp
                   ? TIER_COLORS[t] + ' font-semibold'
                   : 'border border-gray-600 text-gray-400 hover:border-gray-400 hover:text-gray-200'
               }`}
+              data-tooltip-id="trust-tip"
+              data-tooltip-content={TIER_DESCRIPTIONS[t]}
             >
               {t}
             </button>
@@ -390,7 +422,13 @@ function RuleBuilder({ existingRule, onSave, onCancel, saving }: RuleBuilderProp
       {/* Priority + active */}
       <div className="mb-4 flex items-center gap-4">
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-gray-400">Priority (lower = evaluated first)</span>
+          <span
+            className="text-xs text-gray-400"
+            data-tooltip-id="trust-tip"
+            data-tooltip-content="Lower numbers are evaluated first; the first matching rule wins"
+          >
+            Priority (lower = evaluated first)
+          </span>
           <input
             type="number"
             min={1}
@@ -407,7 +445,13 @@ function RuleBuilder({ existingRule, onSave, onCancel, saving }: RuleBuilderProp
             onChange={(e) => setActive(e.target.checked)}
             className="accent-violet-500"
           />
-          <span className="text-sm text-gray-300">Active</span>
+          <span
+            className="text-sm text-gray-300"
+            data-tooltip-id="trust-tip"
+            data-tooltip-content="Enable or disable this rule without deleting it"
+          >
+            Active
+          </span>
         </label>
       </div>
 
@@ -586,7 +630,11 @@ export function TrustConfiguration() {
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-200">
           Rules
-          <span className="ml-2 text-xs font-normal text-gray-500">
+          <span
+            className="ml-2 text-xs font-normal text-gray-500"
+            data-tooltip-id="trust-tip"
+            data-tooltip-content="Rules are evaluated in ascending priority order; the first matching rule determines the tier"
+          >
             (evaluated in priority order, first match wins)
           </span>
         </h3>
@@ -594,6 +642,8 @@ export function TrustConfiguration() {
           <button
             onClick={() => openEditRule(null)}
             className="rounded bg-violet-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-600"
+            data-tooltip-id="trust-tip"
+            data-tooltip-content="Create a conditional rule to assign trust tiers based on task properties"
           >
             + New rule
           </button>
@@ -635,6 +685,9 @@ export function TrustConfiguration() {
           />
         ))}
       </div>
+
+      {/* Epic 45.8: react-tooltip instance for all trust configuration hints */}
+      <Tooltip id="trust-tip" place="top" className="z-50 max-w-xs text-xs" />
     </div>
   )
 }

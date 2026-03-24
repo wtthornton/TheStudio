@@ -3,10 +3,24 @@
  */
 
 import { useState, useRef, useEffect } from 'react'
+import { Tooltip } from 'react-tooltip'
 import type { StageStatus } from '../stores/pipeline-store'
 import { usePipelineStore } from '../stores/pipeline-store'
 import { STATUS_COLORS } from '../lib/constants'
 import type { StageId } from '../lib/constants'
+
+/** Short descriptions for each pipeline stage, shown as react-tooltip on stage labels. */
+const STAGE_DESCRIPTIONS: Record<string, string> = {
+  intake: 'Webhook ingestion — validates GitHub events and creates TaskPackets',
+  context: 'Enriches tasks with complexity scores, risk flags, and repo context',
+  intent: 'Builds an Intent Specification — the definition of correctness for the task',
+  router: 'Selects expert agents and assigns mandatory coverage requirements',
+  assembler: 'Merges expert outputs and provenance into the Primary Agent context',
+  implement: 'Primary Agent implements the change (developer role)',
+  verify: 'Runs linting, pytest, and security scans — gates fail closed',
+  qa: 'QA Agent validates output against the Intent Specification and defect taxonomy',
+  publish: 'Creates a draft PR with evidence comment and lifecycle labels on GitHub',
+}
 
 export interface StageNodeProps {
   id: StageId
@@ -171,7 +185,15 @@ export function StageNode({ id, label, color, status, taskCount, activeTasks }: 
           </span>
         )}
       </button>
-      <span className="text-xs text-gray-400">{label}</span>
+      <span
+        className="text-xs text-gray-400"
+        data-tooltip-id="stage-info-tip"
+        data-tooltip-content={STAGE_DESCRIPTIONS[id] ?? label}
+      >
+        {label}
+      </span>
+      {/* Epic 45.8: react-tooltip for stage descriptions */}
+      <Tooltip id="stage-info-tip" place="bottom" className="z-50 max-w-xs text-xs" />
     </div>
   )
 }

@@ -10,6 +10,7 @@
  */
 
 import { useEffect, useState, useCallback } from 'react'
+import { Tooltip as ReactTooltip } from 'react-tooltip'
 import { EmptyState } from './EmptyState'
 import {
   Chart as ChartJS,
@@ -37,6 +38,12 @@ interface PeriodSelectorProps {
   onChange: (p: Period) => void
 }
 
+const PERIOD_DESCRIPTIONS: Record<Period, string> = {
+  '1d': 'Show data for the last 24 hours',
+  '7d': 'Show data for the last 7 days',
+  '30d': 'Show data for the last 30 days',
+}
+
 function PeriodSelector({ value, onChange }: PeriodSelectorProps) {
   const options: { label: string; value: Period }[] = [
     { label: '1d', value: '1d' },
@@ -54,6 +61,8 @@ function PeriodSelector({ value, onChange }: PeriodSelectorProps) {
               ? 'bg-indigo-600 text-white'
               : 'text-gray-400 hover:text-gray-200'
           }`}
+          data-tooltip-id="budget-tip"
+          data-tooltip-content={PERIOD_DESCRIPTIONS[opt.value]}
         >
           {opt.label}
         </button>
@@ -90,25 +99,33 @@ function SummaryCards() {
           : weeklyCapPct !== null && weeklyCapPct >= 75
             ? 'text-yellow-400'
             : 'text-indigo-400',
+      tooltip: 'Total LLM API cost in the selected period',
     },
     {
       label: 'Total API Calls',
       value: summary.total_calls.toLocaleString(),
       sub: undefined,
       accent: 'text-blue-400',
+      tooltip: 'Number of LLM API requests made in the selected period',
     },
     {
       label: 'Cache Hit Rate',
       value: `${(summary.cache_hit_rate * 100).toFixed(1)}%`,
       sub: undefined,
       accent: 'text-green-400',
+      tooltip: 'Percentage of responses served from prompt cache — higher rates reduce cost',
     },
   ]
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
       {cards.map((card) => (
-        <div key={card.label} className="rounded-lg border border-gray-700 bg-gray-900 p-4">
+        <div
+          key={card.label}
+          className="rounded-lg border border-gray-700 bg-gray-900 p-4"
+          data-tooltip-id="budget-tip"
+          data-tooltip-content={card.tooltip}
+        >
           <p className="text-xs text-gray-400">{card.label}</p>
           <p className={`mt-1 text-2xl font-semibold ${card.accent}`}>{card.value}</p>
           {card.sub && <p className="mt-0.5 text-xs text-gray-500">{card.sub}</p>}
@@ -431,7 +448,12 @@ function BudgetAlertConfig() {
         {numberFields.map((field) => (
           <div key={field.key}>
             <label className="mb-1 block text-xs font-medium text-gray-300">
-              {field.label}
+              <span
+                data-tooltip-id="budget-tip"
+                data-tooltip-content={field.help}
+              >
+                {field.label}
+              </span>
               <span className="ml-1 text-gray-500">({field.unit})</span>
             </label>
             <input
@@ -487,7 +509,13 @@ function BudgetAlertConfig() {
               />
             </button>
             <div>
-              <p className="text-sm text-gray-200">{field.label}</p>
+              <p
+                className="text-sm text-gray-200"
+                data-tooltip-id="budget-tip"
+                data-tooltip-content={field.help}
+              >
+                {field.label}
+              </p>
               <p className="text-xs text-gray-500">{field.help}</p>
             </div>
           </div>
@@ -543,6 +571,8 @@ export function BudgetDashboard() {
             disabled={loading}
             className="rounded border border-gray-700 px-2 py-1 text-xs text-gray-400 hover:border-gray-500 hover:text-gray-200 disabled:opacity-50"
             title="Refresh"
+            data-tooltip-id="budget-tip"
+            data-tooltip-content="Reload budget data from the API"
           >
             ↻
           </button>
@@ -590,6 +620,9 @@ export function BudgetDashboard() {
         {/* BudgetAlertConfig */}
         <BudgetAlertConfig />
       </div>
+
+      {/* Epic 45.8: react-tooltip instance for all budget dashboard hints */}
+      <ReactTooltip id="budget-tip" place="top" className="z-50 max-w-xs text-xs" />
     </div>
   )
 }

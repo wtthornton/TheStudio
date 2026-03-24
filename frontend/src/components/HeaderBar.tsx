@@ -8,6 +8,7 @@
  */
 
 import { useState } from 'react'
+import { Tooltip } from 'react-tooltip'
 import { usePipelineStore } from '../stores/pipeline-store'
 import { PIPELINE_STAGES } from '../lib/constants'
 import {
@@ -58,19 +59,36 @@ export function HeaderBar({ onResumeWizard, onOpenApiDocs, activeTab, onSwitchTa
   return (
     <div className="flex items-center gap-6 text-sm" data-testid="header-bar">
       <AppSwitcher />
-      <span className="text-gray-400" data-testid="active-count">
+      <span
+        className="text-gray-400"
+        data-testid="active-count"
+        data-tooltip-id="header-tip"
+        data-tooltip-content="Tasks currently processing through the pipeline"
+      >
         <span className="font-medium text-emerald-400">{activeCount}</span> active
       </span>
-      <span className="text-gray-400" data-testid="queued-count">
+      <span
+        className="text-gray-400"
+        data-testid="queued-count"
+        data-tooltip-id="header-tip"
+        data-tooltip-content="Tasks waiting in the Intake queue"
+      >
         <span className="font-medium text-amber-400">{queuedCount}</span> queued
       </span>
-      <span className="text-gray-400" data-testid="running-cost">
+      <span
+        className="text-gray-400"
+        data-testid="running-cost"
+        data-tooltip-id="header-tip"
+        data-tooltip-content="Cumulative LLM API spend this session"
+      >
         <span className="font-medium text-cyan-400">${totalCost.toFixed(2)}</span>
       </span>
       {allZero && !setupSkipped && (
         <span
           className="ml-2 rounded-full border border-indigo-700 bg-indigo-900/40 px-3 py-0.5 text-xs text-indigo-300"
           data-testid="onboarding-hint"
+          data-tooltip-id="header-tip"
+          data-tooltip-content="Import a GitHub issue to start the AI delivery pipeline"
         >
           Import your first GitHub issue to get started →
         </span>
@@ -81,6 +99,8 @@ export function HeaderBar({ onResumeWizard, onOpenApiDocs, activeTab, onSwitchTa
           onClick={onResumeWizard}
           className="ml-2 rounded-full border border-amber-700 bg-amber-900/40 px-3 py-0.5 text-xs text-amber-300 hover:bg-amber-900/70 focus:outline-none focus:ring-2 focus:ring-amber-500"
           data-testid="setup-incomplete-badge"
+          data-tooltip-id="header-tip"
+          data-tooltip-content="Complete the setup wizard to enable all features"
         >
           ⚠ Setup incomplete — resume →
         </button>
@@ -91,6 +111,8 @@ export function HeaderBar({ onResumeWizard, onOpenApiDocs, activeTab, onSwitchTa
         title="Admin Settings"
         data-testid="admin-settings-link"
         aria-label="Admin Settings"
+        data-tooltip-id="header-tip"
+        data-tooltip-content="Open Admin Settings console"
       >
         ⚙ Settings
       </a>
@@ -113,6 +135,9 @@ export function HeaderBar({ onResumeWizard, onOpenApiDocs, activeTab, onSwitchTa
         activeTab={activeTab}
         onSwitchTab={onSwitchTab}
       />
+
+      {/* Epic 45.8: react-tooltip instance for header KPI hints */}
+      <Tooltip id="header-tip" place="bottom" className="z-50 max-w-xs text-xs" />
     </div>
   )
 }
