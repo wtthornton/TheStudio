@@ -32,6 +32,8 @@ import { useRepoContext } from './contexts/RepoContext'
 import { RepoSelector } from './components/RepoSelector'
 import { RepoSettings } from './components/RepoSettings'
 import { ApiReference } from './components/ApiReference'
+import { TourBeacon } from './components/tours/TourBeacon'
+import { PIPELINE_TOUR_STEPS } from './components/tours/registry'
 import { WizardShell } from './components/wizard/WizardShell'
 import { HealthCheckStep } from './components/wizard/HealthCheckStep'
 import { RepoRegistrationStep } from './components/wizard/RepoRegistrationStep'
@@ -267,6 +269,11 @@ function App() {
 
       {activeTab === 'pipeline' ? (
         <>
+          {/* Epic 47.4 — Pipeline tour beacon (hidden after completion) */}
+          <div className="flex justify-end px-6 pt-3">
+            <TourBeacon tourId="pipeline" steps={PIPELINE_TOUR_STEPS} label="Pipeline tour" />
+          </div>
+
           {/* Pipeline rail with loopback overlay */}
           <section className="relative flex justify-center">
             <LoopbackOverlay />
@@ -309,6 +316,7 @@ function App() {
       ) : activeTab === 'triage' ? (
         /* Triage Queue (Epic 36) */
         <div className="mx-auto max-w-4xl px-6 py-6">
+          {/* Epic 47.5 — Triage tour beacon added here */}
           <TriageQueue />
         </div>
       ) : activeTab === 'intent' ? (
@@ -366,12 +374,14 @@ function App() {
         <BudgetDashboard />
       ) : activeTab === 'analytics' ? (
         /* Operational Analytics (Epic 39, Slice 1) */
+        /* Epic 47.6 — Analytics tour beacon added here */
         <Analytics onNavigateToPipeline={() => setActiveTab('pipeline')} />
       ) : activeTab === 'reputation' ? (
         /* Reputation & Outcomes (Epic 39, Slice 2) */
         <Reputation />
       ) : activeTab === 'repos' ? (
         /* Repository Settings & Fleet Health (Epic 41, Slice 2 — 41.11 + 41.14) */
+        /* Epic 47.7 — Repo & Trust tour beacon added here */
         <RepoSettings />
       ) : activeTab === 'api' ? (
         <div className="mx-auto max-w-[100rem] px-6 py-6">
