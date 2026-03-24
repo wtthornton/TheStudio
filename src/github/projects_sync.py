@@ -165,8 +165,6 @@ async def _handle_mark_done(
     In a future iteration, this could trigger an abort signal via Temporal.
     For Epic 38 scope, we treat this as an informational event.
     """
-    from src.models.taskpacket_crud import get_by_id
-
     # content_node_id is a GitHub node ID (e.g., "I_kwDOA...").
     # We cannot directly look up by node ID in our DB — we'd need to store it.
     # For now, log the event and return. Future work: store GitHub node IDs.
