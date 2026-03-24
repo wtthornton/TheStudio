@@ -47,6 +47,11 @@
         th[data-tooltip], td[data-tooltip] {
             overflow: visible;
         }
+        /* Keyboard focus visibility — SG 6 (admin console) */
+        :where(a, button, input, select, textarea, summary):focus-visible {
+            outline: 2px solid #2563eb;
+            outline-offset: 2px;
+        }
     </style>
     {% block head %}{% endblock %}
 </head>

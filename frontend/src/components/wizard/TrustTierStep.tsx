@@ -43,7 +43,7 @@ const TIER_OPTIONS: TierOption[] = [
     badge: 'Auto-merge',
     description:
       'TheStudio promotes PRs to ready-for-review and can auto-merge when all checks pass.',
-    badgeClass: 'bg-emerald-950 text-emerald-300 ring-emerald-800',
+    badgeClass: 'bg-purple-950 text-purple-300 ring-purple-800',
   },
 ]
 

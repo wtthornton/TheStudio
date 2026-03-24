@@ -16,11 +16,11 @@ export type StageId = (typeof PIPELINE_STAGES)[number]['id']
 
 export const STAGE_COUNT = PIPELINE_STAGES.length // 9
 
-/** Status colors for stage nodes. */
+/** Status colors for stage nodes — align with SG 3.1 cross-surface semantics. */
 export const STATUS_COLORS = {
-  idle: '#4b5563',     // gray-600
-  active: '#3b82f6',   // blue-500
-  review: '#f59e0b',   // amber-500
-  passed: '#10b981',   // emerald-500
-  failed: '#ef4444',   // red-500
+  idle: '#4b5563',     // gray-600 — neutral / unknown
+  active: '#2563eb',   // blue-600 — in progress / running / info
+  review: '#ca8a04',   // yellow-600 — warning / review / degraded
+  passed: '#16a34a',   // green-600 — success
+  failed: '#dc2626',   // red-600 — error / failed
 } as const

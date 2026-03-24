@@ -10,6 +10,15 @@ import { STATUS_COLORS } from '../lib/constants'
 import type { StageId } from '../lib/constants'
 
 /** Short descriptions for each pipeline stage, shown as react-tooltip on stage labels. */
+/** Human-readable pipeline stage status for aria-labels (non-color cue). */
+const STATUS_LABELS: Record<StageStatus, string> = {
+  idle: 'Idle',
+  active: 'Active',
+  review: 'In review',
+  passed: 'Passed',
+  failed: 'Failed',
+}
+
 const STAGE_DESCRIPTIONS: Record<string, string> = {
   intake: 'Webhook ingestion — validates GitHub events and creates TaskPackets',
   context: 'Enriches tasks with complexity scores, risk flags, and repo context',
@@ -172,7 +181,7 @@ export function StageNode({ id, label, color, status, taskCount, activeTasks }: 
           '--pulse-color': `${color}40`,
         } as React.CSSProperties}
         onClick={() => setSelectedStage(id)}
-        aria-label={`View ${label} stage details`}
+        aria-label={`${label} stage, ${STATUS_LABELS[status]}, ${taskCount} task${taskCount === 1 ? '' : 's'}`}
       >
         <StatusIcon status={status} color={bgColor} />
         {/* Task count badge */}

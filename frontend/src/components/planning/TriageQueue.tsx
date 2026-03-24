@@ -71,9 +71,18 @@ export function TriageQueue() {
 
       {/* Error */}
       {error && (
-        <div className="mb-4 p-3 rounded border border-red-700 bg-red-900/30 text-red-400 text-sm">
+        <div
+          className="mb-4 p-3 rounded border border-red-700 bg-red-900/30 text-red-400 text-sm"
+          role="alert"
+        >
           {error}
-          <button onClick={() => void loadTasks()} className="ml-2 underline">Retry</button>
+          <button
+            type="button"
+            onClick={() => void loadTasks(selectedRepo)}
+            className="ml-2 underline rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+          >
+            Retry
+          </button>
         </div>
       )}
 

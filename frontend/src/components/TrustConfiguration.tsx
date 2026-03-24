@@ -35,10 +35,11 @@ const TIER_DESCRIPTIONS: Record<AssignedTier, string> = {
   suggest: 'Agent suggests changes; a human must approve before merging',
   execute: 'Agent executes changes automatically without requiring approval',
 }
+/** SG 3.2: OBSERVE gray, SUGGEST blue, EXECUTE purple */
 const TIER_COLORS: Record<AssignedTier, string> = {
-  observe: 'bg-blue-900/40 text-blue-300 border border-blue-700',
-  suggest: 'bg-amber-900/40 text-amber-300 border border-amber-700',
-  execute: 'bg-green-900/40 text-green-300 border border-green-700',
+  observe: 'bg-gray-800/60 text-gray-300 border border-gray-600',
+  suggest: 'bg-blue-900/40 text-blue-300 border border-blue-700',
+  execute: 'bg-purple-900/40 text-purple-300 border border-purple-700',
 }
 const OPERATORS: ConditionOperator[] = [
   'equals',

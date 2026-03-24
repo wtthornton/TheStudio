@@ -131,9 +131,17 @@ export default function CreateTaskModal({ open, onClose, onCreated }: CreateTask
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
       onClick={handleBackdropClick}
       data-testid="create-task-backdrop"
+      role="presentation"
     >
-      <div className="w-full max-w-xl rounded-lg border border-gray-700 bg-gray-900 p-6 shadow-xl max-h-[90vh] overflow-y-auto">
-        <h3 className="mb-1 text-sm font-semibold text-gray-100">Create Task</h3>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-task-modal-title"
+        className="w-full max-w-xl rounded-lg border border-gray-700 bg-gray-900 p-6 shadow-xl max-h-[90vh] overflow-y-auto"
+      >
+        <h3 id="create-task-modal-title" className="mb-1 text-sm font-semibold text-gray-100">
+          Create Task
+        </h3>
         <p className="mb-5 text-xs text-gray-400">
           Manually create a task. It will enter the Triage queue unless "Skip Triage" is checked.
         </p>
@@ -297,7 +305,10 @@ export default function CreateTaskModal({ open, onClose, onCreated }: CreateTask
 
         {/* Error */}
         {error && (
-          <p className="mb-4 rounded border border-red-800 bg-red-950 px-3 py-2 text-xs text-red-300">
+          <p
+            className="mb-4 rounded border border-red-800 bg-red-950 px-3 py-2 text-xs text-red-300"
+            role="alert"
+          >
             {error}
           </p>
         )}
@@ -305,17 +316,19 @@ export default function CreateTaskModal({ open, onClose, onCreated }: CreateTask
         {/* Actions */}
         <div className="flex items-center justify-end gap-2">
           <button
+            type="button"
             onClick={onClose}
             disabled={saving}
-            className="rounded px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200 disabled:opacity-50"
+            className="rounded px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
             data-testid="create-task-cancel"
           >
             Cancel
           </button>
           <button
+            type="button"
             onClick={() => { void handleSubmit() }}
             disabled={!isValid || saving}
-            className="rounded bg-blue-700 px-4 py-1.5 text-xs font-medium text-blue-100 hover:bg-blue-600 disabled:opacity-50 transition-colors"
+            className="rounded bg-blue-700 px-4 py-1.5 text-xs font-medium text-blue-100 hover:bg-blue-600 disabled:opacity-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
             data-testid="create-task-submit"
           >
             {saving ? 'Creating…' : skipTriage ? 'Create & Start' : 'Create Task'}
