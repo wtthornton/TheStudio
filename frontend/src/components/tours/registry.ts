@@ -111,6 +111,56 @@ export function resetAllTours(): void {
   }
 }
 
+// ── Triage Tour Steps (Epic 47.5) ─────────────────────────────────────────────
+
+/**
+ * Five-step guided tour of the Triage tab.
+ *
+ * Targets use `data-tour` attributes added to:
+ *   TriageQueue.tsx  → data-tour="triage-queue", data-tour="triage-list"
+ *   TriageCard.tsx   → data-tour="triage-card", data-tour="triage-actions"
+ *   IntentEditor.tsx → data-tour="intent-editor"
+ *   RoutingPreview.tsx → data-tour="routing-preview"
+ */
+export const TRIAGE_TOUR_STEPS: Step[] = [
+  {
+    target: '[data-tour="triage-queue"]',
+    title: 'Triage Queue',
+    content:
+      'This is your triage queue — all GitHub issues that have been received by the webhook and are waiting for your review before entering the pipeline. Only issues you accept will be processed.',
+    disableBeacon: true,
+    placement: 'bottom',
+  },
+  {
+    target: '[data-tour="triage-card"]',
+    title: 'Issue Card',
+    content:
+      'Each card represents one incoming issue. It shows the issue title, a short description, and enrichment signals like complexity estimate, file count, and cost range computed by the Context stage.',
+    placement: 'bottom',
+  },
+  {
+    target: '[data-tour="triage-actions"]',
+    title: 'Accept or Reject',
+    content:
+      '"Accept & Plan" sends the issue into the full pipeline. "Edit" lets you adjust the title or body before accepting. "Reject" closes the issue with a reason (duplicate, out of scope, needs info, or won\'t fix).',
+    placement: 'top',
+  },
+  {
+    target: '[data-tour="intent-editor"]',
+    title: 'Intent Editor',
+    content:
+      'Once an issue passes the Intent Builder stage, its Intent Specification appears here. Review, approve, edit, or request AI refinement before the Router assigns expert agents.',
+    placement: 'left',
+  },
+  {
+    target: '[data-tour="routing-preview"]',
+    title: 'Routing Preview',
+    content:
+      'After intent is approved, the Router stage selects the best expert agents for the task. Review their selection rationale here, add or remove experts, then approve routing to continue.',
+    placement: 'left',
+  },
+]
+
 // ── Pipeline Tour Steps (Epic 47.3) ───────────────────────────────────────────
 
 /**

@@ -112,7 +112,7 @@ export default function RoutingPreview({ taskId, onClose, onNavigateToPipeline }
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-tour="routing-preview">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">

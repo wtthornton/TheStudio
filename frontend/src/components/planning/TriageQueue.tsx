@@ -58,7 +58,7 @@ export function TriageQueue() {
   }
 
   return (
-    <div>
+    <div data-tour="triage-queue">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-gray-100">
@@ -112,7 +112,7 @@ export function TriageQueue() {
       )}
 
       {/* Task list */}
-      <div className="space-y-3">
+      <div className="space-y-3" data-tour="triage-list">
         {tasks.map((task) => (
           <TriageCard
             key={task.id}

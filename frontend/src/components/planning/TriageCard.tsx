@@ -38,7 +38,7 @@ export function TriageCard({ task, onAccept, onReject, onEdit }: TriageCardProps
   const enrichment = task.triage_enrichment
 
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-900 p-4 hover:border-gray-600 transition-colors">
+    <div className="rounded-lg border border-gray-700 bg-gray-900 p-4 hover:border-gray-600 transition-colors" data-tour="triage-card">
       {/* Header */}
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2 min-w-0">
@@ -90,7 +90,7 @@ export function TriageCard({ task, onAccept, onReject, onEdit }: TriageCardProps
           </button>
         </div>
       ) : (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" data-tour="triage-actions">
           <button
             onClick={() => onAccept(task.id)}
             className="px-3 py-1.5 text-sm rounded bg-emerald-700 text-emerald-100 hover:bg-emerald-600"
