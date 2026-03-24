@@ -6,6 +6,7 @@ Covers:
 - pipeline_comments_enabled feature flag gates activity execution (38.23)
 - Webhook bridge publishes PR/issue events to NATS (38.24)
 - emit_github_event publishes to github.event.* subjects (38.25)
+- Combined comment + NATS publish integration (38.27)
 """
 
 from __future__ import annotations
@@ -84,14 +85,16 @@ class TestFormatPipelineComment:
         assert pr_url in body
 
     def test_pr_url_absent_when_empty(self):
-        """No stray PR link when pr_url is empty."""
+        """No pull-request URL in body when pr_url is not provided."""
         from src.publisher.pipeline_comment import format_pipeline_comment
 
         body = format_pipeline_comment(
             taskpacket_id="t4",
             current_stage="context",
         )
-        assert "https://github.com" not in body
+        # The footer may contain https://github.com as a project link, but a
+        # pull-request URL (containing "/pull/") must not appear unless supplied.
+        assert "/pull/" not in body
 
     def test_cost_displayed_when_nonzero(self):
         """Cost in USD is shown with $ prefix when > 0."""
@@ -150,7 +153,7 @@ class TestFormatPipelineComment:
 
     def test_stage_table_has_all_display_stages(self):
         """Progress table includes all canonical display stages."""
-        from src.publisher.pipeline_comment import format_pipeline_comment, _DISPLAY_STAGES
+        from src.publisher.pipeline_comment import _DISPLAY_STAGES, format_pipeline_comment
 
         body = format_pipeline_comment(taskpacket_id="t10", current_stage="context")
         for stage in _DISPLAY_STAGES:
@@ -223,6 +226,12 @@ class TestPostPipelineCommentActivityGitHub:
     @pytest.mark.asyncio
     async def test_creates_new_comment_when_none_exists(self):
         """Activity calls add_comment when no existing marker comment found."""
+        # Pre-import modules that create SQLAlchemy engines at module level so
+        # they are already cached before settings is patched (prevents
+        # create_async_engine from receiving a MagicMock URL).
+        import src.adapters.github
+        import src.db.connection
+        import src.models.taskpacket_crud  # noqa: F401
         from src.workflow.activities import (
             PostPipelineCommentInput,
             post_pipeline_comment_activity,
@@ -243,22 +252,20 @@ class TestPostPipelineCommentActivityGitHub:
 
         with (
             patch("src.settings.settings") as mock_settings,
+            patch("src.adapters.github.get_github_client", return_value=mock_github),
+            patch("src.db.connection.get_async_session", return_value=mock_session),
+            patch("src.models.taskpacket_crud.get_by_id", return_value=mock_tp),
         ):
             mock_settings.pipeline_comments_enabled = True
             mock_settings.github_provider = "real"
             mock_settings.intake_poll_token = "fake-token"
 
-            with (
-                patch("src.adapters.github.get_github_client", return_value=mock_github),
-                patch("src.db.connection.get_async_session", return_value=mock_session),
-                patch("src.models.taskpacket_crud.get", return_value=mock_tp),
-            ):
-                result = await post_pipeline_comment_activity(
-                    PostPipelineCommentInput(
-                        taskpacket_id="abc-00000000-0000-0000-0000-000000000001",
-                        current_stage="context",
-                    )
+            result = await post_pipeline_comment_activity(
+                PostPipelineCommentInput(
+                    taskpacket_id="00000000-0000-0000-0000-000000000001",
+                    current_stage="context",
                 )
+            )
 
         assert result.posted is True
         assert result.comment_id == 9001
@@ -267,6 +274,9 @@ class TestPostPipelineCommentActivityGitHub:
     @pytest.mark.asyncio
     async def test_updates_existing_comment_with_marker(self):
         """Activity calls update_comment when existing marker comment is found."""
+        import src.adapters.github
+        import src.db.connection
+        import src.models.taskpacket_crud  # noqa: F401
         from src.publisher.pipeline_comment import PIPELINE_COMMENT_MARKER
         from src.workflow.activities import (
             PostPipelineCommentInput,
@@ -287,23 +297,23 @@ class TestPostPipelineCommentActivityGitHub:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("src.settings.settings") as mock_settings:
+        with (
+            patch("src.settings.settings") as mock_settings,
+            patch("src.adapters.github.get_github_client", return_value=mock_github),
+            patch("src.db.connection.get_async_session", return_value=mock_session),
+            patch("src.models.taskpacket_crud.get_by_id", return_value=mock_tp),
+        ):
             mock_settings.pipeline_comments_enabled = True
             mock_settings.github_provider = "real"
             mock_settings.intake_poll_token = "fake-token"
 
-            with (
-                patch("src.adapters.github.get_github_client", return_value=mock_github),
-                patch("src.db.connection.get_async_session", return_value=mock_session),
-                patch("src.models.taskpacket_crud.get", return_value=mock_tp),
-            ):
-                result = await post_pipeline_comment_activity(
-                    PostPipelineCommentInput(
-                        taskpacket_id="abc-00000000-0000-0000-0000-000000000002",
-                        current_stage="verify",
-                        completed_stages=["intake", "context", "intent"],
-                    )
+            result = await post_pipeline_comment_activity(
+                PostPipelineCommentInput(
+                    taskpacket_id="00000000-0000-0000-0000-000000000002",
+                    current_stage="verify",
+                    completed_stages=["intake", "context", "intent"],
                 )
+            )
 
         assert result.posted is True
         assert result.comment_id == 555
@@ -313,6 +323,8 @@ class TestPostPipelineCommentActivityGitHub:
     @pytest.mark.asyncio
     async def test_taskpacket_not_found_returns_error(self):
         """Activity returns error when TaskPacket does not exist."""
+        import src.db.connection
+        import src.models.taskpacket_crud  # noqa: F401
         from src.workflow.activities import (
             PostPipelineCommentInput,
             post_pipeline_comment_activity,
@@ -322,21 +334,21 @@ class TestPostPipelineCommentActivityGitHub:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("src.settings.settings") as mock_settings:
+        with (
+            patch("src.settings.settings") as mock_settings,
+            patch("src.db.connection.get_async_session", return_value=mock_session),
+            patch("src.models.taskpacket_crud.get_by_id", return_value=None),
+        ):
             mock_settings.pipeline_comments_enabled = True
             mock_settings.github_provider = "real"
             mock_settings.intake_poll_token = "fake-token"
 
-            with (
-                patch("src.db.connection.get_async_session", return_value=mock_session),
-                patch("src.models.taskpacket_crud.get", return_value=None),
-            ):
-                result = await post_pipeline_comment_activity(
-                    PostPipelineCommentInput(
-                        taskpacket_id="00000000-0000-0000-0000-000000000003",
-                        current_stage="context",
-                    )
+            result = await post_pipeline_comment_activity(
+                PostPipelineCommentInput(
+                    taskpacket_id="00000000-0000-0000-0000-000000000003",
+                    current_stage="context",
                 )
+            )
 
         assert result.posted is False
         assert result.error == "taskpacket_not_found"
@@ -357,20 +369,10 @@ class TestWebhookBridge:
 
         mock_js = AsyncMock()
         with patch(
-            "src.ingress.webhook_handler.get_pipeline_jetstream",
-            new_callable=AsyncMock,
-        ) as mock_get_js:
-            # Need to import the right reference
-            pass
-
-        # Test the helper function directly
-        with patch(
             "src.dashboard.events_publisher.get_pipeline_jetstream",
             new_callable=AsyncMock,
-        ) as mock_get_js:
-            mock_js = AsyncMock()
-            mock_get_js.return_value = mock_js
-
+            return_value=mock_js,
+        ):
             await _publish_github_event_to_nats(
                 event_type="pull_request",
                 delivery_id="abc123",
@@ -379,7 +381,7 @@ class TestWebhookBridge:
             )
 
         mock_js.publish.assert_called_once()
-        subject, data = mock_js.publish.call_args.args
+        subject, _data = mock_js.publish.call_args.args
         assert subject == "github.event.pull_request"
 
     @pytest.mark.asyncio
@@ -477,7 +479,7 @@ class TestEmitGitHubEvent:
             )
 
         mock_js.publish.assert_called_once()
-        subject, data = mock_js.publish.call_args.args
+        subject, _data = mock_js.publish.call_args.args
         assert subject == "github.event.pull_request_review"
 
     @pytest.mark.asyncio
@@ -527,3 +529,218 @@ class TestEmitGitHubEvent:
                 repo="org/repo",
                 payload={},
             )
+
+
+# ---------------------------------------------------------------------------
+# 38.27: Combined integration — pipeline comment + NATS publish
+# ---------------------------------------------------------------------------
+
+
+class TestCommentAndNATSPublishIntegration:
+    """End-to-end integration: pipeline comment creation + NATS bridge (Story 38.27).
+
+    Verifies that the two subsystems (GitHub comment activity and NATS webhook
+    bridge) compose correctly:
+
+    1. post_pipeline_comment_activity creates/updates a GitHub issue comment.
+    2. The resulting ``issue_comment`` GitHub webhook is published to NATS via
+       ``_publish_github_event_to_nats``.
+    3. NATS failures in the bridge never surface to callers (fire-and-forget).
+    """
+
+    @pytest.mark.asyncio
+    async def test_comment_create_then_nats_bridge_publish(self):
+        """Creating a pipeline comment → NATS bridge publishes issue_comment event."""
+        import json
+
+        import src.adapters.github
+        import src.db.connection
+        import src.models.taskpacket_crud  # noqa: F401
+        from src.ingress.webhook_handler import _publish_github_event_to_nats
+        from src.publisher.pipeline_comment import PIPELINE_COMMENT_MARKER
+        from src.workflow.activities import (
+            PostPipelineCommentInput,
+            post_pipeline_comment_activity,
+        )
+
+        # Step 1 — post the pipeline comment via the Temporal activity
+        mock_tp = MagicMock()
+        mock_tp.repo = "org/repo"
+        mock_tp.issue_id = 42
+
+        mock_github = AsyncMock()
+        mock_github.list_issue_comments.return_value = []  # no existing comment
+        mock_github.add_comment.return_value = {"id": 7777}
+        mock_github.close = AsyncMock()
+
+        mock_session = AsyncMock()
+        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session.__aexit__ = AsyncMock(return_value=None)
+
+        with (
+            patch("src.settings.settings") as mock_settings,
+            patch("src.adapters.github.get_github_client", return_value=mock_github),
+            patch("src.db.connection.get_async_session", return_value=mock_session),
+            patch("src.models.taskpacket_crud.get_by_id", return_value=mock_tp),
+        ):
+            mock_settings.pipeline_comments_enabled = True
+            mock_settings.github_provider = "real"
+            mock_settings.intake_poll_token = "fake-token"
+            result = await post_pipeline_comment_activity(
+                PostPipelineCommentInput(
+                    taskpacket_id="00000000-0000-0000-0000-000000000010",
+                    current_stage="implement",
+                )
+            )
+
+        assert result.posted is True
+        assert result.comment_id == 7777
+
+        # Step 2 — simulate GitHub sending back an issue_comment webhook for the
+        # newly created pipeline comment, then verify bridge NATS publish.
+        mock_js = AsyncMock()
+        with patch(
+            "src.dashboard.events_publisher.get_pipeline_jetstream",
+            new_callable=AsyncMock,
+            return_value=mock_js,
+        ):
+            await _publish_github_event_to_nats(
+                event_type="issue_comment",
+                delivery_id="del-issue-comment-123",
+                payload={
+                    "action": "created",
+                    "comment": {
+                        "id": 7777,
+                        "body": f"{PIPELINE_COMMENT_MARKER}\nProgress...",
+                    },
+                    "issue": {"number": 42},
+                },
+                repo="org/repo",
+            )
+
+        mock_js.publish.assert_called_once()
+        subject, raw = mock_js.publish.call_args.args
+        assert subject == "github.event.issue_comment"
+        parsed = json.loads(raw)
+        assert parsed["type"] == "github.event.issue_comment"
+        assert parsed["data"]["event_type"] == "issue_comment"
+        assert parsed["data"]["action"] == "created"
+        assert parsed["data"]["repo"] == "org/repo"
+        assert parsed["data"]["delivery_id"] == "del-issue-comment-123"
+
+    @pytest.mark.asyncio
+    async def test_comment_update_idempotency_then_nats_publish(self):
+        """Updating an existing marker comment still produces a NATS bridge event."""
+        import json
+
+        import src.adapters.github
+        import src.db.connection
+        import src.models.taskpacket_crud  # noqa: F401
+        from src.ingress.webhook_handler import _publish_github_event_to_nats
+        from src.publisher.pipeline_comment import PIPELINE_COMMENT_MARKER
+        from src.workflow.activities import (
+            PostPipelineCommentInput,
+            post_pipeline_comment_activity,
+        )
+
+        mock_tp = MagicMock()
+        mock_tp.repo = "org/repo"
+        mock_tp.issue_id = 99
+
+        existing_comment = {"id": 8888, "body": f"{PIPELINE_COMMENT_MARKER}\nOld stage"}
+        mock_github = AsyncMock()
+        mock_github.list_issue_comments.return_value = [existing_comment]
+        mock_github.update_comment.return_value = {"id": 8888}
+        mock_github.close = AsyncMock()
+
+        mock_session = AsyncMock()
+        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session.__aexit__ = AsyncMock(return_value=None)
+
+        with (
+            patch("src.settings.settings") as mock_settings,
+            patch("src.adapters.github.get_github_client", return_value=mock_github),
+            patch("src.db.connection.get_async_session", return_value=mock_session),
+            patch("src.models.taskpacket_crud.get_by_id", return_value=mock_tp),
+        ):
+            mock_settings.pipeline_comments_enabled = True
+            mock_settings.github_provider = "real"
+            mock_settings.intake_poll_token = "fake-token"
+
+            result = await post_pipeline_comment_activity(
+                PostPipelineCommentInput(
+                    taskpacket_id="00000000-0000-0000-0000-000000000011",
+                    current_stage="verify",
+                    completed_stages=["intake", "context", "intent"],
+                )
+            )
+
+        assert result.posted is True
+        assert result.comment_id == 8888
+        mock_github.update_comment.assert_called_once()
+        mock_github.add_comment.assert_not_called()
+
+        # Simulate edited issue_comment webhook → NATS bridge publish
+        mock_js = AsyncMock()
+        with patch(
+            "src.dashboard.events_publisher.get_pipeline_jetstream",
+            new_callable=AsyncMock,
+            return_value=mock_js,
+        ):
+            await _publish_github_event_to_nats(
+                event_type="issue_comment",
+                delivery_id="del-edit-88",
+                payload={
+                    "action": "edited",
+                    "comment": {
+                        "id": 8888,
+                        "body": f"{PIPELINE_COMMENT_MARKER}\nNew stage",
+                    },
+                    "issue": {"number": 99},
+                },
+                repo="org/repo",
+            )
+
+        mock_js.publish.assert_called_once()
+        subject, raw = mock_js.publish.call_args.args
+        assert subject == "github.event.issue_comment"
+        parsed = json.loads(raw)
+        assert parsed["data"]["action"] == "edited"
+        assert parsed["data"]["delivery_id"] == "del-edit-88"
+        assert parsed["data"]["repo"] == "org/repo"
+
+    @pytest.mark.asyncio
+    async def test_nats_bridge_failure_is_silent_after_comment_posted(self):
+        """NATS bridge failure is fire-and-forget — already-posted comment is unaffected."""
+        from src.ingress.webhook_handler import _publish_github_event_to_nats
+        from src.publisher.pipeline_comment import PIPELINE_COMMENT_MARKER
+
+        mock_js = AsyncMock()
+        mock_js.publish.side_effect = ConnectionError("NATS down")
+
+        with patch(
+            "src.dashboard.events_publisher.get_pipeline_jetstream",
+            new_callable=AsyncMock,
+            return_value=mock_js,
+        ):
+            # Must not raise even when NATS is unavailable
+            await _publish_github_event_to_nats(
+                event_type="issue_comment",
+                delivery_id="del-fail-99",
+                payload={
+                    "action": "created",
+                    "comment": {"id": 123, "body": f"{PIPELINE_COMMENT_MARKER}\nStage"},
+                    "issue": {"number": 55},
+                },
+                repo="org/repo",
+            )
+        # No assertion needed — absence of exception is the invariant
+
+    @pytest.mark.asyncio
+    async def test_issue_comment_in_bridge_event_types(self):
+        """issue_comment is included in _BRIDGE_EVENT_TYPES for pipeline comment webhooks."""
+        from src.ingress.webhook_handler import _BRIDGE_EVENT_TYPES
+
+        assert "issue_comment" in _BRIDGE_EVENT_TYPES, (
+            "issue_comment must be bridged so pipeline comment events reach NATS"
+        )

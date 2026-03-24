@@ -2339,7 +2339,7 @@ async def post_pipeline_comment_activity(
     try:
         from src.adapters.github import get_github_client
         from src.db.connection import get_async_session
-        from src.models.taskpacket_crud import get as get_taskpacket
+        from src.models.taskpacket_crud import get_by_id as get_taskpacket
 
         # Resolve GitHub token (same pattern as _publish_real)
         token = settings.intake_poll_token
