@@ -33,7 +33,14 @@ import { RepoSelector } from './components/RepoSelector'
 import { RepoSettings } from './components/RepoSettings'
 import { ApiReference } from './components/ApiReference'
 import { TourBeacon } from './components/tours/TourBeacon'
-import { PIPELINE_TOUR_STEPS, REPO_TRUST_TOUR_STEPS } from './components/tours/registry'
+import {
+  PIPELINE_TOUR_STEPS,
+  TRIAGE_TOUR_STEPS,
+  ANALYTICS_TOUR_STEPS,
+  REPO_TRUST_TOUR_STEPS,
+  TOUR_REGISTRY,
+} from './components/tours/registry'
+import { useTour } from './components/tours/TourProvider'
 import { WizardShell } from './components/wizard/WizardShell'
 import { HealthCheckStep } from './components/wizard/HealthCheckStep'
 import { RepoRegistrationStep } from './components/wizard/RepoRegistrationStep'
@@ -74,9 +81,20 @@ function getInitialTab(): Tab {
   return param && (VALID_TABS as string[]).includes(param) ? (param as Tab) : 'pipeline'
 }
 
+/** Map tour IDs to their step arrays for the HelpMenu replay handler. */
+const TOUR_STEPS_MAP: Record<string, Parameters<ReturnType<typeof useTour>['startTour']>[1]> = {
+  pipeline: PIPELINE_TOUR_STEPS,
+  triage: TRIAGE_TOUR_STEPS,
+  analytics: ANALYTICS_TOUR_STEPS,
+  'repo-trust': REPO_TRUST_TOUR_STEPS,
+}
+
 function App() {
   useSSE()
   useInitialLoad()
+
+  // Epic 47.8: tour context for HelpMenu replay links
+  const { startTour } = useTour()
 
   const { setSelectedRepo } = useRepoContext()
   const stages = usePipelineStore((s) => s.stages)
@@ -122,6 +140,15 @@ function App() {
     clearSetupWizardSkipped()
     setShowSetupWizard(true)
   }, [])
+
+  // Epic 47.8: start a tour from HelpMenu by tourId
+  const handleStartTour = useCallback(
+    (tourId: string) => {
+      const steps = TOUR_STEPS_MAP[tourId]
+      if (steps) startTour(tourId, steps)
+    },
+    [startTour],
+  )
 
   // Check if pipeline has any tasks
   const hasAnyTasks = PIPELINE_STAGES.some((s) => stages[s.id].taskCount > 0)
@@ -256,11 +283,14 @@ function App() {
           {/* Epic 45.3: HelpMenu mounted inside HeaderBar; onOpenApiDocs switches tab */}
           {/* Epic 45.4: activeTab passed for route-aware help content */}
           {/* Epic 45.5: onSwitchTab wires help search results to tab navigation */}
+          {/* Epic 47.8: onStartTour + tours wired to enable HelpMenu replay links */}
           <HeaderBar
             onResumeWizard={handleSetupWizardResume}
             onOpenApiDocs={() => setActiveTab('api')}
             activeTab={activeTab}
             onSwitchTab={(tab) => setActiveTab(tab as Tab)}
+            onStartTour={handleStartTour}
+            tours={TOUR_REGISTRY as Array<{ id: string; label: string; description?: string }>}
           />
           <NotificationBell onNavigate={handleNotificationNavigate} />
           <ConnectionIndicator />

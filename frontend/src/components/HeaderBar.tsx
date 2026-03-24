@@ -34,9 +34,19 @@ interface HeaderBarProps {
    * The caller (App.tsx) switches to the target tab.
    */
   onSwitchTab?: (tabKey: string) => void
+  /**
+   * Called when the user selects a tour from HelpMenu (Epic 47.8).
+   * The caller (App.tsx) starts the corresponding tour.
+   */
+  onStartTour?: (tourId: string) => void
+  /**
+   * Tour definitions from the tour registry (Epic 47.8).
+   * Passed through to HelpMenu to render 4 replay links.
+   */
+  tours?: Array<{ id: string; label: string; description?: string }>
 }
 
-export function HeaderBar({ onResumeWizard, onOpenApiDocs, activeTab, onSwitchTab }: HeaderBarProps = {}) {
+export function HeaderBar({ onResumeWizard, onOpenApiDocs, activeTab, onSwitchTab, onStartTour, tours }: HeaderBarProps = {}) {
   const stages = usePipelineStore((s) => s.stages)
   const totalCost = usePipelineStore((s) => s.totalCost)
 
@@ -117,7 +127,7 @@ export function HeaderBar({ onResumeWizard, onOpenApiDocs, activeTab, onSwitchTa
         ⚙ Settings
       </a>
 
-      {/* Epic 45.3: Help menu */}
+      {/* Epic 45.3: Help menu; Epic 47.8: onStartTour + tours wired */}
       <HelpMenu
         onOpenHelpPanel={() => setHelpPanelOpen(true)}
         onOpenWizard={() => {
@@ -126,6 +136,8 @@ export function HeaderBar({ onResumeWizard, onOpenApiDocs, activeTab, onSwitchTa
         onOpenApiDocs={() => {
           onOpenApiDocs?.()
         }}
+        onStartTour={onStartTour}
+        tours={tours}
       />
 
       {/* Epic 45.3: Slide-in help panel (45.4: activeTab, 45.5: onSwitchTab search) */}

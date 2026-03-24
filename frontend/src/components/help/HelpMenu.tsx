@@ -140,7 +140,7 @@ export interface HelpMenuProps {
    * Each entry will be rendered as a sub-item under "Guided Tours".
    * If omitted or empty the section shows a single placeholder item.
    */
-  tours?: Array<{ id: string; label: string }>
+  tours?: Array<{ id: string; label: string; description?: string }>
 }
 
 // ── component ─────────────────────────────────────────────────────────────────
@@ -285,7 +285,12 @@ export function HelpMenu({
                   data-testid={`help-menu-tour-${tour.id}`}
                 >
                   <ToursIcon className="h-4 w-4 shrink-0 text-indigo-400" />
-                  <span>{tour.label}</span>
+                  <div>
+                    <div className="font-medium">{tour.label}</div>
+                    {tour.description && (
+                      <div className="text-xs text-gray-500">{tour.description}</div>
+                    )}
+                  </div>
                 </button>
               ))}
             </>

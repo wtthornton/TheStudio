@@ -99,7 +99,7 @@
 - [x] 47.5: Triage tour (5 steps) — queue, card, accept/reject, intent editor, routing preview. **Files:** modify TriageQueue.tsx, IntentEditor.tsx, RoutingPreview.tsx; update registry.ts.
 - [x] 47.6: Analytics tour (5 steps) — period selector, KPIs, throughput, bottleneck, expert table. **Files:** modify Analytics.tsx sub-components; update registry.ts.
 - [x] 47.7: Repo & Trust tour (5 steps) — repo selector, settings, trust tier, tier descriptions, budget. **Files:** modify RepoSettings.tsx, TrustConfiguration.tsx, BudgetDashboard.tsx; update registry.ts.
-- [ ] 47.8: Add "Guided Tours" section to HelpMenu (4 replay links) + Vitest. **Files:** modify HelpMenu.tsx; create __tests__/tours.test.tsx. **RUN TESTS.**
+- [x] 47.8: Add "Guided Tours" section to HelpMenu (4 replay links) + Vitest. **Files:** modify HelpMenu.tsx; create __tests__/tours.test.tsx. **RUN TESTS.**
 
 ---
 
