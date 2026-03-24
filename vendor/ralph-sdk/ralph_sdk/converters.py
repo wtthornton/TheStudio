@@ -176,6 +176,7 @@ def from_task_packet(
         task_packet_id=packet.id,
         task_packet_type=packet.type,
         task_packet_payload=packet.payload,
+        complexity_band=intent.complexity.value,
     )
 
 

@@ -414,7 +414,7 @@ pytest tests/ -m integration
 
 Deploy TheStudio on a single Linux host with Docker Compose. This section covers the hardened production stack (`infra/docker-compose.prod.yml`).
 
-**Shared Docker host:** The stack uses Compose project name `thestudio-prod` and host ports **9080** (HTTP) and **9443** (HTTPS) by default so it can run alongside other production systems using 80/443. Admin UI: **https://localhost:9443/admin/ui/** — health: **https://localhost:9443/healthz**. To bind 80/443 exclusively, edit the `caddy` service ports in `docker-compose.prod.yml`. Full URL reference: **docs/URLs.md**.
+**Shared Docker host:** The stack uses Compose project name `thestudio-prod` and host ports **9080** (HTTP) and **9443** (HTTPS). By default, `THESTUDIO_HTTPS_ENABLED=false` — Caddy serves HTTP only. Admin UI: **http://localhost:9080/admin/ui/** — health: **http://localhost:9080/healthz**. Set `THESTUDIO_HTTPS_ENABLED=true` in `infra/.env` for HTTPS (self-signed TLS). Full URL reference: **docs/URLs.md**.
 
 **Production test rig (multi-repo):** A dedicated repo runs tests against this deployment without starting Docker. See `docs/production-test-rig-contract.md` and the scaffold in `thestudio-production-test-rig/`.
 
@@ -464,10 +464,10 @@ cd infra
 ./setup-prod-env.sh --mock    # Creates .env with generated secrets and mock providers
 ./check-env.sh                # Validate
 docker compose -f docker-compose.prod.yml up -d
-./wait-for-stack.sh           # Optional: wait until HTTPS /healthz is ready
+./wait-for-stack.sh           # Optional: wait until /healthz is ready
 ```
 
-Then open **https://localhost:9443/admin/ui/** (accept the self-signed cert, then enter Basic Auth credentials — default user: `admin`). See **docs/URLs.md** for all URLs. The default compose binds Caddy to host ports **9080** (HTTP) and **9443** (HTTPS) so this stack can run alongside other systems using 80/443. To use **real** Anthropic and GitHub later, edit `infra/.env` with real keys and set `THESTUDIO_LLM_PROVIDER=anthropic`, `THESTUDIO_GITHUB_PROVIDER=real`, then `docker compose -f docker-compose.prod.yml up -d --force-recreate app`.
+Then open **http://localhost:9080/admin/ui/** (enter Basic Auth credentials — default user: `admin`). See **docs/URLs.md** for all URLs. To enable HTTPS (self-signed TLS), add `THESTUDIO_HTTPS_ENABLED=true` to `infra/.env` and recreate Caddy. To use **real** Anthropic and GitHub later, edit `infra/.env` with real keys and set `THESTUDIO_LLM_PROVIDER=anthropic`, `THESTUDIO_GITHUB_PROVIDER=real`, then `docker compose -f docker-compose.prod.yml up -d --force-recreate app`.
 
 ## Secret Generation
 
@@ -557,29 +557,34 @@ The startup order is:
 # Wait for all services
 bash wait-for-stack.sh
 
-# Check HTTPS endpoint (shared-host ports: 9080 HTTP, 9443 HTTPS)
-curl -k https://localhost:9443/healthz
+# Default: HTTP (THESTUDIO_HTTPS_ENABLED=false)
+curl http://localhost:9080/healthz
 # Expected: {"status":"ok"}
 
 # Check readiness (DB connectivity)
-curl -k https://localhost:9443/readyz
+curl http://localhost:9080/readyz
 # Expected: {"status":"ready"}
 
 # Check Ralph agent mode status
-curl -k https://localhost:9443/health/ralph
+curl http://localhost:9080/health/ralph
 # Expected: {"agent_mode":"legacy","sdk_importable":true,"cli_available":false,"status":"ok",...}
 
+# With HTTPS enabled (THESTUDIO_HTTPS_ENABLED=true): use https://localhost:9443 and curl -k
 # Full URL reference: docs/URLs.md
 
 # Check service status
 docker compose -f docker-compose.prod.yml ps
 ```
 
-## TLS Configuration
+## TLS / HTTPS (feature flag)
 
-### Self-signed (default)
+**Default:** `THESTUDIO_HTTPS_ENABLED=false` — Caddy serves HTTP only on port 80 (host 9080). Use `http://localhost:9080`.
 
-Works out of the box. The Caddyfile uses `tls internal` which generates a self-signed certificate. Clients will see a certificate warning — add an exception or use `curl -k`.
+**To enable HTTPS:** Set `THESTUDIO_HTTPS_ENABLED=true` in `infra/.env`, then `docker compose -f docker-compose.prod.yml up -d --force-recreate caddy`. Caddy uses `Caddyfile` (self-signed TLS) instead of `Caddyfile.http`. Use `https://localhost:9443` (accept cert warning or `curl -k`).
+
+### Self-signed (when HTTPS enabled)
+
+The Caddyfile uses `tls internal` which generates a self-signed certificate. Clients will see a certificate warning — add an exception or use `curl -k`.
 
 ### Let's Encrypt (requires domain)
 

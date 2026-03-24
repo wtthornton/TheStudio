@@ -8,12 +8,10 @@ from __future__ import annotations
 
 import re
 from datetime import UTC, datetime
-from typing import Any
 
 from pydantic import BaseModel, Field
 
 from ralph_sdk.agent import TaskResult
-from ralph_sdk.status import RalphLoopStatus
 
 
 class TestEvidence(BaseModel):
@@ -155,7 +153,7 @@ def _extract_lint_results(output: str) -> list[LintEvidence]:
     """Best-effort extraction of lint results from raw output."""
     results = []
 
-    # ruff: "Found X errors" or "X errors fixed"
+    # Ruff CLI output shapes: "Found X errors" or "X errors fixed"
     ruff_pattern = r'(?:Found\s+)?(\d+)\s+error'
     ruff_warn_pattern = r'(\d+)\s+warning'
     for match in re.finditer(ruff_pattern, output):

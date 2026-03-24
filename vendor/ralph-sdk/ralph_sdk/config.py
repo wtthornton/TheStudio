@@ -104,6 +104,17 @@ class RalphConfig(BaseModel):
     progressive_context_max_items: int = Field(default=10, ge=1, le=100)
     progressive_context_chars_per_token: int = Field(default=4, ge=1, le=16)
 
+    # Task decomposition heuristic (CLI parity — Epic 51 P1)
+    decompose_files_threshold: int = Field(default=5, ge=1, le=500)
+    decompose_complexity_min: int = Field(default=4, ge=1, le=5)
+    decompose_no_progress_streak_min: int = Field(default=3, ge=1, le=50)
+
+    # Cost tracking (Epic 51 P1 / evaluation §1.4)
+    cost_tracking_enabled: bool = True
+    cost_input_usd_per_million_tokens: float = Field(default=3.0, ge=0.0)
+    cost_output_usd_per_million_tokens: float = Field(default=15.0, ge=0.0)
+    cost_rates_by_model: dict[str, dict[str, float]] = Field(default_factory=dict)
+
     # Log rotation
     log_max_size_mb: int = Field(default=10, ge=1, le=1000)
     log_max_files: int = Field(default=5, ge=1, le=100)

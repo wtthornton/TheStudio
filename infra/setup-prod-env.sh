@@ -74,6 +74,8 @@ ADMIN_PASSWORD_HASH=$ADMIN_PASSWORD_HASH
 # ─── OPTIONAL ────────────────────────────────────────────────────────────────
 THESTUDIO_LLM_PROVIDER=$THESTUDIO_LLM_PROVIDER
 THESTUDIO_GITHUB_PROVIDER=$THESTUDIO_GITHUB_PROVIDER
+# HTTPS: false = HTTP only (default, use http://localhost:9080); true = TLS on 9443
+# THESTUDIO_HTTPS_ENABLED=false
 # Poll intake (Epic 17 — backup when webhooks unavailable)
 # THESTUDIO_INTAKE_POLL_ENABLED=false
 # THESTUDIO_INTAKE_POLL_INTERVAL_MINUTES=10

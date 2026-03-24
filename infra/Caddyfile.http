@@ -1,0 +1,31 @@
+# TheStudio Production — HTTP-only (no TLS)
+#
+# Used when THESTUDIO_HTTPS_ENABLED=false (default for local/simple setups).
+# Set THESTUDIO_HTTPS_ENABLED=true to use Caddyfile (HTTPS) instead.
+#
+# Admin auth: same as Caddyfile — ADMIN_USER, ADMIN_PASSWORD_HASH in .env
+
+:80 {
+	# Admin routes require Basic Auth.
+	handle /admin/* {
+		basic_auth {
+			{$ADMIN_USER:admin} {$ADMIN_PASSWORD_HASH}
+		}
+		reverse_proxy app:8000 {
+			header_up X-User-ID {http.auth.user.id}
+		}
+	}
+
+	# All other routes (webhooks, healthz, readyz, etc.) — no auth.
+	handle {
+		reverse_proxy app:8000 {
+			health_uri /healthz
+			health_interval 10s
+		}
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

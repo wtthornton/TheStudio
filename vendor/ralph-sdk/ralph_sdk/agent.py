@@ -19,6 +19,12 @@ from pydantic import BaseModel, Field, field_validator
 from ralph_sdk.circuit_breaker import CircuitBreaker, StallDetector
 from ralph_sdk.config import RalphConfig
 from ralph_sdk.context_management import build_progressive_context
+from ralph_sdk.cost_tracking import CostTracker
+from ralph_sdk.decomposition import (
+    DecompositionContext,
+    DecompositionHint,
+    detect_decomposition_needed,
+)
 from ralph_sdk.parsing import parse_ralph_status
 from ralph_sdk.state import FileStateBackend, RalphStateBackend
 from ralph_sdk.status import CircuitBreakerState, RalphLoopStatus, RalphStatus, WorkType
@@ -31,6 +37,24 @@ from ralph_sdk.tools import (
 )
 
 logger = logging.getLogger("ralph.sdk")
+
+
+class CancelResult(BaseModel, frozen=True):
+    """Outcome of :meth:`RalphAgent.cancel` (Temporal / activity cancellation).
+
+    ``cancel`` is synchronous and safe from another thread while the event loop
+    is driving ``run()`` / ``run_iteration()``. It sets the loop stop flag and
+    sends **SIGTERM** to the active Claude CLI child process when one exists
+    (``terminate()`` on :class:`asyncio.subprocess.Process`; on Windows this
+    ends the child process similarly).
+
+    Partial stdout is **not** captured today; callers rely on logs and the
+    grace period in the activity wrapper after ``cancel()`` returns.
+    """
+
+    requested: bool = True
+    subprocess_terminated: bool = False
+    message: str = ""
 
 
 def _status_is_timeout(status: RalphStatus) -> bool:
@@ -91,6 +115,7 @@ class TaskInput(BaseModel, frozen=True):
     task_packet_id: str = ""
     task_packet_type: str = ""
     task_packet_payload: dict[str, Any] = Field(default_factory=dict)
+    complexity_band: str = "unknown"
 
     @field_validator("prompt")
     @classmethod
@@ -140,6 +165,7 @@ class TaskInput(BaseModel, frozen=True):
             task_packet_id=packet.get("id", ""),
             task_packet_type=packet.get("type", ""),
             task_packet_payload=packet,
+            complexity_band=str(packet.get("complexity_band", "unknown") or "unknown"),
         )
 
 
@@ -155,6 +181,8 @@ class TaskResult(BaseModel):
     tokens_in: int = 0
     tokens_out: int = 0
     files_changed: list[str] = Field(default_factory=list)
+    decomposition_hint: DecompositionHint | None = None
+    session_cost_usd: float = 0.0
 
     def to_signal(self) -> dict[str, Any]:
         """Convert to TheStudio-compatible signal format."""
@@ -169,6 +197,10 @@ class TaskResult(BaseModel):
             "tokens_in": self.tokens_in,
             "tokens_out": self.tokens_out,
             "files_changed": self.files_changed,
+            "decomposition_hint": self.decomposition_hint.model_dump()
+            if self.decomposition_hint
+            else None,
+            "session_cost_usd": self.session_cost_usd,
         }
 
 
@@ -236,6 +268,10 @@ class RalphAgent:
         self._files_changed_session: set[str] = set()
         self._last_iteration_files_changed: list[str] = []
         self._last_iteration_duration_sec: float = 0.0
+        self._prior_iteration_timeout: bool = False
+        self._no_file_change_streak: int = 0
+        self._cost_tracker = CostTracker(self.config)
+        self._current_cli_proc: asyncio.subprocess.Process | None = None
 
         # Ensure .ralph directory exists
         self.ralph_dir.mkdir(parents=True, exist_ok=True)
@@ -253,13 +289,34 @@ class RalphAgent:
         """
         return asyncio.run(self.run())
 
-    def cancel(self) -> None:
-        """Request graceful cancellation of the running loop.
+    def cancel(self) -> CancelResult:
+        """Stop the loop and **SIGTERM** the active Claude CLI subprocess if any.
 
-        Safe to call from another thread or an async timeout handler.
-        The loop will exit after the current iteration completes.
+        Intended for Temporal activity cancellation and wall-clock timeouts.
+        Returns immediately after signalling; use an asyncio grace wait in the
+        caller before cancelling the task. See :class:`CancelResult`.
         """
         self._running = False
+        proc = self._current_cli_proc
+        if proc is None or proc.returncode is not None:
+            return CancelResult(
+                requested=True,
+                subprocess_terminated=False,
+                message="No active Claude CLI subprocess",
+            )
+        try:
+            proc.terminate()
+            return CancelResult(
+                requested=True,
+                subprocess_terminated=True,
+                message="Sent SIGTERM to Claude CLI subprocess",
+            )
+        except OSError as exc:
+            return CancelResult(
+                requested=True,
+                subprocess_terminated=False,
+                message=f"terminate() failed: {exc}",
+            )
 
     # -------------------------------------------------------------------------
     # Core Loop (async, replicates ralph_loop.sh main())
@@ -295,6 +352,9 @@ class RalphAgent:
 
         self._stall_detector.reset()
         self._files_changed_session.clear()
+        self._prior_iteration_timeout = False
+        self._no_file_change_streak = 0
+        self._cost_tracker.reset()
 
         result = TaskResult()
 
@@ -338,6 +398,41 @@ class RalphAgent:
                 # Execute one iteration
                 iteration_status = await self.run_iteration(task_input)
 
+                n_changed = len(self._last_iteration_files_changed)
+                if _status_is_timeout(iteration_status) or _status_is_error(iteration_status):
+                    self._no_file_change_streak = 0
+                elif n_changed == 0:
+                    self._no_file_change_streak += 1
+                else:
+                    self._no_file_change_streak = 0
+
+                decomp = detect_decomposition_needed(
+                    iteration_status,
+                    self.config,
+                    DecompositionContext(
+                        iteration_files_changed=n_changed,
+                        prior_iteration_was_timeout=self._prior_iteration_timeout,
+                        complexity_band=task_input.complexity_band,
+                        consecutive_no_progress=self._no_file_change_streak,
+                    ),
+                )
+                if decomp.decompose:
+                    logger.warning(
+                        "Decomposition suggested [%s]: %s",
+                        self.correlation_id,
+                        decomp.recommendation,
+                        extra={"correlation_id": self.correlation_id},
+                    )
+                    result.decomposition_hint = decomp
+
+                self._prior_iteration_timeout = _status_is_timeout(iteration_status)
+
+                self._cost_tracker.record_iteration_cost(
+                    self.config.model,
+                    self._last_tokens_in,
+                    self._last_tokens_out,
+                )
+
                 stall_reason = await self._stall_detector.evaluate_after_iteration(
                     iteration_duration_sec=self._last_iteration_duration_sec,
                     files_changed_count=len(self._last_iteration_files_changed),
@@ -373,6 +468,7 @@ class RalphAgent:
             result.tokens_in = self._last_tokens_in
             result.tokens_out = self._last_tokens_out
             result.files_changed = sorted(self._files_changed_session)
+            result.session_cost_usd = self._cost_tracker.get_session_cost()
 
         return result
 
@@ -413,11 +509,14 @@ class RalphAgent:
                 stderr=asyncio.subprocess.PIPE,
                 cwd=str(self.project_dir),
             )
-
-            stdout_bytes, stderr_bytes = await asyncio.wait_for(
-                proc.communicate(),
-                timeout=self.config.timeout_minutes * 60,
-            )
+            self._current_cli_proc = proc
+            try:
+                stdout_bytes, stderr_bytes = await asyncio.wait_for(
+                    proc.communicate(),
+                    timeout=self.config.timeout_minutes * 60,
+                )
+            finally:
+                self._current_cli_proc = None
 
             stdout = stdout_bytes.decode("utf-8", errors="replace") if stdout_bytes else ""
             stderr = stderr_bytes.decode("utf-8", errors="replace") if stderr_bytes else ""
@@ -449,6 +548,7 @@ class RalphAgent:
 
         except TimeoutError:
             logger.warning("Claude CLI timed out after %d minutes", self.config.timeout_minutes)
+            self._current_cli_proc = None
             # Kill the orphaned subprocess to prevent resource leaks
             try:
                 proc.kill()
@@ -481,7 +581,17 @@ class RalphAgent:
         Requires BOTH:
         1. completion_indicators >= 2 (NLP heuristics)
         2. EXIT_SIGNAL: true (explicit from Claude)
+
+        When there is productive work (files changed or completed_task set) but
+        ``exit_signal`` is false, stale completion heuristics are cleared (CLI
+        parity; evaluation §1.6).
         """
+        productive = bool(
+            len(self._last_iteration_files_changed) > 0 or status.completed_task.strip()
+        )
+        if not status.exit_signal and productive:
+            self._completion_indicators = 0
+
         if status.exit_signal:
             self._completion_indicators += 1
 

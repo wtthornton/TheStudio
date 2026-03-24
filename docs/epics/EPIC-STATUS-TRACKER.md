@@ -1,6 +1,6 @@
 # Epic Status Tracker
 
-> Consolidated status of all epics as of 2026-03-21.
+> Consolidated status of all epics as of 2026-03-23.
 > Source of truth for epic status is each epic's own file. This tracker is a rollup view.
 
 ---
@@ -9,11 +9,11 @@
 
 | Metric | Value |
 |--------|-------|
-| Total epics | 39 (0-39) |
-| Complete | 36 (Epics 0-26, 28-36) |
-| In Progress | 0 |
-| Planned | 3 (Epics 37-39 — Pipeline UI Phases 3-5) |
-| Milestone | **Pipeline UI Phase 2 complete** (2026-03-21) — Phases 0-2 delivered, Planning Experience live |
+| Total epics | 39+ (numbered epics; 44+ onboarding / 51 Ralph tracked separately below) |
+| Complete | 36+ (Epics 0-26, 28-36; Pipeline UI Phases 0-2) |
+| In Progress | 2 — **Epic 44** (Setup Wizard: 44.1-44.3 done; 44.4-44.10 open), **Epic 51** (Ralph vendored SDK parity — P0/P1 slices; evaluation backlog open) |
+| Planned | 2 — **Epic 38** (GitHub integration — Meridian approved), **Epic 39** (Analytics & learning — Meridian approved) |
+| Milestone | **Pipeline UI Phase 3 complete** (Epic 37 per `epic-37-phase3-interactive-controls.md`, 2026-03-22). Phases 4-5 = Epics 38-39. |
 | Deferred | 1 (Epic 27) |
 | Tests passing | 3,366+ unit (zero failures), 9 E2E pipeline, ~244 integration, 23 P0 harness |
 | Eval tests | 20/25 passed with real Claude (~$5/run) |
@@ -141,16 +141,17 @@
 
 ---
 
-## Phase 9 — Pipeline UI (In Progress)
+## Phase 9 — Pipeline UI + Onboarding
 
 | Epic | Title | Status | Notes |
 |------|-------|--------|-------|
 | 34 | Phase 0: SSE PoC + Frontend Scaffolding | **Complete** (2026-03-21) | 14 stories. Dashboard API router, SSE bridge (NATS→EventSource), Vite+React+Zustand+Tailwind, pipeline rail, auth, CI. |
 | 35 | Phase 1: Pipeline Visibility | **Complete** (2026-03-21) | 63 stories across 4 slices. Pipeline Rail, TaskPacket Timeline, Gate Inspector, Activity Stream, Loopback arcs, Minimap, error states. |
 | 36 | Phase 2: Planning Experience | **Complete** (2026-03-21) | All 4 slices delivered. Slice 1: Triage Queue (6 stories). Slice 2: Intent Review (8 stories). Slice 3: Complexity + Routing (10 stories). Slice 4: Backlog + Tasks (5 stories). 29 stories total. |
-| 37 | Phase 3: Interactive Controls | Planned | Trust tier controls, bulk actions, keyboard shortcuts. Epic defined, not started. |
-| 38 | Phase 4: GitHub Integration | Planned | Bidirectional sync with GitHub Projects, issue templates. Epic defined, not started. |
-| 39 | Phase 5: Analytics & Learning | Planned | Cost analytics, performance trends, model comparison. Epic defined, not started. |
+| 37 | Phase 3: Interactive Controls | **Complete** (2026-03-22) | Per `epic-37-phase3-interactive-controls.md` — all 28 stories. (Meridian process gap noted in epic.) |
+| 38 | Phase 4: GitHub Integration | **Approved** — not started | `epic-38-phase4-github-integration.md` — Meridian R2 PASS (2026-03-22). MVP = Slices 1+2. |
+| 39 | Phase 5: Analytics & Learning | **Approved** — not started | `epic-39-phase5-analytics-learning.md` — Meridian R2 PASS (2026-03-22). |
+| 44 | Setup Wizard (first-run onboarding) | **In progress** (2026-03-23) | `epic-44-setup-wizard.md`. **44.1-44.3** delivered: `WizardShell`, `App.tsx` gate, `HealthCheckStep`, `thestudio_setup_complete` / `thestudio_setup_skipped` keys, Vite proxy `/healthz` `/readyz`. **44.4-44.10** open. See `.ralph/fix_plan.md`. |
 
 ---
 
@@ -159,14 +160,23 @@
 | Epic | Title | Status | Notes |
 |------|-------|--------|-------|
 | 43 | Ralph SDK as Primary Agent | Approved (2026-03-22) | Meridian PASS. Session continuity, CB, Temporal wrapper. See `epic-43-ralph-sdk-integration.md`. |
-| 51 | Ralph Vendored SDK Parity | Approved — Meridian PASS (2026-03-23) | Stall detection, progressive `fix_plan` context, structured `files_changed`. Upstream: [ralph-claude-code#226](https://github.com/frankbria/ralph-claude-code/issues/226). |
+| 51 | Ralph Vendored SDK Parity | **In progress** — Meridian PASS (2026-03-23) | P0/P1 slices landed (vendor SDK + bridge). **Next:** evaluation doc gaps (routing, metrics JSONL, heartbeat, cancel partial output, etc.). Handoff: `docs/handoffs/ralph-epic-51-next-agent-prompt.md`. Upstream: [ralph-claude-code#226](https://github.com/frankbria/ralph-claude-code/issues/226). |
 
 ---
 
 ## Critical Path
 
 ```
-Phase 9 — IN PROGRESS (2026-03-21)
+Phase 9 — PIPELINE UI (2026-03-23)
+  Epics 34-37 — COMPLETE (Phases 0-3). Epic 37: see epic-37 file (28 stories).
+  Epic 44 (Setup Wizard) — IN PROGRESS — 44.1-44.3 done; remaining .ralph/fix_plan.md
+  Epic 38 (GitHub integration) — APPROVED — next major UI epic after 44 MVP slice
+  Epic 39 (Analytics & learning) — APPROVED — after Epic 38 data path
+
+Phase 10 — RALPH
+  Epic 51 — IN PROGRESS — vendor parity + evaluation backlog (handoff doc)
+
+Prior rollup (2026-03-21)
   Epic 34 (Phase 0: SSE PoC) — COMPLETE. 14 stories. Dashboard infra.
   Epic 35 (Phase 1: Pipeline Visibility) — COMPLETE. 63 stories. Full dashboard.
   Epic 36 (Phase 2: Planning Experience) — COMPLETE. 29 stories across 4 slices.
@@ -267,4 +277,6 @@ Phase 5 — COMPLETE (2026-03-17)
 30. ~~**Epic 34 (Phase 0: SSE PoC)**~~ — **Complete** (2026-03-21). 14 stories. SSE bridge, React scaffolding.
 31. ~~**Epic 35 (Phase 1: Pipeline Visibility)**~~ — **Complete** (2026-03-21). 63 stories across 4 slices.
 32. ~~**Epic 36 (Phase 2: Planning Experience)**~~ — **Complete** (2026-03-21). 29 stories across 4 slices. All frontend + backend delivered by Ralph (22 loops).
-33. **Epic 51 (Ralph vendored SDK parity)** — **Approved** (2026-03-23). Meridian: `MERIDIAN-REVIEW-EPIC-51.md`. Upstream issue [#226](https://github.com/frankbria/ralph-claude-code/issues/226). WSL `~/.ralph`: use `scripts/wsl-setup-ralph-home.sh` if not a git clone.
+33. **Epic 51 (Ralph vendored SDK parity)** — **In progress** (2026-03-23). Meridian: `MERIDIAN-REVIEW-EPIC-51.md`. Next: `docs/handoffs/ralph-epic-51-next-agent-prompt.md` + `docs/ralph-sdk-upgrade-evaluation.md`. Upstream [#226](https://github.com/frankbria/ralph-claude-code/issues/226). WSL `~/.ralph`: `scripts/wsl-setup-ralph-home.sh`.
+34. **Epic 44 (Setup Wizard)** — **In progress** (2026-03-23). Stories **44.1-44.3** complete (`WizardShell`, gate in `App.tsx`, `HealthCheckStep`). Continue **44.4** in `.ralph/fix_plan.md`.
+35. **Epic 38 (GitHub Phase 4)** — **Approved** — schedule after Epic 44 slice 1 or in parallel if capacity.

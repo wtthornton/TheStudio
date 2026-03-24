@@ -12,8 +12,11 @@ services:
     environment:
       ADMIN_USER: "${ADMIN_USER:-admin}"
       ADMIN_PASSWORD_HASH: "${ADMIN_PASSWORD_HASH:?Set ADMIN_PASSWORD_HASH in .env — run: docker run --rm caddy:2.9-alpine caddy hash-password --plaintext YOUR_PASSWORD}"
+      # HTTPS feature flag: false = HTTP only (default), true = HTTPS with self-signed TLS
+      THESTUDIO_HTTPS_ENABLED: "${THESTUDIO_HTTPS_ENABLED:-false}"
+    entrypoint: ["/bin/sh", "/mnt/caddy/docker-entrypoint-caddy.sh"]
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - .:/mnt/caddy:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:

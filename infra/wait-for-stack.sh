@@ -34,13 +34,15 @@ while [ $ELAPSED -lt $TIMEOUT ]; do
     ALL_READY=true
 
     # App health (the primary indicator)
-    # Default ports 9080/9443 for shared-host; use 80/443 if you changed compose to bind those.
-    if curl -sf -o /dev/null -k https://localhost:9443/healthz 2>/dev/null; then
+    # Default: HTTP on 9080 (THESTUDIO_HTTPS_ENABLED=false). With HTTPS: 9443.
+    if curl -sf -o /dev/null http://localhost:9080/healthz 2>/dev/null; then
+        echo "  app: healthy (HTTP :9080)"
+    elif curl -sf -o /dev/null -k https://localhost:9443/healthz 2>/dev/null; then
         echo "  app: healthy (HTTPS :9443)"
     elif curl -sf -o /dev/null -k https://localhost/healthz 2>/dev/null; then
         echo "  app: healthy (HTTPS :443)"
     elif curl -sf -o /dev/null http://localhost:8000/healthz 2>/dev/null; then
-        echo "  app: healthy (direct)"
+        echo "  app: healthy (direct :8000)"
     else
         echo "  app: not ready"
         ALL_READY=false

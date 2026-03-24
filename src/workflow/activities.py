@@ -879,7 +879,7 @@ async def preflight_activity(params: PreflightInput) -> PreflightActivityOutput:
 
 async def _implement_ralph_with_heartbeat(
     params: ImplementInput,
-    repo_tier: str,  # noqa: ARG001 — reserved for future per-tier config
+    repo_tier: str,
 ) -> ImplementOutput:
     """Ralph SDK mode for implement_activity (Story 43.11).
 
@@ -951,7 +951,12 @@ async def _implement_ralph_with_heartbeat(
                         task_id,
                     )
                     if agent_holder:
-                        agent_holder[0].cancel()
+                        _cr = agent_holder[0].cancel()
+                        _log.info(
+                            "Ralph cancel() subprocess_terminated=%s message=%s",
+                            getattr(_cr, "subprocess_terminated", False),
+                            getattr(_cr, "message", ""),
+                        )
                     # Grace period: give the agent up to 10 s to stop cleanly.
                     await asyncio.sleep(10)
                     impl_task.cancel()
@@ -966,7 +971,12 @@ async def _implement_ralph_with_heartbeat(
             task_id,
         )
         if agent_holder:
-            agent_holder[0].cancel()
+            _cr = agent_holder[0].cancel()
+            _log.info(
+                "Ralph cancel() subprocess_terminated=%s message=%s",
+                getattr(_cr, "subprocess_terminated", False),
+                getattr(_cr, "message", ""),
+            )
         impl_task.cancel()
         await asyncio.gather(impl_task, return_exceptions=True)
         raise  # re-raise so Temporal records the activity as cancelled

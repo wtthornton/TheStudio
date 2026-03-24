@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from scalar_fastapi import AgentScalarConfig, Theme, get_scalar_api_reference
 from slowapi import Limiter
@@ -210,6 +210,14 @@ async def scalar_api_docs() -> HTMLResponse:
         dark_mode=True,
         agent=AgentScalarConfig(disabled=True),
     )
+
+
+# Root redirect: / → /dashboard/ when frontend is built, else /admin/ui/
+@app.get("/", include_in_schema=False)
+async def root_redirect() -> RedirectResponse:
+    if _FRONTEND_DIST.is_dir() and (_FRONTEND_DIST / "index.html").is_file():
+        return RedirectResponse(url="/dashboard/", status_code=302)
+    return RedirectResponse(url="/admin/ui/", status_code=302)
 
 
 app.include_router(ingress_router)

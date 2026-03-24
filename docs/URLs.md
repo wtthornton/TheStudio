@@ -8,10 +8,15 @@ Single source of truth for all base URLs, ports, and key paths. Use this when co
 |-------------|----------|---------|--------|
 | **Dev (Docker)** | `http://localhost:8000` | 8000 | `docker compose -f docker-compose.dev.yml up -d` |
 | **Dev (local uvicorn)** | `http://localhost:8000` | 8000 | `uvicorn src.app:app --reload --port 8000` from repo root |
-| **Production (shared host)** | `https://localhost:9443` | 9080 (HTTP), 9443 (HTTPS) | `infra/docker-compose.prod.yml`; Caddy on 9080/9443 |
-| **Production (dedicated 80/443)** | `https://localhost` or your domain | 80, 443 | Edit Caddy ports in prod compose to `80:80`, `443:443` |
+| **Production (HTTP default)** | `http://localhost:9080` | 9080 | `infra/docker-compose.prod.yml`; `THESTUDIO_HTTPS_ENABLED=false` (default) |
+| **Production (HTTPS)** | `https://localhost:9443` | 9080, 9443 | Set `THESTUDIO_HTTPS_ENABLED=true` in `infra/.env` for TLS |
+| **Production (dedicated 80/443)** | `http://localhost` or `https://localhost` | 80, 443 | Edit Caddy ports in prod compose to `80:80`, `443:443` |
 
 No trailing slash on base URLs. Configurable via `THESTUDIO_BASE_URL` (production test rig), `PLAYWRIGHT_BASE_URL` (Playwright), or env in deployment.
+
+**Root `/`:** Redirects 302 to `/dashboard/` when the React frontend is built, otherwise to `/admin/ui/`.
+
+**HTTPS feature flag:** `THESTUDIO_HTTPS_ENABLED` (default: `false`). When `false`, Caddy serves HTTP only on port 80 (host 9080) — use `http://localhost:9080`. When `true`, Caddy serves HTTPS on 443 (host 9443) and redirects HTTP→HTTPS — use `https://localhost:9443`.
 
 ---
 
@@ -27,7 +32,8 @@ The `/health/ralph` endpoint returns `agent_mode`, `sdk_importable`, `cli_availa
 
 **Examples:**
 - Dev: `http://localhost:8000/healthz`
-- Prod: `https://localhost:9443/healthz` (use `-k` with curl for self-signed cert)
+- Prod (HTTP): `http://localhost:9080/healthz`
+- Prod (HTTPS): `https://localhost:9443/healthz` (use `-k` with curl for self-signed cert)
 
 ---
 
@@ -47,7 +53,8 @@ Prefix: `/admin`. Authentication differs by environment:
 
 **Examples:**
 - Dev: `http://localhost:8000/admin/health`, `http://localhost:8000/docs`
-- Prod: `https://localhost:9443/admin/health` (browser will prompt for credentials), `https://localhost:9443/docs`
+- Prod (HTTP): `http://localhost:9080/admin/health` (browser prompts for Basic Auth)
+- Prod (HTTPS): `https://localhost:9443/admin/health`, `https://localhost:9443/docs`
 
 ---
 
@@ -73,7 +80,8 @@ Prefix: `/admin/ui`. Same auth as Admin API (see above).
 
 **Entry points:**
 - Dev: **http://localhost:8000/admin/ui/** or **http://localhost:8000/admin/ui/dashboard**
-- Prod: **https://localhost:9443/admin/ui/** or **https://localhost:9443/admin/ui/dashboard** (browser prompts for Basic Auth credentials)
+- Prod (HTTP): **http://localhost:9080/admin/ui/** (browser prompts for Basic Auth)
+- Prod (HTTPS): **https://localhost:9443/admin/ui/** or **https://localhost:9443/admin/ui/dashboard**
 
 ---
 
@@ -83,18 +91,17 @@ Prefix: `/admin/ui`. Same auth as Admin API (see above).
 |------|--------|---------|
 | `/webhook/github` | POST | GitHub webhook (requires `X-Hub-Signature-256`, etc.) |
 
-**Example:** `POST https://localhost:9443/webhook/github` (prod).
+**Example:** `POST http://localhost:9080/webhook/github` (prod HTTP) or `POST https://localhost:9443/webhook/github` (prod HTTPS).
 
 ---
 
 ## Quick reference
 
-| What | Dev | Production (shared ports) |
-|------|-----|----------------------------|
-| App base | http://localhost:8000 | https://localhost:9443 |
-| Admin UI home | http://localhost:8000/admin/ui/ | https://localhost:9443/admin/ui/ |
-| Health | http://localhost:8000/healthz | https://localhost:9443/healthz |
-| Ralph health | http://localhost:8000/health/ralph | https://localhost:9443/health/ralph |
-| OpenAPI docs | http://localhost:8000/docs | https://localhost:9443/docs |
+| What | Dev | Production (HTTP default) | Production (HTTPS) |
+|------|-----|---------------------------|--------------------|
+| App base | http://localhost:8000 | http://localhost:9080 | https://localhost:9443 |
+| Admin UI home | http://localhost:8000/admin/ui/ | http://localhost:9080/admin/ui/ | https://localhost:9443/admin/ui/ |
+| Health | http://localhost:8000/healthz | http://localhost:9080/healthz | https://localhost:9443/healthz |
+| OpenAPI docs | http://localhost:8000/docs | http://localhost:9080/docs | https://localhost:9443/docs |
 
 See `docs/deployment.md` for full deployment and `docs/production-test-rig-contract.md` for test rig contract.

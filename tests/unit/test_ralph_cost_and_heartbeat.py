@@ -20,8 +20,8 @@ Story 43.12 — Validates:
 from __future__ import annotations
 
 import asyncio
-from contextlib import ExitStack, asynccontextmanager
-from unittest.mock import AsyncMock, MagicMock, call, patch
+from contextlib import asynccontextmanager
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
@@ -29,7 +29,6 @@ import pytest
 from src.admin.model_gateway import BudgetExceededError, ModelCallAudit
 from src.agent.evidence import EvidenceBundle
 from src.workflow.activities import ImplementInput
-
 
 # ---------------------------------------------------------------------------
 # Shared helpers

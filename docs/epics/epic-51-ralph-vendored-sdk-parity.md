@@ -36,12 +36,12 @@ Ralph CLI v2.2.0 fixed production bugs but the Python SDK stayed at 2.0.2. TheSt
 <!-- docsmcp:start:acceptance-criteria -->
 ## Acceptance Criteria
 
-- [ ] **P0 — Stall detection:** `FastTripDetector` and `StallDetector` in `circuit_breaker.py` with configurable thresholds (fast-trip, deferred-test stall, consecutive timeouts).
-- [ ] **P0 — Progressive context:** `ContextManager` (or equivalent) provides `build_progressive_context` + token estimate for `fix_plan.md`.
-- [ ] **P0 — Structured outputs:** `TaskResult.files_changed` populated from tool/git records; TheStudio removes regex extraction from `ralph_bridge` / `primary_agent` once the field is reliable.
-- [ ] **P1 backlog:** Stories 51.4–51.6 (and later P2 items from the evaluation) tracked; implement in priority order after P0.
-- [ ] **Tests:** Unit tests cover new detectors and context trimming; regression tests for `files_changed` contract.
-- [ ] **Traceability:** `docs/ralph-sdk-upgrade-evaluation.md` and `EPIC-STATUS-TRACKER.md` reference this epic.
+- [x] **P0 — Stall detection:** `FastTripDetector` and `StallDetector` in `circuit_breaker.py` with configurable thresholds (fast-trip, deferred-test stall, consecutive timeouts).
+- [x] **P0 — Progressive context:** `ContextManager` (or equivalent) provides `build_progressive_context` + token estimate for `fix_plan.md`.
+- [ ] **P0 — Structured outputs:** `TaskResult.files_changed` populated from tool/git records; TheStudio removes regex extraction from `ralph_bridge` / `primary_agent` once the field is reliable. *(Structured paths preferred; legacy bullet heuristic remains as fallback.)*
+- [x] **P1 backlog:** Stories 51.4–51.6 (and later P2 items from the evaluation) tracked; implement in priority order after P0. *(51.4–51.6 delivered; P2 per evaluation doc.)*
+- [x] **Tests:** Unit tests cover new detectors and context trimming; regression tests for `files_changed` contract.
+- [x] **Traceability:** `docs/ralph-sdk-upgrade-evaluation.md` and `EPIC-STATUS-TRACKER.md` reference this epic.
 
 <!-- docsmcp:end:acceptance-criteria -->
 
@@ -57,8 +57,8 @@ Port CLI stall semantics to vendor circuit_breaker.py
 (4 acceptance criteria)
 
 **Tasks:**
-- [ ] Implement p0 — stall detection (fast-trip, deferred-test, consecutive timeout)
-- [ ] Write unit tests
+- [x] Implement p0 — stall detection (fast-trip, deferred-test, consecutive timeout)
+- [x] Write unit tests
 - [ ] Update documentation
 
 **Definition of Done:** P0 — Stall detection (fast-trip, deferred-test, consecutive timeout) is implemented, tests pass, and documentation is updated.
@@ -74,8 +74,8 @@ ContextManager trims plan to current section + N unchecked items
 (3 acceptance criteria)
 
 **Tasks:**
-- [ ] Implement p0 — progressive context loading for fix_plan.md
-- [ ] Write unit tests
+- [x] Implement p0 — progressive context loading for fix_plan.md
+- [x] Write unit tests
 - [ ] Update documentation
 
 **Definition of Done:** P0 — Progressive context loading for fix_plan.md is implemented, tests pass, and documentation is updated.
@@ -91,8 +91,8 @@ Eliminate freeform parsing in TheStudio bridge
 (4 acceptance criteria)
 
 **Tasks:**
-- [ ] Implement p0 — structured files_changed on taskresult
-- [ ] Write unit tests
+- [x] Implement p0 — structured files_changed on taskresult
+- [x] Write unit tests
 - [ ] Update documentation
 
 **Definition of Done:** P0 — Structured files_changed on TaskResult is implemented, tests pass, and documentation is updated.
@@ -108,8 +108,8 @@ detect_decomposition_needed heuristic
 (2 acceptance criteria)
 
 **Tasks:**
-- [ ] Implement p1 — task decomposition detection
-- [ ] Write unit tests
+- [x] Implement p1 — task decomposition detection
+- [x] Write unit tests
 - [ ] Update documentation
 
 **Definition of Done:** P1 — Task decomposition detection is implemented, tests pass, and documentation is updated.
@@ -125,8 +125,8 @@ CostTracker with per-model rates
 (3 acceptance criteria)
 
 **Tasks:**
-- [ ] Implement p1 — cost tracking and budget guardrails
-- [ ] Write unit tests
+- [x] Implement p1 — cost tracking and budget guardrails
+- [x] Write unit tests
 - [ ] Update documentation
 
 **Definition of Done:** P1 — Cost tracking and budget guardrails is implemented, tests pass, and documentation is updated.
@@ -142,8 +142,8 @@ SIGTERM, CancelResult, Temporal alignment
 (3 acceptance criteria)
 
 **Tasks:**
-- [ ] Implement p1 — document and harden ralphagent.cancel()
-- [ ] Write unit tests
+- [x] Implement p1 — document and harden ralphagent.cancel()
+- [x] Write unit tests
 - [ ] Update documentation
 
 **Definition of Done:** P1 — Document and harden RalphAgent.cancel() is implemented, tests pass, and documentation is updated.

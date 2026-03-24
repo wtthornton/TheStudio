@@ -21,3 +21,10 @@ class TestHealthzEndpoint:
         response = client.get("/healthz")
         data = response.json()
         assert data["status"] == "ok"
+
+    def test_root_redirects(self):
+        """Root / redirects to /dashboard/ (when built) or /admin/ui/ (fallback)."""
+        client = TestClient(app)
+        response = client.get("/", follow_redirects=False)
+        assert response.status_code == 302
+        assert response.headers["location"] in ("/dashboard/", "/admin/ui/")

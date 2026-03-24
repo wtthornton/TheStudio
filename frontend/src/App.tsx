@@ -1,5 +1,5 @@
 import './index.css'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useSSE } from './hooks/useSSE'
 import { useInitialLoad } from './hooks/useInitialLoad'
 import { usePipelineStore } from './stores/pipeline-store'
@@ -32,6 +32,14 @@ import { RepoContextProvider } from './contexts/RepoContext'
 import { RepoSelector } from './components/RepoSelector'
 import { RepoSettings } from './components/RepoSettings'
 import { ApiReference } from './components/ApiReference'
+import { WizardShell } from './components/wizard/WizardShell'
+import { HealthCheckStep } from './components/wizard/HealthCheckStep'
+import {
+  isSetupWizardComplete,
+  isSetupWizardSkipped,
+  markSetupWizardComplete,
+  markSetupWizardSkipped,
+} from './components/wizard/wizardStorage'
 
 type Tab =
   | 'pipeline'
@@ -55,6 +63,25 @@ function App() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<Tab>('pipeline')
   const [importModalOpen, setImportModalOpen] = useState(false)
+  const [showSetupWizard, setShowSetupWizard] = useState(false)
+
+  useEffect(() => {
+    if (isSetupWizardComplete() || isSetupWizardSkipped()) {
+      setShowSetupWizard(false)
+    } else {
+      setShowSetupWizard(true)
+    }
+  }, [])
+
+  const handleSetupWizardComplete = useCallback(() => {
+    markSetupWizardComplete()
+    setShowSetupWizard(false)
+  }, [])
+
+  const handleSetupWizardSkip = useCallback(() => {
+    markSetupWizardSkipped()
+    setShowSetupWizard(false)
+  }, [])
 
   // Check if pipeline has any tasks
   const hasAnyTasks = PIPELINE_STAGES.some((s) => stages[s.id].taskCount > 0)
@@ -71,6 +98,23 @@ function App() {
   return (
     <RepoContextProvider>
     <div className="min-h-screen bg-gray-950 text-gray-100 pb-16">
+      {showSetupWizard ? (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="setup-wizard-title"
+        >
+          <WizardShell
+            title="Setup"
+            onComplete={handleSetupWizardComplete}
+            onSkip={handleSetupWizardSkip}
+          >
+            <HealthCheckStep />
+          </WizardShell>
+        </div>
+      ) : null}
+
       {/* S4.F10: Disconnection banner */}
       <DisconnectionBanner />
 

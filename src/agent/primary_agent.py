@@ -8,6 +8,11 @@ When THESTUDIO_AGENT_MODE=ralph, dispatches to RalphAgent from ralph_sdk
 (Epic 43) instead of the legacy PrimaryAgentRunner. The function signatures
 for implement() and handle_loopback() are unchanged.
 
+Changed-files contract (Epic 51): the Ralph path uses ``TaskResult.files_changed``
+from the SDK (git-based); the legacy framework path still uses
+``_parse_changed_files()`` on freeform output (see ``ralph_bridge`` for structured
+evidence when consuming Ralph results).
+
 Architecture reference: thestudioarc/08-agent-roles.md
 Epic reference: Story 0.5 — Primary Agent
 Epic 23 Story 1.8: Refactored to use AgentRunner framework.
@@ -123,9 +128,11 @@ class PrimaryAgentRunner(AgentRunner):
 
 
 def _parse_changed_files(agent_summary: str) -> list[str]:
-    """Extract file paths from the agent's summary output.
+    """Extract file paths from the agent's summary output (non-Ralph / legacy).
 
-    Looks for lines starting with '- ' that contain file-path-like strings.
+    Ralph mode does not use this for evidence: ``ralph_result_to_evidence`` prefers
+    ``TaskResult.files_changed``. This heuristic remains for the in-process and
+    container agent paths that only have freeform text.
     """
     files: list[str] = []
     for line in agent_summary.splitlines():
@@ -303,10 +310,15 @@ async def _implement_ralph(
         # provider="claude_code" indicates Ralph's CLI path (not direct Anthropic API).
         tokens_in = result.tokens_in
         tokens_out = result.tokens_out
-        estimated_cost = (
+        sdk_raw = getattr(result, "session_cost_usd", None)
+        heuristic_cost = (
             tokens_in * _RALPH_COST_PER_1K_INPUT / 1000
             + tokens_out * _RALPH_COST_PER_1K_OUTPUT / 1000
         )
+        if type(sdk_raw) in (int, float) and sdk_raw > 0:
+            estimated_cost = float(sdk_raw)
+        else:
+            estimated_cost = heuristic_cost
         latency_ms = result.duration_seconds * 1000.0
 
         # Post-run span attributes — token usage, cost, and duration (Story 43.14)

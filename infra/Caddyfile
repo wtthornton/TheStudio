@@ -1,6 +1,7 @@
-# TheStudio Production — Caddy Reverse Proxy
+# TheStudio Production — Caddy Reverse Proxy (HTTPS mode)
 #
-# Default: self-signed TLS (tls internal).
+# Used when THESTUDIO_HTTPS_ENABLED=true. When false, Caddyfile.http is used instead (HTTP only).
+# Self-signed TLS (tls internal).
 # For Let's Encrypt: replace the site address with your domain
 # and change "tls internal" to "tls you@example.com".
 #
