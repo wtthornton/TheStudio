@@ -26,6 +26,7 @@ import { ThroughputChart } from './ThroughputChart'
 import { BottleneckBars } from './BottleneckBars'
 import { CategoryBreakdown } from './CategoryBreakdown'
 import { FailureAnalysis } from './FailureAnalysis'
+import { ExpertTable } from './ExpertTable'
 import { useRepoContext } from '../../contexts/RepoContext'
 import { EmptyState } from '../EmptyState'
 
@@ -111,8 +112,8 @@ export function Analytics({ onNavigateToPipeline }: AnalyticsProps) {
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-6 space-y-6">
-      {/* Header row */}
-      <div className="flex items-center justify-between">
+      {/* Header row — data-tour target for period selector step */}
+      <div className="flex items-center justify-between" data-tour="analytics-period">
         <div>
           <h2 className="text-lg font-semibold text-gray-100">Operational Analytics</h2>
           {selectedRepo && (
@@ -124,19 +125,32 @@ export function Analytics({ onNavigateToPipeline }: AnalyticsProps) {
         <PeriodSelector period={period} onChange={setPeriod} />
       </div>
 
-      {/* Summary cards */}
-      <SummaryCards period={period} repo={selectedRepo} />
+      {/* Summary cards — data-tour target for KPIs step */}
+      <div data-tour="analytics-kpis">
+        <SummaryCards period={period} repo={selectedRepo} />
+      </div>
 
       {/* Charts row */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <ThroughputChart period={period} repo={selectedRepo} />
-        <BottleneckBars period={period} repo={selectedRepo} />
+        {/* data-tour target for throughput step */}
+        <div data-tour="analytics-throughput">
+          <ThroughputChart period={period} repo={selectedRepo} />
+        </div>
+        {/* data-tour target for bottleneck step */}
+        <div data-tour="analytics-bottleneck">
+          <BottleneckBars period={period} repo={selectedRepo} />
+        </div>
       </div>
 
       {/* Detail row */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <CategoryBreakdown period={period} repo={selectedRepo} />
         <FailureAnalysis period={period} repo={selectedRepo} />
+      </div>
+
+      {/* Expert reputation table — data-tour target for expert table step */}
+      <div data-tour="analytics-expert-table">
+        <ExpertTable onSelectExpert={() => {}} />
       </div>
     </div>
   )

@@ -13,7 +13,9 @@
  *   3. Call `useTourState(tourId).start(steps)` from a TourBeacon or menu item.
  *
  * Pipeline tour steps added by Epic 47.3.
- * Triage/Analytics/Repo-Trust steps will be added by Epics 47.5–47.7.
+ * Triage tour steps added by Epic 47.5.
+ * Analytics tour steps added by Epic 47.6.
+ * Repo-Trust steps will be added by Epic 47.7.
  */
 
 import type { Step } from 'react-joyride'
@@ -110,6 +112,57 @@ export function resetAllTours(): void {
     resetTourCompletion(tour.storageKey)
   }
 }
+
+// ── Analytics Tour Steps (Epic 47.6) ──────────────────────────────────────────
+
+/**
+ * Five-step guided tour of the Analytics tab.
+ *
+ * Targets use `data-tour` attributes added to:
+ *   Analytics.tsx        → data-tour="analytics-period" (header row)
+ *   Analytics.tsx        → data-tour="analytics-kpis"   (SummaryCards wrapper)
+ *   Analytics.tsx        → data-tour="analytics-throughput" (ThroughputChart wrapper)
+ *   Analytics.tsx        → data-tour="analytics-bottleneck" (BottleneckBars wrapper)
+ *   Analytics.tsx        → data-tour="analytics-expert-table" (ExpertTable wrapper)
+ */
+export const ANALYTICS_TOUR_STEPS: Step[] = [
+  {
+    target: '[data-tour="analytics-period"]',
+    title: 'Period Selector',
+    content:
+      'Choose the time window for all analytics data: last 7, 30, or 90 days. Every chart and KPI on this page updates instantly when you switch periods.',
+    disableBeacon: true,
+    placement: 'bottom',
+  },
+  {
+    target: '[data-tour="analytics-kpis"]',
+    title: 'Key Performance Indicators',
+    content:
+      'Four headline metrics at a glance: Tasks Completed, Average Pipeline Time (intake to draft PR), PR Merge Rate, and Total Spend. Use these to track pipeline health over time.',
+    placement: 'bottom',
+  },
+  {
+    target: '[data-tour="analytics-throughput"]',
+    title: 'Throughput Chart',
+    content:
+      'A daily bar chart of completed tasks. Spikes show busy days; flat lines reveal blocked periods. Hover a bar to see the exact count and compare against your moving average.',
+    placement: 'top',
+  },
+  {
+    target: '[data-tour="analytics-bottleneck"]',
+    title: 'Bottleneck Analysis',
+    content:
+      'Horizontal bars show average time spent in each pipeline stage. The longest bar is your current bottleneck. The variance indicator flags stages with unpredictable durations worth investigating.',
+    placement: 'top',
+  },
+  {
+    target: '[data-tour="analytics-expert-table"]',
+    title: 'Expert Reputation Table',
+    content:
+      'Every expert agent\'s performance at a glance: trust tier, average weight in the assembler, total samples, confidence, and drift trend. Click any row for a detailed expert profile and historical weight chart.',
+    placement: 'top',
+  },
+]
 
 // ── Triage Tour Steps (Epic 47.5) ─────────────────────────────────────────────
 
