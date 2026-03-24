@@ -7,6 +7,7 @@ import { EditPanel } from './EditPanel'
 import type { RejectionReason } from '../../lib/api'
 import { useRepoContext } from '../../contexts/RepoContext'
 import { EmptyState } from '../EmptyState'
+import { useGitHubEvents } from '../../hooks/useGitHubEvents'
 
 export function TriageQueue() {
   const { tasks, loading, error, loadTasks, accept, reject, edit } = useTriageStore()
@@ -16,6 +17,19 @@ export function TriageQueue() {
   useEffect(() => {
     void loadTasks(selectedRepo)
   }, [loadTasks, selectedRepo])
+
+  // Reload the queue when GitHub issue events arrive (new comments, label
+  // changes) so TriageCards reflect the latest issue state without polling.
+  // Story 38.26: useGitHubEvents with no taskId captures all github.event.*
+  // messages; we only react to issue_comment and issues sub-types.
+  const { lastEvent } = useGitHubEvents()
+  useEffect(() => {
+    if (!lastEvent) return
+    const subType = lastEvent.event_type.replace('github.event.', '')
+    if (subType === 'issue_comment' || subType === 'issues') {
+      void loadTasks(selectedRepo)
+    }
+  }, [lastEvent, loadTasks, selectedRepo])
 
   const handleAccept = useCallback((taskId: string) => {
     void accept(taskId)

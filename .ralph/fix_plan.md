@@ -42,7 +42,7 @@
 - [x] **38.23:** `pipeline_comments_enabled` flag + per-repo config.
 - [x] **38.24:** Webhook bridge — PR/issue events → NATS `github.event.*`.
 - [x] **38.25:** SSE — extend `src/dashboard/events.py` for `github.event.*` / stream subjects.
-- [ ] **38.26:** Dashboard consumers — PR Evidence + triage real-time updates (`useGitHubEvents.ts`).
+- [x] **38.26:** Dashboard consumers — PR Evidence + triage real-time updates (`useGitHubEvents.ts`).
 - [ ] **38.27:** Integration test — comments + NATS publish.
 
 ### Epic 39 — Phase 5 analytics & learning

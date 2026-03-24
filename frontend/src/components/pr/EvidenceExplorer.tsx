@@ -13,7 +13,7 @@
  * Loading states, error handling, and empty states are all handled.
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   fetchTaskEvidence,
   type EvidencePayload,
@@ -21,6 +21,7 @@ import {
   type EvidenceCostEntry,
   type EvidenceProvenanceEntry,
 } from '../../lib/api'
+import { useGitHubEvents, type PrStatus, type ReviewStatus, type CheckStatus } from '../../hooks/useGitHubEvents'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -463,6 +464,73 @@ function DiffTab({ payload }: { payload: EvidencePayload }) {
 }
 
 // ---------------------------------------------------------------------------
+// Live PR status strip (rendered when GitHub events have arrived)
+// ---------------------------------------------------------------------------
+
+const PR_STATUS_COLOR: Record<PrStatus, string> = {
+  open: 'bg-green-900 text-green-300',
+  merged: 'bg-purple-900 text-purple-300',
+  closed: 'bg-red-900 text-red-300',
+  unknown: 'bg-gray-700 text-gray-400',
+}
+
+const REVIEW_STATUS_COLOR: Record<ReviewStatus, string> = {
+  approved: 'bg-green-900 text-green-300',
+  changes_requested: 'bg-orange-900 text-orange-300',
+  commented: 'bg-blue-900 text-blue-300',
+  dismissed: 'bg-gray-700 text-gray-400',
+  none: '',
+}
+
+const CHECK_STATUS_COLOR: Record<CheckStatus, string> = {
+  queued: 'bg-gray-700 text-gray-400',
+  in_progress: 'bg-yellow-900 text-yellow-300',
+  completed: 'bg-green-900 text-green-300',
+  unknown: 'bg-gray-700 text-gray-400',
+}
+
+interface LivePrStatusProps {
+  prStatus: PrStatus
+  reviewStatus: ReviewStatus
+  checkStatus: CheckStatus
+  eventCount: number
+}
+
+function LivePrStatus({ prStatus, reviewStatus, checkStatus, eventCount }: LivePrStatusProps) {
+  if (eventCount === 0) return null
+
+  return (
+    <div
+      className="flex items-center gap-2 px-4 py-2 bg-gray-800 border-b border-gray-700 text-xs shrink-0"
+      aria-label="Live GitHub PR status"
+      data-testid="live-pr-status"
+    >
+      <span className="text-gray-500 shrink-0">Live:</span>
+
+      {prStatus !== 'unknown' && (
+        <span className={`rounded px-1.5 py-0.5 font-medium ${PR_STATUS_COLOR[prStatus]}`}>
+          PR {prStatus}
+        </span>
+      )}
+
+      {reviewStatus !== 'none' && (
+        <span className={`rounded px-1.5 py-0.5 font-medium ${REVIEW_STATUS_COLOR[reviewStatus]}`}>
+          {reviewStatus.replace('_', ' ')}
+        </span>
+      )}
+
+      {checkStatus !== 'unknown' && (
+        <span className={`rounded px-1.5 py-0.5 font-medium ${CHECK_STATUS_COLOR[checkStatus]}`}>
+          CI {checkStatus.replace('_', ' ')}
+        </span>
+      )}
+
+      <span className="ml-auto text-gray-600">{eventCount} event{eventCount !== 1 ? 's' : ''}</span>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
 
@@ -472,12 +540,13 @@ export default function EvidenceExplorer({ taskId, onClose }: EvidenceExplorerPr
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+  // Real-time GitHub event state via webhook bridge (Story 38.26)
+  const { prStatus, reviewStatus, checkStatus, lastEvent, eventCount } = useGitHubEvents(taskId)
+
+  const loadEvidence = useCallback(() => {
     if (!taskId) return
     setLoading(true)
     setError(null)
-    setPayload(null)
-
     fetchTaskEvidence(taskId)
       .then((data) => {
         setPayload(data)
@@ -488,6 +557,19 @@ export default function EvidenceExplorer({ taskId, onClose }: EvidenceExplorerPr
         setLoading(false)
       })
   }, [taskId])
+
+  useEffect(() => {
+    setPayload(null)
+    loadEvidence()
+  }, [loadEvidence])
+
+  // Auto-refresh evidence payload when PR is merged or closed so the
+  // Evidence tab (pr_number, pr_url) reflects the latest persisted state.
+  useEffect(() => {
+    if (lastEvent && (prStatus === 'merged' || prStatus === 'closed')) {
+      loadEvidence()
+    }
+  }, [lastEvent, prStatus, loadEvidence])
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'evidence', label: 'Evidence' },
@@ -529,6 +611,14 @@ export default function EvidenceExplorer({ taskId, onClose }: EvidenceExplorerPr
           </button>
         ))}
       </div>
+
+      {/* Live PR status strip — only shown when GitHub events have arrived */}
+      <LivePrStatus
+        prStatus={prStatus}
+        reviewStatus={reviewStatus}
+        checkStatus={checkStatus}
+        eventCount={eventCount}
+      />
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4">
