@@ -566,6 +566,22 @@ It's unclear whether `cancel()` actually stops the subprocess or just sets a fla
 2. Returns a `CancelResult` with the partial output collected so far
 3. Completes within a configurable grace period (default 10s)
 
+#### Current State (2026-03-24)
+
+**Gap status: ✅ FULLY IMPLEMENTED (51-cancel).**
+
+`cancel()` in `vendor/ralph-sdk/ralph_sdk/agent.py`:
+1. Sets `_running = False` and calls `proc.terminate()` (SIGTERM) — guaranteed.
+2. Returns `CancelResult(partial_output=self._output_buffer, ...)` — buffer is
+   updated at the end of every `_run_iteration` call after stdout is decoded.
+   When cancel races an in-flight `communicate()`, `partial_output` reflects
+   the previous iteration; once the process exits the activity's grace wait
+   allows `communicate()` to resolve and `_output_buffer` to be updated.
+3. Grace wait (10 s) is caller responsibility per the documented contract in
+   `CancelResult` docstring and `activities.py:960-961`.
+
+`CancelResult` now carries `partial_output: str = ""`.
+
 ---
 
 ### 2.3 Heartbeat Data is Unstructured (Priority: P2)

@@ -48,13 +48,24 @@ class CancelResult(BaseModel, frozen=True):
     (``terminate()`` on :class:`asyncio.subprocess.Process`; on Windows this
     ends the child process similarly).
 
-    Partial stdout is **not** captured today; callers rely on logs and the
-    grace period in the activity wrapper after ``cancel()`` returns.
+    ``partial_output`` contains the decoded stdout from the most recently
+    completed (or just-terminated) subprocess invocation.  It is populated from
+    ``RalphAgent._output_buffer``, which is updated at the end of every
+    ``_run_iteration`` call.  When ``cancel()`` races with an in-flight
+    ``communicate()`` the buffer reflects the *previous* iteration; once the
+    process exits the activity's grace-wait loop can read the final value via
+    ``agent._output_buffer``.
+
+    **Grace wait contract (caller responsibility):**
+    After ``cancel()`` returns, the activity wrapper should ``await
+    asyncio.sleep(grace_seconds)`` (default 10 s) before hard-cancelling the
+    asyncio task so the subprocess can flush and ``communicate()`` can resolve.
     """
 
     requested: bool = True
     subprocess_terminated: bool = False
     message: str = ""
+    partial_output: str = ""
 
 
 def _status_is_timeout(status: RalphStatus) -> bool:
@@ -272,6 +283,10 @@ class RalphAgent:
         self._no_file_change_streak: int = 0
         self._cost_tracker = CostTracker(self.config)
         self._current_cli_proc: asyncio.subprocess.Process | None = None
+        # Rolling buffer of the most recently captured subprocess stdout.
+        # Updated at the end of every _run_iteration so cancel() can surface
+        # partial work even when the active communicate() is still in-flight.
+        self._output_buffer: str = ""
 
         # Ensure .ralph directory exists
         self.ralph_dir.mkdir(parents=True, exist_ok=True)
@@ -293,16 +308,32 @@ class RalphAgent:
         """Stop the loop and **SIGTERM** the active Claude CLI subprocess if any.
 
         Intended for Temporal activity cancellation and wall-clock timeouts.
-        Returns immediately after signalling; use an asyncio grace wait in the
-        caller before cancelling the task. See :class:`CancelResult`.
+        Returns immediately after signalling.
+
+        **Caller grace-wait pattern** (activities.py)::
+
+            cr = agent.cancel()
+            await asyncio.sleep(grace_seconds)  # default 10 s
+            impl_task.cancel()
+            await asyncio.gather(impl_task, return_exceptions=True)
+
+        After the grace period the activity wrapper may inspect
+        ``agent._output_buffer`` for the final captured output if
+        ``communicate()`` resolved while the subprocess was exiting.
+
+        :returns: :class:`CancelResult` with ``partial_output`` from the most
+            recently completed subprocess invocation (may be from the previous
+            iteration if the current one is still in-flight).
         """
         self._running = False
+        partial = self._output_buffer
         proc = self._current_cli_proc
         if proc is None or proc.returncode is not None:
             return CancelResult(
                 requested=True,
                 subprocess_terminated=False,
                 message="No active Claude CLI subprocess",
+                partial_output=partial,
             )
         try:
             proc.terminate()
@@ -310,12 +341,14 @@ class RalphAgent:
                 requested=True,
                 subprocess_terminated=True,
                 message="Sent SIGTERM to Claude CLI subprocess",
+                partial_output=partial,
             )
         except OSError as exc:
             return CancelResult(
                 requested=True,
                 subprocess_terminated=False,
                 message=f"terminate() failed: {exc}",
+                partial_output=partial,
             )
 
     # -------------------------------------------------------------------------
@@ -521,6 +554,9 @@ class RalphAgent:
             stdout = stdout_bytes.decode("utf-8", errors="replace") if stdout_bytes else ""
             stderr = stderr_bytes.decode("utf-8", errors="replace") if stderr_bytes else ""
             returncode = proc.returncode or 0
+
+            # Persist for cancel() / heartbeat consumers
+            self._output_buffer = stdout
 
             # Increment call count
             await self._increment_call_count()

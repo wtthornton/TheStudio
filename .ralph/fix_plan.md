@@ -18,7 +18,7 @@
 > P0/P1 stories **51.1–51.6** shipped per `docs/handoffs/ralph-epic-51-next-agent-prompt.md`. **Parsing tests** for `TESTS_STATUS: DEFERRED` live in `tests/unit/test_ralph_parsing_tests_status.py` (**done**). **Still open:** evaluation doc gaps + cancel/git hardening below. **Gate:** `docs/ralph-sdk-upgrade-evaluation.md`. **Verify:** handoff “Verification (local)” block.
 
 - [x] **51-eval:** Close open gaps in `docs/ralph-sdk-upgrade-evaluation.md` — prioritize §1.5 dynamic model routing, §1.8 prompt cache split, §1.9 metrics JSONL, §1.10 session lifecycle / Continue-As-New, §1.7 error categorization (P2), §2.3 ProgressSnapshot / heartbeat (P2).
-- [ ] **51-cancel:** Cancel hardening — `CancelResult.partial_output` (stream/buffer), optional grace wait inside SDK (`docs/ralph-sdk-upgrade-evaluation.md` §2.2).
+- [x] **51-cancel:** Cancel hardening — `CancelResult.partial_output` (stream/buffer), optional grace wait inside SDK (`docs/ralph-sdk-upgrade-evaluation.md` §2.2).
 - [ ] **51-git:** Harden `files_changed` / stall when `git` missing or repo dirty; add/adjust unit tests.
 - [x] **51-tests:** `tests/unit/test_ralph_parsing_tests_status.py` — DEFERRED / case-insensitive / JSON / JSONL coverage for `tests_status` parsing.
 

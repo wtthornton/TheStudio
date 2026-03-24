@@ -35,6 +35,33 @@ def test_cancel_terminates_active_subprocess() -> None:
     proc.terminate.assert_called_once()
 
 
+def test_cancel_includes_partial_output_from_buffer() -> None:
+    """CancelResult.partial_output is populated from _output_buffer (51-cancel)."""
+    agent = RalphAgent(config=RalphConfig(), state_backend=NullStateBackend())
+    agent._output_buffer = "---RALPH_STATUS---\nSTATUS: IN_PROGRESS\n---END_RALPH_STATUS---"
+    cr = agent.cancel()
+    assert cr.partial_output == agent._output_buffer
+
+
+def test_cancel_partial_output_with_active_subprocess() -> None:
+    """partial_output is returned even when a subprocess is being terminated."""
+    agent = RalphAgent(config=RalphConfig(), state_backend=NullStateBackend())
+    agent._output_buffer = "partial work output"
+    proc = MagicMock()
+    proc.returncode = None
+    agent._current_cli_proc = proc
+    cr = agent.cancel()
+    assert cr.subprocess_terminated is True
+    assert cr.partial_output == "partial work output"
+
+
+def test_cancel_result_partial_output_defaults_empty() -> None:
+    """CancelResult.partial_output defaults to empty string when buffer is empty."""
+    agent = RalphAgent(config=RalphConfig(), state_backend=NullStateBackend())
+    cr = agent.cancel()
+    assert cr.partial_output == ""
+
+
 @pytest.mark.asyncio
 async def test_should_exit_resets_indicators_on_progress_without_exit_signal(
     tmp_path: Path,
