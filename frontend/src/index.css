@@ -39,3 +39,124 @@
 .animate-loopback-resolve {
   animation: loopback-resolve 1s ease-out forwards;
 }
+
+/* ── Driver.js dark-theme overrides (Epic 50.4) ──────────────────────────────
+ *
+ * Scoped to .studio-spotlight (set via `popoverClass` in SpotlightProvider).
+ * These rules override driver.js's built-in light theme without touching the
+ * library stylesheet global rules used by other tours (react-joyride, etc.).
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+/* Popover container */
+.studio-spotlight.driver-popover {
+  background-color: #0f1117;
+  border: 1px solid #374151;
+  border-radius: 10px;
+  color: #f9fafb;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(59, 130, 246, 0.15);
+  padding: 20px 22px 16px;
+  max-width: 360px;
+  font-family: inherit;
+}
+
+/* Title */
+.studio-spotlight.driver-popover .driver-popover-title {
+  font-size: 0.9375rem;   /* 15px */
+  font-weight: 600;
+  color: #f9fafb;
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+/* Description body */
+.studio-spotlight.driver-popover .driver-popover-description {
+  font-size: 0.8125rem;   /* 13px */
+  color: #9ca3af;
+  line-height: 1.6;
+  margin-bottom: 14px;
+}
+
+/* Footer row */
+.studio-spotlight.driver-popover .driver-popover-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-top: 1px solid #1f2937;
+  padding-top: 12px;
+}
+
+/* Progress text */
+.studio-spotlight.driver-popover .driver-popover-progress-text {
+  font-size: 0.75rem;
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+/* Shared button base */
+.studio-spotlight.driver-popover button {
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  border: 1px solid transparent;
+}
+
+/* Previous button — ghost/outline style */
+.studio-spotlight.driver-popover .driver-popover-prev-btn {
+  background-color: transparent;
+  color: #6b7280;
+  border-color: #374151;
+}
+.studio-spotlight.driver-popover .driver-popover-prev-btn:hover {
+  background-color: #1f2937;
+  color: #d1d5db;
+  border-color: #4b5563;
+}
+
+/* Next / Done button — blue accent */
+.studio-spotlight.driver-popover .driver-popover-next-btn {
+  background-color: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+}
+.studio-spotlight.driver-popover .driver-popover-next-btn:hover {
+  background-color: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+/* Close (✕) button in top-right corner */
+.studio-spotlight.driver-popover .driver-popover-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 2px 4px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+.studio-spotlight.driver-popover .driver-popover-close-btn:hover {
+  color: #f9fafb;
+  background-color: #1f2937;
+}
+
+/* Arrow — match popover background */
+.studio-spotlight.driver-popover .driver-popover-arrow-side-top.driver-popover-arrow::before,
+.studio-spotlight.driver-popover .driver-popover-arrow-side-left.driver-popover-arrow::before,
+.studio-spotlight.driver-popover .driver-popover-arrow-side-right.driver-popover-arrow::before,
+.studio-spotlight.driver-popover .driver-popover-arrow-side-bottom.driver-popover-arrow::before {
+  border-color: #374151 transparent transparent transparent;
+}
+
+/* Stage highlight ring — subtle blue glow */
+.driver-stage-wrapper > .driver-stage {
+  border-radius: 6px;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4), 0 0 0 9999px rgba(0, 0, 0, 0.55);
+}
