@@ -436,6 +436,45 @@ class TestProjectsV2FeatureFlag:
         finally:
             settings.projects_v2_enabled = original
 
+    @pytest.mark.asyncio
+    async def test_workflow_trigger_propagates_projects_v2_enabled(self):
+        """start_workflow passes projects_v2_enabled from settings to workflow arg.
+
+        Story 38.13: The flag must be forwarded at workflow launch time so that
+        PipelineInput.projects_v2_enabled reflects the runtime settings value.
+        """
+        from unittest.mock import AsyncMock, MagicMock, patch
+        from uuid import uuid4
+
+        task_id = uuid4()
+        corr_id = uuid4()
+
+        mock_handle = MagicMock()
+        mock_handle.result_run_id = "run-abc"
+
+        mock_client = AsyncMock()
+        mock_client.start_workflow = AsyncMock(return_value=mock_handle)
+
+        original = settings.projects_v2_enabled
+        settings.projects_v2_enabled = True
+        try:
+            with patch(
+                "src.ingress.workflow_trigger.get_temporal_client",
+                return_value=mock_client,
+            ):
+                from src.ingress.workflow_trigger import start_workflow
+
+                await start_workflow(task_id, corr_id)
+
+            _args, kwargs = mock_client.start_workflow.call_args
+            workflow_arg = kwargs.get("arg") or _args[1]
+            assert workflow_arg["projects_v2_enabled"] is True, (
+                "projects_v2_enabled must be forwarded to PipelineInput so the "
+                "Projects v2 sync activity is not silently skipped."
+            )
+        finally:
+            settings.projects_v2_enabled = original
+
 
 # ---------------------------------------------------------------------------
 # 38.14: Field mapping — Cost and Complexity

@@ -46,6 +46,7 @@ async def start_workflow(
             "approval_auto_bypass": settings.approval_auto_bypass,
             "intent_review_enabled": settings.intent_review_enabled,
             "pipeline_comments_enabled": settings.pipeline_comments_enabled,
+            "projects_v2_enabled": settings.projects_v2_enabled,
             "repo": repo,
             "issue_title": issue_title,
             "issue_body": issue_body,
