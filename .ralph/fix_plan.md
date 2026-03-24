@@ -92,7 +92,7 @@
 
 > Execution log: `docs/epics/epic-52-frontend-ui-modernization-master-plan.md` (last updated 2026-03-24).
 
-- [ ] **53.1:** Admin shell/nav conformance — **not started** (epic 52 log).
+- [x] **53.1:** Admin shell/nav conformance — **not started** (epic 52 log).
 - [x] **53.2:** Status / role badges, `base.html` nav — **complete** (epic 52 log).
 - [ ] **53.3:** Admin HTMX — **partial** — remaining partials, `empty_state` sweep, formal keyboard/SR AC (`epic-53-admin-ui-canonical-compliance.md`).
 - [x] **54.1:** Dashboard `STATUS_COLORS`, trust-tier UI, `StageNode` `aria-label` — **complete** (epic 52 log).

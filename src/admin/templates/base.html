@@ -14,6 +14,27 @@
         .fade-in { animation: fadeIn 0.2s ease-in; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
+        /* Skip navigation link — SG §6 keyboard baseline */
+        .skip-nav {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            z-index: 9999;
+            background: #2563eb;
+            color: #fff;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            border-radius: 0 0 4px 0;
+            transition: top 0.1s ease;
+        }
+        .skip-nav:focus {
+            top: 0;
+            outline: 2px solid #fff;
+            outline-offset: 2px;
+        }
+
         /* CSS Tooltips — use data-tooltip="..." on any element */
         [data-tooltip] {
             position: relative;
@@ -48,7 +69,7 @@
         th[data-tooltip], td[data-tooltip] {
             overflow: visible;
         }
-        /* Keyboard focus visibility — SG 6 (admin console) */
+        /* Keyboard focus visibility — SG §6 (admin console) */
         :where(a, button, input, select, textarea, summary):focus-visible {
             outline: 2px solid #2563eb;
             outline-offset: 2px;
@@ -57,110 +78,129 @@
     {% block head %}{% endblock %}
 </head>
 <body class="bg-gray-50 text-gray-900 min-h-screen">
+    <!-- Skip navigation — SG §6 keyboard baseline -->
+    <a href="#main-content" class="skip-nav">Skip to main content</a>
+
     <div class="flex min-h-screen">
-        <!-- Sidebar Navigation -->
-        <nav class="w-56 bg-gray-900 text-gray-100 flex flex-col flex-shrink-0">
+        <!-- Sidebar Navigation — SG §2.1–2.2 shell/nav standard -->
+        <nav class="w-56 bg-gray-900 text-gray-100 flex flex-col flex-shrink-0"
+             aria-label="Admin navigation">
             <div class="px-4 py-5 border-b border-gray-700">
                 <h1 class="text-lg font-bold tracking-tight">TheStudio</h1>
                 <p class="text-xs text-gray-400 mt-1">Admin Console</p>
             </div>
-            <ul class="flex-1 py-4 space-y-1 px-2">
-                <li>
+            <ul class="flex-1 py-4 space-y-1 px-2" role="list">
+                <li role="listitem">
                     <a href="/dashboard/"
                        class="flex items-center px-3 py-2 rounded text-sm hover:bg-indigo-700 bg-indigo-800 text-indigo-100 font-medium mb-2">
-                        <span class="mr-2">&#9654;&#9654;</span> Pipeline Dashboard
+                        <span class="mr-2" aria-hidden="true">&#9654;&#9654;</span> Pipeline Dashboard
                     </a>
                 </li>
-                <li class="border-t border-gray-700 pt-2 mb-1"></li>
-                <li>
+                <li role="listitem" class="border-t border-gray-700 pt-2 mb-1" aria-hidden="true"></li>
+                <li role="listitem">
                     <a href="/admin/ui/dashboard"
-                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'dashboard' %}bg-gray-800 text-white{% else %}text-gray-300{% endif %}">
-                        <span class="mr-2">&#9632;</span> Dashboard
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'dashboard' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
+                       {% if active_page == 'dashboard' %}aria-current="page"{% endif %}>
+                        <span class="mr-2" aria-hidden="true">&#9632;</span> Dashboard
                     </a>
                 </li>
-                <li>
+                <li role="listitem">
                     <a href="/admin/ui/repos"
-                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'repos' %}bg-gray-800 text-white{% else %}text-gray-300{% endif %}">
-                        <span class="mr-2">&#9654;</span> Repos
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'repos' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
+                       {% if active_page == 'repos' %}aria-current="page"{% endif %}>
+                        <span class="mr-2" aria-hidden="true">&#9654;</span> Repos
                     </a>
                 </li>
-                <li>
+                <li role="listitem">
                     <a href="/admin/ui/workflows"
-                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'workflows' %}bg-gray-800 text-white{% else %}text-gray-300{% endif %}">
-                        <span class="mr-2">&#9660;</span> Workflows
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'workflows' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
+                       {% if active_page == 'workflows' %}aria-current="page"{% endif %}>
+                        <span class="mr-2" aria-hidden="true">&#9660;</span> Workflows
                     </a>
                 </li>
-                <li>
+                <li role="listitem">
                     <a href="/admin/ui/metrics"
-                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'metrics' %}bg-gray-800 text-white{% else %}text-gray-300{% endif %}">
-                        <span class="mr-2">&#9650;</span> Metrics
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'metrics' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
+                       {% if active_page == 'metrics' %}aria-current="page"{% endif %}>
+                        <span class="mr-2" aria-hidden="true">&#9650;</span> Metrics
                     </a>
                 </li>
-                <li>
+                <li role="listitem">
                     <a href="/admin/ui/experts"
-                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'experts' %}bg-gray-800 text-white{% else %}text-gray-300{% endif %}">
-                        <span class="mr-2">&#9733;</span> Experts
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'experts' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
+                       {% if active_page == 'experts' %}aria-current="page"{% endif %}>
+                        <span class="mr-2" aria-hidden="true">&#9733;</span> Experts
                     </a>
                 </li>
-                <li>
+                <li role="listitem">
                     <a href="/admin/ui/tools"
-                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'tools' %}bg-gray-800 text-white{% else %}text-gray-300{% endif %}">
-                        <span class="mr-2">&#9881;</span> Tool Hub
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'tools' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
+                       {% if active_page == 'tools' %}aria-current="page"{% endif %}>
+                        <span class="mr-2" aria-hidden="true">&#9881;</span> Tool Hub
                     </a>
                 </li>
-                <li>
+                <li role="listitem">
                     <a href="/admin/ui/models"
-                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'models' %}bg-gray-800 text-white{% else %}text-gray-300{% endif %}">
-                        <span class="mr-2">&#9672;</span> Models
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'models' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
+                       {% if active_page == 'models' %}aria-current="page"{% endif %}>
+                        <span class="mr-2" aria-hidden="true">&#9672;</span> Models
                     </a>
                 </li>
-                <li>
+                <li role="listitem">
                     <a href="/admin/ui/cost-dashboard"
-                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'cost-dashboard' %}bg-gray-800 text-white{% else %}text-gray-300{% endif %}">
-                        <span class="mr-2">&#36;</span> Cost Dashboard
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'cost-dashboard' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
+                       {% if active_page == 'cost-dashboard' %}aria-current="page"{% endif %}>
+                        <span class="mr-2" aria-hidden="true">&#36;</span> Cost Dashboard
                     </a>
                 </li>
-                <li>
+                <li role="listitem">
                     <a href="/admin/ui/compliance"
-                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'compliance' %}bg-gray-800 text-white{% else %}text-gray-300{% endif %}">
-                        <span class="mr-2">&#10003;</span> Compliance
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'compliance' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
+                       {% if active_page == 'compliance' %}aria-current="page"{% endif %}>
+                        <span class="mr-2" aria-hidden="true">&#10003;</span> Compliance
                     </a>
                 </li>
-                <li>
+                <li role="listitem">
                     <a href="/admin/ui/quarantine"
-                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'quarantine' %}bg-gray-800 text-white{% else %}text-gray-300{% endif %}">
-                        <span class="mr-2">&#9888;</span> Quarantine
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'quarantine' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
+                       {% if active_page == 'quarantine' %}aria-current="page"{% endif %}>
+                        <span class="mr-2" aria-hidden="true">&#9888;</span> Quarantine
                     </a>
                 </li>
-                <li>
+                <li role="listitem">
                     <a href="/admin/ui/dead-letters"
-                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'dead-letters' %}bg-gray-800 text-white{% else %}text-gray-300{% endif %}">
-                        <span class="mr-2">&#9760;</span> Dead Letters
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'dead-letters' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
+                       {% if active_page == 'dead-letters' %}aria-current="page"{% endif %}>
+                        <span class="mr-2" aria-hidden="true">&#9760;</span> Dead Letters
                     </a>
                 </li>
-                <li>
+                <li role="listitem">
                     <a href="/admin/ui/planes"
-                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'planes' %}bg-gray-800 text-white{% else %}text-gray-300{% endif %}">
-                        <span class="mr-2">&#9638;</span> Planes
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'planes' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
+                       {% if active_page == 'planes' %}aria-current="page"{% endif %}>
+                        <span class="mr-2" aria-hidden="true">&#9638;</span> Planes
                     </a>
                 </li>
-                <li>
+                <li role="listitem">
                     <a href="/admin/ui/portfolio-health"
-                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'portfolio-health' %}bg-gray-800 text-white{% else %}text-gray-300{% endif %}">
-                        <span class="mr-2">&#9829;</span> Portfolio Health
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'portfolio-health' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
+                       {% if active_page == 'portfolio-health' %}aria-current="page"{% endif %}>
+                        <span class="mr-2" aria-hidden="true">&#9829;</span> Portfolio Health
                     </a>
                 </li>
                 {% if current_user_role and current_user_role.value == 'admin' %}
-                <li>
+                <li role="listitem">
                     <a href="/admin/ui/audit"
-                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'audit' %}bg-gray-800 text-white{% else %}text-gray-300{% endif %}">
-                        <span class="mr-2">&#9679;</span> Audit Log
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'audit' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
+                       {% if active_page == 'audit' %}aria-current="page"{% endif %}>
+                        <span class="mr-2" aria-hidden="true">&#9679;</span> Audit Log
                     </a>
                 </li>
-                <li>
+                <li role="listitem">
                     <a href="/admin/ui/settings"
-                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'settings' %}bg-gray-800 text-white{% else %}text-gray-300{% endif %}">
-                        <span class="mr-2">&#9881;</span> Settings
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'settings' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
+                       {% if active_page == 'settings' %}aria-current="page"{% endif %}>
+                        <span class="mr-2" aria-hidden="true">&#9881;</span> Settings
                     </a>
                 </li>
                 {% endif %}
@@ -181,9 +221,9 @@
             </div>
         </nav>
 
-        <!-- Main Content -->
-        <main class="flex-1 flex flex-col">
-            <!-- Header -->
+        <!-- Main Content — SG §2.1 shell standard -->
+        <main class="flex-1 flex flex-col" id="main-content" tabindex="-1">
+            <!-- Header — SG §2.1 header bar standard -->
             <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
                 <h2 class="text-xl font-semibold">{% block page_title %}{% endblock %}</h2>
                 <div class="text-sm text-gray-500" id="page-status">

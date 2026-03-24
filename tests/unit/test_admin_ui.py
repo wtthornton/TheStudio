@@ -602,3 +602,61 @@ class TestRBACAwareUI:
 
         resp2 = client.get("/admin/ui/repos", headers=VIEWER_HEADERS)
         assert "Register Repo" not in resp2.text
+
+
+class TestStory531AdminShellNavConformance:
+    """Story 53.1: Admin shell and navigation conformance — SG §2.1–2.2 + §6."""
+
+    def test_skip_nav_link_present(self, client):
+        """Skip-nav link must be present for keyboard baseline (SG §6)."""
+        resp = client.get("/admin/ui/dashboard", headers=ADMIN_HEADERS)
+        assert resp.status_code == 200
+        assert 'href="#main-content"' in resp.text
+        assert "Skip to main content" in resp.text
+
+    def test_main_content_anchor_present(self, client):
+        """#main-content anchor must exist as skip-link target (SG §6)."""
+        resp = client.get("/admin/ui/dashboard", headers=ADMIN_HEADERS)
+        assert 'id="main-content"' in resp.text
+
+    def test_nav_has_aria_label(self, client):
+        """Nav element must have aria-label for landmark accessibility (SG §6)."""
+        resp = client.get("/admin/ui/dashboard", headers=ADMIN_HEADERS)
+        assert 'aria-label="Admin navigation"' in resp.text
+
+    def test_active_nav_item_has_aria_current(self, client):
+        """Active nav link must carry aria-current='page' (SG §6)."""
+        resp = client.get("/admin/ui/dashboard", headers=ADMIN_HEADERS)
+        assert 'aria-current="page"' in resp.text
+
+    def test_active_nav_item_uses_correct_classes(self, client):
+        """Active nav item must use bg-gray-800 text-white font-medium (SG §2.2)."""
+        resp = client.get("/admin/ui/dashboard", headers=ADMIN_HEADERS)
+        body = resp.text
+        # The active Dashboard link must carry the active state class
+        assert "bg-gray-800 text-white font-medium" in body
+
+    def test_nav_icon_spans_are_aria_hidden(self, client):
+        """Decorative icon spans must be aria-hidden so SR skips them (SG §6)."""
+        resp = client.get("/admin/ui/dashboard", headers=ADMIN_HEADERS)
+        assert 'aria-hidden="true"' in resp.text
+
+    def test_cross_app_link_indigo_emphasis(self, client):
+        """Pipeline Dashboard cross-app link must use indigo emphasis (SG §2.2)."""
+        resp = client.get("/admin/ui/dashboard", headers=ADMIN_HEADERS)
+        assert "bg-indigo-800" in resp.text
+        assert "Pipeline Dashboard" in resp.text
+
+    def test_shell_layout_classes_present(self, client):
+        """Shell layout must use flex min-h-screen canvas (SG §2.1)."""
+        resp = client.get("/admin/ui/dashboard", headers=ADMIN_HEADERS)
+        body = resp.text
+        assert "flex min-h-screen" in body
+        assert "bg-gray-50" in body
+        assert "bg-gray-900" in body  # dark sidebar
+
+    def test_repos_page_active_nav(self, client):
+        """Repos page must mark repos nav item as aria-current='page'."""
+        resp = client.get("/admin/ui/repos", headers=ADMIN_HEADERS)
+        assert resp.status_code == 200
+        assert 'aria-current="page"' in resp.text
