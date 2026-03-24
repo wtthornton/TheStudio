@@ -43,7 +43,9 @@ import {
   isSetupWizardSkipped,
   markSetupWizardComplete,
   markSetupWizardSkipped,
+  clearSetupWizardSkipped,
 } from './components/wizard/wizardStorage'
+import { IncompleteBanner } from './components/wizard/IncompleteBanner'
 
 type Tab =
   | 'pipeline'
@@ -87,6 +89,11 @@ function App() {
     setShowSetupWizard(false)
   }, [])
 
+  const handleSetupWizardResume = useCallback(() => {
+    clearSetupWizardSkipped()
+    setShowSetupWizard(true)
+  }, [])
+
   // Check if pipeline has any tasks
   const hasAnyTasks = PIPELINE_STAGES.some((s) => stages[s.id].taskCount > 0)
 
@@ -125,6 +132,8 @@ function App() {
 
       {/* S4.F10: Disconnection banner */}
       <DisconnectionBanner />
+      {/* Epic 44.9: Incomplete setup banner */}
+      <IncompleteBanner onResume={handleSetupWizardResume} />
 
       {/* Header */}
       <header className="flex items-center justify-between border-b border-gray-800 px-6 py-4">
@@ -216,7 +225,7 @@ function App() {
           >
             ↓ Import Issues
           </button>
-          <HeaderBar />
+          <HeaderBar onResumeWizard={handleSetupWizardResume} />
           <NotificationBell onNavigate={handleNotificationNavigate} />
           <ConnectionIndicator />
         </div>

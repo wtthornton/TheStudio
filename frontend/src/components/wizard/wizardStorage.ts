@@ -34,3 +34,11 @@ export function markSetupWizardSkipped(): void {
     /* ignore */
   }
 }
+
+export function clearSetupWizardSkipped(): void {
+  try {
+    localStorage.removeItem(SETUP_WIZARD_SKIPPED_KEY)
+  } catch {
+    /* ignore */
+  }
+}
