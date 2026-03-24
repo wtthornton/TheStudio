@@ -1,6 +1,7 @@
 /** RefinementModal — modal overlay for requesting AI refinement (Epic 36, 36.11f). */
 
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { useFocusTrap } from '../../hooks/useFocusTrap'
 
 interface RefinementModalProps {
   open: boolean
@@ -14,6 +15,9 @@ const MIN_FEEDBACK_LENGTH = 10
 export default function RefinementModal({ open, saving, onSubmit, onClose }: RefinementModalProps) {
   const [feedback, setFeedback] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
+
+  useFocusTrap(dialogRef, open)
 
   const isValid = feedback.trim().length >= MIN_FEEDBACK_LENGTH
 
@@ -66,6 +70,7 @@ export default function RefinementModal({ open, saving, onSubmit, onClose }: Ref
       role="presentation"
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="refinement-modal-title"

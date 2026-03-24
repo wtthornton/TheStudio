@@ -13,6 +13,7 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { useFocusTrap } from '../../hooks/useFocusTrap'
 import {
   fetchDashboardRepos,
   fetchGitHubIssues,
@@ -71,6 +72,9 @@ export default function ImportModal({ open, onClose, onImported }: ImportModalPr
   const [importError, setImportError] = useState<string | null>(null)
 
   const searchRef = useRef<HTMLInputElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
+
+  useFocusTrap(dialogRef, open)
 
   /** The effective repo string (selected from dropdown or typed manually). */
   const activeRepo = selectedRepo || repoInput
@@ -250,6 +254,7 @@ export default function ImportModal({ open, onClose, onImported }: ImportModalPr
       onClick={handleBackdropClick}
     >
       <div
+        ref={dialogRef}
         className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-gray-700 bg-gray-900 shadow-2xl"
         role="dialog"
         aria-modal="true"

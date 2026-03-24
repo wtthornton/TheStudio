@@ -1,6 +1,6 @@
 # Epic 52: Frontend UI Modernization Master Plan
 
-> **Status:** In execution (waves 1–2 partial, 2026-03-24)
+> **Status:** In execution (waves 1–2 complete, wave 3 complete, 2026-03-24)
 > **Owner:** Product + Frontend
 > **Scope:** `/admin/ui/*` and `/dashboard/*`
 > **Canonical Standard:** `docs/design/07-THESTUDIO-UI-UX-STYLE-GUIDE.md`
@@ -12,12 +12,16 @@
 
 | Story | Status | Notes |
 |-------|--------|--------|
-| 53.1 | Not started | Shell/nav conformance — confirm sprint placement before claiming done |
+| 53.1 | **Completed** | Admin shell/nav conformance (SG 2.1–2.2 + 6) — commit `b9bde1c` |
 | 53.2 | **Completed** | `status_badge.html` (SG 3.1–3.2), `role_badge` macro + dark variant; `base.html` nav uses `role_badge` (SG 3.3 admin); `writes_disabled` → yellow |
-| 53.3 | **Partial** | Wave 1: `base.html` focus-visible, `empty_state` primary blue-600. Wave 2: settings cards — `aria-label`, loading `role="status"` / `aria-live`, `data-admin-htmx-section` + global `htmx:responseError` Retry. **Remaining:** other admin partials, empty-state sweep |
+| 53.3 | **Completed** | Admin empty_state sweep + scope="col" SR/WCAG compliance — commit `394fb11`. HTMX shells, `aria-label`, loading `role="status"` / `aria-live`, `data-admin-htmx-section` + global `htmx:responseError` Retry. |
 | 54.1 | **Completed** | `STATUS_COLORS`, trust-tier UI, `StageNode` `aria-label` (dashboard user-role chip still N/A for SG 3.3) |
-| 54.2 | **Partial** | Wave 1: `EmptyState`, `TriageQueue`, `CreateTaskModal`. Wave 2: `RefinementModal` dialog semantics; `IntentEditor` reject modal, loading/error roles, toolbar focus rings. **Remaining:** other modals/panels, optional focus traps |
-| 57.1 | **In progress** | Matrix maintained; SG 3.3 **Verified** (admin); SG 4.x–6.x **Partial** with evidence. Full story AC after 53.3/54.2 sweeps + 57.2 |
+| 54.2 | **Completed** | Modals/panels: `EmptyState`, `TriageQueue`, `CreateTaskModal`, `RefinementModal`, `IntentEditor`, `ImportModal`, `StageDetailPanel`, `EditPanel` — dialog semantics, focus traps, focus-visible, aria-labels. |
+| 55.1–55.4 | **Completed** | AI prompt-first components: PromptObject, IntentPreview, ExecutionModeSelector, DecisionControls, TrustMetadata, AuditTimeline (39 tests) |
+| 56.1–56.4 | **Completed** | 2026 capability modules: CommandPalette, DashboardCustomizer, locale helpers, CommentThread, ChangeHistory (35 tests) |
+| 57.1 | **Completed** | Traceability matrix operational; all SG rows linked to implementing stories with evidence |
+| 57.2 | **Completed** | Regression safety checklist (21 items, 6 categories) — `docs/governance/ui-regression-checklist.md` |
+| 57.3 | **Completed** | Phased rollout plan with 3 waves, entry/exit criteria, rollback triggers — `docs/governance/rollout-plan.md` |
 
 ---
 

@@ -6,6 +6,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { createManualTask, fetchAdminRepos } from '../../lib/api'
 import type { AdminRepoItem } from '../../lib/api'
+import { useFocusTrap } from '../../hooks/useFocusTrap'
 
 interface CreateTaskModalProps {
   open: boolean
@@ -30,6 +31,9 @@ export default function CreateTaskModal({ open, onClose, onCreated }: CreateTask
   const [availableRepos, setAvailableRepos] = useState<AdminRepoItem[]>([])
 
   const titleRef = useRef<HTMLInputElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
+
+  useFocusTrap(dialogRef, open)
 
   const reset = useCallback(() => {
     setTitle('')
@@ -134,6 +138,7 @@ export default function CreateTaskModal({ open, onClose, onCreated }: CreateTask
       role="presentation"
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="create-task-modal-title"

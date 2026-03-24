@@ -161,12 +161,12 @@
 
 | Epic | Title | Status | Notes |
 |------|-------|--------|--------|
-| 52 | Frontend UI modernization (master plan) | **In execution** (2026-03-24) | `epic-52-frontend-ui-modernization-master-plan.md`. Traceability: `epic-52-traceability-matrix-style-guide-mapping.md`. Gap report: `epic-52-gap-report-admin-vs-dashboard.md`. |
-| 53 | Admin console canonical compliance | Proposed (stories in flight) | **53.2** complete; **53.3** — HTMX shells, repo nested loaders, **Wave 6** `empty_state` on fleet dashboard repos table, experts list, planes list; **2026-03-24** self-loading shells with `data-admin-htmx-section`, `aria-label`, and loading `role="status"` aligned across primary admin pages (dashboard, repos, workflows, settings, tools, metrics, models, cost, portfolio, quarantine, dead letters, experts, planes, compliance, audit, detail templates). Formal AC / keyboard pass open. Rollup in `epic-53-admin-ui-canonical-compliance.md`. |
-| 54 | Pipeline app canonical compliance | Proposed (stories in flight) | **54.1** complete; **54.2** partial — added dialog semantics / focus rings on ImportModal, steering modals, StageDetailPanel, EditPanel (prior: IntentEditor, RefinementModal, CreateTaskModal, TriageQueue). Rollup in `epic-54-dashboard-ui-canonical-compliance.md`. |
-| 55 | Cross-surface AI prompt-first + trust | Proposed | Not started |
-| 56 | 2026 capability modules | Proposed | Not started |
-| 57 | Rollout governance + regression safety | Proposed | **57.1** in progress (matrix updated 2026-03-24 for Waves 4–6). Rollup in `epic-57-rollout-governance-and-regression-safety.md`. |
+| 52 | Frontend UI modernization (master plan) | **In execution** (2026-03-24) | Waves 1–3 complete. Remaining: stories 53.4, 54.3, 54.4. `epic-52-frontend-ui-modernization-master-plan.md`. |
+| 53 | Admin console canonical compliance | **In execution** (2026-03-24) | **53.1–53.3 complete**; 53.4 not started. Shell/nav conformance, status badges, HTMX loading/empty/error + WCAG. `epic-53-admin-ui-canonical-compliance.md`. |
+| 54 | Pipeline app canonical compliance | **In execution** (2026-03-24) | **54.1–54.2 complete**; 54.3–54.4 not started. STATUS_COLORS, trust-tier UI, modal dialog semantics + focus traps. `epic-54-dashboard-ui-canonical-compliance.md`. |
+| 55 | Cross-surface AI prompt-first + trust | **Complete** (2026-03-24) | All 4 stories (55.1–55.4) delivered. PromptObject, IntentPreview, ExecutionModeSelector, DecisionControls, TrustMetadata, AuditTimeline — 39 tests. `epic-55-cross-surface-ai-prompt-first-and-trust-layer.md`. |
+| 56 | 2026 capability modules | **Complete** (2026-03-24) | All 4 stories (56.1–56.4) delivered. CommandPalette, DashboardCustomizer, locale helpers, CommentThread, ChangeHistory — 35 tests. `epic-56-cross-surface-2026-capability-modules.md`. |
+| 57 | Rollout governance + regression safety | **Complete** (2026-03-24) | All 3 stories (57.1–57.3) delivered. Traceability matrix operational, regression checklist (21 items, 6 categories), 3-wave rollout plan with rollback triggers. `epic-57-rollout-governance-and-regression-safety.md`. |
 
 ---
 

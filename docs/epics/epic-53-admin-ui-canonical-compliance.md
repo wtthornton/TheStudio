@@ -1,7 +1,7 @@
 # Epic 53: Admin Console Canonical UI Compliance
 
 <!-- docsmcp:start:metadata -->
-**Status:** Proposed (execution started under Epic 52 master plan)
+**Status:** In execution (stories 53.1–53.3 complete; 53.4 not started)
 **Priority:** P0 - Critical
 **Estimated LOE:** ~3-4 weeks
 **Dependencies:** Epic 52
@@ -12,9 +12,10 @@
 
 | Story | Status | Pointer |
 |-------|--------|--------|
+| 53.1 | **Complete** | Admin shell/nav conformance (SG 2.1–2.2 + 6) — commit `b9bde1c` |
 | 53.2 | **Complete** | `stories/story-53.2-admin-semantic-status-badge-normalization.md` |
-| 53.3 | **Partial** | Settings HTMX loading/error + `base.html` handler; sweep other partials still open — `stories/story-53.3-admin-loading-empty-error-keyboard-baseline.md` |
-| 53.1, 53.4 | Not done | — |
+| 53.3 | **Complete** | Admin empty_state sweep + scope="col" SR/WCAG compliance — commit `394fb11`, `stories/story-53.3-admin-loading-empty-error-keyboard-baseline.md` |
+| 53.4 | Not done | — |
 
 Master plan: `epic-52-frontend-ui-modernization-master-plan.md`.
 

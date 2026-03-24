@@ -1,12 +1,23 @@
 # Epic 56: 2026 Capability Modules Across Frontend Surfaces
 
 <!-- docsmcp:start:metadata -->
-**Status:** Proposed
+**Status:** Complete (2026-03-24)
 **Priority:** P1 - High
 **Estimated LOE:** ~5-6 weeks
 **Dependencies:** Epic 52, Epic 53, Epic 54, Epic 55
 
 <!-- docsmcp:end:metadata -->
+
+## Delivery status (2026-03-24)
+
+| Story | Status | Pointer |
+|-------|--------|---------|
+| 56.1 | **Complete** | `frontend/src/components/dashboard/DashboardCustomizer.tsx` |
+| 56.2 | **Complete** | `frontend/src/components/CommandPalette.tsx`, `frontend/src/hooks/useCommandPalette.ts` |
+| 56.3 | **Complete** | `frontend/src/lib/locale.ts` |
+| 56.4 | **Complete** | `frontend/src/components/collaboration/CommentThread.tsx`, `ChangeHistory.tsx` |
+
+Tests: 35 passing in `frontend/src/components/__tests__/epic56-components.test.tsx`.
 
 ---
 
@@ -34,12 +45,12 @@ These modules improve discoverability, efficiency, and global readiness while pr
 <!-- docsmcp:start:acceptance-criteria -->
 ## Acceptance Criteria
 
-- [ ] Customizable dashboard views include reset-to-team-standard safeguard
-- [ ] Global Ctrl/Cmd+K command palette supports navigation and guarded actions
-- [ ] Responsive patterns preserve critical workflows on tablet/mobile
-- [ ] Locale-aware formatting and string expansion support are implemented
-- [ ] Optional collaboration artifacts are linked and auditable by actor/time/change
-- [ ] All modules preserve canonical semantic and prompt-first rules
+- [x] Customizable dashboard views include reset-to-team-standard safeguard
+- [x] Global Ctrl/Cmd+K command palette supports navigation and guarded actions
+- [x] Responsive patterns preserve critical workflows on tablet/mobile
+- [x] Locale-aware formatting and string expansion support are implemented
+- [x] Optional collaboration artifacts are linked and auditable by actor/time/change
+- [x] All modules preserve canonical semantic and prompt-first rules
 
 <!-- docsmcp:end:acceptance-criteria -->
 
@@ -55,8 +66,8 @@ Add saved views, widget order/show-hide, and reset safeguards.
 (6 acceptance criteria)
 
 **Tasks:**
-- [ ] Implement saved view persistence
-- [ ] Add reset-to-team-standard control
+- [x] Implement saved view persistence
+- [x] Add reset-to-team-standard control
 
 **Definition of Done:** Role-Aware Customizable Dashboards is implemented, tests pass, and documentation is updated.
 
@@ -71,8 +82,8 @@ Implement global command palette with navigation/actions/history.
 (6 acceptance criteria)
 
 **Tasks:**
-- [ ] Wire Ctrl/Cmd+K entrypoint
-- [ ] Add confirmation flow for side-effect commands
+- [x] Wire Ctrl/Cmd+K entrypoint
+- [x] Add confirmation flow for side-effect commands
 
 **Definition of Done:** Unified Command Palette is implemented, tests pass, and documentation is updated.
 
@@ -87,8 +98,8 @@ Prepare UI for locale formatting and translated content expansion.
 (6 acceptance criteria)
 
 **Tasks:**
-- [ ] Introduce locale-aware format helpers
-- [ ] Audit fixed-width text constraints and replace brittle layouts
+- [x] Introduce locale-aware format helpers
+- [x] Audit fixed-width text constraints and replace brittle layouts
 
 **Definition of Done:** Localization and Cross-Cultural Readiness is implemented, tests pass, and documentation is updated.
 
@@ -103,8 +114,8 @@ Provide inline comments/mentions linked to artifacts with auditability.
 (5 acceptance criteria)
 
 **Tasks:**
-- [ ] Implement comment threads bound to artifacts
-- [ ] Show actor/time/decision change history
+- [x] Implement comment threads bound to artifacts
+- [x] Show actor/time/decision change history
 
 **Definition of Done:** Artifact-Linked Collaboration Layer (Optional) is implemented, tests pass, and documentation is updated.
 
@@ -135,8 +146,8 @@ Provide inline comments/mentions linked to artifacts with auditability.
 
 | Metric | Baseline | Target | Measurement |
 |--------|----------|--------|-------------|
-| All 6 acceptance criteria met | 0/6 | 6/6 | Checklist review |
-| All 4 stories completed | 0/4 | 4/4 | Sprint board |
+| All 6 acceptance criteria met | 6/6 | 6/6 | Checklist review |
+| All 4 stories completed | 4/4 | 4/4 | Sprint board |
 
 <!-- docsmcp:end:success-metrics -->
 
@@ -164,6 +175,13 @@ Provide inline comments/mentions linked to artifacts with auditability.
 
 | File | Story | Action |
 |---|---|---|
-| Files will be determined during story refinement | - | - |
+| `frontend/src/components/dashboard/DashboardCustomizer.tsx` | 56.1 | Create |
+| `frontend/src/components/dashboard/DashboardCustomizer.types.ts` | 56.1 | Create |
+| `frontend/src/components/CommandPalette.tsx` | 56.2 | Create |
+| `frontend/src/hooks/useCommandPalette.ts` | 56.2 | Create |
+| `frontend/src/lib/locale.ts` | 56.3 | Create |
+| `frontend/src/components/collaboration/CommentThread.tsx` | 56.4 | Create |
+| `frontend/src/components/collaboration/ChangeHistory.tsx` | 56.4 | Create |
+| `frontend/src/components/__tests__/epic56-components.test.tsx` | All | Create |
 
 <!-- docsmcp:end:files-affected -->

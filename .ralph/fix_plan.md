@@ -10,7 +10,7 @@
 | **38** | MVP done (38.1–38.12); **Slices 3–4 open** | `docs/epics/epic-38-phase4-github-integration.md` |
 | **39** | Approved — not started | `docs/epics/epic-39-phase5-analytics-learning.md` |
 | **43** | **Integration delivered** in tree (43.1–43.15); **default `THESTUDIO_AGENT_MODE=ralph`** and primary-agent *rollout* still **gated on Epic 51** + ops | `docs/epics/epic-43-ralph-sdk-integration.md` |
-| **52–57** | Canonical UI modernization (52 master; 53–57 child tracks) | `docs/epics/epic-52-frontend-ui-modernization-master-plan.md`, `epic-53-admin-ui-canonical-compliance.md`, `epic-54-dashboard-ui-canonical-compliance.md`, `epic-55-cross-surface-ai-prompt-first-and-trust-layer.md`, `epic-56-cross-surface-2026-capability-modules.md`, `epic-57-rollout-governance-and-regression-safety.md` |
+| **52–54** | Canonical UI — **55, 56, 57 complete**; remaining: 53.4, 54.3, 54.4 | `epic-52-frontend-ui-modernization-master-plan.md`, `epic-53-admin-ui-canonical-compliance.md`, `epic-54-dashboard-ui-canonical-compliance.md` |
 | **27** | Deferred on demand | `docs/epics/` (multi-source webhooks — see tracker) |
 
 ### Epic 51 — Ralph vendored SDK parity (remaining)
@@ -92,15 +92,16 @@
 
 > Execution log: `docs/epics/epic-52-frontend-ui-modernization-master-plan.md` (last updated 2026-03-24).
 
-- [x] **53.1:** Admin shell/nav conformance — **not started** (epic 52 log).
+- [x] **53.1:** Admin shell/nav conformance — **complete** — commit `b9bde1c` (SG 2.1–2.2 + 6).
 - [x] **53.2:** Status / role badges, `base.html` nav — **complete** (epic 52 log).
-- [x] **53.3:** Admin HTMX — **partial** — remaining partials, `empty_state` sweep, formal keyboard/SR AC (`epic-53-admin-ui-canonical-compliance.md`).
+- [x] **53.3:** Admin HTMX — **complete** — empty_state sweep + scope="col" SR/WCAG compliance, commit `394fb11`.
 - [x] **54.1:** Dashboard `STATUS_COLORS`, trust-tier UI, `StageNode` `aria-label` — **complete** (epic 52 log).
-- [ ] **54.2:** Pipeline app — **partial** — remaining modals/panels, SG §11 sign-off, optional focus traps (`epic-54-dashboard-ui-canonical-compliance.md`).
-- [ ] **55:** Cross-surface AI prompt-first + trust — **not started** — `epic-55-cross-surface-ai-prompt-first-and-trust-layer.md`.
-- [ ] **56:** 2026 capability modules — **not started** — `epic-56-cross-surface-2026-capability-modules.md`.
-- [ ] **57.1:** Rollout governance matrix — **in progress** (`epic-57-rollout-governance-and-regression-safety.md`).
-- [ ] **57.2:** Full regression / AC closure — **pending** 53.3 + 54.2 sweeps per epic 52 log.
+- [x] **54.2:** Pipeline app — **complete** — modals/panels dialog semantics, focus traps, focus-visible, aria-labels (`epic-54-dashboard-ui-canonical-compliance.md`).
+- [x] **55:** Cross-surface AI prompt-first + trust — **complete** — PromptObject, IntentPreview, ExecutionModeSelector, DecisionControls, TrustMetadata, AuditTimeline (39 tests). `epic-55-cross-surface-ai-prompt-first-and-trust-layer.md`.
+- [x] **56:** 2026 capability modules — **complete** — CommandPalette, DashboardCustomizer, locale helpers, CommentThread, ChangeHistory (35 tests). `epic-56-cross-surface-2026-capability-modules.md`.
+- [x] **57.1:** Rollout governance matrix — **complete** — traceability matrix updated, all rows linked, evidence recorded. `story-57.1-traceability-operations-style-guide-closure.md`.
+- [x] **57.2:** Regression safety checklist — **complete** — 21-item checklist across 6 categories. `docs/governance/ui-regression-checklist.md`.
+- [x] **57.3:** Phased rollout plan — **complete** — 3-wave plan with entry/exit criteria, rollback triggers. `docs/governance/rollout-plan.md`.
 
 ### Deferred (no sprint checkbox — pull when demand exists)
 
@@ -245,7 +246,11 @@
 
 **Other closed work (not duplicated as tasks here):** Epics **0–37**, **28–29**, **30–33**, **34–37** (pipeline UI phases 0–3), per `docs/epics/EPIC-STATUS-TRACKER.md`.
 
-**Still open:** See **Open epics** at top — **38** (slices 3–4), **39**, **51** (vendor parity + eval backlog), **52–57** (53.1 / 53.3 / 54.2 / 55–57 partial or not started). **Epic 43** stories **43.1–43.15** are **done in code**; **Ralph as default in prod** remains **gated on Epic 51** + ops. **Epic 27** is **deferred** (not scheduled).
+**Epics 55, 56, 57 complete:** All stories **55.1–55.4, 56.1–56.4, 57.1–57.3** marked `[x]`. Components: `ai/` (6 files, 39 tests), `CommandPalette`, `DashboardCustomizer`, `locale.ts`, `collaboration/` (2 files), governance docs (regression checklist + rollout plan). 74 new tests passing.
+
+**Epics 52–54 partial:** Stories **53.1–53.3, 54.1–54.2** marked `[x]`. Remaining: **53.4** (not started), **54.3, 54.4** (not started).
+
+**Still open:** See **Open epics** at top — **52–54** (remaining stories 53.4, 54.3, 54.4), **38** (slices 3–4), **39**, **51** (vendor parity + eval backlog). **Epic 43** stories **43.1–43.15** are **done in code**; **Ralph as default in prod** remains **gated on Epic 51** + ops. **Epic 27** is **deferred** (not scheduled).
 
 Deployment hardening (reference): multi-stage Dockerfile, `.dockerignore`, `vendor/ralph-sdk`, migrations **048** (`ralph_agent_state`) + **049**, NATS healthcheck, pg-proxy localhost binding, `/health/ralph` coverage.
 

@@ -1,7 +1,7 @@
 # Epic 54: Pipeline App Canonical UI Compliance
 
 <!-- docsmcp:start:metadata -->
-**Status:** Proposed (execution started under Epic 52 master plan)
+**Status:** In execution (stories 54.1–54.2 complete; 54.3–54.4 not started)
 **Priority:** P0 - Critical
 **Estimated LOE:** ~4-5 weeks
 **Dependencies:** Epic 52, Epic 53
@@ -13,7 +13,7 @@
 | Story | Status | Pointer |
 |-------|--------|--------|
 | 54.1 | **Complete** | `stories/story-54.1-dashboard-semantic-consistency.md` |
-| 54.2 | **Partial** | Core planning modals + states — `stories/story-54.2-dashboard-state-accessibility-hardening.md` |
+| 54.2 | **Complete** | Modals/panels dialog semantics, focus traps, focus-visible, aria-labels — `stories/story-54.2-dashboard-state-accessibility-hardening.md` |
 | 54.3, 54.4 | Not done | — |
 
 Master plan: `epic-52-frontend-ui-modernization-master-plan.md`.

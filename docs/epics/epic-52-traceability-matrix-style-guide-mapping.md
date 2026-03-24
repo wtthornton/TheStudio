@@ -2,7 +2,7 @@
 
 > Canonical source: `docs/design/07-THESTUDIO-UI-UX-STYLE-GUIDE.md`
 > Coverage scope: `/admin/ui/*` and `/dashboard/*`
-> **Last updated:** 2026-03-24 — Wave 4–5 admin HTMX shells, repo-detail nested loaders, Story **54.2** Wave 3 (ImportModal, steering modals, StageDetailPanel, EditPanel).
+> **Last updated:** 2026-03-24 — Epic 57 closure: SG 8.x In Progress (Epic 55), SG 9.3x In Progress (Epic 56), SG 9.4 Verified, SG 11 In Progress (57.2).
 
 ---
 
@@ -24,21 +24,21 @@
 | SG 5.3 | Explicit error/alert semantics | 53.3, 54.2 | alert containers and fallback states | Partial — settings HTMX `responseError` + Retry; dashboard: TriageQueue, CreateTaskModal, IntentEditor `role="alert"`; steering/import dialogs (54.2 W3) |
 | SG 6.1-6.5 | Accessibility baseline and non-color cues | 53.3, 54.2, 57.2 | admin controls, dashboard controls, modal/panel flows | Partial — **54.2 W3:** `ImportModal`, abort/redirect/retry dialogs, `StageDetailPanel`, `EditPanel` (`role="dialog"`, `aria-modal`, `aria-labelledby`, `type="button"`, focus-visible); prior: RefinementModal, IntentEditor, CreateTaskModal, admin `:focus-visible` |
 | SG 7.1-7.10 | Modernization guardrails | 53.x, 54.x, 56.1, 57.2 | all touched surfaces | Planned |
-| SG 8.1 | Prompt-first 5-step sequence | 53.4, 54.3, 55.1, 55.2 | admin AI partials, planning/steering flows | Planned |
-| SG 8.2 | Prompt object contract | 54.3, 55.1 | `IntentEditor.tsx`, shared prompt model | Planned |
-| SG 8.3 | Agentic controls (preview, autonomy, rationale, audit/undo) | 55.1, 55.2, 55.4 | dashboard + admin AI action surfaces | Planned |
-| SG 8.4 | Trust signals (confidence/evidence/timestamp/ownership) | 53.4, 55.3 | `EvidenceExplorer.tsx`, admin workflow detail | Planned |
-| SG 8.5 | High-impact action friction/confirmation | 54.3, 55.2, 56.2 | steering/reviewer/command actions | Planned |
-| SG 8.6 | AI labeling in context | 53.4, 55.3 | AI output surfaces across both UIs | Planned |
+| SG 8.1 | Prompt-first 5-step sequence | 53.4, 54.3, 55.1, 55.2 | admin AI partials, planning/steering flows | In Progress (Epic 55 covers prompt-first flows) |
+| SG 8.2 | Prompt object contract | 54.3, 55.1 | `IntentEditor.tsx`, shared prompt model | In Progress (Epic 55 covers prompt object fields) |
+| SG 8.3 | Agentic controls (preview, autonomy, rationale, audit/undo) | 55.1, 55.2, 55.4 | dashboard + admin AI action surfaces | In Progress (Epic 55 covers agentic control surfaces) |
+| SG 8.4 | Trust signals (confidence/evidence/timestamp/ownership) | 53.4, 55.3 | `EvidenceExplorer.tsx`, admin workflow detail | In Progress (Epic 55 covers trust/evidence display) |
+| SG 8.5 | High-impact action friction/confirmation | 54.3, 55.2, 56.2 | steering/reviewer/command actions | In Progress (Epic 55 covers confirmation gates) |
+| SG 8.6 | AI labeling in context | 53.4, 55.3 | AI output surfaces across both UIs | In Progress (Epic 55 covers AI output labeling) |
 | SG 9.1 | Preferred patterns (overview->detail, prompt iteration, feedback/revert) | 54.3, 55.4 | planning/steering/review flows | Planned |
 | SG 9.2 | Anti-pattern prevention | 54.3, 55.2, 56.2, 57.2 | all AI and command action surfaces | Planned |
-| SG 9.3A | Customizable dashboards | 56.1 | dashboard personalization modules | Planned |
-| SG 9.3B | Command palette | 56.2 | global app shell + command registry | Planned |
-| SG 9.3C | Responsive desktop/tablet/mobile | 54.4 | timeline, backlog, triage, action controls | Planned |
-| SG 9.3D | Localization and cross-cultural readiness | 56.3 | formatting helpers + layouts in both surfaces | Planned |
-| SG 9.3E | Optional collaboration layer | 56.4 | artifact-linked comments + audit trails | Planned |
-| SG 9.4 | Deferred patterns remain deferred | 56.x, 57.1, 57.3 | scope guard in all modernization work | Planned |
-| SG 11 | PR compliance checklist coverage | 57.2 + all stories | all epic/story done criteria | Planned |
+| SG 9.3A | Customizable dashboards | 56.1 | dashboard personalization modules | In Progress (Epic 56 covers dashboard customization) |
+| SG 9.3B | Command palette | 56.2 | global app shell + command registry | In Progress (Epic 56 covers command palette) |
+| SG 9.3C | Responsive desktop/tablet/mobile | 54.4 | timeline, backlog, triage, action controls | In Progress (Epic 56 covers responsive layouts) |
+| SG 9.3D | Localization and cross-cultural readiness | 56.3 | formatting helpers + layouts in both surfaces | In Progress (Epic 56 covers localization readiness) |
+| SG 9.3E | Optional collaboration layer | 56.4 | artifact-linked comments + audit trails | In Progress (Epic 56 covers collaboration layer) |
+| SG 9.4 | Deferred patterns remain deferred | 56.x, 57.1, 57.3 | scope guard in all modernization work | Verified (guard rows exist in Deferred Pattern Guard section) |
+| SG 11 | PR compliance checklist coverage | 57.2 + all stories | all epic/story done criteria | In Progress (covered by Story 57.2 regression checklist) |
 
 ---
 

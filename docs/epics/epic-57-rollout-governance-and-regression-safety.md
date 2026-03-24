@@ -1,7 +1,7 @@
 # Epic 57: Frontend Rollout Governance and Regression Safety
 
 <!-- docsmcp:start:metadata -->
-**Status:** Proposed (57.1 traceability in progress)
+**Status:** Complete (all 3 stories delivered 2026-03-24)
 **Priority:** P0 - Critical
 **Estimated LOE:** ~2-3 weeks
 **Dependencies:** Epic 53, Epic 54, Epic 55, Epic 56
@@ -12,8 +12,9 @@
 
 | Story | Status | Pointer |
 |-------|--------|--------|
-| 57.1 | **In progress** | Style-guide matrix + evidence notes — `stories/story-57.1-traceability-operations-style-guide-closure.md` |
-| 57.2, 57.3 | Not done | — |
+| 57.1 | **Complete** | Traceability matrix updated, all rows linked, evidence recorded -- `stories/story-57.1-traceability-operations-style-guide-closure.md` |
+| 57.2 | **Complete** | Regression checklist created -- `stories/story-57.2-regression-safety-checklist.md`, `docs/governance/ui-regression-checklist.md` |
+| 57.3 | **Complete** | Rollout plan with wave gates, rollback triggers -- `stories/story-57.3-phased-rollout-risk-controls.md`, `docs/governance/rollout-plan.md` |
 
 Matrix: `epic-52-traceability-matrix-style-guide-mapping.md`. Master plan: `epic-52-frontend-ui-modernization-master-plan.md`.
 
@@ -43,11 +44,11 @@ Modernization across two surfaces and many pages/components risks regressions un
 <!-- docsmcp:start:acceptance-criteria -->
 ## Acceptance Criteria
 
-- [ ] A phased rollout plan exists with quick-win medium and high-impact waves
-- [ ] Style-guide compliance is tracked per page/component with owner and status
-- [ ] Regression checklist covers accessibility semantics prompt-first trust cues and responsive behavior
-- [ ] Deferred patterns are explicitly guarded and rejected in scope review
-- [ ] Release criteria and rollback triggers are documented for each wave
+- [x] A phased rollout plan exists with quick-win medium and high-impact waves
+- [x] Style-guide compliance is tracked per page/component with owner and status
+- [x] Regression checklist covers accessibility semantics prompt-first trust cues and responsive behavior
+- [x] Deferred patterns are explicitly guarded and rejected in scope review
+- [x] Release criteria and rollback triggers are documented for each wave
 
 <!-- docsmcp:end:acceptance-criteria -->
 
@@ -63,8 +64,8 @@ Operationalize requirement-to-story/page tracking and closure.
 (5 acceptance criteria)
 
 **Tasks:**
-- [ ] Maintain traceability matrix with status
-- [ ] Attach compliance evidence links per requirement
+- [x] Maintain traceability matrix with status
+- [x] Attach compliance evidence links per requirement
 
 **Definition of Done:** Compliance Dashboard and Traceability Operations is implemented, tests pass, and documentation is updated.
 
@@ -79,8 +80,8 @@ Define and enforce cross-surface regression checks.
 (5 acceptance criteria)
 
 **Tasks:**
-- [ ] Create reusable UI regression checklist
-- [ ] Integrate checklist in epic/story done criteria
+- [x] Create reusable UI regression checklist
+- [x] Integrate checklist in epic/story done criteria
 
 **Definition of Done:** Regression Safety Checklist and Test Gates is implemented, tests pass, and documentation is updated.
 
@@ -95,8 +96,8 @@ Ship modernization in controlled waves with rollback criteria.
 (5 acceptance criteria)
 
 **Tasks:**
-- [ ] Define wave gates and owner sign-off
-- [ ] Document rollback and communication plan
+- [x] Define wave gates and owner sign-off
+- [x] Document rollback and communication plan
 
 **Definition of Done:** Phased Rollout and Risk Controls is implemented, tests pass, and documentation is updated.
 
@@ -125,8 +126,8 @@ Ship modernization in controlled waves with rollback criteria.
 
 | Metric | Baseline | Target | Measurement |
 |--------|----------|--------|-------------|
-| All 5 acceptance criteria met | 0/5 | 5/5 | Checklist review |
-| All 3 stories completed | 0/3 | 3/3 | Sprint board |
+| All 5 acceptance criteria met | 5/5 | 5/5 | Checklist review |
+| All 3 stories completed | 3/3 | 3/3 | Sprint board |
 
 <!-- docsmcp:end:success-metrics -->
 
@@ -153,6 +154,11 @@ Ship modernization in controlled waves with rollback criteria.
 
 | File | Story | Action |
 |---|---|---|
-| Files will be determined during story refinement | - | - |
+| `docs/epics/epic-52-traceability-matrix-style-guide-mapping.md` | 57.1 | Updated (status transitions, evidence notes) |
+| `docs/epics/stories/story-57.1-traceability-operations-style-guide-closure.md` | 57.1 | Updated (marked complete) |
+| `docs/epics/stories/story-57.2-regression-safety-checklist.md` | 57.2 | Created |
+| `docs/governance/ui-regression-checklist.md` | 57.2 | Created |
+| `docs/epics/stories/story-57.3-phased-rollout-risk-controls.md` | 57.3 | Created |
+| `docs/governance/rollout-plan.md` | 57.3 | Created |
 
 <!-- docsmcp:end:files-affected -->
