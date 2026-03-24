@@ -48,7 +48,7 @@
 - [x] 44.7: `LLMProviderStep.tsx` — GET `/admin/health`, shows Anthropic key status. **Files:** create LLMProviderStep.tsx.
 - [x] 44.8: `TestIssueStep.tsx` — trigger test issue, poll for TaskPacket, success animation. **Files:** create TestIssueStep.tsx.
 - [x] 44.9: Skip flow + incomplete banner — skip link sets flag, banner in HeaderBar with resume link. **Files:** modify HeaderBar.tsx; create IncompleteBanner.tsx.
-- [ ] 44.10: Re-launch menu item + Vitest tests for all wizard components and gate logic. **Files:** create __tests__/WizardShell.test.tsx; modify HelpMenu (if Epic 45 done) or App.tsx. **RUN TESTS.**
+- [x] 44.10: Re-launch menu item + Vitest tests for all wizard components and gate logic. **Files:** create __tests__/WizardShell.test.tsx; modify HelpMenu (if Epic 45 done) or App.tsx. **RUN TESTS.**
 
 ---
 
