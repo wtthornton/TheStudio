@@ -1,6 +1,6 @@
 /** IntentEditor — container for intent review workflow (Epic 36, 36.11d). */
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useIntentStore } from '../../stores/intent-store'
 import { fetchTaskDetail } from '../../lib/api'
 import type { TaskPacketRead } from '../../lib/api'
@@ -36,9 +36,10 @@ export default function IntentEditor({ taskId, onNavigateToPipeline }: IntentEdi
   const [taskLoading, setTaskLoading] = useState(true)
   const [taskError, setTaskError] = useState<string | null>(null)
 
-  // Reject confirmation state
+  // Reject confirmation state (modal — SG 6 dialog pattern, story 54.2)
   const [rejectOpen, setRejectOpen] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
+  const rejectInputRef = useRef<HTMLInputElement>(null)
 
   // Diff mode state
   const [diffMode, setDiffMode] = useState(false)
@@ -109,11 +110,32 @@ export default function IntentEditor({ taskId, onNavigateToPipeline }: IntentEdi
     setRefineModalOpen(true)
   }, [setRefineModalOpen])
 
+  useEffect(() => {
+    if (!rejectOpen) return
+    requestAnimationFrame(() => {
+      rejectInputRef.current?.focus()
+    })
+  }, [rejectOpen])
+
+  useEffect(() => {
+    if (!rejectOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !saving) {
+        setRejectOpen(false)
+        setRejectReason('')
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [rejectOpen, saving])
+
   // Loading state
   if (taskLoading || loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-sm text-gray-400">Loading intent review…</div>
+        <div className="text-sm text-gray-400" role="status" aria-live="polite">
+          Loading intent review…
+        </div>
       </div>
     )
   }
@@ -122,7 +144,10 @@ export default function IntentEditor({ taskId, onNavigateToPipeline }: IntentEdi
   if (taskError || error) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="rounded border border-red-800 bg-red-900/30 px-4 py-3 text-sm text-red-300">
+        <div
+          className="rounded border border-red-800 bg-red-900/30 px-4 py-3 text-sm text-red-300"
+          role="alert"
+        >
           {taskError || error}
         </div>
       </div>
@@ -158,6 +183,7 @@ export default function IntentEditor({ taskId, onNavigateToPipeline }: IntentEdi
           />
           {versions.length >= 2 && (
             <button
+              type="button"
               onClick={() => {
                 if (!diffMode && current) {
                   // Default: compare previous version to current
@@ -167,7 +193,7 @@ export default function IntentEditor({ taskId, onNavigateToPipeline }: IntentEdi
                 }
                 setDiffMode(!diffMode)
               }}
-              className={`rounded px-2 py-1 text-xs font-medium ${
+              className={`rounded px-2 py-1 text-xs font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950 ${
                 diffMode
                   ? 'bg-amber-700 text-amber-100'
                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
@@ -181,7 +207,7 @@ export default function IntentEditor({ taskId, onNavigateToPipeline }: IntentEdi
             <select
               value={diffBaseVersion ?? ''}
               onChange={(e) => setDiffBaseVersion(Number(e.target.value))}
-              className="rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs text-gray-300 focus:border-amber-500 focus:outline-none"
+              className="rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs text-gray-300 focus:border-amber-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
               data-testid="diff-base-selector"
             >
               {versions
@@ -197,63 +223,37 @@ export default function IntentEditor({ taskId, onNavigateToPipeline }: IntentEdi
 
         <div className="flex items-center gap-2">
           <button
+            type="button"
             onClick={handleApprove}
             disabled={saving}
-            className="rounded bg-emerald-700 px-3 py-1.5 text-xs font-medium text-emerald-100 hover:bg-emerald-600 disabled:opacity-50"
+            className="rounded bg-emerald-700 px-3 py-1.5 text-xs font-medium text-emerald-100 hover:bg-emerald-600 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
           >
             {saving ? 'Saving…' : 'Approve'}
           </button>
           <button
+            type="button"
             onClick={handleEdit}
             disabled={saving || mode === 'edit'}
-            className="rounded bg-blue-700 px-3 py-1.5 text-xs font-medium text-blue-100 hover:bg-blue-600 disabled:opacity-50"
+            className="rounded bg-blue-700 px-3 py-1.5 text-xs font-medium text-blue-100 hover:bg-blue-600 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
           >
             Edit
           </button>
           <button
+            type="button"
             onClick={handleRefine}
             disabled={saving}
-            className="rounded bg-purple-700 px-3 py-1.5 text-xs font-medium text-purple-100 hover:bg-purple-600 disabled:opacity-50"
+            className="rounded bg-purple-700 px-3 py-1.5 text-xs font-medium text-purple-100 hover:bg-purple-600 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
           >
             Refine
           </button>
-          {rejectOpen ? (
-            <div className="flex items-center gap-1">
-              <input
-                type="text"
-                value={rejectReason}
-                onChange={(e) => setRejectReason(e.target.value)}
-                placeholder="Rejection reason…"
-                className="rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs text-gray-200 placeholder-gray-500 focus:border-red-500 focus:outline-none"
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleRejectConfirm()
-                  if (e.key === 'Escape') { setRejectOpen(false); setRejectReason('') }
-                }}
-              />
-              <button
-                onClick={handleRejectConfirm}
-                disabled={!rejectReason.trim() || saving}
-                className="rounded bg-red-700 px-2 py-1 text-xs font-medium text-red-100 hover:bg-red-600 disabled:opacity-50"
-              >
-                Confirm
-              </button>
-              <button
-                onClick={() => { setRejectOpen(false); setRejectReason('') }}
-                className="rounded px-2 py-1 text-xs text-gray-400 hover:text-gray-200"
-              >
-                Cancel
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setRejectOpen(true)}
-              disabled={saving}
-              className="rounded bg-red-800 px-3 py-1.5 text-xs font-medium text-red-200 hover:bg-red-700 disabled:opacity-50"
-            >
-              Reject
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setRejectOpen(true)}
+            disabled={saving}
+            className="rounded bg-red-800 px-3 py-1.5 text-xs font-medium text-red-200 hover:bg-red-700 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+          >
+            Reject
+          </button>
         </div>
       </div>
 
@@ -283,6 +283,69 @@ export default function IntentEditor({ taskId, onNavigateToPipeline }: IntentEdi
           )}
         </div>
       </div>
+
+      {/* Reject intent — modal dialog (54.2) */}
+      {rejectOpen ? (
+        <div
+          role="presentation"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !saving) {
+              setRejectOpen(false)
+              setRejectReason('')
+            }
+          }}
+          data-testid="reject-intent-backdrop"
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="reject-intent-title"
+            className="w-full max-w-md rounded-lg border border-gray-700 bg-gray-900 p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="reject-intent-title" className="mb-1 text-sm font-semibold text-gray-100">
+              Reject intent
+            </h3>
+            <p className="mb-3 text-xs text-gray-400">
+              Provide a short reason. It will be recorded with the rejection.
+            </p>
+            <input
+              ref={rejectInputRef}
+              type="text"
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Rejection reason…"
+              disabled={saving}
+              className="mb-4 w-full rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-gray-200 placeholder-gray-500 focus:border-red-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 disabled:opacity-50"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') void handleRejectConfirm()
+              }}
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setRejectOpen(false)
+                  setRejectReason('')
+                }}
+                disabled={saving}
+                className="rounded px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleRejectConfirm()}
+                disabled={!rejectReason.trim() || saving}
+                className="rounded bg-red-700 px-3 py-1.5 text-xs font-medium text-red-100 hover:bg-red-600 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+              >
+                Confirm rejection
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* Refinement modal */}
       <RefinementModal

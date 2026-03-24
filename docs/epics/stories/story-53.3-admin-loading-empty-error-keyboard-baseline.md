@@ -1,8 +1,9 @@
 # Story 53.3 -- Admin loading empty error and keyboard baseline
 
-> **Delivery status:** Partially complete (2026-03-24) — Wave 1  
-> **Done:** Global `:focus-visible` outline in `src/admin/templates/base.html` (SG 6); primary CTA on `empty_state.html` aligned to blue-600 (SG 4.3). `workflows.html` / list partials already had explicit loading + empty states.  
-> **Remaining:** Audit `settings_content.html` and other partials for missing loading/error rows; optional HTMX error-target messaging.
+> **Delivery status:** Partially complete (2026-03-24) — Wave 1 + Wave 2 (settings)  
+> **Done:** Global `:focus-visible` outline in `src/admin/templates/base.html` (SG 6); primary CTA on `empty_state.html` aligned to blue-600 (SG 4.3). `workflows.html` / list partials already had explicit loading + empty states. **Wave 2:** `settings_content.html` — per-card `aria-label`, loading text + `role="status"` / `aria-live="polite"`; `data-admin-htmx-section` + `htmx:responseError` handler in `base.html` with Retry (SG 5.3).  
+> **Remaining:** Sweep other admin partials (tools, models, metrics, …) for the same HTMX error pattern; normalize `empty_state` usage where still generic.  
+> **Doc sync:** Status mirrored in `epic-52-frontend-ui-modernization-master-plan.md`, `epic-52-gap-report-admin-vs-dashboard.md`, `epic-53-admin-ui-canonical-compliance.md`, traceability matrix SG 4.4 / 5.x / 6.x rows.
 
 <!-- docsmcp:start:user-story -->
 

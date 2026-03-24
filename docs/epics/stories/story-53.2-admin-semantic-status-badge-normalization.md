@@ -1,7 +1,7 @@
 # Story 53.2 -- Admin semantic status and badge normalization
 
-> **Delivery status:** Completed (2026-03-24) — Wave 1  
-> **Evidence:** `src/admin/templates/components/status_badge.html` — `role="status"`, tier `aria-label`, repo `writes_disabled` → warning yellow (SG 3.1), `role_badge` macro added (SG 3.3).
+> **Delivery status:** Completed (2026-03-24) — Wave 1; admin nav wiring 2026-03-24  
+> **Evidence:** `src/admin/templates/components/status_badge.html` — `role="status"`, tier `aria-label`, repo `writes_disabled` → warning yellow (SG 3.1), `role_badge(role, variant='light'|'dark')` (SG 3.3). `src/admin/templates/base.html` — current user role rendered via `role_badge(..., variant='dark')` in the sidebar footer.
 
 <!-- docsmcp:start:user-story -->
 

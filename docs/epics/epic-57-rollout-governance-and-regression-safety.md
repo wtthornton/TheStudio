@@ -1,12 +1,21 @@
 # Epic 57: Frontend Rollout Governance and Regression Safety
 
 <!-- docsmcp:start:metadata -->
-**Status:** Proposed
+**Status:** Proposed (57.1 traceability in progress)
 **Priority:** P0 - Critical
 **Estimated LOE:** ~2-3 weeks
 **Dependencies:** Epic 53, Epic 54, Epic 55, Epic 56
 
 <!-- docsmcp:end:metadata -->
+
+## Delivery status (rollup, 2026-03-24)
+
+| Story | Status | Pointer |
+|-------|--------|--------|
+| 57.1 | **In progress** | Style-guide matrix + evidence notes — `stories/story-57.1-traceability-operations-style-guide-closure.md` |
+| 57.2, 57.3 | Not done | — |
+
+Matrix: `epic-52-traceability-matrix-style-guide-mapping.md`. Master plan: `epic-52-frontend-ui-modernization-master-plan.md`.
 
 ---
 

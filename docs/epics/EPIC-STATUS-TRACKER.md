@@ -1,6 +1,6 @@
 # Epic Status Tracker
 
-> Consolidated status of all epics as of 2026-03-23.
+> Consolidated status of all epics as of 2026-03-24.
 > Source of truth for epic status is each epic's own file. This tracker is a rollup view.
 
 ---
@@ -153,6 +153,17 @@
 | 39 | Phase 5: Analytics & Learning | **Approved** — not started | `epic-39-phase5-analytics-learning.md` — Meridian R2 PASS (2026-03-22). |
 | 44 | Setup Wizard (first-run onboarding) | **In progress** (2026-03-23) | `epic-44-setup-wizard.md`. **44.1-44.3** delivered: `WizardShell`, `App.tsx` gate, `HealthCheckStep`, `thestudio_setup_complete` / `thestudio_setup_skipped` keys, Vite proxy `/healthz` `/readyz`. **44.4-44.10** open. See `.ralph/fix_plan.md`. |
 
+### Canonical UI / style-guide modernization (Epics 52–57)
+
+| Epic | Title | Status | Notes |
+|------|-------|--------|--------|
+| 52 | Frontend UI modernization (master plan) | **In execution** (2026-03-24) | `epic-52-frontend-ui-modernization-master-plan.md`. Traceability: `epic-52-traceability-matrix-style-guide-mapping.md`. Gap report: `epic-52-gap-report-admin-vs-dashboard.md`. |
+| 53 | Admin console canonical compliance | Proposed (stories in flight) | **53.2** complete; **53.3** partial (settings HTMX + global error handler). Rollup in `epic-53-admin-ui-canonical-compliance.md`. |
+| 54 | Pipeline app canonical compliance | Proposed (stories in flight) | **54.1** complete; **54.2** partial (IntentEditor, RefinementModal, prior wave components). Rollup in `epic-54-dashboard-ui-canonical-compliance.md`. |
+| 55 | Cross-surface AI prompt-first + trust | Proposed | Not started |
+| 56 | 2026 capability modules | Proposed | Not started |
+| 57 | Rollout governance + regression safety | Proposed | **57.1** in progress (matrix ops). Rollup in `epic-57-rollout-governance-and-regression-safety.md`. |
+
 ---
 
 ## Phase 10 — Ralph SDK (tracking)
@@ -172,6 +183,7 @@ Phase 9 — PIPELINE UI (2026-03-23)
   Epic 44 (Setup Wizard) — IN PROGRESS — 44.1-44.3 done; remaining .ralph/fix_plan.md
   Epic 38 (GitHub integration) — APPROVED — next major UI epic after 44 MVP slice
   Epic 39 (Analytics & learning) — APPROVED — after Epic 38 data path
+  Epics 52-57 (canonical UI modernization) — IN EXECUTION (2026-03-24) — see tracker subsection under Phase 9; master plan + traceability matrix
 
 Phase 10 — RALPH
   Epic 51 — IN PROGRESS — vendor parity + evaluation backlog (handoff doc)

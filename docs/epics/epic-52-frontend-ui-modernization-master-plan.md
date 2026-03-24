@@ -1,21 +1,23 @@
 # Epic 52: Frontend UI Modernization Master Plan
 
-> **Status:** Proposed
+> **Status:** In execution (waves 1–2 partial, 2026-03-24)
 > **Owner:** Product + Frontend
 > **Scope:** `/admin/ui/*` and `/dashboard/*`
 > **Canonical Standard:** `docs/design/07-THESTUDIO-UI-UX-STYLE-GUIDE.md`
 > **Depends On:** Existing epics and current frontend surfaces
 > **Blocks:** Epics 53, 54, 55, 56, 57 rollout execution
+> **Traceability:** `docs/epics/epic-52-traceability-matrix-style-guide-mapping.md` (living matrix)
 
-### Wave 1 execution log (2026-03-24)
+### Execution log (last updated 2026-03-24)
 
 | Story | Status | Notes |
 |-------|--------|--------|
-| 53.2 | Completed | Admin `status_badge.html` semantics, tier a11y, `role_badge`, `writes_disabled` → yellow |
-| 54.1 | Completed | `STATUS_COLORS`, trust-tier UI (dashboard + wizard), `StageNode` aria-label |
-| 53.3 | Partial | `base.html` focus-visible; `empty_state` CTA blue-600 |
-| 54.2 | Partial | `EmptyState`, `TriageQueue`, `CreateTaskModal` a11y improvements |
-| 57.1 | In progress | Traceability matrix updated for Wave 1 |
+| 53.1 | Not started | Shell/nav conformance — confirm sprint placement before claiming done |
+| 53.2 | **Completed** | `status_badge.html` (SG 3.1–3.2), `role_badge` macro + dark variant; `base.html` nav uses `role_badge` (SG 3.3 admin); `writes_disabled` → yellow |
+| 53.3 | **Partial** | Wave 1: `base.html` focus-visible, `empty_state` primary blue-600. Wave 2: settings cards — `aria-label`, loading `role="status"` / `aria-live`, `data-admin-htmx-section` + global `htmx:responseError` Retry. **Remaining:** other admin partials, empty-state sweep |
+| 54.1 | **Completed** | `STATUS_COLORS`, trust-tier UI, `StageNode` `aria-label` (dashboard user-role chip still N/A for SG 3.3) |
+| 54.2 | **Partial** | Wave 1: `EmptyState`, `TriageQueue`, `CreateTaskModal`. Wave 2: `RefinementModal` dialog semantics; `IntentEditor` reject modal, loading/error roles, toolbar focus rings. **Remaining:** other modals/panels, optional focus traps |
+| 57.1 | **In progress** | Matrix maintained; SG 3.3 **Verified** (admin); SG 4.x–6.x **Partial** with evidence. Full story AC after 53.3/54.2 sweeps + 57.2 |
 
 ---
 

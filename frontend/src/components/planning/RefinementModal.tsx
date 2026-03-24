@@ -28,17 +28,17 @@ export default function RefinementModal({ open, saving, onSubmit, onClose }: Ref
     }
   }, [open])
 
-  // Escape key closes modal
+  // Escape key closes modal (not while saving)
   useEffect(() => {
     if (!open) return
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === 'Escape' && !saving) {
         onClose()
       }
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [open, onClose])
+  }, [open, saving, onClose])
 
   const handleSubmit = useCallback(() => {
     if (!isValid || saving) return
@@ -47,11 +47,11 @@ export default function RefinementModal({ open, saving, onSubmit, onClose }: Ref
 
   const handleBackdropClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
-      if (e.target === e.currentTarget) {
+      if (e.target === e.currentTarget && !saving) {
         onClose()
       }
     },
-    [onClose],
+    [saving, onClose],
   )
 
   if (!open) return null
@@ -63,9 +63,17 @@ export default function RefinementModal({ open, saving, onSubmit, onClose }: Ref
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
       onClick={handleBackdropClick}
       data-testid="refinement-modal-backdrop"
+      role="presentation"
     >
-      <div className="w-full max-w-lg rounded-lg border border-gray-700 bg-gray-900 p-6 shadow-xl">
-        <h3 className="mb-1 text-sm font-semibold text-gray-100">Request AI Refinement</h3>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="refinement-modal-title"
+        className="w-full max-w-lg rounded-lg border border-gray-700 bg-gray-900 p-6 shadow-xl"
+      >
+        <h3 id="refinement-modal-title" className="mb-1 text-sm font-semibold text-gray-100">
+          Request AI Refinement
+        </h3>
         <p className="mb-4 text-xs text-gray-400">
           Describe what should be changed or improved in the intent specification.
         </p>
@@ -90,17 +98,19 @@ export default function RefinementModal({ open, saving, onSubmit, onClose }: Ref
 
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={onClose}
               disabled={saving}
-              className="rounded px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200 disabled:opacity-50"
+              className="rounded px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
               data-testid="refinement-cancel"
             >
               Cancel
             </button>
             <button
+              type="button"
               onClick={handleSubmit}
               disabled={!isValid || saving}
-              className="rounded bg-purple-700 px-3 py-1.5 text-xs font-medium text-purple-100 hover:bg-purple-600 disabled:opacity-50"
+              className="rounded bg-purple-700 px-3 py-1.5 text-xs font-medium text-purple-100 hover:bg-purple-600 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
               data-testid="refinement-submit"
             >
               {saving ? 'Refining…' : 'Submit'}

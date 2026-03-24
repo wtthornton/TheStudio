@@ -4,12 +4,18 @@
 > - `docs/design/07-THESTUDIO-UI-UX-STYLE-GUIDE.md`
 > - `docs/TAPPS_MCP_FRONTEND_EXPERTS_BRIEF.md`
 > - `docs/design/00-PIPELINE-UI-VISION.md`
+> - **Traceability (living):** `docs/epics/epic-52-traceability-matrix-style-guide-mapping.md`
+> - **Execution log:** `docs/epics/epic-52-frontend-ui-modernization-master-plan.md`
 
 ---
 
 ## 1) Summary
 
 This report identifies major frontend compliance gaps by surface and maps them to modernization stories. Existing implementation already aligns with parts of the canonical standard, but significant work remains on prompt-first AI flow consistency, cross-surface semantics, and 2026 modules.
+
+### Progress note (2026-03-24)
+
+Wave 1–2 work has narrowed several gaps without closing them fully: admin **semantic badges** and **role badge in nav** (53.2); **settings** loading/a11y and **HTMX failure + Retry** (53.3 partial); dashboard **intent/refinement modals** and explicit loading/error roles (54.2 partial); **style-guide ↔ story matrix** with per-row status (57.1 in progress). See the traceability matrix for requirement-level status.
 
 ---
 
@@ -19,8 +25,8 @@ This report identifies major frontend compliance gaps by surface and maps them t
 |---|---|---|---|---|
 | Shell/layout consistency | Core shell exists; variation across pages/partials | Uniform canonical shell/nav/card rhythm on all pages | Medium | 53.1 |
 | Status semantics | Status badges exist but page-level variance remains | Canonical SG 3 mapping + non-color labels everywhere | High | 53.2 |
-| Loading/empty/error | Partial coverage; uneven explicit handling | Explicit SG 5 states on all async/list/detail surfaces | High | 53.3 |
-| Keyboard/focus baseline | Mixed compliance | Keyboard reachable controls + visible focus + semantic structures | High | 53.3 |
+| Loading/empty/error | Improved on **settings** HTMX cards + global error handler; other partials uneven | Explicit SG 5 states on all async/list/detail surfaces | High | 53.3 |
+| Keyboard/focus baseline | Admin `:focus-visible` baseline + settings a11y labels; mixed elsewhere | Keyboard reachable controls + visible focus + semantic structures | High | 53.3 |
 | Prompt-first AI flow | Present in places, not systematized | Full SG 8 prompt-first + trust cues + decision points | High | 53.4, 55.x |
 | Trust metadata | Inconsistent display of confidence/evidence/ownership | Standard trust metadata block on AI outputs | Medium | 53.4, 55.3 |
 
@@ -31,8 +37,8 @@ This report identifies major frontend compliance gaps by surface and maps them t
 | Area | Current State | Required State | Gap Severity | Story Coverage |
 |---|---|---|---|---|
 | Semantic consistency | Strong but not fully normalized across modules | Universal SG semantic mapping with no drift | High | 54.1 |
-| State handling | Many modules good; gaps remain by component | Explicit SG 5 states across all key modules | High | 54.2 |
-| Accessibility baseline | Partial coverage and test depth variance | SG 6 keyboard/focus/non-color baseline end-to-end | High | 54.2, 57.2 |
+| State handling | **Intent editor** path: modal reject + explicit loading/error roles; not all modules | Explicit SG 5 states across all key modules | High | 54.2 |
+| Accessibility baseline | **RefinementModal** + **IntentEditor** dialog/focus improvements; depth still varies by module | SG 6 keyboard/focus/non-color baseline end-to-end | High | 54.2, 57.2 |
 | Prompt-first planning/steering | Intent tooling exists; step sequence not always enforced | Mandatory SG 8 sequence + decision checkpoints | High | 54.3, 55.1, 55.2 |
 | Responsive support | Desktop-first strong; mobile/tablet uneven | Critical flows usable across desktop/tablet/mobile | Medium | 54.4 |
 | Command palette | No complete global implementation | `Ctrl/Cmd+K` across surfaces with guarded actions | High | 56.2 |
@@ -48,7 +54,7 @@ This report identifies major frontend compliance gaps by surface and maps them t
 | Prompt object contract (`goal/context/constraints/success_criteria/mode`) | No single reusable contract across both surfaces | High | 55.1 |
 | Human override and audit/undo | Inconsistent action governance by module | High | 55.2, 55.4 |
 | Trust calibration cues | Uneven confidence/provenance/ownership/timestamp display | High | 55.3 |
-| Traceability and compliance operations | No single requirement-to-story matrix in active operations | Medium | 57.1 |
+| Traceability and compliance operations | **Matrix active:** `epic-52-traceability-matrix-style-guide-mapping.md` (status per SG row; not all Verified) | Medium | 57.1 |
 | Regression gate discipline | No single cross-surface checklist enforced per wave | Medium | 57.2 |
 
 ---

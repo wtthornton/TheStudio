@@ -1,7 +1,8 @@
 # Story 54.1 -- Dashboard semantic consistency across status and trust indicators
 
 > **Delivery status:** Completed (2026-03-24) — Wave 1  
-> **Evidence:** `frontend/src/lib/constants.ts` (`STATUS_COLORS` → SG 3.1), `TrustConfiguration.tsx` + `TrustTierStep.tsx` trust-tier colors → SG 3.2 (observe gray / suggest blue / execute purple), `StageNode.tsx` status text in `aria-label`.
+> **Evidence:** `frontend/src/lib/constants.ts` (`STATUS_COLORS` → SG 3.1), `TrustConfiguration.tsx` + `TrustTierStep.tsx` trust-tier colors → SG 3.2 (observe gray / suggest blue / execute purple), `StageNode.tsx` status text in `aria-label`.  
+> **SG 3.3 (role cues):** No dashboard user-role chip in-product yet; traceability matrix marks dashboard role UI as out of scope for this story. Admin role badges: see story 53.2 / `role_badge` in `base.html`.
 
 <!-- docsmcp:start:user-story -->
 

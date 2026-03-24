@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+{% from "components/status_badge.html" import role_badge %}
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -169,14 +170,9 @@
                 <p class="truncate">{{ current_user_id }}</p>
                 <p class="mt-1">
                     {% if current_user_role %}
-                        <span class="inline-block px-2 py-0.5 rounded text-xs font-medium
-                            {% if current_user_role.value == 'admin' %}bg-red-700 text-red-100
-                            {% elif current_user_role.value == 'operator' %}bg-yellow-700 text-yellow-100
-                            {% else %}bg-blue-700 text-blue-100{% endif %}">
-                            {{ current_user_role.value | upper }}
-                        </span>
+                        {{ role_badge(current_user_role.value, variant='dark') }}
                     {% else %}
-                        <span class="inline-block px-2 py-0.5 rounded text-xs font-medium bg-gray-600 text-gray-300">NO ROLE</span>
+                        <span class="inline-block px-2 py-0.5 rounded text-xs font-medium bg-gray-600 text-gray-300" role="status">NO ROLE</span>
                     {% endif %}
                 </p>
                 {% else %}
@@ -215,5 +211,29 @@
             </div>
         </main>
     </div>
+    {# HTMX load failures on settings (and other) sections — SG 5.3 #}
+    <script>
+    (function () {
+      function escAttr(s) {
+        return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+      }
+      document.body.addEventListener('htmx:responseError', function (evt) {
+        var elt = evt.detail && evt.detail.elt;
+        if (!elt || elt.getAttribute('data-admin-htmx-section') !== 'true') return;
+        var id = elt.id;
+        var url = elt.getAttribute('hx-get');
+        var label = elt.getAttribute('aria-label') || 'This section';
+        if (!id || !url) return;
+        elt.innerHTML =
+          '<div class="px-6 py-4 border border-red-200 bg-red-50 rounded-md" role="alert">' +
+          '<p class="text-sm text-red-800">' + escAttr(label) + ' could not be loaded.</p>' +
+          '<p class="mt-1 text-xs text-red-700">Check your connection or try again.</p>' +
+          '<button type="button" class="mt-3 text-sm font-medium text-blue-600 hover:text-blue-800 ' +
+          'focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded px-1" ' +
+          'hx-get="' + escAttr(url) + '" hx-target="#' + escAttr(id) + '" hx-swap="innerHTML">Retry</button></div>';
+        if (window.htmx) htmx.process(elt);
+      });
+    })();
+    </script>
 </body>
 </html>
