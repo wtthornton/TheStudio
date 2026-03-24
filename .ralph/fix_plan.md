@@ -40,7 +40,7 @@
 - [x] **38.21:** Pipeline comment template + idempotent marker (`pipeline_comment.py`).
 - [x] **38.22:** Pipeline comment Temporal activity — create/edit comment; final update with PR link.
 - [x] **38.23:** `pipeline_comments_enabled` flag + per-repo config.
-- [ ] **38.24:** Webhook bridge — PR/issue events → NATS `github.event.*`.
+- [x] **38.24:** Webhook bridge — PR/issue events → NATS `github.event.*`.
 - [ ] **38.25:** SSE — extend `src/dashboard/events.py` for `github.event.*` / stream subjects.
 - [ ] **38.26:** Dashboard consumers — PR Evidence + triage real-time updates (`useGitHubEvents.ts`).
 - [ ] **38.27:** Integration test — comments + NATS publish.
