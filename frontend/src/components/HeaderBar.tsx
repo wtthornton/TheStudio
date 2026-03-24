@@ -3,6 +3,7 @@
  * Epic 46.5: Onboarding hint shown when all KPIs are zero.
  * Epic 44.9: "Setup incomplete" badge when wizard was skipped.
  * Epic 49.1: AppSwitcher for cross-app navigation.
+ * Epic 49.4: Settings deep link to /admin/ui/settings.
  */
 
 import { usePipelineStore } from '../stores/pipeline-store'
@@ -65,6 +66,15 @@ export function HeaderBar({ onResumeWizard }: HeaderBarProps = {}) {
           ⚠ Setup incomplete — resume →
         </button>
       )}
+      <a
+        href="/admin/ui/settings"
+        className="ml-auto rounded px-2.5 py-1 text-xs text-gray-500 hover:text-gray-300 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+        title="Admin Settings"
+        data-testid="admin-settings-link"
+        aria-label="Admin Settings"
+      >
+        ⚙ Settings
+      </a>
     </div>
   )
 }

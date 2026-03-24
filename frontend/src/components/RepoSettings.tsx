@@ -144,7 +144,16 @@ function FleetHealthTable({
                 <HealthDot health={repo.health} />
               </td>
               <td className="py-2 pr-4 font-mono text-gray-200">
-                {repo.full_name}
+                <a
+                  href={`/admin/ui/repos/${repo.id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="hover:text-indigo-300 hover:underline focus:outline-none focus:text-indigo-300"
+                  title={`Open ${repo.full_name} in Admin Console`}
+                  data-testid={`repo-admin-link-${repo.id}`}
+                >
+                  {repo.full_name}
+                </a>
+                <span className="ml-1 text-gray-600 text-[10px]" aria-hidden="true">↗</span>
               </td>
               <td className="py-2 pr-4">
                 <TierBadge tier={repo.tier} />
