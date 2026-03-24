@@ -37,7 +37,7 @@
 
 ### Epic 38 — Phase 4 (Slice 4: Pipeline comments + webhook bridge)
 
-- [ ] **38.21:** Pipeline comment template + idempotent marker (`pipeline_comment.py`).
+- [x] **38.21:** Pipeline comment template + idempotent marker (`pipeline_comment.py`).
 - [ ] **38.22:** Pipeline comment Temporal activity — create/edit comment; final update with PR link.
 - [ ] **38.23:** `pipeline_comments_enabled` flag + per-repo config.
 - [ ] **38.24:** Webhook bridge — PR/issue events → NATS `github.event.*`.
