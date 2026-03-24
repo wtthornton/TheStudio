@@ -381,7 +381,7 @@ export function ActivityStream({ taskId }: ActivityStreamProps) {
   }
 
   return (
-    <div className="flex flex-col rounded-lg border border-gray-700 bg-gray-900" data-testid="activity-stream">
+    <div className="flex flex-col rounded-lg border border-gray-700 bg-gray-900" data-testid="activity-stream" data-tour="activity-stream">
       <div className="flex items-center justify-between border-b border-gray-700 px-3 py-2">
         <h3 className="text-sm font-semibold">Activity Stream</h3>
         <span className="text-xs text-gray-500">{filteredEntries.length} entries</span>

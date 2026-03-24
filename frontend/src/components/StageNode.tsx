@@ -167,6 +167,7 @@ export function StageNode({ id, label, color, status, taskCount, activeTasks }: 
     <div
       className="relative flex flex-col items-center gap-1"
       data-testid={`stage-${label.toLowerCase()}`}
+      data-tour="stage-node"
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       ref={nodeRef}
@@ -175,6 +176,7 @@ export function StageNode({ id, label, color, status, taskCount, activeTasks }: 
       <button
         type="button"
         className={`relative flex h-12 w-12 items-center justify-center rounded-full border-2 cursor-pointer transition-shadow hover:shadow-lg ${pulseClass}`}
+        data-tour="active-pulse"
         style={{
           borderColor: ringColor,
           backgroundColor: `${bgColor}20`,

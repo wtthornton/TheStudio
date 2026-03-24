@@ -200,7 +200,7 @@ export function GateInspector() {
   useEffect(() => { void loadData() }, [loadData])
 
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-900" data-testid="gate-inspector">
+    <div className="rounded-lg border border-gray-700 bg-gray-900" data-testid="gate-inspector" data-tour="gate-inspector">
       <div className="flex items-center justify-between border-b border-gray-700 px-4 py-2">
         <h3 className="text-sm font-semibold">Gate Inspector</h3>
         <button onClick={loadData} className="text-xs text-blue-400 hover:underline">Refresh</button>

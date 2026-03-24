@@ -90,6 +90,7 @@ export function Minimap({ activeTaskId, onTaskClick }: MinimapProps) {
     <div
       className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-700 bg-gray-900"
       data-testid="minimap"
+      data-tour="minimap"
     >
       {/* Header with collapse toggle */}
       <div className="flex items-center justify-between px-4 py-1">

@@ -94,7 +94,7 @@
 
 - [x] 47.1: `npm install react-joyride`. Create `TourProvider.tsx` wrapping App with Joyride context. Dark tooltip styles. **Files:** modify package.json; create frontend/src/components/tours/TourProvider.tsx.
 - [x] 47.2: Create tour registry + `useTourState` hook — localStorage flags, start/complete lifecycle. **Files:** create registry.ts, useTourState.ts.
-- [ ] 47.3: Pipeline tour (6 steps) — pipeline rail, stage node, active pulse, gate inspector, activity stream, minimap. Add `data-tour` attrs. **Files:** modify PipelineStatus.tsx, GateInspector.tsx, ActivityStream.tsx, Minimap.tsx; update registry.ts.
+- [x] 47.3: Pipeline tour (6 steps) — pipeline rail, stage node, active pulse, gate inspector, activity stream, minimap. Add `data-tour` attrs. **Files:** modify PipelineStatus.tsx, GateInspector.tsx, ActivityStream.tsx, Minimap.tsx; update registry.ts.
 - [ ] 47.4: Tour beacon component — pulses on first visit, click starts tour, hidden after completion. **Files:** create TourBeacon.tsx; modify App.tsx to place beacons per-tab.
 - [ ] 47.5: Triage tour (5 steps) — queue, card, accept/reject, intent editor, routing preview. **Files:** modify TriageQueue.tsx, IntentEditor.tsx, RoutingPreview.tsx; update registry.ts.
 - [ ] 47.6: Analytics tour (5 steps) — period selector, KPIs, throughput, bottleneck, expert table. **Files:** modify Analytics.tsx sub-components; update registry.ts.

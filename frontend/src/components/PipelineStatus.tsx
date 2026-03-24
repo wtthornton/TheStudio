@@ -47,7 +47,7 @@ export function PipelineStatus() {
   const stages = usePipelineStore((s) => s.stages)
 
   return (
-    <div className="flex flex-col items-end gap-2 px-4 py-6" data-testid="pipeline-rail">
+    <div className="flex flex-col items-end gap-2 px-4 py-6" data-testid="pipeline-rail" data-tour="pipeline-rail">
       {/* Row 1: Intake → Assembler */}
       <div className="flex items-center gap-2">
         {ROW_1.map((stage, i) => {
