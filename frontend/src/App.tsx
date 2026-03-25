@@ -190,11 +190,13 @@ function App() {
       {/* Epic 44.9: Incomplete setup banner */}
       <IncompleteBanner onResume={handleSetupWizardResume} />
 
-      {/* Header */}
-      <header className="flex items-center justify-between border-b border-gray-800 px-6 py-4">
-        <div className="flex items-center gap-6">
-          <h1 className="text-lg font-semibold">TheStudio Pipeline Dashboard</h1>
-          <nav className="flex gap-1">
+      {/* Header — responsive: title hidden on small screens to give nav more space;
+          nav scrolls horizontally on small screens (overflow-x-auto + flex-nowrap). */}
+      <header className="flex items-center justify-between border-b border-gray-800 px-4 sm:px-6 py-3 sm:py-4 gap-2">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0 overflow-hidden">
+          <h1 className="text-lg font-semibold shrink-0 hidden md:block">TheStudio Pipeline Dashboard</h1>
+          <h1 className="text-sm font-semibold shrink-0 md:hidden">TheStudio</h1>
+          <nav className="flex gap-1 overflow-x-auto scrollbar-none flex-nowrap" aria-label="Primary navigation">
             <button
               onClick={() => setActiveTab('pipeline')}
               className={`px-3 py-1.5 text-sm rounded ${activeTab === 'pipeline' ? 'bg-gray-700 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}

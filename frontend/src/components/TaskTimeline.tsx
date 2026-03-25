@@ -408,23 +408,28 @@ export function TaskTimeline({ taskId, onClose }: TaskTimelineProps) {
 
   return (
     <div className="space-y-4" data-testid="task-timeline">
-      {/* S2.F4: Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-semibold text-gray-200">
+      {/* S2.F4: Header — responsive: wrap controls below task info on small screens */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold text-gray-200 truncate">
             {task.id.slice(0, 8)}… <span className="font-normal text-gray-400">#{task.issue_id}</span>
           </h3>
-          <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
+          <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-1 text-xs text-gray-400">
             <span className="rounded bg-gray-700 px-1.5 py-0.5">{task.status}</span>
             <span>{progressPercent(task)}% complete</span>
             <span>{elapsedTime(task)} elapsed</span>
             <span className="text-cyan-400">${task.total_cost.toFixed(4)}</span>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 shrink-0">
           {/* S1.37.6: Steering controls — pause/resume/abort */}
           <SteeringActionBar taskId={task.id} taskStatus={task.status} />
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-200 text-sm">Close</button>
+          <button
+            onClick={onClose}
+            className="min-h-[44px] px-3 py-2 text-sm text-gray-400 hover:text-gray-200 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+          >
+            Close
+          </button>
         </div>
       </div>
 
@@ -454,11 +459,11 @@ export function TaskTimeline({ taskId, onClose }: TaskTimelineProps) {
           const isHovered = hoveredBar === entry.stage
 
           return (
-            <div key={entry.stage} className="flex items-start gap-3" data-testid={`timeline-stage-${entry.stage}`}>
-              {/* Stage label */}
-              <div className="w-20 shrink-0 text-right">
+            <div key={entry.stage} className="flex items-start gap-2 sm:gap-3" data-testid={`timeline-stage-${entry.stage}`}>
+              {/* Stage label — narrower on mobile to give bar more room */}
+              <div className="w-14 sm:w-20 shrink-0 text-right">
                 <span className="text-xs font-medium" style={{ color: entry.color }}>{entry.label}</span>
-                <div className="text-xs text-gray-500">{formatTime(entry.start)}</div>
+                <div className="text-xs text-gray-500 hidden sm:block">{formatTime(entry.start)}</div>
               </div>
 
               {/* Bar */}
@@ -511,8 +516,8 @@ export function TaskTimeline({ taskId, onClose }: TaskTimelineProps) {
                 ))}
               </div>
 
-              {/* Duration label */}
-              <div className="w-16 shrink-0 text-right text-xs text-gray-500">
+              {/* Duration label — hidden on mobile (bar already shows duration inline) */}
+              <div className="hidden sm:block w-16 shrink-0 text-right text-xs text-gray-500">
                 {entry.status === 'completed' ? formatDuration(entry.duration) : ''}
               </div>
             </div>

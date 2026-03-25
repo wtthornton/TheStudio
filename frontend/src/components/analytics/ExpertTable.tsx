@@ -130,7 +130,58 @@ export function ExpertTable({ onSelectExpert }: ExpertTableProps) {
   return (
     <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
       <h3 className="text-sm font-medium text-gray-300 mb-3">Expert Performance</h3>
-      <div className="overflow-x-auto">
+
+      {/* Mobile card view — shown below md breakpoint (< 768px) */}
+      <div className="block md:hidden space-y-2" aria-label="Expert performance cards">
+        {sorted.map((expert) => {
+          const drift = driftBadge(expert.drift_signal)
+          return (
+            <div
+              key={expert.expert_id}
+              className="rounded border border-gray-700 bg-gray-800 p-3 cursor-pointer hover:bg-gray-800/80 active:bg-gray-700 transition-colors"
+              role="button"
+              tabIndex={0}
+              aria-label={`View details for expert ${expert.expert_id.slice(0, 8)}`}
+              onClick={() => onSelectExpert(expert.expert_id)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  onSelectExpert(expert.expert_id)
+                }
+              }}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-mono text-xs text-gray-300">
+                  {expert.expert_id.slice(0, 8)}…
+                </span>
+                <span className={`text-xs font-medium capitalize ${tierColor(expert.trust_tier)}`}>
+                  {expert.trust_tier}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                <div>
+                  <span className="text-gray-500">Weight </span>
+                  <span className="text-gray-200">{(expert.avg_weight * 100).toFixed(1)}%</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Samples </span>
+                  <span className="text-gray-400">{expert.total_samples}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Confidence </span>
+                  <span className="text-gray-400">{(expert.avg_confidence * 100).toFixed(0)}%</span>
+                </div>
+                <div className={drift.color}>
+                  {drift.label}
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Desktop table view — shown at md breakpoint and above (>= 768px) */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-700">
@@ -179,6 +230,7 @@ export function ExpertTable({ onSelectExpert }: ExpertTableProps) {
           </tbody>
         </table>
       </div>
+
       <p className="mt-2 text-xs text-gray-500">
         Click a row to view expert details. {data.experts.length} expert
         {data.experts.length !== 1 ? 's' : ''} tracked.

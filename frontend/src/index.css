@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+/* Utility: hide scrollbar while preserving scroll functionality (Epic 54.4) */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 /* Stage pulse animation for active nodes (S1.F7) */
 @keyframes stage-pulse {
   0%, 100% { box-shadow: 0 0 0 0 var(--pulse-color, rgba(59, 130, 246, 0.25)); }

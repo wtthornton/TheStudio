@@ -20,7 +20,7 @@
 
 - [x] **53.4:** Admin UI — remaining canonical compliance story (not started)
 - [x] **54.3:** Dashboard UI — remaining canonical compliance story (not started)
-- [ ] **54.4:** Dashboard UI — remaining canonical compliance story (not started)
+- [x] **54.4:** Dashboard UI — remaining canonical compliance story (not started)
 
 ---
 

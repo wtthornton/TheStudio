@@ -82,43 +82,44 @@ export function TriageCard({ task, onAcceptIntent, onReject, onEdit }: TriageCar
         </div>
       )}
 
-      {/* Action buttons */}
+      {/* Action buttons — flex-wrap ensures usability at all breakpoints.
+          min-h-[44px] on each button meets WCAG 2.5.5 touch-target minimum. */}
       {showReject ? (
         <div className="flex items-center gap-2 flex-wrap">
           {REJECTION_REASONS.map((r) => (
             <button
               key={r.value}
               onClick={() => { onReject(task.id, r.value); setShowReject(false) }}
-              className="px-2 py-1 text-xs rounded border border-red-700 text-red-400 hover:bg-red-900/50"
+              className="min-h-[44px] px-3 py-2 text-xs rounded border border-red-700 text-red-400 hover:bg-red-900/50 active:bg-red-900/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
             >
               {r.label}
             </button>
           ))}
           <button
             onClick={() => setShowReject(false)}
-            className="px-2 py-1 text-xs text-gray-500 hover:text-gray-300"
+            className="min-h-[44px] px-3 py-2 text-xs text-gray-500 hover:text-gray-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
           >
             Cancel
           </button>
         </div>
       ) : (
-        <div className="flex items-center gap-2" data-tour="triage-actions">
+        <div className="flex items-center gap-2 flex-wrap" data-tour="triage-actions">
           <button
             onClick={() => onAcceptIntent(task.id)}
-            className="px-3 py-1.5 text-sm rounded bg-emerald-700 text-emerald-100 hover:bg-emerald-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+            className="min-h-[44px] px-3 py-2 text-sm rounded bg-emerald-700 text-emerald-100 hover:bg-emerald-600 active:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
             data-testid="triage-card-accept-intent-btn"
           >
             Accept & Plan
           </button>
           <button
             onClick={() => onEdit(task.id)}
-            className="px-3 py-1.5 text-sm rounded border border-blue-700 text-blue-400 hover:bg-blue-900/50"
+            className="min-h-[44px] px-3 py-2 text-sm rounded border border-blue-700 text-blue-400 hover:bg-blue-900/50 active:bg-blue-900/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
           >
             Edit
           </button>
           <button
             onClick={() => setShowReject(true)}
-            className="px-3 py-1.5 text-sm rounded border border-red-700 text-red-400 hover:bg-red-900/50"
+            className="min-h-[44px] px-3 py-2 text-sm rounded border border-red-700 text-red-400 hover:bg-red-900/50 active:bg-red-900/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
           >
             Reject
           </button>
