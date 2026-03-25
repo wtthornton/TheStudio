@@ -6,11 +6,51 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Admin{% endblock %} - TheStudio</title>
+    <!-- Dark mode FOUC prevention — must execute before any rendering (Epic 75.7) -->
+    <script>(function(){var t=localStorage.getItem('ts-theme');if(t==='dark'||(t!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark')}})();</script>
     <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+    <!-- Enable class-based dark mode for Tailwind dark: variants -->
+    <script>tailwind.config={darkMode:'class'}</script>
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
     <!-- SortableJS — drag-and-drop for kanban views (Epic 75.5) -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
     <style>
+        /* ── Design tokens — Epic 75.7 ─────────────────────────────────────────── */
+        :root {
+            /* Surfaces */
+            --ts-bg:          #f9fafb;  /* gray-50   */
+            --ts-surface:     #ffffff;  /* white     */
+            --ts-surface-alt: #f3f4f6;  /* gray-100  */
+            --ts-border:      #e5e7eb;  /* gray-200  */
+            --ts-border-sub:  #f3f4f6;  /* gray-100  */
+            /* Text */
+            --ts-text:        #111827;  /* gray-900  */
+            --ts-text-muted:  #6b7280;  /* gray-500  */
+            --ts-text-faint:  #9ca3af;  /* gray-400  */
+            /* Sidebar (already dark in light mode) */
+            --ts-nav-bg:      #111827;  /* gray-900  */
+            --ts-nav-text:    #f3f4f6;  /* gray-100  */
+            --ts-nav-border:  #374151;  /* gray-700  */
+            --ts-nav-hover:   #1f2937;  /* gray-800  */
+            /* Interactive accent */
+            --ts-focus:       #2563eb;  /* blue-600  */
+        }
+        .dark {
+            --ts-bg:          #0f172a;  /* slate-900  */
+            --ts-surface:     #1e293b;  /* slate-800  */
+            --ts-surface-alt: #0f172a;  /* slate-900  */
+            --ts-border:      #334155;  /* slate-700  */
+            --ts-border-sub:  #1e293b;  /* slate-800  */
+            --ts-text:        #f1f5f9;  /* slate-100  */
+            --ts-text-muted:  #94a3b8;  /* slate-400  */
+            --ts-text-faint:  #64748b;  /* slate-500  */
+            --ts-nav-bg:      #020617;  /* slate-950  */
+            --ts-nav-text:    #e2e8f0;  /* slate-200  */
+            --ts-nav-border:  #1e293b;  /* slate-800  */
+            --ts-nav-hover:   #1e293b;  /* slate-800  */
+        }
+        /* ── /Design tokens ──────────────────────────────────────────────────────── */
+
         .htmx-indicator { display: none; }
         .htmx-request .htmx-indicator { display: inline-block; }
         .htmx-request.htmx-indicator { display: inline-block; }
@@ -99,7 +139,7 @@
             height: 100%;
             width: 480px;
             max-width: 90vw;
-            background: #ffffff;
+            background: var(--ts-surface);
             box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
             z-index: 50;
             transform: translateX(100%);
@@ -114,113 +154,113 @@
     </style>
     {% block head %}{% endblock %}
 </head>
-<body class="bg-gray-50 text-gray-900 min-h-screen">
+<body class="bg-gray-50 text-gray-900 min-h-screen dark:bg-slate-950 dark:text-slate-100">
     <!-- Skip navigation — SG §6 keyboard baseline -->
     <a href="#main-content" class="skip-nav">Skip to main content</a>
 
     <div class="flex min-h-screen">
         <!-- Sidebar Navigation — SG §2.1–2.2 shell/nav standard -->
-        <nav class="w-56 bg-gray-900 text-gray-100 flex flex-col flex-shrink-0"
+        <nav class="w-56 bg-gray-900 text-gray-100 flex flex-col flex-shrink-0 dark:bg-slate-950 dark:text-slate-200"
              aria-label="Admin navigation">
-            <div class="px-4 py-5 border-b border-gray-700">
+            <div class="px-4 py-5 border-b border-gray-700 dark:border-slate-800">
                 <h1 class="text-lg font-bold tracking-tight">TheStudio</h1>
-                <p class="text-xs text-gray-400 mt-1">Admin Console</p>
+                <p class="text-xs text-gray-400 mt-1 dark:text-slate-500">Admin Console</p>
             </div>
             <ul class="flex-1 py-4 space-y-1 px-2" role="list">
                 <li role="listitem">
                     <a href="/dashboard/"
-                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-indigo-700 bg-indigo-800 text-indigo-100 font-medium mb-2">
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-indigo-700 bg-indigo-800 text-indigo-100 font-medium mb-2 dark:bg-indigo-900 dark:hover:bg-indigo-800 dark:text-indigo-200">
                         {{ icon("pipeline", class="w-4 h-4 mr-2") }} Pipeline Dashboard
                     </a>
                 </li>
                 <li role="listitem" class="border-t border-gray-700 pt-2 mb-1" aria-hidden="true"></li>
                 <li role="listitem">
                     <a href="/admin/ui/dashboard"
-                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'dashboard' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 dark:hover:bg-slate-800 {% if active_page == 'dashboard' %}bg-gray-800 text-white font-medium dark:bg-slate-800{% else %}text-gray-300 dark:text-slate-400{% endif %}"
                        {% if active_page == 'dashboard' %}aria-current="page"{% endif %}>
                         {{ icon("dashboard", class="w-4 h-4 mr-2") }} Dashboard
                     </a>
                 </li>
                 <li role="listitem">
                     <a href="/admin/ui/repos"
-                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'repos' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 dark:hover:bg-slate-800 {% if active_page == 'repos' %}bg-gray-800 text-white font-medium dark:bg-slate-800{% else %}text-gray-300 dark:text-slate-400{% endif %}"
                        {% if active_page == 'repos' %}aria-current="page"{% endif %}>
                         {{ icon("repos", class="w-4 h-4 mr-2") }} Repos
                     </a>
                 </li>
                 <li role="listitem">
                     <a href="/admin/ui/workflows"
-                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'workflows' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 dark:hover:bg-slate-800 {% if active_page == 'workflows' %}bg-gray-800 text-white font-medium dark:bg-slate-800{% else %}text-gray-300 dark:text-slate-400{% endif %}"
                        {% if active_page == 'workflows' %}aria-current="page"{% endif %}>
                         {{ icon("workflows", class="w-4 h-4 mr-2") }} Workflows
                     </a>
                 </li>
                 <li role="listitem">
                     <a href="/admin/ui/metrics"
-                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'metrics' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 dark:hover:bg-slate-800 {% if active_page == 'metrics' %}bg-gray-800 text-white font-medium dark:bg-slate-800{% else %}text-gray-300 dark:text-slate-400{% endif %}"
                        {% if active_page == 'metrics' %}aria-current="page"{% endif %}>
                         {{ icon("metrics", class="w-4 h-4 mr-2") }} Metrics
                     </a>
                 </li>
                 <li role="listitem">
                     <a href="/admin/ui/experts"
-                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'experts' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 dark:hover:bg-slate-800 {% if active_page == 'experts' %}bg-gray-800 text-white font-medium dark:bg-slate-800{% else %}text-gray-300 dark:text-slate-400{% endif %}"
                        {% if active_page == 'experts' %}aria-current="page"{% endif %}>
                         {{ icon("experts", class="w-4 h-4 mr-2") }} Experts
                     </a>
                 </li>
                 <li role="listitem">
                     <a href="/admin/ui/tools"
-                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'tools' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 dark:hover:bg-slate-800 {% if active_page == 'tools' %}bg-gray-800 text-white font-medium dark:bg-slate-800{% else %}text-gray-300 dark:text-slate-400{% endif %}"
                        {% if active_page == 'tools' %}aria-current="page"{% endif %}>
                         {{ icon("tools", class="w-4 h-4 mr-2") }} Tool Hub
                     </a>
                 </li>
                 <li role="listitem">
                     <a href="/admin/ui/models"
-                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'models' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 dark:hover:bg-slate-800 {% if active_page == 'models' %}bg-gray-800 text-white font-medium dark:bg-slate-800{% else %}text-gray-300 dark:text-slate-400{% endif %}"
                        {% if active_page == 'models' %}aria-current="page"{% endif %}>
                         {{ icon("models", class="w-4 h-4 mr-2") }} Models
                     </a>
                 </li>
                 <li role="listitem">
                     <a href="/admin/ui/cost-dashboard"
-                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'cost-dashboard' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 dark:hover:bg-slate-800 {% if active_page == 'cost-dashboard' %}bg-gray-800 text-white font-medium dark:bg-slate-800{% else %}text-gray-300 dark:text-slate-400{% endif %}"
                        {% if active_page == 'cost-dashboard' %}aria-current="page"{% endif %}>
                         {{ icon("cost", class="w-4 h-4 mr-2") }} Cost Dashboard
                     </a>
                 </li>
                 <li role="listitem">
                     <a href="/admin/ui/compliance"
-                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'compliance' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 dark:hover:bg-slate-800 {% if active_page == 'compliance' %}bg-gray-800 text-white font-medium dark:bg-slate-800{% else %}text-gray-300 dark:text-slate-400{% endif %}"
                        {% if active_page == 'compliance' %}aria-current="page"{% endif %}>
                         {{ icon("compliance", class="w-4 h-4 mr-2") }} Compliance
                     </a>
                 </li>
                 <li role="listitem">
                     <a href="/admin/ui/quarantine"
-                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'quarantine' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 dark:hover:bg-slate-800 {% if active_page == 'quarantine' %}bg-gray-800 text-white font-medium dark:bg-slate-800{% else %}text-gray-300 dark:text-slate-400{% endif %}"
                        {% if active_page == 'quarantine' %}aria-current="page"{% endif %}>
                         {{ icon("quarantine", class="w-4 h-4 mr-2") }} Quarantine
                     </a>
                 </li>
                 <li role="listitem">
                     <a href="/admin/ui/dead-letters"
-                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'dead-letters' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 dark:hover:bg-slate-800 {% if active_page == 'dead-letters' %}bg-gray-800 text-white font-medium dark:bg-slate-800{% else %}text-gray-300 dark:text-slate-400{% endif %}"
                        {% if active_page == 'dead-letters' %}aria-current="page"{% endif %}>
                         {{ icon("dead-letters", class="w-4 h-4 mr-2") }} Dead Letters
                     </a>
                 </li>
                 <li role="listitem">
                     <a href="/admin/ui/planes"
-                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'planes' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 dark:hover:bg-slate-800 {% if active_page == 'planes' %}bg-gray-800 text-white font-medium dark:bg-slate-800{% else %}text-gray-300 dark:text-slate-400{% endif %}"
                        {% if active_page == 'planes' %}aria-current="page"{% endif %}>
                         {{ icon("planes", class="w-4 h-4 mr-2") }} Planes
                     </a>
                 </li>
                 <li role="listitem">
                     <a href="/admin/ui/portfolio-health"
-                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'portfolio-health' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 dark:hover:bg-slate-800 {% if active_page == 'portfolio-health' %}bg-gray-800 text-white font-medium dark:bg-slate-800{% else %}text-gray-300 dark:text-slate-400{% endif %}"
                        {% if active_page == 'portfolio-health' %}aria-current="page"{% endif %}>
                         {{ icon("portfolio", class="w-4 h-4 mr-2") }} Portfolio Health
                     </a>
@@ -228,28 +268,28 @@
                 {% if current_user_role and current_user_role.value == 'admin' %}
                 <li role="listitem">
                     <a href="/admin/ui/audit"
-                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'audit' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 dark:hover:bg-slate-800 {% if active_page == 'audit' %}bg-gray-800 text-white font-medium dark:bg-slate-800{% else %}text-gray-300 dark:text-slate-400{% endif %}"
                        {% if active_page == 'audit' %}aria-current="page"{% endif %}>
                         {{ icon("audit", class="w-4 h-4 mr-2") }} Audit Log
                     </a>
                 </li>
                 <li role="listitem">
                     <a href="/admin/ui/settings"
-                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'settings' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
+                       class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 dark:hover:bg-slate-800 {% if active_page == 'settings' %}bg-gray-800 text-white font-medium dark:bg-slate-800{% else %}text-gray-300 dark:text-slate-400{% endif %}"
                        {% if active_page == 'settings' %}aria-current="page"{% endif %}>
                         {{ icon("settings", class="w-4 h-4 mr-2") }} Settings
                     </a>
                 </li>
                 {% endif %}
             </ul>
-            <div class="px-4 py-3 border-t border-gray-700 text-xs text-gray-400">
+            <div class="px-4 py-3 border-t border-gray-700 text-xs text-gray-400 dark:border-slate-800 dark:text-slate-500">
                 {% if current_user_id %}
                 <p class="truncate">{{ current_user_id }}</p>
                 <p class="mt-1">
                     {% if current_user_role %}
                         {{ role_badge(current_user_role.value, variant='dark') }}
                     {% else %}
-                        <span class="inline-block px-2 py-0.5 rounded text-xs font-medium bg-gray-600 text-gray-300" role="status">NO ROLE</span>
+                        <span class="inline-block px-2 py-0.5 rounded text-xs font-medium bg-gray-600 text-gray-300 dark:bg-slate-700 dark:text-slate-300" role="status">NO ROLE</span>
                     {% endif %}
                 </p>
                 {% else %}
@@ -261,7 +301,7 @@
         <!-- Main Content — SG §2.1 shell standard -->
         <main class="flex-1 flex flex-col" id="main-content" tabindex="-1">
             <!-- Header — SG §2.1 header bar standard -->
-            <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+            <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between dark:bg-slate-900 dark:border-slate-700">
                 <h2 class="text-xl font-semibold">{% block page_title %}{% endblock %}</h2>
                 <div class="flex items-center gap-4">
                     <!-- Command Palette trigger — Ctrl+K / Cmd+K, Epic 75.6 -->
@@ -270,7 +310,9 @@
                             class="hidden sm:flex items-center gap-2 px-3 py-1.5 text-sm text-gray-500
                                    border border-gray-200 rounded-lg hover:border-gray-300 hover:text-gray-700
                                    focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600
-                                   transition-colors bg-gray-50 hover:bg-white"
+                                   transition-colors bg-gray-50 hover:bg-white
+                                   dark:text-slate-400 dark:border-slate-600 dark:bg-slate-800
+                                   dark:hover:bg-slate-700 dark:hover:text-slate-200 dark:hover:border-slate-500"
                             aria-label="Open command palette"
                             data-tooltip="Search or navigate (Ctrl+K)">
                         <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"
@@ -280,11 +322,32 @@
                                   clip-rule="evenodd"/>
                         </svg>
                         <span>Search</span>
-                        <kbd class="text-xs bg-white border border-gray-200 rounded px-1 font-mono text-gray-400">
+                        <kbd class="text-xs bg-white border border-gray-200 rounded px-1 font-mono text-gray-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-500">
                             ⌘K
                         </kbd>
                     </button>
-                    <div class="text-sm text-gray-500" id="page-status">
+                    <!-- Dark mode toggle — Epic 75.7 -->
+                    <button type="button"
+                            id="dark-mode-toggle"
+                            onclick="window.tsTheme && window.tsTheme.toggle()"
+                            class="p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100
+                                   dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-700
+                                   focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600
+                                   transition-colors"
+                            aria-label="Toggle dark mode"
+                            data-tooltip="Toggle dark/light mode">
+                        <!-- Sun icon (shown in dark mode) -->
+                        <svg id="theme-icon-sun" class="w-4 h-4 hidden" viewBox="0 0 20 20" fill="currentColor"
+                             aria-hidden="true" focusable="false">
+                            <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd"/>
+                        </svg>
+                        <!-- Moon icon (shown in light mode) -->
+                        <svg id="theme-icon-moon" class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"
+                             aria-hidden="true" focusable="false">
+                            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/>
+                        </svg>
+                    </button>
+                    <div class="text-sm text-gray-500 dark:text-slate-400" id="page-status">
                         {% block header_right %}{% endblock %}
                     </div>
                 </div>
@@ -295,9 +358,9 @@
             <div class="px-6 pt-4 space-y-2" id="flash-container">
                 {% for msg in flash_messages %}
                 <div class="px-4 py-3 rounded text-sm fade-in
-                    {% if msg.level == 'error' %}bg-red-50 text-red-800 border border-red-200
-                    {% elif msg.level == 'warning' %}bg-yellow-50 text-yellow-800 border border-yellow-200
-                    {% else %}bg-green-50 text-green-800 border border-green-200{% endif %}">
+                    {% if msg.level == 'error' %}bg-red-50 text-red-800 border border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800
+                    {% elif msg.level == 'warning' %}bg-yellow-50 text-yellow-800 border border-yellow-200 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-800
+                    {% else %}bg-green-50 text-green-800 border border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800{% endif %}">
                     {{ msg.text }}
                 </div>
                 {% endfor %}
@@ -325,11 +388,11 @@
          hidden
          class="detail-panel">
         <!-- Panel header -->
-        <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200 flex-shrink-0 bg-white">
-            <h2 id="detail-panel-title" class="text-base font-semibold text-gray-900">Details</h2>
+        <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200 flex-shrink-0 bg-white dark:bg-slate-900 dark:border-slate-700">
+            <h2 id="detail-panel-title" class="text-base font-semibold text-gray-900 dark:text-slate-100">Details</h2>
             <button id="detail-panel-close"
                     type="button"
-                    class="rounded p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                    class="rounded p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-700"
                     aria-label="Close detail panel">
                 <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"
                      aria-hidden="true" focusable="false">
@@ -339,7 +402,7 @@
         </div>
         <!-- HTMX loading indicator (shown during hx-get requests) -->
         <div id="detail-panel-loading"
-             class="htmx-indicator flex items-center gap-2 px-5 py-3 text-sm text-gray-500 flex-shrink-0">
+             class="htmx-indicator flex items-center gap-2 px-5 py-3 text-sm text-gray-500 flex-shrink-0 dark:text-slate-400">
             <svg class="animate-spin w-4 h-4 text-blue-500" viewBox="0 0 24 24" fill="none"
                  aria-hidden="true">
                 <circle class="opacity-25" cx="12" cy="12" r="10"
@@ -351,7 +414,7 @@
         </div>
         <!-- Content target: HTMX swaps HTML here -->
         <div id="detail-panel-body"
-             class="flex-1 overflow-y-auto px-5 py-4 text-sm text-gray-700"
+             class="flex-1 overflow-y-auto px-5 py-4 text-sm text-gray-700 dark:text-slate-300"
              tabindex="-1"></div>
     </div>
     <!-- ── /Detail Panel ──────────────────────────────────────────────────────── -->
@@ -480,6 +543,48 @@
 
       document.addEventListener('DOMContentLoaded', init);
       return { openLoading: openLoading, onContentLoaded: onContentLoaded, close: close };
+    }());
+    </script>
+    <script>
+    /* ── Dark mode toggle — Epic 75.7 ────────────────────────────────────────── */
+    window.tsTheme = (function () {
+      'use strict';
+      var HTML = document.documentElement;
+
+      function applyIcons(dark) {
+        var sun  = document.getElementById('theme-icon-sun');
+        var moon = document.getElementById('theme-icon-moon');
+        if (sun)  { sun.classList.toggle('hidden', !dark); }
+        if (moon) { moon.classList.toggle('hidden', dark); }
+      }
+
+      function toggle() {
+        var isDark = HTML.classList.contains('dark');
+        var next   = !isDark;
+        try { localStorage.setItem('ts-theme', next ? 'dark' : 'light'); } catch (e) {}
+        if (next) {
+          HTML.classList.add('dark');
+        } else {
+          HTML.classList.remove('dark');
+        }
+        applyIcons(next);
+      }
+
+      /* Sync icon state after DOM ready (HTML class already applied by FOUC script) */
+      document.addEventListener('DOMContentLoaded', function () {
+        applyIcons(HTML.classList.contains('dark'));
+      });
+
+      /* Also respond to OS preference changes when no explicit preference stored */
+      if (window.matchMedia) {
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function (e) {
+          try { if (localStorage.getItem('ts-theme')) return; } catch (ex) {}
+          if (e.matches) { HTML.classList.add('dark'); } else { HTML.classList.remove('dark'); }
+          applyIcons(e.matches);
+        });
+      }
+
+      return { toggle: toggle };
     }());
     </script>
 </body>
