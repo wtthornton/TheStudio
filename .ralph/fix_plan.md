@@ -2,16 +2,12 @@
 
 ## Open epics — active backlog
 
-> **Rollup:** `docs/epics/EPIC-STATUS-TRACKER.md` (2026-03-24). All non-complete epics from that tracker are listed here so Ralph and humans share one queue.
+> **Rollup:** `docs/epics/EPIC-STATUS-TRACKER.md` (2026-03-25). All non-complete epics from that tracker are listed here so Ralph and humans share one queue.
 
 | Epic | Status | Canonical doc |
 |------|--------|---------------|
-| **51** | In progress — vendor parity + evaluation backlog | `docs/epics/epic-51-ralph-vendored-sdk-parity.md`, `docs/handoffs/ralph-epic-51-next-agent-prompt.md`, `docs/ralph-sdk-upgrade-evaluation.md` |
-| **38** | MVP done (38.1–38.12); **Slices 3–4 open** | `docs/epics/epic-38-phase4-github-integration.md` |
-| **39** | Approved — not started | `docs/epics/epic-39-phase5-analytics-learning.md` |
-| **43** | **Integration delivered** in tree (43.1–43.15); **default `THESTUDIO_AGENT_MODE=ralph`** and primary-agent *rollout* still **gated on Epic 51** + ops | `docs/epics/epic-43-ralph-sdk-integration.md` |
+| **43** | **Stories 43.1–43.15 complete in tree**; primary-agent rollout gated on ops sign-off (Epic 51 complete) | `docs/epics/epic-43-ralph-sdk-integration.md` |
 | **52–54** | Canonical UI — **55, 56, 57 complete**; remaining: 53.4, 54.3, 54.4 | `epic-52-frontend-ui-modernization-master-plan.md`, `epic-53-admin-ui-canonical-compliance.md`, `epic-54-dashboard-ui-canonical-compliance.md` |
-| **58** | Proposed — Playwright test infra + visual snapshot framework (7 stories, 29 pts) | `docs/epics/epic-58-playwright-test-infrastructure.md` |
 | **59–74** | Proposed — Per-page Playwright full-stack test suites (16 epics × 6 stories = 96 stories, 304 pts) | `docs/epics/epic-59-dashboard-playwright-suite.md` … `epic-74-detail-pages-playwright-suite.md` |
 | **27** | Deferred on demand | `docs/epics/` (multi-source webhooks — see tracker) |
 
@@ -296,7 +292,9 @@ Each page epic has: `.1` Intent, `.2` API verification, `.3` Style guide complia
 
 **Epics 52–54 partial:** Stories **53.1–53.3, 54.1–54.2** marked `[x]`. Remaining: **53.4** (not started), **54.3, 54.4** (not started).
 
-**Still open:** See **Open epics** at top — **52–54** (remaining stories 53.4, 54.3, 54.4), **38** (slices 3–4), **39**, **51** (vendor parity + eval backlog). **Epic 43** stories **43.1–43.15** are **done in code**; **Ralph as default in prod** remains **gated on Epic 51** + ops. **Epic 27** is **deferred** (not scheduled).
+**Still open:** See **Open epics** at top — **52–54** (remaining stories 53.4, 54.3, 54.4), **43** (stories complete, rollout gated on ops), **59–74** (proposed Playwright per-page suites). **Epic 27** is **deferred** (not scheduled).
+
+**Newly completed (2026-03-25 sync):** **Epic 38** (all 4 slices, stories 38.1–38.27), **Epic 39** (all stories 39.0a–39.21), **Epic 51** (all evaluation + hardening tasks), **Epic 58** (all 7 stories, test infra framework).
 
 Deployment hardening (reference): multi-stage Dockerfile, `.dockerignore`, `vendor/ralph-sdk`, migrations **048** (`ralph_agent_state`) + **049**, NATS healthcheck, pg-proxy localhost binding, `/health/ralph` coverage.
 

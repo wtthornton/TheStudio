@@ -1,6 +1,6 @@
 # Epic 38 — GitHub Deep Integration: Issue Import, PR Evidence, Projects Sync, and Pipeline Comments
 
-> **Phase:** UI Phase 4 | **Status:** **MVP delivered in repo** (Slices 1–2, stories **38.1–38.12**); Meridian R2 PASS (2026-03-22). **Slices 3–4** (Projects sync, pipeline comments, webhook bridge) not started.
+> **Phase:** UI Phase 4 | **Status:** **COMPLETE** — All 4 slices delivered (stories **38.1–38.27**); Meridian R2 PASS (2026-03-22). Slices 3–4 completed 2026-03-25.
 > **Estimated duration:** 5-7 weeks (full epic) | **Stories:** 27 across 4 slices (MVP: Slices 1+2 — **shipped**)
 > **Depends on:** Epic 34 (COMPLETE), Epic 35 (COMPLETE), Epic 36 (COMPLETE), Epic 37 (COMPLETE)
 > **Kill Criterion:** If after MVP delivery (Slices 1+2), fewer than 20% of pipeline tasks use manual import within 2 weeks, defer Slices 3-4 and proceed to Epic 39. Slices 1+2 shipping alone constitutes a successful epic.

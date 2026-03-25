@@ -1,6 +1,6 @@
 # Epic 43: Ralph SDK as Primary Agent -- Session Continuity, Circuit Breaking, and Cost-Aware Implementation
 
-> **Status:** APPROVED -- Meridian PASS (2026-03-22)
+> **Status:** **STORIES COMPLETE** (2026-03-25) — All 15 stories (43.1–43.15) implemented in tree. Production rollout gated on ops sign-off (Epic 51 now complete). Meridian PASS (2026-03-22).
 > **Epic Owner:** Primary Developer
 > **Duration:** 3-4 weeks (4 slices, 15 stories)
 > **Created:** 2026-03-22

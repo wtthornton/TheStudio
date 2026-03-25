@@ -1,7 +1,7 @@
 # Epic 51: Ralph Vendored SDK Parity — Stall Detection, Progressive Context, and Structured Outputs
 
 <!-- docsmcp:start:metadata -->
-**Status:** **APPROVED** — Meridian PASS (2026-03-23); see `MERIDIAN-REVIEW-EPIC-51.md`
+**Status:** **COMPLETE** (2026-03-25) — All P0/P1 tasks delivered (eval gaps closed, cancel hardening, git hardening, tests). Meridian PASS (2026-03-23); see `MERIDIAN-REVIEW-EPIC-51.md`
 **Priority:** P0-P1 — Production quality and cost
 **Estimated LOE:** ~3-4 weeks (P0 slice 2.5-4.5 days; full backlog 17-21 days per evaluation)
 **Dependencies:** Epic 43 (Ralph SDK integration) — parallel or prerequisite for consuming new TaskResult fields

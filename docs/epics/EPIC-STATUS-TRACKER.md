@@ -1,6 +1,6 @@
 # Epic Status Tracker
 
-> Consolidated status of all epics as of **2026-03-24** (rollup: Epics **44–50**, **47** complete per `.ralph/fix_plan.md`; canonical UI standard published).
+> Consolidated status of all epics as of **2026-03-25** (rollup: Epics 38, 39, 44–51, 55–58 confirmed complete; 43 stories complete/rollout gated).
 > **Canonical UI/UX:** `docs/design/07-THESTUDIO-UI-UX-STYLE-GUIDE.md` — referenced from README, AGENTS.md, CLAUDE.md, Copilot instructions, and `.cursor/rules/frontend-style-source-of-truth.mdc`. **MCP frontend experts:** `docs/TAPPS_MCP_FRONTEND_EXPERTS_BRIEF.md` + `.tapps-mcp/experts.yaml`.
 > Source of truth for epic status is each epic's own file. This tracker is a rollup view.
 
@@ -10,16 +10,17 @@
 
 | Metric | Value |
 |--------|-------|
-| Total epics | 57+ (numbered epics 0–57 complete/in-progress; **58–74** proposed Playwright suites) |
-| Complete | 40+ (Epics 0-26, 28-37, **44**; Pipeline UI Phases 0-3; **45–50** onboarding/UX per `.ralph/fix_plan.md`) |
-| In Progress | 2 — **Epic 51** (Ralph vendored SDK parity — eval backlog), **Epics 52–57** (canonical UI modernization; stories partial) |
-| Proposed | 17 — **Epics 58–74** (Playwright full-stack test suites: 103 stories, 333 pts) |
-| Planned | 2 — **Epic 38** (Phase 4 **Slices 3–4**), **Epic 39** (Analytics & learning — Meridian approved) |
-| Milestone | **Pipeline UI Phase 3 complete** (Epic 37 per `epic-37-phase3-interactive-controls.md`, 2026-03-22). Phases 4-5 = Epics 38-39. |
+| Total epics | 74 (numbered epics 0–74; **59–74** proposed Playwright per-page suites) |
+| Complete | 51 (Epics 0-26, 28-39, 44-51, 55-58; Pipeline UI Phases 0-5; onboarding/UX; Ralph SDK parity; Playwright infra) |
+| Stories complete / rollout gated | 1 — **Epic 43** (Ralph SDK as primary agent — stories 43.1–43.15 in tree, production rollout gated on ops sign-off) |
+| In Progress | 1 — **Epics 52–54** (canonical UI modernization; remaining stories 53.4, 54.3, 54.4) |
+| Proposed | 16 — **Epics 59–74** (per-page Playwright test suites: 96 stories, 304 pts) |
+| Milestone | **Pipeline UI Phase 5 complete** (Epic 39, 2026-03-25). All pipeline UI phases 0-5 delivered. |
 | Deferred | 1 (Epic 27) |
-| Tests passing | 3,366+ unit (zero failures), 9 E2E pipeline, ~244 integration, 23 P0 harness |
+| Tests passing | 3,366+ unit (zero failures), 9 E2E pipeline, ~244 integration, 23 P0 harness, 98 Ralph-specific |
 | Eval tests | 20/25 passed with real Claude (~$5/run) |
 | Coverage | 84% |
+| Version | **v0.2.1** (2026-03-25) — Ralph SDK v2.0.3, epic status sync, ops checklist |
 
 ---
 
@@ -151,20 +152,20 @@
 | 35 | Phase 1: Pipeline Visibility | **Complete** (2026-03-21) | 63 stories across 4 slices. Pipeline Rail, TaskPacket Timeline, Gate Inspector, Activity Stream, Loopback arcs, Minimap, error states. |
 | 36 | Phase 2: Planning Experience | **Complete** (2026-03-21) | All 4 slices delivered. Slice 1: Triage Queue (6 stories). Slice 2: Intent Review (8 stories). Slice 3: Complexity + Routing (10 stories). Slice 4: Backlog + Tasks (5 stories). 29 stories total. |
 | 37 | Phase 3: Interactive Controls | **Complete** (2026-03-22) | Per `epic-37-phase3-interactive-controls.md` — all 28 stories. (Meridian process gap noted in epic.) |
-| 38 | Phase 4: GitHub Integration | **MVP complete** — Slices 3–4 open | `epic-38-phase4-github-integration.md`. **Delivered:** Slices **1–2** (issue import, evidence JSON/API, PR Evidence Explorer, reviewer actions). **Next:** Slice 3 Projects sync, Slice 4 pipeline comments + webhook bridge. |
-| 39 | Phase 5: Analytics & Learning | **Approved** — not started | `epic-39-phase5-analytics-learning.md` — Meridian R2 PASS (2026-03-22). |
+| 38 | Phase 4: GitHub Integration | **Complete** (2026-03-25) | All 4 slices, 27 stories (38.1–38.27). Issue import, PR Evidence Explorer, reviewer actions, Projects v2 sync, pipeline comments, webhook bridge. |
+| 39 | Phase 5: Analytics & Learning | **Complete** (2026-03-25) | All 24 stories (39.0a–39.21). Operational analytics APIs + UI, reputation & drift APIs + UI. |
 | 44 | Setup Wizard (first-run onboarding) | **Complete** (2026-03-24) | All stories **44.1-44.10** delivered per `.ralph/fix_plan.md` (Sprint 6). `epic-44-setup-wizard.md`. |
 | 47 | Product Tours | **Complete** (2026-03-24) | Stories **47.1-47.8** per `.ralph/fix_plan.md` (Sprint 9). `epic-47-product-tours.md`. |
 
-> **Also complete** per `.ralph/fix_plan.md` (same rollup window): **Epic 45** (Contextual Help), **Epic 46** (Actionable Empty States), **Epic 48** (Scalar API docs), **Epic 49** (Unified Navigation), **Epic 50** (Feature Spotlights). See epic files under `docs/epics/` where present.
+> **Also complete** per `.ralph/fix_plan.md`: **Epic 45** (Contextual Help), **Epic 46** (Actionable Empty States), **Epic 48** (Scalar API docs), **Epic 49** (Unified Navigation), **Epic 50** (Feature Spotlights). See epic files under `docs/epics/` where present.
 
 ### Canonical UI / style-guide modernization (Epics 52–57)
 
 | Epic | Title | Status | Notes |
 |------|-------|--------|--------|
-| 52 | Frontend UI modernization (master plan) | **In execution** (2026-03-24) | Waves 1–3 complete. Remaining: stories 53.4, 54.3, 54.4. `epic-52-frontend-ui-modernization-master-plan.md`. |
-| 53 | Admin console canonical compliance | **In execution** (2026-03-24) | **53.1–53.3 complete**; 53.4 not started. Shell/nav conformance, status badges, HTMX loading/empty/error + WCAG. `epic-53-admin-ui-canonical-compliance.md`. |
-| 54 | Pipeline app canonical compliance | **In execution** (2026-03-24) | **54.1–54.2 complete**; 54.3–54.4 not started. STATUS_COLORS, trust-tier UI, modal dialog semantics + focus traps. `epic-54-dashboard-ui-canonical-compliance.md`. |
+| 52 | Frontend UI modernization (master plan) | **In progress** (2026-03-25) | Waves 1–3 complete. Remaining: stories 53.4, 54.3, 54.4. `epic-52-frontend-ui-modernization-master-plan.md`. |
+| 53 | Admin console canonical compliance | **In progress** (2026-03-25) | **53.1–53.3 complete**; 53.4 not started. Shell/nav conformance, status badges, HTMX loading/empty/error + WCAG. `epic-53-admin-ui-canonical-compliance.md`. |
+| 54 | Pipeline app canonical compliance | **In progress** (2026-03-25) | **54.1–54.2 complete**; 54.3–54.4 not started. STATUS_COLORS, trust-tier UI, modal dialog semantics + focus traps. `epic-54-dashboard-ui-canonical-compliance.md`. |
 | 55 | Cross-surface AI prompt-first + trust | **Complete** (2026-03-24) | All 4 stories (55.1–55.4) delivered. PromptObject, IntentPreview, ExecutionModeSelector, DecisionControls, TrustMetadata, AuditTimeline — 39 tests. `epic-55-cross-surface-ai-prompt-first-and-trust-layer.md`. |
 | 56 | 2026 capability modules | **Complete** (2026-03-24) | All 4 stories (56.1–56.4) delivered. CommandPalette, DashboardCustomizer, locale helpers, CommentThread, ChangeHistory — 35 tests. `epic-56-cross-surface-2026-capability-modules.md`. |
 | 57 | Rollout governance + regression safety | **Complete** (2026-03-24) | All 3 stories (57.1–57.3) delivered. Traceability matrix operational, regression checklist (21 items, 6 categories), 3-wave rollout plan with rollback triggers. `epic-57-rollout-governance-and-regression-safety.md`. |
@@ -175,24 +176,29 @@
 
 | Epic | Title | Status | Notes |
 |------|-------|--------|-------|
-| 43 | Ralph SDK as Primary Agent | Approved (2026-03-22) | Meridian PASS. Session continuity, CB, Temporal wrapper. See `epic-43-ralph-sdk-integration.md`. **Dependency:** treat **Epic 51** (vendored SDK parity + eval) as the gate before flipping “primary agent” in production. |
-| 51 | Ralph Vendored SDK Parity | **In progress** — Meridian PASS (2026-03-23) | P0/P1 slices landed (vendor SDK + bridge). **Next:** evaluation doc gaps (routing, metrics JSONL, heartbeat, cancel partial output, etc.). Handoff: `docs/handoffs/ralph-epic-51-next-agent-prompt.md`. Upstream: [ralph-claude-code#226](https://github.com/frankbria/ralph-claude-code/issues/226). **Feeds Epic 43.** |
+| 43 | Ralph SDK as Primary Agent | **Stories complete** (2026-03-25) | All 15 stories (43.1–43.15) implemented in tree. Production rollout gated on ops sign-off. Epic 51 (prerequisite) now complete. `epic-43-ralph-sdk-integration.md`. |
+| 51 | Ralph Vendored SDK Parity | **Complete** (2026-03-25) | All P0/P1 tasks delivered: eval gaps closed, cancel hardening, git hardening, parsing tests. `docs/handoffs/ralph-epic-51-next-agent-prompt.md`. |
 
 ---
 
 ## Critical Path
 
 ```
-Phase 9 — PIPELINE UI (2026-03-24)
+Phase 9 — PIPELINE UI — COMPLETE (2026-03-25)
   Epics 34-37 — COMPLETE (Phases 0-3). Epic 37: see epic-37 file (28 stories).
-  Epic 44 (Setup Wizard) — COMPLETE — all 44.1-44.10 per .ralph/fix_plan.md
-  Epics 45-50, 47 — COMPLETE per .ralph/fix_plan.md (help, empty states, tours, API docs, navigation, spotlights)
-  Epic 38 — MVP (Slices 1–2) COMPLETE in tree; Slices 3–4 = Projects sync + pipeline comments / webhook bridge
-  Epic 39 (Analytics & learning) — APPROVED — next after Epic 38 remaining slices or in parallel per capacity
-  Epics 52-57 (canonical UI modernization) — IN EXECUTION — Story 54.2 can proceed on triage/intent/routing (Epic 47 complete)
+  Epic 38 (Phase 4: GitHub Integration) — COMPLETE — all 4 slices, 27 stories (38.1–38.27)
+  Epic 39 (Phase 5: Analytics & Learning) — COMPLETE — all 24 stories (39.0a–39.21)
+  Epics 44-50 — COMPLETE (setup wizard, help, empty states, tours, API docs, navigation, spotlights)
+  Epics 55-57 — COMPLETE (AI prompt-first + trust, 2026 capability modules, rollout governance)
+  Epics 52-54 (canonical UI) — IN PROGRESS — remaining stories 53.4, 54.3, 54.4
 
-Phase 10 — RALPH
-  Epic 51 — IN PROGRESS — vendor parity + evaluation backlog (handoff doc); prerequisite for Epic 43 primary-agent flip
+Phase 10 — RALPH — COMPLETE (2026-03-25)
+  Epic 51 — COMPLETE — vendor parity, eval gaps closed, cancel/git hardening, tests
+  Epic 43 — STORIES COMPLETE (43.1–43.15 in tree) — production rollout gated on ops sign-off
+
+Phase 11 — PLAYWRIGHT TEST SUITES
+  Epic 58 (Test Infrastructure) — COMPLETE (2026-03-25) — all 7 stories (58.1–58.7)
+  Epics 59-74 (Per-page suites) — PROPOSED — 16 epics, 96 stories, 304 pts
 
 Prior rollup (2026-03-21)
   Epic 34 (Phase 0: SSE PoC) — COMPLETE. 14 stories. Dashboard infra.
@@ -263,15 +269,14 @@ Phase 5 — COMPLETE (2026-03-17)
 
 ## Recommended Next Actions
 
-### Current sprint priorities (2026-03-24+)
+### Current sprint priorities (2026-03-25+)
 
 | Priority | Track | Next step |
 |----------|--------|-----------|
-| 1 | **Epic 51** | Evaluation docs and parity work from `docs/handoffs/ralph-epic-51-next-agent-prompt.md` — gates **Epic 43**. Run verification block in handoff before claiming slice done. |
-| 2 | **Epic 38** | **Slices 3–4** — Projects v2 sync, pipeline comments, webhook→SSE (`epic-38-phase4-github-integration.md`). MVP 1–2 already in tree. |
-| 3 | **Story 54.2** | SG §11 sign-off + optional focus trap; Waves 1–3 delivered. |
-| 4 | **Story 53.3** | Formal keyboard/SR spot-check + AC checkboxes; `empty_state` normalization ongoing in admin partials. |
-| 5 | **Epic 39** | Phase 5 analytics (`epic-39-phase5-analytics-learning.md`) when ready. |
+| 1 | **Epic 43 rollout** | Ops sign-off for `THESTUDIO_AGENT_MODE=ralph` in production. Epic 51 (prerequisite) now complete. |
+| 2 | **Stories 53.4, 54.3, 54.4** | Remaining canonical UI compliance stories. |
+| 3 | **Epics 59–74** | Per-page Playwright test suites — Epic 58 (infra) now complete, unblocking all 16 page epics. |
+| 4 | **Epic 27** | Multi-source webhooks — pull when demand exists. |
 
 ---
 
@@ -309,10 +314,10 @@ Phase 5 — COMPLETE (2026-03-17)
 30. ~~**Epic 34 (Phase 0: SSE PoC)**~~ — **Complete** (2026-03-21). 14 stories. SSE bridge, React scaffolding.
 31. ~~**Epic 35 (Phase 1: Pipeline Visibility)**~~ — **Complete** (2026-03-21). 63 stories across 4 slices.
 32. ~~**Epic 36 (Phase 2: Planning Experience)**~~ — **Complete** (2026-03-21). 29 stories across 4 slices. All frontend + backend delivered by Ralph (22 loops).
-33. **Epic 51 (Ralph vendored SDK parity)** — **In progress** (2026-03-23). Meridian: `MERIDIAN-REVIEW-EPIC-51.md`. Next: `docs/handoffs/ralph-epic-51-next-agent-prompt.md` + `docs/ralph-sdk-upgrade-evaluation.md`. Upstream [#226](https://github.com/frankbria/ralph-claude-code/issues/226). WSL `~/.ralph`: `scripts/wsl-setup-ralph-home.sh`. **Prerequisite for Epic 43.**
+33. ~~**Epic 51 (Ralph vendored SDK parity)**~~ — **Complete** (2026-03-25). All P0/P1 tasks delivered: eval gaps closed, cancel hardening, git hardening, parsing tests. Meridian PASS (2026-03-23).
 34. ~~**Epic 44 (Setup Wizard)**~~ — **Complete** (2026-03-24). Stories **44.1-44.10** per `.ralph/fix_plan.md` (Sprint 6).
 35. ~~**Epic 47 (Product Tours)**~~ — **Complete** (2026-03-24). Stories **47.1-47.8** per `.ralph/fix_plan.md` (Sprint 9).
-36. **Epic 38 (GitHub Phase 4)** — **MVP complete** (Slices 1–2 in tree: import, evidence JSON/API, Evidence Explorer, reviewer actions). **Next:** Slices 3–4. `epic-38-phase4-github-integration.md` implementation rollup.
+36. ~~**Epic 38 (GitHub Phase 4)**~~ — **Complete** (2026-03-25). All 4 slices, 27 stories (38.1–38.27). Issue import, PR Evidence Explorer, reviewer actions, Projects v2 sync, pipeline comments, webhook bridge.
 37. ~~**Epics 45–46, 48–50**~~ — **Complete** per `.ralph/fix_plan.md` (help, empty states, Scalar docs, navigation, spotlights).
-38. **Epic 58 (Playwright Test Infrastructure)** — **Proposed** (2026-03-24). 7 stories, 29 pts. Shared assertion libs for style guide, a11y, API, visual snapshots. Blocks Epics 59–74.
+38. ~~**Epic 58 (Playwright Test Infrastructure)**~~ — **Complete** (2026-03-25). All 7 stories (58.1–58.7) delivered. Shared assertion libs for style guide colors, typography, spacing, component recipes, API verification, interactive elements, WCAG 2.2 AA, visual snapshots.
 39. **Epics 59–74 (Per-Page Playwright Suites)** — **Proposed** (2026-03-24). 16 epics × 6 stories = 96 stories, 304 pts. Full-stack test suite per Admin UI page: intent, API verification, style guide compliance, interactive elements, WCAG 2.2 AA, visual snapshot baselines. Includes 2 zero-coverage pages (cost-dashboard, portfolio-health) and 3 detail pages. See `docs/PAGES.md` for full page inventory.

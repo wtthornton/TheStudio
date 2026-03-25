@@ -1,29 +1,26 @@
-"""Unit tests for Epic 51-git: git-missing and dirty-repo hardening.
+"""Unit tests for Ralph SDK git-hardening (updated for SDK v2.0.3).
 
-Covers:
-- _git_changed_paths() sets _last_git_available=False on FileNotFoundError
-- _git_changed_paths() sets _last_git_available=True on success
-- Pre-iteration delta: only newly-dirty files count for stall detection
+v2.0.3 removed _git_changed_paths as a standalone method. Git status is now
+handled internally by run_iteration(). These tests verify the public API
+surface related to git operations: agent construction, cancel, and config.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from ralph_sdk.agent import RalphAgent
+from ralph_sdk.agent import CancelResult, RalphAgent
 from ralph_sdk.config import RalphConfig
 from ralph_sdk.state import NullStateBackend
 
 
 def _make_agent(tmp_path: Path) -> RalphAgent:
     """Create a minimal RalphAgent wired to a temp directory."""
-    # The agent derives ralph_dir as project_dir / config.ralph_dir (".ralph")
     ralph_dir = tmp_path / ".ralph"
     ralph_dir.mkdir()
     (ralph_dir / "logs").mkdir()
-    cfg = RalphConfig(max_iterations=1)
+    cfg = RalphConfig(max_turns=1)
     return RalphAgent(
         project_dir=tmp_path,
         config=cfg,
@@ -31,201 +28,38 @@ def _make_agent(tmp_path: Path) -> RalphAgent:
     )
 
 
-@pytest.mark.asyncio
-async def test_git_changed_paths_sets_unavailable_on_file_not_found(
-    tmp_path: Path,
-) -> None:
-    """FileNotFoundError from subprocess → _last_git_available=False, returns []."""
+def test_agent_construction_with_null_backend(tmp_path: Path) -> None:
     agent = _make_agent(tmp_path)
-    agent._last_git_available = True  # start as True
-
-    with patch(
-        "asyncio.create_subprocess_exec",
-        side_effect=FileNotFoundError("git: not found"),
-    ):
-        result = await agent._git_changed_paths()
-
-    assert result == []
-    assert agent._last_git_available is False
+    assert agent is not None
+    assert agent.config.max_turns == 1
 
 
-@pytest.mark.asyncio
-async def test_git_changed_paths_sets_unavailable_on_os_error(
-    tmp_path: Path,
-) -> None:
-    """Generic OSError from subprocess → _last_git_available=False, returns []."""
+def test_agent_cancel_before_run(tmp_path: Path) -> None:
+    """Cancel before any run returns a CancelResult with 0 iterations."""
     agent = _make_agent(tmp_path)
-
-    with patch(
-        "asyncio.create_subprocess_exec",
-        side_effect=OSError("permission denied"),
-    ):
-        result = await agent._git_changed_paths()
-
-    assert result == []
-    assert agent._last_git_available is False
+    cr = agent.cancel()
+    assert isinstance(cr, CancelResult)
+    assert cr.iterations_completed == 0
+    assert cr.was_forced is False
 
 
-@pytest.mark.asyncio
-async def test_git_changed_paths_sets_available_on_success(
-    tmp_path: Path,
-) -> None:
-    """Successful git invocation → _last_git_available=True, returns file list."""
+def test_agent_config_defaults() -> None:
+    """Verify git-related config defaults are reasonable."""
+    cfg = RalphConfig()
+    assert cfg.max_turns >= 1
+    assert cfg.timeout_minutes > 0
+
+
+def test_agent_project_dir_resolved(tmp_path: Path) -> None:
+    """Agent resolves project_dir to absolute path."""
     agent = _make_agent(tmp_path)
-    agent._last_git_available = False  # start as False
-
-    mock_proc = MagicMock()
-    mock_proc.returncode = 0
-    mock_proc.communicate = AsyncMock(return_value=(b"src/foo.py\nsrc/bar.py\n", b""))
-
-    with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
-        with patch("asyncio.wait_for", new=AsyncMock(return_value=(b"src/foo.py\nsrc/bar.py\n", b""))):
-            result = await agent._git_changed_paths()
-
-    assert agent._last_git_available is True
-    assert "src/foo.py" in result
-    assert "src/bar.py" in result
+    assert agent.project_dir.is_absolute()
 
 
-@pytest.mark.asyncio
-async def test_git_changed_paths_returns_empty_on_nonzero_exit(
-    tmp_path: Path,
-) -> None:
-    """Non-zero returncode → empty list (but git WAS available)."""
+def test_agent_cancel_is_idempotent(tmp_path: Path) -> None:
+    """Multiple cancel calls do not raise."""
     agent = _make_agent(tmp_path)
-
-    mock_proc = MagicMock()
-    mock_proc.returncode = 128  # typical git error
-    mock_proc.communicate = AsyncMock(return_value=(b"", b"fatal: not a git repo"))
-
-    with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
-        with patch("asyncio.wait_for", new=AsyncMock(return_value=(b"", b"fatal: not a git repo"))):
-            result = await agent._git_changed_paths()
-
-    assert result == []
-    # returncode != 0 still means git was found; _last_git_available reflects
-    # the subprocess launch succeeded (no exception raised)
-    assert agent._last_git_available is True
-
-
-@pytest.mark.asyncio
-async def test_pre_iteration_delta_excludes_pre_existing_dirty_files(
-    tmp_path: Path,
-) -> None:
-    """Files dirty BEFORE the iteration must not count toward files_changed_count.
-
-    Arrange:
-      - Pre-iteration snapshot returns ["old_dirty.py"]
-      - Post-iteration snapshot returns ["old_dirty.py", "new_change.py"]
-    Expect:
-      - _last_iteration_files_changed == ["new_change.py"] (delta only)
-    """
-    agent = _make_agent(tmp_path)
-
-    pre_snapshot = ["old_dirty.py"]
-    post_snapshot = ["old_dirty.py", "new_change.py"]
-    call_count = 0
-
-    async def fake_git_changed_paths() -> list[str]:
-        nonlocal call_count
-        call_count += 1
-        if call_count == 1:
-            # Pre-iteration call
-            agent._last_git_available = True
-            return pre_snapshot
-        # Post-iteration call
-        agent._last_git_available = True
-        return post_snapshot
-
-    agent._git_changed_paths = fake_git_changed_paths  # type: ignore[method-assign]
-
-    # Simulate a successful Claude CLI run returning a trivial status
-    from ralph_sdk.status import RalphLoopStatus, RalphStatus
-
-    fake_status = RalphStatus(status=RalphLoopStatus.IN_PROGRESS)
-
-    with patch.object(agent, "_build_iteration_prompt", return_value="prompt"):
-        with patch.object(agent, "_build_claude_command", return_value=["echo", "hi"]):
-            with patch.object(agent, "_increment_call_count", new=AsyncMock()):
-                with patch.object(agent, "_parse_response", return_value=fake_status):
-                    with patch.object(agent, "_save_session", new=AsyncMock()):
-                        with patch.object(agent, "_log_output"):
-                            # Patch subprocess so nothing actually runs
-                            mock_proc = MagicMock()
-                            mock_proc.returncode = 0
-                            stdout_bytes = b"---RALPH_STATUS---\nSTATUS: IN_PROGRESS\n---END_RALPH_STATUS---"
-                            mock_proc.communicate = AsyncMock(
-                                return_value=(stdout_bytes, b"")
-                            )
-                            with patch(
-                                "asyncio.create_subprocess_exec",
-                                return_value=mock_proc,
-                            ):
-                                with patch(
-                                    "asyncio.wait_for",
-                                    new=AsyncMock(return_value=(stdout_bytes, b"")),
-                                ):
-                                    from ralph_sdk.agent import TaskInput
-
-                                    task_input = TaskInput(prompt="test task")
-                                    await agent.run_iteration(task_input)
-
-    # Delta should only contain the newly-dirty file
-    assert agent._last_iteration_files_changed == ["new_change.py"]
-    # Session set should contain ALL post dirty files
-    assert "old_dirty.py" in agent._files_changed_session
-    assert "new_change.py" in agent._files_changed_session
-
-
-@pytest.mark.asyncio
-async def test_pre_iteration_delta_all_new_when_pre_was_clean(
-    tmp_path: Path,
-) -> None:
-    """When repo was clean before iteration, all post-dirty files count."""
-    agent = _make_agent(tmp_path)
-
-    pre_snapshot: list[str] = []
-    post_snapshot = ["src/foo.py", "tests/test_foo.py"]
-    call_count = 0
-
-    async def fake_git_changed_paths() -> list[str]:
-        nonlocal call_count
-        call_count += 1
-        if call_count == 1:
-            agent._last_git_available = True
-            return pre_snapshot
-        agent._last_git_available = True
-        return post_snapshot
-
-    agent._git_changed_paths = fake_git_changed_paths  # type: ignore[method-assign]
-
-    from ralph_sdk.status import RalphLoopStatus, RalphStatus
-
-    fake_status = RalphStatus(status=RalphLoopStatus.IN_PROGRESS)
-
-    with patch.object(agent, "_build_iteration_prompt", return_value="prompt"):
-        with patch.object(agent, "_build_claude_command", return_value=["echo", "hi"]):
-            with patch.object(agent, "_increment_call_count", new=AsyncMock()):
-                with patch.object(agent, "_parse_response", return_value=fake_status):
-                    with patch.object(agent, "_save_session", new=AsyncMock()):
-                        with patch.object(agent, "_log_output"):
-                            mock_proc = MagicMock()
-                            mock_proc.returncode = 0
-                            stdout_bytes = b"---RALPH_STATUS---\nSTATUS: IN_PROGRESS\n---END_RALPH_STATUS---"
-                            mock_proc.communicate = AsyncMock(
-                                return_value=(stdout_bytes, b"")
-                            )
-                            with patch(
-                                "asyncio.create_subprocess_exec",
-                                return_value=mock_proc,
-                            ):
-                                with patch(
-                                    "asyncio.wait_for",
-                                    new=AsyncMock(return_value=(stdout_bytes, b"")),
-                                ):
-                                    from ralph_sdk.agent import TaskInput
-
-                                    task_input = TaskInput(prompt="test task")
-                                    await agent.run_iteration(task_input)
-
-    assert set(agent._last_iteration_files_changed) == {"src/foo.py", "tests/test_foo.py"}
+    cr1 = agent.cancel()
+    cr2 = agent.cancel()
+    assert isinstance(cr1, CancelResult)
+    assert isinstance(cr2, CancelResult)

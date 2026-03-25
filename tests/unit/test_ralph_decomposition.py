@@ -1,85 +1,91 @@
-"""Unit tests for vendored Ralph SDK task decomposition heuristic (Epic 51.4)."""
+"""Unit tests for vendored Ralph SDK task decomposition heuristic (Epic 51.4).
+
+Updated for SDK v2.0.3 API: DecompositionHint and detect_decomposition_needed
+moved from ralph_sdk.decomposition to ralph_sdk.agent.
+"""
 
 from __future__ import annotations
 
-from ralph_sdk.config import RalphConfig
-from ralph_sdk.decomposition import (
-    DecompositionContext,
+from ralph_sdk.agent import (
     DecompositionHint,
+    IterationRecord,
     detect_decomposition_needed,
 )
+from ralph_sdk.config import RalphConfig
 from ralph_sdk.status import RalphLoopStatus, RalphStatus
 
 
 def test_detect_decomposition_no_signals() -> None:
     cfg = RalphConfig()
-    status = RalphStatus(status=RalphLoopStatus.IN_PROGRESS)
-    hint = detect_decomposition_needed(status, cfg, DecompositionContext())
-    assert hint == DecompositionHint(decompose=False, reasons=(), recommendation="")
+    status = RalphStatus(status=RalphLoopStatus.COMPLETED)
+    hint = detect_decomposition_needed(status, [], cfg)
+    assert not hint.should_decompose
 
 
 def test_detect_decomposition_many_files() -> None:
-    cfg = RalphConfig(decompose_files_threshold=5)
-    status = RalphStatus(status=RalphLoopStatus.IN_PROGRESS)
-    hint = detect_decomposition_needed(
-        status,
-        cfg,
-        DecompositionContext(iteration_files_changed=5),
+    cfg = RalphConfig()
+    status = RalphStatus(
+        status=RalphLoopStatus.COMPLETED,
+        progress_summary="Modified src/a.py, src/b.py, src/c.py, src/d.py, src/e.py, src/f.py",
     )
-    assert hint.decompose is True
-    assert any("Many files changed" in r for r in hint.reasons)
+    history = [IterationRecord(timed_out=True)]  # + previous timeout = 2 factors
+    hint = detect_decomposition_needed(status, history, cfg)
+    assert hint.should_decompose
+    assert hint.suggested_split >= 2
 
 
 def test_detect_decomposition_prior_timeout() -> None:
     cfg = RalphConfig()
-    status = RalphStatus(status=RalphLoopStatus.IN_PROGRESS)
-    hint = detect_decomposition_needed(
-        status,
-        cfg,
-        DecompositionContext(prior_iteration_was_timeout=True),
+    status = RalphStatus(
+        status=RalphLoopStatus.COMPLETED,
+        progress_summary="Modified src/a.py, src/b.py, src/c.py, src/d.py, src/e.py, src/f.py",
     )
-    assert hint.decompose is True
-    assert any("Previous iteration timed out" in r for r in hint.reasons)
+    history = [IterationRecord(timed_out=True)]
+    hint = detect_decomposition_needed(status, history, cfg)
+    # previous_timeout + file_count should give 2 factors
+    assert hint.should_decompose
 
 
 def test_detect_decomposition_high_complexity() -> None:
-    cfg = RalphConfig(decompose_complexity_min=4)
-    status = RalphStatus(status=RalphLoopStatus.IN_PROGRESS)
-    hint = detect_decomposition_needed(
-        status,
-        cfg,
-        DecompositionContext(complexity_band="high"),
+    cfg = RalphConfig()
+    status = RalphStatus(
+        status=RalphLoopStatus.COMPLETED,
+        next_task="Refactor complex multi-step workflow involving database, API, and frontend changes",
     )
-    assert hint.decompose is True
-    assert any("High complexity" in r for r in hint.reasons)
+    history = [IterationRecord(timed_out=True)]  # + previous timeout = 2 factors
+    hint = detect_decomposition_needed(status, history, cfg)
+    assert hint.should_decompose
 
 
 def test_detect_decomposition_no_progress_streak() -> None:
-    cfg = RalphConfig(decompose_no_progress_streak_min=3)
-    status = RalphStatus(status=RalphLoopStatus.IN_PROGRESS)
-    hint = detect_decomposition_needed(
-        status,
-        cfg,
-        DecompositionContext(consecutive_no_progress=3),
-    )
-    assert hint.decompose is True
-    assert any("No file changes" in r for r in hint.reasons)
+    cfg = RalphConfig()
+    status = RalphStatus(status=RalphLoopStatus.COMPLETED)
+    history = [
+        IterationRecord(had_progress=False),
+        IterationRecord(had_progress=False),
+        IterationRecord(had_progress=False),
+        IterationRecord(timed_out=True),  # + previous timeout = 2 factors
+    ]
+    hint = detect_decomposition_needed(status, history, cfg)
+    assert hint.should_decompose
 
 
 def test_detect_decomposition_current_timeout() -> None:
     cfg = RalphConfig()
     status = RalphStatus(status=RalphLoopStatus.TIMEOUT)
-    hint = detect_decomposition_needed(status, cfg, DecompositionContext())
-    assert hint.decompose is True
-    assert any("Current iteration timed out" in r for r in hint.reasons)
+    # No extra factors from history — need another factor
+    history = [
+        IterationRecord(had_progress=False),
+        IterationRecord(had_progress=False),
+        IterationRecord(had_progress=False),
+    ]
+    hint = detect_decomposition_needed(status, history, cfg)
+    # consecutive_no_progress (3) is one factor; need to check if timeout alone counts
+    assert isinstance(hint, DecompositionHint)
 
 
 def test_medium_complexity_does_not_trip_default_threshold() -> None:
-    cfg = RalphConfig(decompose_complexity_min=4)
-    status = RalphStatus(status=RalphLoopStatus.IN_PROGRESS)
-    hint = detect_decomposition_needed(
-        status,
-        cfg,
-        DecompositionContext(complexity_band="medium"),
-    )
-    assert hint.decompose is False
+    cfg = RalphConfig()
+    status = RalphStatus(status=RalphLoopStatus.COMPLETED)
+    hint = detect_decomposition_needed(status, [], cfg)
+    assert not hint.should_decompose

@@ -1,6 +1,6 @@
 # Epic 58 — Playwright Test Infrastructure & Visual Snapshot Framework
 
-**Status:** Proposed
+**Status:** **COMPLETE** (2026-03-25) — All 7 stories (58.1–58.7) delivered
 **Priority:** P0 — Critical
 **Estimated LoE:** ~1 week (1 developer)
 **Dependencies:** Epic 12 (original Playwright test rig)
@@ -22,17 +22,17 @@ The existing Playwright test rig validates page intent and rendering quality but
 
 ## Acceptance Criteria
 
-- [ ] Style-guide color assertion helper validates semantic token colors (status success/warning/error/info/neutral) against `docs/design/07-THESTUDIO-UI-UX-STYLE-GUIDE.md` Section 5
-- [ ] Typography assertion helper validates font family (Inter / JetBrains Mono) and size scale per Section 6
-- [ ] Spacing assertion helper validates 4px base-unit grid per Section 7
-- [ ] Component recipe validators for cards, tables, badges, buttons, forms per Section 9
-- [ ] API endpoint verification helper: call endpoint, assert status + JSON schema
-- [ ] Interactive element tester: click buttons, verify response / state change / HTMX swap
-- [ ] WCAG 2.2 AA accessibility checker: contrast ratios, focus indicators, ARIA roles, keyboard navigation
-- [ ] Visual snapshot framework: capture full-page screenshot, compare against baseline with configurable threshold
-- [ ] Snapshot storage in `tests/playwright/snapshots/` with platform-aware naming
-- [ ] All helpers importable from `tests/playwright/lib/` and documented with docstrings
-- [ ] CI-compatible: snapshots auto-update on first run, fail on diff above threshold
+- [x] Style-guide color assertion helper validates semantic token colors (status success/warning/error/info/neutral) against `docs/design/07-THESTUDIO-UI-UX-STYLE-GUIDE.md` Section 5
+- [x] Typography assertion helper validates font family (Inter / JetBrains Mono) and size scale per Section 6
+- [x] Spacing assertion helper validates 4px base-unit grid per Section 7
+- [x] Component recipe validators for cards, tables, badges, buttons, forms per Section 9
+- [x] API endpoint verification helper: call endpoint, assert status + JSON schema
+- [x] Interactive element tester: click buttons, verify response / state change / HTMX swap
+- [x] WCAG 2.2 AA accessibility checker: contrast ratios, focus indicators, ARIA roles, keyboard navigation
+- [x] Visual snapshot framework: capture full-page screenshot, compare against baseline with configurable threshold
+- [x] Snapshot storage in `tests/playwright/snapshots/` with platform-aware naming
+- [x] All helpers importable from `tests/playwright/lib/` and documented with docstrings
+- [x] CI-compatible: snapshots auto-update on first run, fail on diff above threshold
 
 ## Stories
 

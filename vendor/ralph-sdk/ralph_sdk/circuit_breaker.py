@@ -6,6 +6,11 @@ Replaces the passive check_circuit_breaker() with active state management:
 - record_no_progress() — consecutive zero-work detection
 - can_proceed() — OPEN -> HALF_OPEN after cooldown
 
+Stall detectors (SDK-SAFETY-1):
+- FastTripDetector — consecutive 0-tool-use runs completing in <30s
+- DeferredTestDetector — consecutive TESTS_STATUS: DEFERRED loops
+- ConsecutiveTimeoutDetector — consecutive timeout runs
+
 State transitions:
   CLOSED -> OPEN (threshold failures or no-progress reached)
   OPEN -> HALF_OPEN (cooldown elapsed)
@@ -15,11 +20,223 @@ State transitions:
 
 from __future__ import annotations
 
+import logging
 import time
+from dataclasses import dataclass, field
 from typing import Any
 
+from ralph_sdk.config import RalphConfig
 from ralph_sdk.state import RalphStateBackend
 from ralph_sdk.status import CircuitBreakerState, CircuitBreakerStateEnum
+
+logger = logging.getLogger("ralph.sdk")
+
+
+# =============================================================================
+# SDK-SAFETY-1: Stall Detection
+# =============================================================================
+
+
+@dataclass
+class StallDetectorResult:
+    """Result from a stall detector check."""
+
+    should_trip: bool = False
+    should_warn: bool = False
+    reason: str = ""
+    count: int = 0
+    threshold: int = 0
+
+
+class FastTripDetector:
+    """Detect consecutive 0-tool-use runs completing in <threshold seconds.
+
+    When Claude completes a run very quickly without using any tools, it
+    typically indicates a stall — the model is producing text-only responses
+    without making progress. Trip the circuit breaker after
+    MAX_CONSECUTIVE_FAST_FAILURES consecutive such runs.
+    """
+
+    def __init__(
+        self,
+        max_consecutive: int = 3,
+        threshold_seconds: float = 30.0,
+    ) -> None:
+        self.max_consecutive = max_consecutive
+        self.threshold_seconds = threshold_seconds
+        self._consecutive_count: int = 0
+
+    def record(self, duration_seconds: float, tool_use_count: int) -> StallDetectorResult:
+        """Record an iteration and check for fast-trip condition.
+
+        Args:
+            duration_seconds: Wall-clock duration of the iteration.
+            tool_use_count: Number of tool calls made during the iteration.
+
+        Returns:
+            StallDetectorResult with should_trip=True if threshold reached.
+        """
+        if tool_use_count == 0 and duration_seconds < self.threshold_seconds:
+            self._consecutive_count += 1
+            logger.debug(
+                "FastTripDetector: fast failure %d/%d (%.1fs, 0 tools)",
+                self._consecutive_count,
+                self.max_consecutive,
+                duration_seconds,
+            )
+            if self._consecutive_count >= self.max_consecutive:
+                return StallDetectorResult(
+                    should_trip=True,
+                    reason=(
+                        f"Fast trip: {self._consecutive_count} consecutive 0-tool-use "
+                        f"runs completing in <{self.threshold_seconds}s"
+                    ),
+                    count=self._consecutive_count,
+                    threshold=self.max_consecutive,
+                )
+            return StallDetectorResult(
+                count=self._consecutive_count,
+                threshold=self.max_consecutive,
+            )
+        else:
+            self._consecutive_count = 0
+            return StallDetectorResult()
+
+    def reset(self) -> None:
+        """Reset the consecutive counter."""
+        self._consecutive_count = 0
+
+    @property
+    def consecutive_count(self) -> int:
+        """Current consecutive fast failure count."""
+        return self._consecutive_count
+
+
+class DeferredTestDetector:
+    """Detect consecutive TESTS_STATUS: DEFERRED loops.
+
+    When tests are deferred too many times in a row, the agent may be stuck
+    in a loop where it never actually runs tests. Warn early and trip the
+    circuit breaker if the pattern continues.
+    """
+
+    def __init__(
+        self,
+        warn_at: int = 5,
+        max_consecutive: int = 10,
+    ) -> None:
+        self.warn_at = warn_at
+        self.max_consecutive = max_consecutive
+        self._consecutive_count: int = 0
+
+    def record(self, tests_deferred: bool) -> StallDetectorResult:
+        """Record whether tests were deferred this iteration.
+
+        Args:
+            tests_deferred: True if TESTS_STATUS was DEFERRED this iteration.
+
+        Returns:
+            StallDetectorResult with should_warn or should_trip set.
+        """
+        if tests_deferred:
+            self._consecutive_count += 1
+            logger.debug(
+                "DeferredTestDetector: deferred %d/%d",
+                self._consecutive_count,
+                self.max_consecutive,
+            )
+            if self._consecutive_count >= self.max_consecutive:
+                return StallDetectorResult(
+                    should_trip=True,
+                    reason=(
+                        f"Deferred tests: {self._consecutive_count} consecutive "
+                        f"TESTS_STATUS: DEFERRED loops (threshold: {self.max_consecutive})"
+                    ),
+                    count=self._consecutive_count,
+                    threshold=self.max_consecutive,
+                )
+            if self._consecutive_count >= self.warn_at:
+                return StallDetectorResult(
+                    should_warn=True,
+                    reason=(
+                        f"Deferred tests warning: {self._consecutive_count} consecutive "
+                        f"TESTS_STATUS: DEFERRED loops (trip at {self.max_consecutive})"
+                    ),
+                    count=self._consecutive_count,
+                    threshold=self.max_consecutive,
+                )
+            return StallDetectorResult(
+                count=self._consecutive_count,
+                threshold=self.max_consecutive,
+            )
+        else:
+            self._consecutive_count = 0
+            return StallDetectorResult()
+
+    def reset(self) -> None:
+        """Reset the consecutive counter."""
+        self._consecutive_count = 0
+
+    @property
+    def consecutive_count(self) -> int:
+        """Current consecutive deferred test count."""
+        return self._consecutive_count
+
+
+class ConsecutiveTimeoutDetector:
+    """Detect consecutive timeout iterations.
+
+    Multiple consecutive timeouts indicate the task may be too large or the
+    agent is stuck in an unbounded operation. Trip the circuit breaker after
+    MAX_CONSECUTIVE_TIMEOUTS.
+    """
+
+    def __init__(self, max_consecutive: int = 5) -> None:
+        self.max_consecutive = max_consecutive
+        self._consecutive_count: int = 0
+
+    def record(self, timed_out: bool) -> StallDetectorResult:
+        """Record whether this iteration timed out.
+
+        Args:
+            timed_out: True if the iteration ended due to timeout.
+
+        Returns:
+            StallDetectorResult with should_trip=True if threshold reached.
+        """
+        if timed_out:
+            self._consecutive_count += 1
+            logger.debug(
+                "ConsecutiveTimeoutDetector: timeout %d/%d",
+                self._consecutive_count,
+                self.max_consecutive,
+            )
+            if self._consecutive_count >= self.max_consecutive:
+                return StallDetectorResult(
+                    should_trip=True,
+                    reason=(
+                        f"Consecutive timeouts: {self._consecutive_count} in a row "
+                        f"(threshold: {self.max_consecutive})"
+                    ),
+                    count=self._consecutive_count,
+                    threshold=self.max_consecutive,
+                )
+            return StallDetectorResult(
+                count=self._consecutive_count,
+                threshold=self.max_consecutive,
+            )
+        else:
+            self._consecutive_count = 0
+            return StallDetectorResult()
+
+    def reset(self) -> None:
+        """Reset the consecutive counter."""
+        self._consecutive_count = 0
+
+    @property
+    def consecutive_count(self) -> int:
+        """Current consecutive timeout count."""
+        return self._consecutive_count
 
 
 class CircuitBreaker:
@@ -27,6 +244,9 @@ class CircuitBreaker:
 
     Matches lib/circuit_breaker.sh behavior for common scenarios while
     providing programmatic state management via the state backend.
+
+    Integrates SDK-SAFETY-1 stall detectors (FastTrip, DeferredTest,
+    ConsecutiveTimeout) which can independently trip the breaker.
     """
 
     def __init__(
@@ -38,6 +258,7 @@ class CircuitBreaker:
         cooldown_minutes: int = 30,
         auto_reset: bool = False,
         failure_window_minutes: int = 60,
+        config: RalphConfig | None = None,
     ) -> None:
         self.state_backend = state_backend
         self.no_progress_threshold = no_progress_threshold
@@ -48,6 +269,20 @@ class CircuitBreaker:
 
         # Sliding window: list of (timestamp, reason) tuples
         self._failure_window: list[tuple[float, str]] = []
+
+        # SDK-SAFETY-1: Stall detectors (thresholds from config or defaults)
+        _cfg = config or RalphConfig()
+        self.fast_trip_detector = FastTripDetector(
+            max_consecutive=_cfg.cb_max_consecutive_fast_failures,
+            threshold_seconds=_cfg.cb_fast_failure_threshold_seconds,
+        )
+        self.deferred_test_detector = DeferredTestDetector(
+            warn_at=_cfg.cb_deferred_tests_warn_at,
+            max_consecutive=_cfg.cb_max_deferred_tests,
+        )
+        self.consecutive_timeout_detector = ConsecutiveTimeoutDetector(
+            max_consecutive=_cfg.cb_max_consecutive_timeouts,
+        )
 
     async def _load_state(self) -> CircuitBreakerState:
         """Load current state from backend."""
@@ -117,6 +352,11 @@ class CircuitBreaker:
         # Clear sliding window on success
         self._failure_window.clear()
 
+        # Reset stall detectors on success
+        self.fast_trip_detector.reset()
+        self.deferred_test_detector.reset()
+        self.consecutive_timeout_detector.reset()
+
         await self._save_state(cb)
 
     async def record_failure(self, reason: str = "") -> None:
@@ -140,7 +380,9 @@ class CircuitBreaker:
 
         # Prune old entries outside the window
         cutoff = now - (self.failure_window_minutes * 60)
-        self._failure_window = [(ts, r) for ts, r in self._failure_window if ts >= cutoff]
+        self._failure_window = [
+            (ts, r) for ts, r in self._failure_window if ts >= cutoff
+        ]
 
         # Count same errors in window
         if reason:
@@ -167,21 +409,88 @@ class CircuitBreaker:
         if cb.no_progress_count >= self.no_progress_threshold:
             cb.trip(f"No progress threshold ({self.no_progress_threshold}) reached")
         else:
-            cb.last_transition = (
-                f"CLOSED: no progress ({cb.no_progress_count}/{self.no_progress_threshold})"
-            )
+            cb.last_transition = f"CLOSED: no progress ({cb.no_progress_count}/{self.no_progress_threshold})"
 
         await self._save_state(cb)
+
+    async def record_fast_iteration(
+        self, duration_seconds: float, tool_use_count: int
+    ) -> StallDetectorResult:
+        """Record a fast iteration for stall detection (SDK-SAFETY-1).
+
+        Delegates to FastTripDetector. Trips the circuit breaker if the
+        consecutive fast-failure threshold is reached.
+
+        Args:
+            duration_seconds: Wall-clock duration of the iteration.
+            tool_use_count: Number of tool calls made during the iteration.
+
+        Returns:
+            StallDetectorResult indicating whether the breaker was tripped.
+        """
+        result = self.fast_trip_detector.record(duration_seconds, tool_use_count)
+        if result.should_trip:
+            cb = await self._load_state()
+            cb.trip(result.reason)
+            await self._save_state(cb)
+            logger.warning("Circuit breaker tripped: %s", result.reason)
+        return result
+
+    async def record_deferred_tests(self, tests_deferred: bool) -> StallDetectorResult:
+        """Record a deferred-tests iteration for stall detection (SDK-SAFETY-1).
+
+        Delegates to DeferredTestDetector. Warns at the warning threshold
+        and trips the circuit breaker at the max threshold.
+
+        Args:
+            tests_deferred: True if TESTS_STATUS was DEFERRED this iteration.
+
+        Returns:
+            StallDetectorResult indicating warning or trip status.
+        """
+        result = self.deferred_test_detector.record(tests_deferred)
+        if result.should_trip:
+            cb = await self._load_state()
+            cb.trip(result.reason)
+            await self._save_state(cb)
+            logger.warning("Circuit breaker tripped: %s", result.reason)
+        elif result.should_warn:
+            logger.warning("Stall warning: %s", result.reason)
+        return result
+
+    async def record_timeout(self, timed_out: bool) -> StallDetectorResult:
+        """Record a timeout iteration for stall detection (SDK-SAFETY-1).
+
+        Delegates to ConsecutiveTimeoutDetector. Trips the circuit breaker
+        if the consecutive timeout threshold is reached.
+
+        Args:
+            timed_out: True if the iteration ended due to timeout.
+
+        Returns:
+            StallDetectorResult indicating whether the breaker was tripped.
+        """
+        result = self.consecutive_timeout_detector.record(timed_out)
+        if result.should_trip:
+            cb = await self._load_state()
+            cb.trip(result.reason)
+            await self._save_state(cb)
+            logger.warning("Circuit breaker tripped: %s", result.reason)
+        return result
 
     async def reset(self, reason: str = "manual") -> None:
         """Reset circuit breaker to CLOSED state."""
         cb = CircuitBreakerState()
         cb.last_transition = f"RESET: {reason}"
         self._failure_window.clear()
+        # Reset all stall detectors
+        self.fast_trip_detector.reset()
+        self.deferred_test_detector.reset()
+        self.consecutive_timeout_detector.reset()
         await self._save_state(cb)
 
     async def get_state(self) -> dict[str, Any]:
-        """Get current state as a dictionary."""
+        """Get current state as a dictionary (includes stall detector counts)."""
         cb = await self._load_state()
         return {
             "state": cb.state.value,
@@ -190,105 +499,9 @@ class CircuitBreaker:
             "last_error": cb.last_error,
             "opened_at": cb.opened_at,
             "last_transition": cb.last_transition,
-            "can_proceed": cb.state
-            in (CircuitBreakerStateEnum.CLOSED, CircuitBreakerStateEnum.HALF_OPEN),
+            "can_proceed": cb.state in (CircuitBreakerStateEnum.CLOSED, CircuitBreakerStateEnum.HALF_OPEN),
+            # SDK-SAFETY-1: Stall detector counters
+            "consecutive_fast_failures": self.fast_trip_detector.consecutive_count,
+            "consecutive_deferred_tests": self.deferred_test_detector.consecutive_count,
+            "consecutive_timeouts": self.consecutive_timeout_detector.consecutive_count,
         }
-
-    async def open_circuit(self, reason: str) -> None:
-        """Force OPEN with *reason* (stall detection, operator trip, etc.)."""
-        cb = await self._load_state()
-        cb.trip(reason)
-        self._failure_window.clear()
-        await self._save_state(cb)
-
-
-class StallDetector:
-    """Fast-trip, deferred-test, and consecutive-timeout stall detection (CLI parity)."""
-
-    def __init__(
-        self,
-        circuit_breaker: CircuitBreaker,
-        *,
-        fast_trip_max: int = 3,
-        fast_trip_max_seconds: float = 30.0,
-        deferred_test_max: int = 5,
-        consecutive_timeout_max: int = 5,
-    ) -> None:
-        self._cb = circuit_breaker
-        self.fast_trip_max = fast_trip_max
-        self.fast_trip_max_seconds = fast_trip_max_seconds
-        self.deferred_test_max = deferred_test_max
-        self.consecutive_timeout_max = consecutive_timeout_max
-        self._fast_trip_streak = 0
-        self._deferred_streak = 0
-        self._timeout_streak = 0
-
-    def reset(self) -> None:
-        """Clear streak counters (e.g. at start of a new agent run)."""
-        self._fast_trip_streak = 0
-        self._deferred_streak = 0
-        self._timeout_streak = 0
-
-    async def evaluate_after_iteration(
-        self,
-        *,
-        iteration_duration_sec: float,
-        files_changed_count: int,
-        tests_status: str,
-        timed_out: bool,
-        cli_had_error: bool,
-        git_unavailable: bool = False,
-    ) -> str | None:
-        """Trip the circuit and return a reason string if a stall threshold fired.
-
-        ``git_unavailable`` should be True when the git binary was not found or
-        failed during the file-change snapshot.  In that case the fast-trip
-        streak is reset (we cannot distinguish "agent made no changes" from
-        "we couldn't measure changes") while deferred-test and timeout streaks
-        continue normally.
-        """
-        if cli_had_error:
-            self._fast_trip_streak = 0
-            self._deferred_streak = 0
-            self._timeout_streak = 0
-            return None
-
-        if timed_out:
-            self._timeout_streak += 1
-            self._fast_trip_streak = 0
-            if self._timeout_streak >= self.consecutive_timeout_max:
-                reason = f"Consecutive timeouts ({self.consecutive_timeout_max})"
-                await self._cb.open_circuit(reason)
-                return reason
-            self._deferred_streak = 0
-            return None
-
-        self._timeout_streak = 0
-
-        if git_unavailable:
-            # Cannot determine whether files changed — reset the fast-trip
-            # streak so a missing git binary does not falsely trip the circuit.
-            self._fast_trip_streak = 0
-        elif iteration_duration_sec < self.fast_trip_max_seconds and files_changed_count == 0:
-            self._fast_trip_streak += 1
-            if self._fast_trip_streak >= self.fast_trip_max:
-                reason = (
-                    f"Fast-trip: {self.fast_trip_max} iterations under "
-                    f"{self.fast_trip_max_seconds:.0f}s with no file changes"
-                )
-                await self._cb.open_circuit(reason)
-                return reason
-        else:
-            self._fast_trip_streak = 0
-
-        ts = (tests_status or "UNKNOWN").strip().upper()
-        if ts == "DEFERRED":
-            self._deferred_streak += 1
-            if self._deferred_streak >= self.deferred_test_max:
-                reason = f"Deferred test stall ({self.deferred_test_max} consecutive DEFERRED)"
-                await self._cb.open_circuit(reason)
-                return reason
-        else:
-            self._deferred_streak = 0
-
-        return None
