@@ -10,8 +10,8 @@
 
 | Metric | Value |
 |--------|-------|
-| Total epics | 74 (numbered epics 0–74; **59–74** proposed Playwright per-page suites) |
-| Complete | 51 (Epics 0-26, 28-39, 44-51, 55-58; Pipeline UI Phases 0-5; onboarding/UX; Ralph SDK parity; Playwright infra) |
+| Total epics | 75 (numbered epics 0–75; **59–74** proposed Playwright per-page suites) |
+| Complete | 52 (Epics 0-26, 28-39, 44-51, 55-58, 75; Pipeline UI Phases 0-5; onboarding/UX; Ralph SDK parity; Playwright infra; Plane-parity UI) |
 | Stories complete / rollout gated | 1 — **Epic 43** (Ralph SDK as primary agent — stories 43.1–43.15 in tree, production rollout gated on ops sign-off) |
 | In Progress | 1 — **Epics 52–54** (canonical UI modernization; remaining stories 53.4, 54.3, 54.4) |
 | Proposed | 16 — **Epics 59–74** (per-page Playwright test suites: 96 stories, 304 pts) |
@@ -157,7 +157,13 @@
 | 44 | Setup Wizard (first-run onboarding) | **Complete** (2026-03-24) | All stories **44.1-44.10** delivered per `.ralph/fix_plan.md` (Sprint 6). `epic-44-setup-wizard.md`. |
 | 47 | Product Tours | **Complete** (2026-03-24) | Stories **47.1-47.8** per `.ralph/fix_plan.md` (Sprint 9). `epic-47-product-tours.md`. |
 
-> **Also complete** per `.ralph/fix_plan.md`: **Epic 45** (Contextual Help), **Epic 46** (Actionable Empty States), **Epic 48** (Scalar API docs), **Epic 49** (Unified Navigation), **Epic 50** (Feature Spotlights). See epic files under `docs/epics/` where present.
+> **Also complete** per `.ralph/fix_plan.md`: **Epic 45** (Contextual Help), **Epic 46** (Actionable Empty States), **Epic 48** (Scalar API docs), **Epic 49** (Unified Navigation), **Epic 50** (Feature Spotlights), **Epic 75** (Plane-Parity Admin UI). See epic files under `docs/epics/` where present.
+
+### Plane-Parity Admin UI (Epic 75)
+
+| Epic | Title | Status | Notes |
+|------|-------|--------|-------|
+| 75 | Plane-Parity Admin UI | **Complete** (2026-03-25) | All 8 stories (75.1–75.8) delivered. SVG icon system (Heroicons), right-side sliding detail panel, repo/workflow detail panels, kanban board view (SortableJS), command palette (Ctrl+K), dark mode (CSS custom properties), WCAG 2.2 AA audit. 31 pts. `epic-75-plane-parity-admin-ui.md`. |
 
 ### Canonical UI / style-guide modernization (Epics 52–57)
 
@@ -190,6 +196,7 @@ Phase 9 — PIPELINE UI — COMPLETE (2026-03-25)
   Epic 39 (Phase 5: Analytics & Learning) — COMPLETE — all 24 stories (39.0a–39.21)
   Epics 44-50 — COMPLETE (setup wizard, help, empty states, tours, API docs, navigation, spotlights)
   Epics 55-57 — COMPLETE (AI prompt-first + trust, 2026 capability modules, rollout governance)
+  Epic 75 — COMPLETE (2026-03-25) — Plane-parity admin UI, 8 stories, 31 pts
   Epics 52-54 (canonical UI) — IN PROGRESS — remaining stories 53.4, 54.3, 54.4
 
 Phase 10 — RALPH — COMPLETE (2026-03-25)
@@ -278,6 +285,8 @@ Phase 5 — COMPLETE (2026-03-17)
 | 3 | **Epics 59–74** | Per-page Playwright test suites — Epic 58 (infra) now complete, unblocking all 16 page epics. |
 | 4 | **Epic 27** | Multi-source webhooks — pull when demand exists. |
 
+> **Recently completed:** Epic 75 (Plane-Parity Admin UI, 8 stories, 31 pts) — all stories delivered 2026-03-25.
+
 ---
 
 ### Historical checklist (completed items retained for audit)
@@ -321,3 +330,4 @@ Phase 5 — COMPLETE (2026-03-17)
 37. ~~**Epics 45–46, 48–50**~~ — **Complete** per `.ralph/fix_plan.md` (help, empty states, Scalar docs, navigation, spotlights).
 38. ~~**Epic 58 (Playwright Test Infrastructure)**~~ — **Complete** (2026-03-25). All 7 stories (58.1–58.7) delivered. Shared assertion libs for style guide colors, typography, spacing, component recipes, API verification, interactive elements, WCAG 2.2 AA, visual snapshots.
 39. **Epics 59–74 (Per-Page Playwright Suites)** — **Proposed** (2026-03-24). 16 epics × 6 stories = 96 stories, 304 pts. Full-stack test suite per Admin UI page: intent, API verification, style guide compliance, interactive elements, WCAG 2.2 AA, visual snapshot baselines. Includes 2 zero-coverage pages (cost-dashboard, portfolio-health) and 3 detail pages. See `docs/PAGES.md` for full page inventory.
+40. ~~**Epic 75 (Plane-Parity Admin UI)**~~ — **Complete** (2026-03-25). All 8 stories (75.1–75.8). SVG icon system, sliding detail panel, repo/workflow detail views, kanban board, command palette (Ctrl+K), dark mode, WCAG 2.2 AA audit. 31 pts.
