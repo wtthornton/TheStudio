@@ -1,95 +1,114 @@
 {% from "components/status_badge.html" import workflow_status_badge, status_badge %}
+{% from "components/ai_trust.html" import ai_label, trust_signals, execution_mode_badge, intent_preview, decision_controls %}
 
 <div class="space-y-6">
     <!-- Header -->
-    <div class="bg-white rounded-lg border border-gray-200 p-6">
+    <div class="bg-white rounded-lg border border-gray-200 p-6 dark:bg-slate-800 dark:border-slate-700">
         <div class="flex items-center justify-between mb-4">
             <div>
                 <h3 class="text-lg font-semibold font-mono">{{ workflow.id }}</h3>
                 {% if workflow.issue_ref %}
-                <p class="text-sm text-gray-500 mt-1">Issue: {{ workflow.issue_ref }}</p>
+                <p class="text-sm text-gray-500 mt-1 dark:text-slate-400">Issue: {{ workflow.issue_ref }}</p>
                 {% endif %}
             </div>
             <div class="flex items-center gap-2">
                 {{ workflow_status_badge(workflow.status) }}
+                {{ execution_mode_badge(workflow.tier | default('suggest')) }}
+                {{ ai_label(generated_by="AI Pipeline") }}
             </div>
         </div>
-        <div class="grid grid-cols-4 gap-4 text-sm">
+        <div class="grid grid-cols-4 gap-4 text-sm mb-4">
             <div>
-                <span class="text-gray-500">Repo:</span>
-                <span class="ml-1 font-medium">{{ workflow.repo_name | default(workflow.repo_id) }}</span>
+                <span class="text-gray-500 dark:text-slate-400">Repo:</span>
+                <span class="ml-1 font-medium dark:text-slate-300">{{ workflow.repo_name | default(workflow.repo_id) }}</span>
             </div>
             <div>
-                <span class="text-gray-500">Current Step:</span>
-                <span class="ml-1 font-medium">{{ workflow.current_step | default('-') }}</span>
+                <span class="text-gray-500 dark:text-slate-400">Current Step:</span>
+                <span class="ml-1 font-medium dark:text-slate-300">{{ workflow.current_step | default('-') }}</span>
             </div>
             <div>
-                <span class="text-gray-500">Attempts:</span>
-                <span class="ml-1 font-medium">{{ workflow.attempt_count | default(1) }}</span>
+                <span class="text-gray-500 dark:text-slate-400">Attempts:</span>
+                <span class="ml-1 font-medium dark:text-slate-300">{{ workflow.attempt_count | default(1) }}</span>
             </div>
             <div>
-                <span class="text-gray-500">Complexity:</span>
-                <span class="ml-1 font-medium">{{ workflow.complexity | default('-') | upper }}</span>
+                <span class="text-gray-500 dark:text-slate-400">Complexity:</span>
+                <span class="ml-1 font-medium dark:text-slate-300">{{ workflow.complexity | default('-') | upper }}</span>
             </div>
         </div>
+        {# §13.3 Trust signals — provenance, timestamp, ownership #}
+        {{ trust_signals(
+            provenance="AI agent pipeline (9-step: Intake→Context→Intent→Router→Assembler→Implement→Verify→QA→Publish)",
+            timestamp=workflow.timeline[-1].timestamp if workflow.timeline else None,
+            ownership="You are responsible for approving, escalating, or rejecting the outcome"
+        ) }}
     </div>
 
     <!-- Timeline -->
-    <div class="bg-white rounded-lg border border-gray-200 p-6">
-        <h4 class="text-sm font-semibold text-gray-700 mb-4">Timeline</h4>
+    <div class="bg-white rounded-lg border border-gray-200 p-6 dark:bg-slate-800 dark:border-slate-700">
+        <h4 class="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-4">Timeline</h4>
         {% if workflow.timeline %}
         <div class="space-y-3">
             {% for step in workflow.timeline %}
             <div class="flex items-start gap-3">
                 <div class="flex-shrink-0 mt-1">
                     {% if step.status == 'ok' %}
-                    <span class="inline-block w-3 h-3 rounded-full bg-green-500"></span>
+                    <span class="inline-block w-3 h-3 rounded-full bg-green-500"
+                          role="img" aria-label="Passed"></span>
                     {% elif step.status == 'failed' %}
-                    <span class="inline-block w-3 h-3 rounded-full bg-red-500"></span>
+                    <span class="inline-block w-3 h-3 rounded-full bg-red-500"
+                          role="img" aria-label="Failed"></span>
                     {% elif step.status == 'running' %}
-                    <span class="inline-block w-3 h-3 rounded-full bg-blue-500 animate-pulse"></span>
+                    <span class="inline-block w-3 h-3 rounded-full bg-blue-500 animate-pulse"
+                          role="img" aria-label="Running"></span>
                     {% else %}
-                    <span class="inline-block w-3 h-3 rounded-full bg-gray-300"></span>
+                    <span class="inline-block w-3 h-3 rounded-full bg-gray-300 dark:bg-slate-600"
+                          role="img" aria-label="Pending"></span>
                     {% endif %}
                 </div>
                 <div class="flex-1">
                     <div class="flex items-center justify-between">
-                        <span class="text-sm font-medium">{{ step.name }}</span>
+                        <span class="text-sm font-medium dark:text-slate-300">{{ step.name }}</span>
                         {% if step.timestamp %}
-                        <span class="text-xs text-gray-400">{{ step.timestamp }}</span>
+                        <span class="text-xs text-gray-400 dark:text-slate-500">{{ step.timestamp }}</span>
                         {% endif %}
                     </div>
                     {% if step.failure_reason %}
-                    <p class="text-xs text-red-600 mt-1">{{ step.failure_reason }}</p>
+                    <p class="text-xs text-red-600 dark:text-red-400 mt-1">{{ step.failure_reason }}</p>
                     {% endif %}
                     {% if step.evidence %}
-                    <pre class="text-xs text-gray-500 mt-1 bg-gray-50 rounded p-2 overflow-x-auto">{{ step.evidence }}</pre>
+                    {# Evidence block: AI-generated, label it as such per §13.5 #}
+                    <div class="mt-1.5">
+                        <div class="flex items-center gap-1.5 mb-1">
+                            {{ ai_label(generated_by="Evidence") }}
+                        </div>
+                        <pre class="text-xs text-gray-500 dark:text-slate-400 bg-gray-50 dark:bg-slate-900 rounded p-2 overflow-x-auto">{{ step.evidence }}</pre>
+                    </div>
                     {% endif %}
                 </div>
             </div>
             {% endfor %}
         </div>
         {% else %}
-        <p class="text-sm text-gray-400">No timeline data available.</p>
+        <p class="text-sm text-gray-400 dark:text-slate-500">No timeline data available.</p>
         {% endif %}
     </div>
 
     <!-- Retry Info -->
     {% if workflow.retry_info %}
-    <div class="bg-white rounded-lg border border-gray-200 p-6">
-        <h4 class="text-sm font-semibold text-gray-700 mb-4">Retry Info</h4>
+    <div class="bg-white rounded-lg border border-gray-200 p-6 dark:bg-slate-800 dark:border-slate-700">
+        <h4 class="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-4">Retry Info</h4>
         <div class="grid grid-cols-3 gap-4 text-sm">
             <div>
-                <span class="text-gray-500">Next Retry:</span>
-                <span class="ml-1 font-medium">{{ workflow.retry_info.next_retry_time | default('-') }}</span>
+                <span class="text-gray-500 dark:text-slate-400">Next Retry:</span>
+                <span class="ml-1 font-medium dark:text-slate-300">{{ workflow.retry_info.next_retry_time | default('-') }}</span>
             </div>
             <div>
-                <span class="text-gray-500">Time in Step:</span>
-                <span class="ml-1 font-medium">{{ workflow.retry_info.time_in_current_step | default('-') }}</span>
+                <span class="text-gray-500 dark:text-slate-400">Time in Step:</span>
+                <span class="ml-1 font-medium dark:text-slate-300">{{ workflow.retry_info.time_in_current_step | default('-') }}</span>
             </div>
             <div>
-                <span class="text-gray-500">Step Attempts:</span>
-                <span class="ml-1 font-medium">{{ workflow.retry_info.attempt_count_for_step | default('-') }}</span>
+                <span class="text-gray-500 dark:text-slate-400">Step Attempts:</span>
+                <span class="ml-1 font-medium dark:text-slate-300">{{ workflow.retry_info.attempt_count_for_step | default('-') }}</span>
             </div>
         </div>
     </div>
@@ -97,36 +116,67 @@
 
     <!-- Escalation Info -->
     {% if workflow.escalation %}
-    <div class="bg-yellow-50 rounded-lg border border-yellow-200 p-6">
-        <h4 class="text-sm font-semibold text-yellow-800 mb-4">Escalation</h4>
-        <div class="grid grid-cols-3 gap-4 text-sm text-yellow-700">
+    <div class="bg-yellow-50 dark:bg-yellow-950 rounded-lg border border-yellow-200 dark:border-yellow-800 p-6">
+        <h4 class="text-sm font-semibold text-yellow-800 dark:text-yellow-200 mb-4">Escalation</h4>
+        <div class="grid grid-cols-3 gap-4 text-sm text-yellow-700 dark:text-yellow-300">
             <div>
-                <span class="text-yellow-600">Trigger:</span>
+                <span class="text-yellow-600 dark:text-yellow-400">Trigger:</span>
                 <span class="ml-1 font-medium">{{ workflow.escalation.trigger | default('-') }}</span>
             </div>
             <div>
-                <span class="text-yellow-600">Owner:</span>
+                <span class="text-yellow-600 dark:text-yellow-400">Owner:</span>
                 <span class="ml-1 font-medium">{{ workflow.escalation.owner | default('-') }}</span>
             </div>
             <div>
-                <span class="text-yellow-600">Human Wait:</span>
+                <span class="text-yellow-600 dark:text-yellow-400">Human Wait:</span>
                 <span class="ml-1 font-medium">{{ workflow.escalation.human_wait_state | default('-') }}</span>
             </div>
         </div>
     </div>
     {% endif %}
 
-    <!-- Actions -->
+    <!-- Controls (§13.1 prompt-first: intent preview → action buttons → override controls) -->
     {% if can_rerun or can_send_to_agent or can_escalate %}
-    <div class="bg-white rounded-lg border border-gray-200 p-6">
-        <h4 class="text-sm font-semibold text-gray-700 mb-4">Controls</h4>
+    <div class="bg-white rounded-lg border border-gray-200 p-6 dark:bg-slate-800 dark:border-slate-700">
+        <h4 class="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-4">Controls</h4>
+
+        {# §13.1 Step 2 — Intent Preview: what the AI will do before the operator confirms #}
+        {% if can_send_to_agent or can_rerun %}
+        <div class="mb-4">
+            {% if can_send_to_agent %}
+            {{ intent_preview(
+                goal="Re-submit this issue through the full AI agent pipeline (Intake → Publish)",
+                scope=workflow.id,
+                assumptions=[
+                    "The pipeline will use the current trust tier (" ~ (workflow.tier | default('suggest') | title) ~ ")",
+                    "A new draft PR will be created or updated upon successful completion",
+                    "Existing timeline evidence is preserved for audit"
+                ],
+                mode=workflow.tier | default('suggest')
+            ) }}
+            {% elif can_rerun %}
+            {{ intent_preview(
+                goal="Re-run verification checks (Ruff lint, pytest, security scan) for this workflow",
+                scope=workflow.id,
+                assumptions=[
+                    "Only the Verify stage is re-run; earlier pipeline stages are not repeated",
+                    "Results are attached to the existing task packet"
+                ],
+                mode=workflow.tier | default('suggest')
+            ) }}
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {# §13.1 Step 3 — Action buttons (mode already chosen by trust tier) #}
         <div class="flex flex-wrap gap-3" id="wf-actions">
             {% if can_rerun %}
             <button hx-post="/admin/workflows/{{ workflow.id }}/rerun-verification"
                     hx-headers='{"X-User-ID": "{{ current_user_id }}"}'
                     hx-target="#wf-action-result" hx-swap="innerHTML"
-                    hx-confirm="Rerun verification for this workflow?"
-                    class="px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
+                    hx-confirm="Rerun verification for this workflow? This will re-execute lint, test, and security checks."
+                    class="px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700
+                           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
                 Rerun Verification
             </button>
             {% endif %}
@@ -134,22 +184,22 @@
             <button hx-post="/admin/workflows/{{ workflow.id }}/send-to-agent"
                     hx-headers='{"X-User-ID": "{{ current_user_id }}"}'
                     hx-target="#wf-action-result" hx-swap="innerHTML"
-                    hx-confirm="Send this workflow back to the agent?"
-                    class="px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700">
+                    hx-confirm="Send this workflow back to the AI agent? Review the intent preview above before confirming."
+                    class="px-3 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700
+                           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500">
                 Send to Agent
-            </button>
-            {% endif %}
-            {% if can_escalate %}
-            <button hx-post="/admin/workflows/{{ workflow.id }}/escalate"
-                    hx-headers='{"X-User-ID": "{{ current_user_id }}"}'
-                    hx-target="#wf-action-result" hx-swap="innerHTML"
-                    hx-confirm="Escalate this workflow for human review?"
-                    class="px-3 py-2 bg-yellow-600 text-white text-sm rounded hover:bg-yellow-700">
-                Escalate
             </button>
             {% endif %}
         </div>
         <div id="wf-action-result" class="mt-3"></div>
+
+        {# §13.1 Step 5 — Human override controls (escalate + audit trail) #}
+        {{ decision_controls(
+            workflow_id=workflow.id,
+            current_user_id=current_user_id,
+            target="#wf-action-result",
+            can_escalate=can_escalate
+        ) }}
     </div>
     {% endif %}
 </div>

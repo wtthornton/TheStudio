@@ -18,7 +18,7 @@
 
 > Stories **53.1–53.3, 54.1–54.2, 55–57** all complete. Only 3 stories remain.
 
-- [ ] **53.4:** Admin UI — remaining canonical compliance story (not started)
+- [x] **53.4:** Admin UI — remaining canonical compliance story (not started)
 - [ ] **54.3:** Dashboard UI — remaining canonical compliance story (not started)
 - [ ] **54.4:** Dashboard UI — remaining canonical compliance story (not started)
 

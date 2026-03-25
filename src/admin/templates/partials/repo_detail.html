@@ -1,4 +1,5 @@
 {% from "components/status_badge.html" import tier_badge, health_badge, repo_status_badge %}
+{% from "components/ai_trust.html" import trust_signals %}
 
 {# data-panel-title updates the sliding panel header via JS in base.html #}
 <div data-panel-title="{{ repo.owner }}/{{ repo.repo }}" class="space-y-4">
@@ -55,10 +56,15 @@
                     Execute — agent can auto-merge PRs that pass all compliance gates.
                 {% endif %}
             </p>
+            {# §13.3 Trust signals — ownership note for tier-gated AI autonomy #}
+            {{ trust_signals(
+                ownership="Tier changes take effect immediately. You are responsible for the autonomy level granted."
+            ) }}
             {% if can_change_tier %}
             <div class="flex items-center gap-2 pt-1">
                 <select id="panel-tier-select-{{ repo.id }}"
-                        class="border border-gray-300 rounded px-2 py-1.5 text-xs">
+                        class="border border-gray-300 rounded px-2 py-1.5 text-xs"
+                        aria-label="Select new trust tier">
                     <option value="observe" {% if repo.tier == 'observe' %}selected{% endif %}>Observe</option>
                     <option value="suggest" {% if repo.tier == 'suggest' %}selected{% endif %}>Suggest</option>
                     <option value="execute" {% if repo.tier == 'execute' %}selected{% endif %}>Execute</option>
@@ -67,8 +73,9 @@
                         hx-headers='{"X-User-ID": "{{ current_user_id }}", "Content-Type": "application/json"}'
                         hx-vals='js:{"tier": document.getElementById("panel-tier-select-{{ repo.id }}").value}'
                         hx-target="#panel-tier-result-{{ repo.id }}" hx-swap="innerHTML"
-                        hx-confirm="Change trust tier?"
-                        class="px-2 py-1.5 bg-purple-600 text-white text-xs rounded hover:bg-purple-700">
+                        hx-confirm="Change trust tier? Escalating to EXECUTE grants AI auto-merge authority. This takes effect immediately."
+                        class="px-2 py-1.5 bg-purple-600 text-white text-xs rounded-md hover:bg-purple-700
+                               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500">
                     Change Tier
                 </button>
             </div>
