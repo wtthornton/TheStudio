@@ -263,8 +263,30 @@
             <!-- Header — SG §2.1 header bar standard -->
             <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
                 <h2 class="text-xl font-semibold">{% block page_title %}{% endblock %}</h2>
-                <div class="text-sm text-gray-500" id="page-status">
-                    {% block header_right %}{% endblock %}
+                <div class="flex items-center gap-4">
+                    <!-- Command Palette trigger — Ctrl+K / Cmd+K, Epic 75.6 -->
+                    <button type="button"
+                            onclick="window.commandPalette && window.commandPalette.open()"
+                            class="hidden sm:flex items-center gap-2 px-3 py-1.5 text-sm text-gray-500
+                                   border border-gray-200 rounded-lg hover:border-gray-300 hover:text-gray-700
+                                   focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600
+                                   transition-colors bg-gray-50 hover:bg-white"
+                            aria-label="Open command palette"
+                            data-tooltip="Search or navigate (Ctrl+K)">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"
+                             aria-hidden="true" focusable="false">
+                            <path fill-rule="evenodd"
+                                  d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
+                                  clip-rule="evenodd"/>
+                        </svg>
+                        <span>Search</span>
+                        <kbd class="text-xs bg-white border border-gray-200 rounded px-1 font-mono text-gray-400">
+                            ⌘K
+                        </kbd>
+                    </button>
+                    <div class="text-sm text-gray-500" id="page-status">
+                        {% block header_right %}{% endblock %}
+                    </div>
                 </div>
             </header>
 
@@ -333,6 +355,10 @@
              tabindex="-1"></div>
     </div>
     <!-- ── /Detail Panel ──────────────────────────────────────────────────────── -->
+
+    <!-- ── Command Palette — Epic 75.6 ──────────────────────────────────────── -->
+    {% include "components/command_palette.html" %}
+    <!-- ── /Command Palette ───────────────────────────────────────────────────── -->
 
     {# HTMX load failures on settings (and other) sections — SG 5.3 #}
     <script>

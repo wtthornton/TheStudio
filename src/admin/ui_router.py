@@ -1936,3 +1936,127 @@ async def _get_recent_portfolio_reviews(limit: int = 7) -> list[dict]:
     except Exception:
         logger.debug("Could not fetch portfolio reviews", exc_info=True)
         return []
+
+
+# ── Command Palette — Epic 75.6 ──────────────────────────────────────────────
+
+
+@ui_router.get("/partials/search", response_class=HTMLResponse)
+async def partial_search(
+    request: Request,
+    q: str = Query("", max_length=120),
+) -> Response:
+    """HTMX entity search for the command palette.
+
+    Returns an HTML fragment with matching repos and workflows grouped under
+    labelled sections. Called debounced (250 ms) from the command palette input.
+    An empty query returns an empty fragment so the nav section can stand alone.
+    """
+    q = q.strip()
+    if not q:
+        return HTMLResponse("")
+
+    q_lower = q.lower()
+    repo_results: list[dict[str, str]] = []
+    workflow_results: list[dict[str, str]] = []
+
+    # --- Repos ---
+    try:
+        repo_repo = get_repo_repository()
+        async with get_async_session() as session:
+            repos = await repo_repo.list_repos(session)
+        for repo in repos:
+            name = getattr(repo, "full_name", None) or getattr(repo, "name", "") or str(
+                getattr(repo, "repo_id", "")
+            )
+            if q_lower in name.lower():
+                repo_id = str(getattr(repo, "repo_id", "") or getattr(repo, "id", ""))
+                repo_results.append({"label": name, "href": f"/admin/ui/repos/{repo_id}"})
+        repo_results = repo_results[:6]
+    except Exception:
+        logger.debug("Command palette repo search failed for q=%r", q, exc_info=True)
+
+    # --- Workflows ---
+    try:
+        console_svc = get_workflow_console_service()
+        async with get_async_session() as session:
+            wf_response = await console_svc.list_workflows(session)
+        for wf in wf_response.workflows:
+            wf_id = str(getattr(wf, "workflow_id", "") or "")
+            issue_ref = getattr(wf, "issue_ref", None) or ""
+            repo_name = getattr(wf, "repo_name", "") or str(getattr(wf, "repo_id", ""))
+            label = issue_ref or f"Workflow {wf_id[:8]}"
+            searchable = f"{label} {repo_name} {wf_id}".lower()
+            if q_lower in searchable:
+                status = wf.status.value if hasattr(wf.status, "value") else str(wf.status)
+                workflow_results.append(
+                    {
+                        "label": label,
+                        "meta": f"{repo_name} · {status}",
+                        "href": f"/admin/ui/workflows/{wf_id}",
+                    }
+                )
+        workflow_results = workflow_results[:6]
+    except Exception:
+        logger.debug("Command palette workflow search failed for q=%r", q, exc_info=True)
+
+    if not repo_results and not workflow_results:
+        return HTMLResponse(
+            '<p class="text-center py-4 text-sm text-gray-500">No entities found.</p>'
+        )
+
+    # Build HTML fragment — no Jinja2 template needed for this small partial
+    def _esc(s: str) -> str:
+        return (
+            str(s)
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace('"', "&quot;")
+        )
+
+    parts: list[str] = []
+
+    if repo_results:
+        parts.append('<div class="cmd-group-label" aria-hidden="true">Repos</div>')
+        for item in repo_results:
+            parts.append(
+                f'<a href="{_esc(item["href"])}" class="cmd-item" role="option"'
+                f' aria-selected="false">'
+                f'<svg class="cmd-item-icon" viewBox="0 0 20 20" fill="currentColor"'
+                f' aria-hidden="true" focusable="false">'
+                f'<path d="M3.75 3A1.75 1.75 0 002 4.75v3.26a3.235 3.235 0 011.75-.51h12.5'
+                f"c.644 0 1.245.188 1.75.51V6.75A1.75 1.75 0 0016.25 5h-4.836a.25.25 0 01-.177-.073"
+                f'L9.823 3.513A1.75 1.75 0 008.586 3H3.75zM2 11.75c0-.966.784-1.75 1.75-1.75h12.5'
+                f'c.966 0 1.75.784 1.75 1.75v3.5A1.75 1.75 0 0116.25 17H3.75A1.75 1.75 0 012 15.25v-3.5z"/>'
+                f"</svg>"
+                f'<span class="cmd-item-label">{_esc(item["label"])}</span>'
+                f"</a>"
+            )
+
+    if workflow_results:
+        parts.append('<div class="cmd-group-label" aria-hidden="true">Workflows</div>')
+        for item in workflow_results:
+            meta_html = (
+                f'<span class="cmd-item-meta">{_esc(item.get("meta", ""))}</span>'
+                if item.get("meta")
+                else ""
+            )
+            parts.append(
+                f'<a href="{_esc(item["href"])}" class="cmd-item" role="option"'
+                f' aria-selected="false">'
+                f'<svg class="cmd-item-icon" viewBox="0 0 20 20" fill="currentColor"'
+                f' aria-hidden="true" focusable="false">'
+                f'<path fill-rule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433'
+                f"a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31"
+                f"a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929"
+                f"a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389"
+                f'A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"'
+                f' clip-rule="evenodd"/>'
+                f"</svg>"
+                f'<span class="cmd-item-label">{_esc(item["label"])}</span>'
+                f"{meta_html}"
+                f"</a>"
+            )
+
+    return HTMLResponse("\n".join(parts))
