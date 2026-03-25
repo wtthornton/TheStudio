@@ -1,6 +1,6 @@
 # Epic Status Tracker
 
-> Consolidated status of all epics as of **2026-03-25** (rollup: Epics 38, 39, 44–51, 55–58 confirmed complete; 43 stories complete/rollout gated).
+> Consolidated status of all epics as of **2026-03-25** (rollup: Epics 0–58, 75 complete; Epic 43 ops sign-off granted; Epics 52–54 canonical UI complete).
 > **Canonical UI/UX:** `docs/design/07-THESTUDIO-UI-UX-STYLE-GUIDE.md` — referenced from README, AGENTS.md, CLAUDE.md, Copilot instructions, and `.cursor/rules/frontend-style-source-of-truth.mdc`. **MCP frontend experts:** `docs/TAPPS_MCP_FRONTEND_EXPERTS_BRIEF.md` + `.tapps-mcp/experts.yaml`.
 > Source of truth for epic status is each epic's own file. This tracker is a rollup view.
 
@@ -11,9 +11,9 @@
 | Metric | Value |
 |--------|-------|
 | Total epics | 75 (numbered epics 0–75; **59–74** proposed Playwright per-page suites) |
-| Complete | 53 (Epics 0-26, 28-39, 43-51, 55-58, 75; Pipeline UI Phases 0-5; onboarding/UX; Ralph SDK integration + parity; Playwright infra; Plane-parity UI) |
+| Complete | 56 (Epics 0-26, 28-39, 43-58, 75; all phases delivered; canonical UI complete) |
 | Stories complete / rollout gated | 0 |
-| In Progress | 1 — **Epics 52–54** (canonical UI modernization; remaining stories 53.4, 54.3, 54.4) |
+| In Progress | 0 |
 | Proposed | 16 — **Epics 59–74** (per-page Playwright test suites: 96 stories, 304 pts) |
 | Milestone | **Pipeline UI Phase 5 complete** (Epic 39, 2026-03-25). All pipeline UI phases 0-5 delivered. |
 | Deferred | 1 (Epic 27) |
@@ -169,9 +169,9 @@
 
 | Epic | Title | Status | Notes |
 |------|-------|--------|--------|
-| 52 | Frontend UI modernization (master plan) | **In progress** (2026-03-25) | Waves 1–3 complete. Remaining: stories 53.4, 54.3, 54.4. `epic-52-frontend-ui-modernization-master-plan.md`. |
-| 53 | Admin console canonical compliance | **In progress** (2026-03-25) | **53.1–53.3 complete**; 53.4 not started. Shell/nav conformance, status badges, HTMX loading/empty/error + WCAG. `epic-53-admin-ui-canonical-compliance.md`. |
-| 54 | Pipeline app canonical compliance | **In progress** (2026-03-25) | **54.1–54.2 complete**; 54.3–54.4 not started. STATUS_COLORS, trust-tier UI, modal dialog semantics + focus traps. `epic-54-dashboard-ui-canonical-compliance.md`. |
+| 52 | Frontend UI modernization (master plan) | **Complete** (2026-03-25) | All waves delivered. All stories 53.1–53.4, 54.1–54.4, 55–57 complete. `epic-52-frontend-ui-modernization-master-plan.md`. |
+| 53 | Admin console canonical compliance | **Complete** (2026-03-25) | All 4 stories (53.1–53.4) delivered. Shell/nav, badges, HTMX/WCAG, AI prompt-first. Commit `315c922`. `epic-53-admin-ui-canonical-compliance.md`. |
+| 54 | Pipeline app canonical compliance | **Complete** (2026-03-25) | All 4 stories (54.1–54.4) delivered. STATUS_COLORS, trust-tier, dialog semantics, prompt-first, responsive. Commits `b72738f`, `1634919`. `epic-54-dashboard-ui-canonical-compliance.md`. |
 | 55 | Cross-surface AI prompt-first + trust | **Complete** (2026-03-24) | All 4 stories (55.1–55.4) delivered. PromptObject, IntentPreview, ExecutionModeSelector, DecisionControls, TrustMetadata, AuditTimeline — 39 tests. `epic-55-cross-surface-ai-prompt-first-and-trust-layer.md`. |
 | 56 | 2026 capability modules | **Complete** (2026-03-24) | All 4 stories (56.1–56.4) delivered. CommandPalette, DashboardCustomizer, locale helpers, CommentThread, ChangeHistory — 35 tests. `epic-56-cross-surface-2026-capability-modules.md`. |
 | 57 | Rollout governance + regression safety | **Complete** (2026-03-24) | All 3 stories (57.1–57.3) delivered. Traceability matrix operational, regression checklist (21 items, 6 categories), 3-wave rollout plan with rollback triggers. `epic-57-rollout-governance-and-regression-safety.md`. |
@@ -197,7 +197,7 @@ Phase 9 — PIPELINE UI — COMPLETE (2026-03-25)
   Epics 44-50 — COMPLETE (setup wizard, help, empty states, tours, API docs, navigation, spotlights)
   Epics 55-57 — COMPLETE (AI prompt-first + trust, 2026 capability modules, rollout governance)
   Epic 75 — COMPLETE (2026-03-25) — Plane-parity admin UI, 8 stories, 31 pts
-  Epics 52-54 (canonical UI) — IN PROGRESS — remaining stories 53.4, 54.3, 54.4
+  Epics 52-54 (canonical UI) — COMPLETE (2026-03-25) — all stories 53.1–53.4, 54.1–54.4 delivered
 
 Phase 10 — RALPH — COMPLETE (2026-03-25)
   Epic 51 — COMPLETE — vendor parity, eval gaps closed, cancel/git hardening, tests
@@ -281,11 +281,11 @@ Phase 5 — COMPLETE (2026-03-17)
 | Priority | Track | Next step |
 |----------|--------|-----------|
 | 1 | ~~**Epic 43 rollout**~~ | **APPROVED** (2026-03-25) — ops sign-off granted. Set `THESTUDIO_AGENT_MODE=ralph` in production. |
-| 2 | **Stories 53.4, 54.3, 54.4** | Remaining canonical UI compliance stories. |
+| 2 | ~~**Stories 53.4, 54.3, 54.4**~~ | **COMPLETE** (2026-03-25) — all canonical UI stories delivered. |
 | 3 | **Epics 59–74** | Per-page Playwright test suites — Epic 58 (infra) now complete, unblocking all 16 page epics. |
 | 4 | **Epic 27** | Multi-source webhooks — pull when demand exists. |
 
-> **Recently completed:** Epic 75 (Plane-Parity Admin UI, 8 stories, 31 pts) — all stories delivered 2026-03-25.
+> **Recently completed (2026-03-25):** Epic 43 (ops sign-off), Epic 75 (Plane-Parity Admin UI, 31 pts), Epics 52-54 (canonical UI — stories 53.4, 54.3, 54.4).
 
 ---
 

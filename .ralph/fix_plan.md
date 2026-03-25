@@ -6,21 +6,8 @@
 
 | Epic | Status | Canonical doc |
 |------|--------|---------------|
-| **52–54** | Canonical UI — **55, 56, 57 complete**; remaining: 53.4, 54.3, 54.4 | `epic-52-frontend-ui-modernization-master-plan.md`, `epic-53-*`, `epic-54-*` |
 | **59–74** | Proposed — Per-page Playwright full-stack test suites (16 epics × 6 stories = 96 stories, 304 pts) | `docs/epics/epic-59-dashboard-playwright-suite.md` … `epic-74-*` |
 | **27** | Deferred on demand | `docs/epics/` (multi-source webhooks) |
-
----
-
----
-
-## Epics 52–54 — Canonical UI (remaining stories)
-
-> Stories **53.1–53.3, 54.1–54.2, 55–57** all complete. Only 3 stories remain.
-
-- [x] **53.4:** Admin UI — remaining canonical compliance story (not started)
-- [x] **54.3:** Dashboard UI — remaining canonical compliance story (not started)
-- [x] **54.4:** Dashboard UI — remaining canonical compliance story (not started)
 
 ---
 
@@ -80,11 +67,11 @@ Each page epic has: `.1` Intent, `.2` API verification, `.3` Style guide complia
 
 **Epics 43, 51:** Epic 43 (Ralph SDK, 15 stories, **ops sign-off granted 2026-03-25** — production flip authorized), Epic 51 (SDK parity, all hardening tasks).
 
-**Epics 52–57 (partial):** Stories 53.1–53.3, 54.1–54.2, 55.1–55.4, 56.1–56.4, 57.1–57.3 complete. 74 new tests. Remaining: 53.4, 54.3, 54.4.
+**Epics 52–57:** All stories **complete** (2026-03-25). 53.1–53.4, 54.1–54.4, 55.1–55.4, 56.1–56.4, 57.1–57.3. 74+ tests. Commits `315c922` (53.4), `b72738f` (54.3), `1634919` (54.4).
 
 **Prior phases:** Epics **0–37** (Phases 0–8, Pipeline UI Phases 0–3), per `docs/epics/EPIC-STATUS-TRACKER.md`.
 
-**Newly completed (2026-03-25 sync):** Epic 38 (all 4 slices), Epic 39 (all stories), Epic 51 (all tasks), Epic 58 (all 7 stories), Epic 75 (all 8 stories — Plane-parity admin UI).
+**Newly completed (2026-03-25 sync):** Epic 38 (all 4 slices), Epic 39 (all stories), Epic 43 (ops sign-off granted), Epic 51 (all tasks), Epics 52–54 (canonical UI — 53.4, 54.3, 54.4), Epic 58 (all 7 stories), Epic 75 (all 8 stories).
 
 ---
 
