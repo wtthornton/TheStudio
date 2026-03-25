@@ -11,6 +11,8 @@
 | **39** | Approved — not started | `docs/epics/epic-39-phase5-analytics-learning.md` |
 | **43** | **Integration delivered** in tree (43.1–43.15); **default `THESTUDIO_AGENT_MODE=ralph`** and primary-agent *rollout* still **gated on Epic 51** + ops | `docs/epics/epic-43-ralph-sdk-integration.md` |
 | **52–54** | Canonical UI — **55, 56, 57 complete**; remaining: 53.4, 54.3, 54.4 | `epic-52-frontend-ui-modernization-master-plan.md`, `epic-53-admin-ui-canonical-compliance.md`, `epic-54-dashboard-ui-canonical-compliance.md` |
+| **58** | Proposed — Playwright test infra + visual snapshot framework (7 stories, 29 pts) | `docs/epics/epic-58-playwright-test-infrastructure.md` |
+| **59–74** | Proposed — Per-page Playwright full-stack test suites (16 epics × 6 stories = 96 stories, 304 pts) | `docs/epics/epic-59-dashboard-playwright-suite.md` … `epic-74-detail-pages-playwright-suite.md` |
 | **27** | Deferred on demand | `docs/epics/` (multi-source webhooks — see tracker) |
 
 ### Epic 51 — Ralph vendored SDK parity (remaining)
@@ -227,6 +229,50 @@
 
 ---
 
+## Epics 58–74 — Playwright Full-Stack Test Suites (proposed)
+
+> **Dependency chain:** Epic 58 (infra) → Epics 59–74 (per-page suites)
+> **Total:** 17 epics, 103 stories, 333 points
+> **Page inventory:** `docs/PAGES.md`
+> **Style guide source of truth:** `docs/design/07-THESTUDIO-UI-UX-STYLE-GUIDE.md`
+
+### Epic 58 — Test Infrastructure & Visual Snapshot Framework (P0, blocks all)
+
+> **7 stories, 29 pts.** Shared assertion libs: color/token validation, typography/spacing, component recipe validators, API endpoint helpers, interactive element utilities, WCAG 2.2 AA checker, visual snapshot framework.
+
+- [ ] **58.1:** Style Guide Color & Token Assertion Library (5 pts)
+- [ ] **58.2:** Typography & Spacing Assertion Library (3 pts)
+- [ ] **58.3:** Component Recipe Validators (5 pts)
+- [ ] **58.4:** API Endpoint Verification Helper (3 pts)
+- [ ] **58.5:** Interactive Element Test Utilities (3 pts)
+- [ ] **58.6:** WCAG 2.2 AA Accessibility Checker (5 pts)
+- [ ] **58.7:** Visual Snapshot Baseline Framework (5 pts)
+
+### Epics 59–74 — Per-Page Test Suites (P1, each 6 stories / 19 pts)
+
+Each page epic has: `.1` Intent, `.2` API verification, `.3` Style guide compliance, `.4` Interactive elements, `.5` Accessibility, `.6` Visual snapshot baseline.
+
+| Epic | Page | Path | Stories file |
+|------|------|------|-------------|
+| 59 | Fleet Dashboard | `/admin/ui/dashboard` | `stories/epic-59/` |
+| 60 | Repo Management | `/admin/ui/repos` | `stories/epic-60/` |
+| 61 | Workflow Console | `/admin/ui/workflows` | `stories/epic-61/` |
+| 62 | Audit Log | `/admin/ui/audit` | `stories/epic-62/` |
+| 63 | Metrics | `/admin/ui/metrics` | `stories/epic-63/` |
+| 64 | Expert Performance | `/admin/ui/experts` | `stories/epic-64/` |
+| 65 | Tool Hub | `/admin/ui/tools` | `stories/epic-65/` |
+| 66 | Model Gateway | `/admin/ui/models` | `stories/epic-66/` |
+| 67 | Compliance Scorecard | `/admin/ui/compliance` | `stories/epic-67/` |
+| 68 | Quarantine | `/admin/ui/quarantine` | `stories/epic-68/` |
+| 69 | Dead-Letter Inspector | `/admin/ui/dead-letters` | `stories/epic-69/` |
+| 70 | Execution Planes | `/admin/ui/planes` | `stories/epic-70/` |
+| 71 | Settings | `/admin/ui/settings` | `stories/epic-71/` |
+| 72 | Cost Dashboard | `/admin/ui/cost-dashboard` | `stories/epic-72/` |
+| 73 | Portfolio Health | `/admin/ui/portfolio-health` | `stories/epic-73/` |
+| 74 | Detail Pages (Repo/Workflow/Expert) | `/{entity}/{id}` | `stories/epic-74/` |
+
+---
+
 ## Backlog — Needs Epic (Saga → Meridian → Helm)
 
 **P2: Production Monitoring** — alerts for pipeline failures, cost anomalies, API rate limits, health dashboard
@@ -234,7 +280,7 @@
 **P3: Agent Intelligence** — LLM issue scoring (E16), adversarial classification (E20), agentic non-Primary agents (E23)
 **P3: Approval/Workflow** — GitHub `/approve` command parsing (E21), fleet-wide auto-merge policies (E22)
 **P3: Security** — full SAST/DAST pipeline (E19), automated secret rotation (E11)
-**P3: Testing** — a11y audits (E12), Playwright detail page tests (E12)
+**P3: Testing** — ~~a11y audits (E12), Playwright detail page tests (E12)~~ **→ Superseded by Epics 58–74** (full-stack Playwright suites with style guide, a11y, API, visual snapshots)
 
 ## Deferred — On Demand
 

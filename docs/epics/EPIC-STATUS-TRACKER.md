@@ -10,9 +10,10 @@
 
 | Metric | Value |
 |--------|-------|
-| Total epics | 39+ (numbered epics; 44+ onboarding / 51 Ralph tracked separately below) |
+| Total epics | 57+ (numbered epics 0–57 complete/in-progress; **58–74** proposed Playwright suites) |
 | Complete | 40+ (Epics 0-26, 28-37, **44**; Pipeline UI Phases 0-3; **45–50** onboarding/UX per `.ralph/fix_plan.md`) |
 | In Progress | 2 — **Epic 51** (Ralph vendored SDK parity — eval backlog), **Epics 52–57** (canonical UI modernization; stories partial) |
+| Proposed | 17 — **Epics 58–74** (Playwright full-stack test suites: 103 stories, 333 pts) |
 | Planned | 2 — **Epic 38** (Phase 4 **Slices 3–4**), **Epic 39** (Analytics & learning — Meridian approved) |
 | Milestone | **Pipeline UI Phase 3 complete** (Epic 37 per `epic-37-phase3-interactive-controls.md`, 2026-03-22). Phases 4-5 = Epics 38-39. |
 | Deferred | 1 (Epic 27) |
@@ -313,3 +314,5 @@ Phase 5 — COMPLETE (2026-03-17)
 35. ~~**Epic 47 (Product Tours)**~~ — **Complete** (2026-03-24). Stories **47.1-47.8** per `.ralph/fix_plan.md` (Sprint 9).
 36. **Epic 38 (GitHub Phase 4)** — **MVP complete** (Slices 1–2 in tree: import, evidence JSON/API, Evidence Explorer, reviewer actions). **Next:** Slices 3–4. `epic-38-phase4-github-integration.md` implementation rollup.
 37. ~~**Epics 45–46, 48–50**~~ — **Complete** per `.ralph/fix_plan.md` (help, empty states, Scalar docs, navigation, spotlights).
+38. **Epic 58 (Playwright Test Infrastructure)** — **Proposed** (2026-03-24). 7 stories, 29 pts. Shared assertion libs for style guide, a11y, API, visual snapshots. Blocks Epics 59–74.
+39. **Epics 59–74 (Per-Page Playwright Suites)** — **Proposed** (2026-03-24). 16 epics × 6 stories = 96 stories, 304 pts. Full-stack test suite per Admin UI page: intent, API verification, style guide compliance, interactive elements, WCAG 2.2 AA, visual snapshot baselines. Includes 2 zero-coverage pages (cost-dashboard, portfolio-health) and 3 detail pages. See `docs/PAGES.md` for full page inventory.
