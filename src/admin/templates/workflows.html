@@ -9,13 +9,10 @@
 <p class="text-sm text-gray-500 mb-4">Workflows are created when the pipeline runs. Use the pipeline dashboard to import issues or open runs from registered repos.</p>
 <!-- Filters -->
 <div class="bg-white rounded-lg border border-gray-200 p-4 mb-6">
-    <div class="flex items-center gap-4">
+    <div class="flex items-center gap-4 flex-wrap">
         <div>
             <label class="block text-xs font-medium text-gray-600 mb-1">Status</label>
             <select id="wf-status-filter" class="border border-gray-300 rounded px-3 py-2 text-sm"
-                    hx-get="/admin/ui/partials/workflows" hx-target="#workflows-content" hx-swap="innerHTML"
-                    hx-include="#wf-repo-filter, #wf-limit-filter"
-                    hx-headers='{"X-User-ID": "{{ current_user_id }}"}'
                     name="status">
                 <option value="">All</option>
                 <option value="running">Running</option>
@@ -38,24 +35,189 @@
             </select>
         </div>
         <div class="self-end">
-            <button hx-get="/admin/ui/partials/workflows" hx-target="#workflows-content" hx-swap="innerHTML"
-                    hx-include="#wf-status-filter, #wf-repo-filter, #wf-limit-filter"
-                    hx-headers='{"X-User-ID": "{{ current_user_id }}"}'
+            <button id="wf-apply-btn"
+                    type="button"
                     class="px-4 py-2 bg-gray-600 text-white text-sm rounded hover:bg-gray-700">
                 Apply
             </button>
         </div>
+
+        <!-- View toggle — list / kanban -->
+        <div class="self-end ml-auto flex items-center gap-2">
+            <!-- Hidden input carries current view preference so HTMX includes it -->
+            <input type="hidden" id="wf-view" name="view" value="list">
+            <span class="text-xs font-medium text-gray-500 hidden sm:block">View:</span>
+            <div class="flex items-center border border-gray-200 rounded overflow-hidden shadow-sm"
+                 role="group"
+                 aria-label="Workflow view toggle">
+                <!-- List view button -->
+                <button id="btn-view-list"
+                        type="button"
+                        aria-label="Switch to list view"
+                        aria-pressed="true"
+                        data-tooltip="List view"
+                        class="wf-view-btn px-3 py-2 text-sm flex items-center gap-1.5 bg-gray-700 text-white transition-colors">
+                    <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 10.5a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75a.75.75 0 01-.75-.75zM2 10a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 10z" clip-rule="evenodd"/>
+                    </svg>
+                    <span class="hidden sm:inline">List</span>
+                </button>
+                <!-- Kanban view button -->
+                <button id="btn-view-kanban"
+                        type="button"
+                        aria-label="Switch to kanban view"
+                        aria-pressed="false"
+                        data-tooltip="Kanban view"
+                        class="wf-view-btn px-3 py-2 text-sm flex items-center gap-1.5 bg-white text-gray-600 hover:bg-gray-50 border-l border-gray-200 transition-colors">
+                    <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path d="M3 3a1 1 0 000 2h1a1 1 0 000-2H3zM3 7a1 1 0 000 2h1a1 1 0 000-2H3zM3 11a1 1 0 100 2h1a1 1 0 100-2H3zM9 3a1 1 0 000 2h1a1 1 0 000-2H9zM9 7a1 1 0 000 2h1a1 1 0 000-2H9zM9 11a1 1 0 100 2h1a1 1 0 100-2H9zM15 3a1 1 0 000 2h1a1 1 0 000-2h-1zM15 7a1 1 0 000 2h1a1 1 0 000-2h-1zM15 11a1 1 0 100 2h1a1 1 0 100-2h-1z"/>
+                    </svg>
+                    <span class="hidden sm:inline">Kanban</span>
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- Workflow List -->
+<!-- Kanban ghost/chosen styles -->
+<style>
+.wf-ghost  { opacity: 0.35; outline: 2px dashed #3b82f6; outline-offset: 2px; border-radius: 8px; }
+.wf-chosen { box-shadow: 0 0 0 2px #3b82f6; }
+</style>
+
+<!-- Workflow content — initial request fired by JS so localStorage preference is respected -->
 <div id="workflows-content"
      data-admin-htmx-section="true"
-     aria-label="Workflow list"
-     hx-get="/admin/ui/partials/workflows"
-     hx-trigger="load"
-     hx-swap="innerHTML"
-     hx-headers='{"X-User-ID": "{{ current_user_id }}"}'>
-    <div class="text-center py-12 text-gray-400 text-sm" role="status" aria-live="polite">Loading workflows...</div>
+     aria-label="Workflow content"
+     aria-live="polite">
+    <div class="text-center py-12 text-gray-400 text-sm" role="status">Loading workflows…</div>
 </div>
+
+<script>
+/* ── Workflow view toggle + localStorage + SortableJS init — Epic 75.5 ── */
+(function () {
+    'use strict';
+
+    var LS_KEY = 'thestudio_wf_view';
+    var PARTIAL_URL = '/admin/ui/partials/workflows';
+
+    function getView() {
+        return localStorage.getItem(LS_KEY) || 'list';
+    }
+
+    function saveView(v) {
+        localStorage.setItem(LS_KEY, v);
+    }
+
+    /* Build HTMX-compatible query string from current filter values. */
+    function buildParams(view) {
+        var params = [];
+        params.push('view=' + encodeURIComponent(view));
+        var status = document.getElementById('wf-status-filter');
+        if (status && status.value) params.push('status=' + encodeURIComponent(status.value));
+        var repo = document.getElementById('wf-repo-filter');
+        if (repo && repo.value) params.push('repo_id=' + encodeURIComponent(repo.value));
+        var limit = document.getElementById('wf-limit-filter');
+        if (limit && limit.value) params.push('limit=' + encodeURIComponent(limit.value));
+        return params.join('&');
+    }
+
+    function loadContent(view) {
+        if (typeof htmx === 'undefined') return;
+        var url = PARTIAL_URL + '?' + buildParams(view);
+        htmx.ajax('GET', url, { target: '#workflows-content', swap: 'innerHTML' });
+    }
+
+    function applyButtonStyles(view) {
+        var btnList   = document.getElementById('btn-view-list');
+        var btnKanban = document.getElementById('btn-view-kanban');
+        var inp       = document.getElementById('wf-view');
+        if (inp) inp.value = view;
+        if (!btnList || !btnKanban) return;
+
+        var isKanban = view === 'kanban';
+        /* Active button: dark background; inactive: white with hover */
+        btnList.setAttribute('aria-pressed', isKanban ? 'false' : 'true');
+        btnKanban.setAttribute('aria-pressed', isKanban ? 'true' : 'false');
+
+        if (isKanban) {
+            btnList.className   = 'wf-view-btn px-3 py-2 text-sm flex items-center gap-1.5 bg-white text-gray-600 hover:bg-gray-50 transition-colors';
+            btnKanban.className = 'wf-view-btn px-3 py-2 text-sm flex items-center gap-1.5 bg-gray-700 text-white border-l border-gray-200 transition-colors';
+        } else {
+            btnList.className   = 'wf-view-btn px-3 py-2 text-sm flex items-center gap-1.5 bg-gray-700 text-white transition-colors';
+            btnKanban.className = 'wf-view-btn px-3 py-2 text-sm flex items-center gap-1.5 bg-white text-gray-600 hover:bg-gray-50 border-l border-gray-200 transition-colors';
+        }
+    }
+
+    function switchView(view) {
+        saveView(view);
+        applyButtonStyles(view);
+        loadContent(view);
+    }
+
+    /* Initialise SortableJS on kanban columns (visual DnD within/across columns). */
+    function initKanban() {
+        if (typeof Sortable === 'undefined') return;
+        document.querySelectorAll('.kanban-column').forEach(function (col) {
+            if (col._sortableInst) return; /* Already initialised */
+            col._sortableInst = new Sortable(col, {
+                group: 'wf-kanban',
+                animation: 150,
+                ghostClass:  'wf-ghost',
+                chosenClass: 'wf-chosen',
+                filter:      '.kanban-empty-placeholder',
+                /* Drag handle = entire card (default) */
+                onEnd: function (evt) {
+                    /* Future: POST status change to backend */
+                    var wfId     = evt.item && evt.item.querySelector('[data-workflow-id]');
+                    var toStatus = evt.to && evt.to.dataset.status;
+                    if (wfId && toStatus) {
+                        wfId = wfId.dataset.workflowId;
+                        /* Placeholder for server-side status update */
+                        console.debug('[kanban] moved', wfId, '→', toStatus);
+                    }
+                },
+            });
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        /* Wire toggle buttons */
+        var btnList   = document.getElementById('btn-view-list');
+        var btnKanban = document.getElementById('btn-view-kanban');
+        var applyBtn  = document.getElementById('wf-apply-btn');
+
+        if (btnList)   btnList.addEventListener('click',   function () { switchView('list'); });
+        if (btnKanban) btnKanban.addEventListener('click', function () { switchView('kanban'); });
+
+        /* Apply filter button respects the current view */
+        if (applyBtn) {
+            applyBtn.addEventListener('click', function () {
+                loadContent(getView());
+            });
+        }
+
+        /* Status filter select — also respects current view */
+        var statusSel = document.getElementById('wf-status-filter');
+        if (statusSel) {
+            statusSel.addEventListener('change', function () {
+                loadContent(getView());
+            });
+        }
+
+        /* Fire initial request with saved view preference */
+        var view = getView();
+        applyButtonStyles(view);
+        loadContent(view);
+
+        /* Init SortableJS after every HTMX settle that updates our content div */
+        document.body.addEventListener('htmx:afterSettle', function (evt) {
+            if (evt.detail && evt.detail.target &&
+                evt.detail.target.id === 'workflows-content') {
+                initKanban();
+            }
+        });
+    });
+}());
+</script>
 {% endblock %}

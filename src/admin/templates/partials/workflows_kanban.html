@@ -1,0 +1,79 @@
+{# workflows_kanban.html — Kanban board view for workflows, grouped by status. #}
+{# Rendered by GET /admin/ui/partials/workflows?view=kanban                    #}
+{# Context: workflows (list), workflows_by_status (dict str → list)           #}
+{% from "components/workflow_card.html" import workflow_card %}
+{% from "components/empty_state.html" import empty_state %}
+
+{% set columns = [
+    {
+        "key": "running",
+        "label": "Running",
+        "dot_cls": "bg-blue-500",
+        "count_cls": "bg-blue-50 text-blue-700 border-blue-200"
+    },
+    {
+        "key": "stuck",
+        "label": "Stuck",
+        "dot_cls": "bg-yellow-500",
+        "count_cls": "bg-yellow-50 text-yellow-700 border-yellow-200"
+    },
+    {
+        "key": "completed",
+        "label": "Completed",
+        "dot_cls": "bg-green-500",
+        "count_cls": "bg-green-50 text-green-700 border-green-200"
+    },
+    {
+        "key": "failed",
+        "label": "Failed",
+        "dot_cls": "bg-red-500",
+        "count_cls": "bg-red-50 text-red-700 border-red-200"
+    },
+] %}
+
+{% if workflows %}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 fade-in"
+     role="region"
+     aria-label="Workflow kanban board">
+    {% for col in columns %}
+    {% set col_workflows = workflows_by_status.get(col.key, []) %}
+    <div class="flex flex-col min-h-64 bg-gray-50 rounded-lg border border-gray-200">
+        <!-- Column header -->
+        <div class="flex items-center justify-between px-3 py-2.5 border-b border-gray-200 bg-white rounded-t-lg">
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full flex-shrink-0 {{ col.dot_cls }}"
+                      aria-hidden="true"></span>
+                <h3 class="text-sm font-semibold text-gray-700">{{ col.label }}</h3>
+            </div>
+            <span class="text-xs font-semibold rounded-full px-2 py-0.5 border {{ col.count_cls }}"
+                  aria-label="{{ col_workflows | length }} {{ col.label | lower }} workflows">
+                {{ col_workflows | length }}
+            </span>
+        </div>
+        <!-- Card column — SortableJS target -->
+        <div class="kanban-column flex flex-col gap-2 p-2 flex-1 min-h-16"
+             id="kanban-col-{{ col.key }}"
+             data-status="{{ col.key }}"
+             role="list"
+             aria-label="{{ col.label }} column, {{ col_workflows | length }} items">
+            {% for wf in col_workflows %}
+            <div role="listitem">{{ workflow_card(wf) }}</div>
+            {% else %}
+            <div class="kanban-empty-placeholder flex-1 flex items-center justify-center py-8"
+                 aria-label="No {{ col.label | lower }} workflows">
+                <p class="text-xs text-gray-400 text-center">No {{ col.label | lower }}<br>workflows</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+{{ empty_state(
+    "No workflows yet, or none match your filters. Trigger the pipeline from the dashboard or adjust filters above.",
+    icon="◎",
+    cta_text="Open Pipeline Dashboard",
+    cta_url="/dashboard/?tab=pipeline",
+    cta_icon="→",
+) }}
+{% endif %}

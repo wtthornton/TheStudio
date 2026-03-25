@@ -1,0 +1,42 @@
+{# workflow_card.html — Reusable workflow card for kanban and list views.   #}
+{# Usage: {% from "components/workflow_card.html" import workflow_card %}   #}
+{#        {{ workflow_card(wf) }}                                            #}
+{# Fields expected on wf: id, status, repo_name|repo_id, current_step,    #}
+{# attempt_count.                                                            #}
+{% from "components/status_badge.html" import workflow_status_badge %}
+{% from "components/detail_panel.html" import panel_trigger_btn %}
+
+{% macro workflow_card(wf) %}
+<div class="workflow-card bg-white rounded-lg border border-gray-200 p-3 shadow-sm
+            hover:shadow-md transition-shadow select-none cursor-grab active:cursor-grabbing"
+     data-workflow-id="{{ wf.id }}"
+     data-status="{{ wf.status }}"
+     aria-label="Workflow {{ wf.id[:12] }}, status {{ wf.status }}">
+    <div class="flex items-start justify-between gap-2 mb-2">
+        {{ panel_trigger_btn(
+            hx_get="/admin/ui/panel/workflows/" ~ wf.id,
+            label=wf.id[:12] ~ "…",
+            class="text-blue-600 hover:underline font-mono text-xs text-left font-medium leading-tight cursor-pointer",
+            aria_label="Open detail panel for workflow " ~ wf.id[:12]
+        ) }}
+        {{ workflow_status_badge(wf.status) }}
+    </div>
+    <p class="text-xs text-gray-600 truncate mb-1"
+       title="{{ wf.repo_name | default(wf.repo_id) }}">
+        {{ wf.repo_name | default(wf.repo_id) }}
+    </p>
+    {% if wf.current_step %}
+    <p class="text-xs text-gray-500 truncate">
+        Step: <span class="font-medium text-gray-700">{{ wf.current_step }}</span>
+    </p>
+    {% endif %}
+    <div class="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
+        <span class="text-xs text-gray-400">
+            Attempts: {{ wf.attempt_count | default(1) }}
+        </span>
+        <a href="/admin/ui/workflows/{{ wf.id }}"
+           class="text-xs text-blue-600 hover:underline"
+           data-tooltip="Open full detail view">Detail &#8594;</a>
+    </div>
+</div>
+{% endmacro %}

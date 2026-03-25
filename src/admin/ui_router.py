@@ -577,8 +577,13 @@ async def partial_workflows(
     repo_id: str | None = Query(None),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
+    view: str = Query("list"),
 ) -> Response:
-    """Render workflows list partial."""
+    """Render workflows list or kanban partial.
+
+    Pass ``view=kanban`` to get a kanban board grouped by status column.
+    Pass ``view=list`` (default) to get the standard table view.
+    """
     console_svc = get_workflow_console_service()
 
     wf_status = None
@@ -616,6 +621,21 @@ async def partial_workflows(
                 "attempt_count": getattr(wf, "attempt_count", 1),
             }
         )
+
+    if view == "kanban":
+        # Group workflows by status for the kanban board columns.
+        from collections import defaultdict
+
+        workflows_by_status: dict[str, list[dict]] = defaultdict(list)
+        for wf in workflows:
+            workflows_by_status[wf["status"]].append(wf)
+
+        ctx = {
+            "request": request,
+            "workflows": workflows,
+            "workflows_by_status": dict(workflows_by_status),
+        }
+        return templates.TemplateResponse(request, "partials/workflows_kanban.html", ctx)
 
     ctx = {"request": request, "workflows": workflows}
     return templates.TemplateResponse(request, "partials/workflows_list.html", ctx)
