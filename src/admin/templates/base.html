@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 {% from "components/status_badge.html" import role_badge %}
+{% from "components/icon.html" import icon %}
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -93,7 +94,7 @@
                 <li role="listitem">
                     <a href="/dashboard/"
                        class="flex items-center px-3 py-2 rounded text-sm hover:bg-indigo-700 bg-indigo-800 text-indigo-100 font-medium mb-2">
-                        <span class="mr-2" aria-hidden="true">&#9654;&#9654;</span> Pipeline Dashboard
+                        {{ icon("pipeline", class="w-4 h-4 mr-2") }} Pipeline Dashboard
                     </a>
                 </li>
                 <li role="listitem" class="border-t border-gray-700 pt-2 mb-1" aria-hidden="true"></li>
@@ -101,91 +102,91 @@
                     <a href="/admin/ui/dashboard"
                        class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'dashboard' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
                        {% if active_page == 'dashboard' %}aria-current="page"{% endif %}>
-                        <span class="mr-2" aria-hidden="true">&#9632;</span> Dashboard
+                        {{ icon("dashboard", class="w-4 h-4 mr-2") }} Dashboard
                     </a>
                 </li>
                 <li role="listitem">
                     <a href="/admin/ui/repos"
                        class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'repos' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
                        {% if active_page == 'repos' %}aria-current="page"{% endif %}>
-                        <span class="mr-2" aria-hidden="true">&#9654;</span> Repos
+                        {{ icon("repos", class="w-4 h-4 mr-2") }} Repos
                     </a>
                 </li>
                 <li role="listitem">
                     <a href="/admin/ui/workflows"
                        class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'workflows' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
                        {% if active_page == 'workflows' %}aria-current="page"{% endif %}>
-                        <span class="mr-2" aria-hidden="true">&#9660;</span> Workflows
+                        {{ icon("workflows", class="w-4 h-4 mr-2") }} Workflows
                     </a>
                 </li>
                 <li role="listitem">
                     <a href="/admin/ui/metrics"
                        class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'metrics' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
                        {% if active_page == 'metrics' %}aria-current="page"{% endif %}>
-                        <span class="mr-2" aria-hidden="true">&#9650;</span> Metrics
+                        {{ icon("metrics", class="w-4 h-4 mr-2") }} Metrics
                     </a>
                 </li>
                 <li role="listitem">
                     <a href="/admin/ui/experts"
                        class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'experts' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
                        {% if active_page == 'experts' %}aria-current="page"{% endif %}>
-                        <span class="mr-2" aria-hidden="true">&#9733;</span> Experts
+                        {{ icon("experts", class="w-4 h-4 mr-2") }} Experts
                     </a>
                 </li>
                 <li role="listitem">
                     <a href="/admin/ui/tools"
                        class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'tools' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
                        {% if active_page == 'tools' %}aria-current="page"{% endif %}>
-                        <span class="mr-2" aria-hidden="true">&#9881;</span> Tool Hub
+                        {{ icon("tools", class="w-4 h-4 mr-2") }} Tool Hub
                     </a>
                 </li>
                 <li role="listitem">
                     <a href="/admin/ui/models"
                        class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'models' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
                        {% if active_page == 'models' %}aria-current="page"{% endif %}>
-                        <span class="mr-2" aria-hidden="true">&#9672;</span> Models
+                        {{ icon("models", class="w-4 h-4 mr-2") }} Models
                     </a>
                 </li>
                 <li role="listitem">
                     <a href="/admin/ui/cost-dashboard"
                        class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'cost-dashboard' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
                        {% if active_page == 'cost-dashboard' %}aria-current="page"{% endif %}>
-                        <span class="mr-2" aria-hidden="true">&#36;</span> Cost Dashboard
+                        {{ icon("cost", class="w-4 h-4 mr-2") }} Cost Dashboard
                     </a>
                 </li>
                 <li role="listitem">
                     <a href="/admin/ui/compliance"
                        class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'compliance' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
                        {% if active_page == 'compliance' %}aria-current="page"{% endif %}>
-                        <span class="mr-2" aria-hidden="true">&#10003;</span> Compliance
+                        {{ icon("compliance", class="w-4 h-4 mr-2") }} Compliance
                     </a>
                 </li>
                 <li role="listitem">
                     <a href="/admin/ui/quarantine"
                        class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'quarantine' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
                        {% if active_page == 'quarantine' %}aria-current="page"{% endif %}>
-                        <span class="mr-2" aria-hidden="true">&#9888;</span> Quarantine
+                        {{ icon("quarantine", class="w-4 h-4 mr-2") }} Quarantine
                     </a>
                 </li>
                 <li role="listitem">
                     <a href="/admin/ui/dead-letters"
                        class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'dead-letters' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
                        {% if active_page == 'dead-letters' %}aria-current="page"{% endif %}>
-                        <span class="mr-2" aria-hidden="true">&#9760;</span> Dead Letters
+                        {{ icon("dead-letters", class="w-4 h-4 mr-2") }} Dead Letters
                     </a>
                 </li>
                 <li role="listitem">
                     <a href="/admin/ui/planes"
                        class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'planes' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
                        {% if active_page == 'planes' %}aria-current="page"{% endif %}>
-                        <span class="mr-2" aria-hidden="true">&#9638;</span> Planes
+                        {{ icon("planes", class="w-4 h-4 mr-2") }} Planes
                     </a>
                 </li>
                 <li role="listitem">
                     <a href="/admin/ui/portfolio-health"
                        class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'portfolio-health' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
                        {% if active_page == 'portfolio-health' %}aria-current="page"{% endif %}>
-                        <span class="mr-2" aria-hidden="true">&#9829;</span> Portfolio Health
+                        {{ icon("portfolio", class="w-4 h-4 mr-2") }} Portfolio Health
                     </a>
                 </li>
                 {% if current_user_role and current_user_role.value == 'admin' %}
@@ -193,14 +194,14 @@
                     <a href="/admin/ui/audit"
                        class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'audit' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
                        {% if active_page == 'audit' %}aria-current="page"{% endif %}>
-                        <span class="mr-2" aria-hidden="true">&#9679;</span> Audit Log
+                        {{ icon("audit", class="w-4 h-4 mr-2") }} Audit Log
                     </a>
                 </li>
                 <li role="listitem">
                     <a href="/admin/ui/settings"
                        class="flex items-center px-3 py-2 rounded text-sm hover:bg-gray-800 {% if active_page == 'settings' %}bg-gray-800 text-white font-medium{% else %}text-gray-300{% endif %}"
                        {% if active_page == 'settings' %}aria-current="page"{% endif %}>
-                        <span class="mr-2" aria-hidden="true">&#9881;</span> Settings
+                        {{ icon("settings", class="w-4 h-4 mr-2") }} Settings
                     </a>
                 </li>
                 {% endif %}

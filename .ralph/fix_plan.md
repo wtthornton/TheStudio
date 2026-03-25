@@ -8,6 +8,7 @@
 |------|--------|---------------|
 | **43** | **Stories 43.1–43.15 complete in tree**; primary-agent rollout gated on ops sign-off (Epic 51 complete) | `docs/epics/epic-43-ralph-sdk-integration.md` |
 | **52–54** | Canonical UI — **55, 56, 57 complete**; remaining: 53.4, 54.3, 54.4 | `epic-52-frontend-ui-modernization-master-plan.md`, `epic-53-admin-ui-canonical-compliance.md`, `epic-54-dashboard-ui-canonical-compliance.md` |
+| **75** | **Proposed** — Plane-parity admin UI (icons, detail panels, kanban, command palette, dark mode) — 8 stories, 31 pts | `docs/epics/epic-75-plane-parity-admin-ui.md` |
 | **59–74** | Proposed — Per-page Playwright full-stack test suites (16 epics × 6 stories = 96 stories, 304 pts) | `docs/epics/epic-59-dashboard-playwright-suite.md` … `epic-74-detail-pages-playwright-suite.md` |
 | **27** | Deferred on demand | `docs/epics/` (multi-source webhooks — see tracker) |
 
@@ -222,6 +223,24 @@
 - [x] 50.3: Define 2-3 initial spotlight entries targeting help panel, wizard, API tab. **Files:** modify registry.ts; add `data-spotlight` attrs to target components.
 - [x] 50.4: Dark theme CSS for Driver.js popovers. **Files:** modify frontend/src/index.css.
 - [x] 50.5: Vitest: version mismatch fires, same version skips, registry schema validation. **Files:** create __tests__/spotlights.test.tsx. **RUN TESTS.**
+
+---
+
+## Epic 75 — Plane-Parity Admin UI (proposed)
+
+> **8 stories, 31 pts.** Close the visual/interactive gap between TheStudio admin and Plane.so.
+> **Dependency chain:** 75.1 → 75.2 → 75.3/75.4 (parallel) → 75.5 → 75.6 (independent) → 75.7 → 75.8
+> Gate: Existing Playwright tests pass + WCAG 2.2 AA audit clean
+> TESTS_STATUS: DEFERRED until 75.8
+
+- [x] **75.1:** SVG Icon System — Replace Unicode with Heroicons (3 pts, M) — Create Jinja2 icon macro, replace all Unicode nav/badge icons with inline SVG Heroicons. **Files:** create `components/icon.html`; modify `base.html`, `dashboard_content.html`, `status_badge.html`.
+- [ ] **75.2:** Right-Side Sliding Detail Panel Infrastructure (5 pts, L) — Reusable panel component: HTMX content loading, CSS slide transition, focus trap, ARIA dialog, Escape/click-outside dismiss. **Files:** create `components/detail_panel.html`; modify `base.html`, `routes.py`.
+- [ ] **75.3:** Repo Detail Panel (3 pts, M) — Wire repo table rows → sliding panel with config, activity, queue, trust tier. **Files:** create `partials/repo_detail.html`; modify `repos.html`, `routes.py`.
+- [ ] **75.4:** Workflow Detail Panel (3 pts, M) — Wire workflow rows → sliding panel with status timeline, step outputs, logs. **Files:** create `partials/workflow_detail.html`; modify `workflows.html`, `routes.py`.
+- [ ] **75.5:** Kanban Board View for Workflows (5 pts, L) — List/kanban toggle, SortableJS drag-and-drop, workflow cards by status column, localStorage preference. **Files:** create `partials/workflows_kanban.html`, `components/workflow_card.html`; modify `workflows.html`, `base.html`, `routes.py`.
+- [ ] **75.6:** Command Palette — Ctrl+K (5 pts, L) — Global fuzzy search modal: client-side nav search + HTMX entity search, arrow key navigation, ARIA combobox. **Files:** create `components/command_palette.html`; modify `base.html`, `routes.py`.
+- [ ] **75.7:** Dark Mode with CSS Custom Properties (5 pts, L) — Design token system, header toggle, localStorage + prefers-color-scheme, convert Tailwind classes across all templates. **Files:** modify `base.html`, `dashboard_content.html`, `status_badge.html`, `empty_state.html`.
+- [ ] **75.8:** Accessibility Audit & Fixes (2 pts, S) — WCAG 2.2 AA audit on all new components, axe-core contrast checks both modes, Playwright a11y test updates. **Files:** audit all new components; modify `tests/playwright/`. **RUN TESTS.**
 
 ---
 

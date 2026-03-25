@@ -1,13 +1,31 @@
-{# Empty state: shown when a table or list has no data. Use Unicode symbol (not HTML entity) to avoid double-escaping. #}
-{# Optional CTA params: cta_text (button label), cta_url (href), cta_icon (Unicode symbol shown before label). #}
-{% macro empty_state(message, icon="☐", cta_text="", cta_url="", cta_icon="") %}
+{# Empty state: shown when a table or list has no data.                              #}
+{# icon: Heroicons name (e.g. "inbox") or legacy Unicode symbol (backward-compat).  #}
+{# Optional CTA params: cta_text (button label), cta_url (href), cta_icon name.     #}
+{% from "components/icon.html" import icon as render_icon %}
+{% set _known_icons = [
+    "pipeline","dashboard","repos","workflows","metrics","experts","tools","models",
+    "cost","compliance","quarantine","dead-letters","planes","portfolio","audit",
+    "settings","inbox","arrow-right","check-circle","x-circle","exclamation-circle"
+] %}
+{% macro empty_state(message, icon="inbox", cta_text="", cta_url="", cta_icon="arrow-right") %}
 <div class="text-center py-12 text-gray-400">
-    <p class="text-4xl mb-3">{{ icon }}</p>
+    <div class="mb-3 flex justify-center">
+        {% if icon in _known_icons %}
+            {{ render_icon(icon, class="w-10 h-10 text-gray-300") }}
+        {% else %}
+            {# Legacy Unicode passthrough for backward compatibility #}
+            <span class="text-4xl">{{ icon }}</span>
+        {% endif %}
+    </div>
     <p class="text-sm">{{ message }}</p>
     {% if cta_text and cta_url %}
     <a href="{{ cta_url }}"
-       class="inline-flex items-center gap-1 mt-4 px-4 py-2 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white transition-colors">
-        {% if cta_icon %}<span aria-hidden="true">{{ cta_icon }}</span>{% endif %}
+       class="inline-flex items-center gap-1.5 mt-4 px-4 py-2 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white transition-colors">
+        {% if cta_icon in _known_icons %}
+            {{ render_icon(cta_icon, class="w-4 h-4") }}
+        {% elif cta_icon %}
+            <span aria-hidden="true">{{ cta_icon }}</span>
+        {% endif %}
         {{ cta_text }}
     </a>
     {% endif %}

@@ -1,10 +1,14 @@
 {# Status badge: renders OK/DEGRADED/DOWN with color (SG 3.1 — text label always present, not color-only) #}
+{# SVG status dot pairs with text label for quick visual scanning (epic 75.1) #}
 {% macro status_badge(status) %}
-<span class="inline-block px-2 py-0.5 rounded text-xs font-semibold
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold
     {% if status == 'OK' %}bg-green-100 text-green-800
     {% elif status == 'DEGRADED' %}bg-yellow-100 text-yellow-800
     {% else %}bg-red-100 text-red-800{% endif %}"
     role="status">
+    <svg class="w-1.5 h-1.5 flex-shrink-0" viewBox="0 0 6 6" fill="currentColor" aria-hidden="true">
+        <circle cx="3" cy="3" r="3"/>
+    </svg>
     {{ status }}
 </span>
 {% endmacro %}
@@ -27,12 +31,15 @@
 
 {# Repo health badge — SG 3.1 #}
 {% macro health_badge(health) %}
-<span class="inline-block px-2 py-0.5 rounded text-xs font-semibold
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold
     {% if health == 'healthy' %}bg-green-100 text-green-800
     {% elif health == 'degraded' %}bg-yellow-100 text-yellow-800
     {% elif health == 'unhealthy' %}bg-red-100 text-red-800
     {% else %}bg-gray-100 text-gray-700{% endif %}"
     role="status">
+    <svg class="w-1.5 h-1.5 flex-shrink-0" viewBox="0 0 6 6" fill="currentColor" aria-hidden="true">
+        <circle cx="3" cy="3" r="3"/>
+    </svg>
     {{ health | upper }}
 </span>
 {% endmacro %}
