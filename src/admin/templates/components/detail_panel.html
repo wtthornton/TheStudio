@@ -1,0 +1,48 @@
+{# detail_panel.html — Right-side sliding detail panel trigger macros.             #}
+{# The panel container, CSS, and JS are rendered globally in base.html.           #}
+{# Stories 75.3–75.4 wire specific repo / workflow panel routes.                  #}
+{#                                                                                 #}
+{# Usage:                                                                          #}
+{#   {% from "components/detail_panel.html" import panel_trigger_btn %}           #}
+{#   {{ panel_trigger_btn(hx_get="/admin/ui/panel/repos/42",                      #}
+{#                        label="View details",                                    #}
+{#                        class="text-blue-600 hover:underline text-sm") }}       #}
+{#                                                                                 #}
+{# To update the panel title from loaded content, add data-panel-title="..." to  #}
+{# the root element of your partial HTML response.                                #}
+
+{# ── Button trigger ──────────────────────────────────────────────────────────── #}
+{% macro panel_trigger_btn(hx_get, label, class="", title="", aria_label="") %}
+<button
+    type="button"
+    class="{{ class }}"
+    hx-get="{{ hx_get }}"
+    hx-target="#detail-panel-body"
+    hx-swap="innerHTML"
+    hx-indicator="#detail-panel-loading"
+    hx-on--before-request="window.detailPanel.openLoading()"
+    hx-on--after-settle="window.detailPanel.onContentLoaded()"
+    aria-haspopup="dialog"
+    {%- if aria_label %} aria-label="{{ aria_label }}"{% endif %}
+    {%- if title %} title="{{ title }}"{% endif %}>
+    {{- label -}}
+</button>
+{% endmacro %}
+
+{# ── Anchor trigger ───────────────────────────────────────────────────────────── #}
+{% macro panel_trigger_link(hx_get, label, class="", title="", aria_label="") %}
+<a
+    href="#"
+    class="{{ class }}"
+    hx-get="{{ hx_get }}"
+    hx-target="#detail-panel-body"
+    hx-swap="innerHTML"
+    hx-indicator="#detail-panel-loading"
+    hx-on--before-request="window.detailPanel.openLoading()"
+    hx-on--after-settle="window.detailPanel.onContentLoaded()"
+    aria-haspopup="dialog"
+    {%- if aria_label %} aria-label="{{ aria_label }}"{% endif %}
+    {%- if title %} title="{{ title }}"{% endif %}>
+    {{- label -}}
+</a>
+{% endmacro %}

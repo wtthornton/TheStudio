@@ -234,7 +234,7 @@
 > TESTS_STATUS: DEFERRED until 75.8
 
 - [x] **75.1:** SVG Icon System — Replace Unicode with Heroicons (3 pts, M) — Create Jinja2 icon macro, replace all Unicode nav/badge icons with inline SVG Heroicons. **Files:** create `components/icon.html`; modify `base.html`, `dashboard_content.html`, `status_badge.html`.
-- [ ] **75.2:** Right-Side Sliding Detail Panel Infrastructure (5 pts, L) — Reusable panel component: HTMX content loading, CSS slide transition, focus trap, ARIA dialog, Escape/click-outside dismiss. **Files:** create `components/detail_panel.html`; modify `base.html`, `routes.py`.
+- [x] **75.2:** Right-Side Sliding Detail Panel Infrastructure (5 pts, L) — Reusable panel component: HTMX content loading, CSS slide transition, focus trap, ARIA dialog, Escape/click-outside dismiss. **Files:** create `components/detail_panel.html`; modify `base.html`, `routes.py`.
 - [ ] **75.3:** Repo Detail Panel (3 pts, M) — Wire repo table rows → sliding panel with config, activity, queue, trust tier. **Files:** create `partials/repo_detail.html`; modify `repos.html`, `routes.py`.
 - [ ] **75.4:** Workflow Detail Panel (3 pts, M) — Wire workflow rows → sliding panel with status timeline, step outputs, logs. **Files:** create `partials/workflow_detail.html`; modify `workflows.html`, `routes.py`.
 - [ ] **75.5:** Kanban Board View for Workflows (5 pts, L) — List/kanban toggle, SortableJS drag-and-drop, workflow cards by status column, localStorage preference. **Files:** create `partials/workflows_kanban.html`, `components/workflow_card.html`; modify `workflows.html`, `base.html`, `routes.py`.

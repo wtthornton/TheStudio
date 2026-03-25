@@ -202,6 +202,28 @@ async def ui_audit(request: Request) -> Response:
     return templates.TemplateResponse(request, "audit.html", ctx)
 
 
+# --- Detail Panel Routes (Epic 75.2) ---
+
+
+@ui_router.get("/panel/demo", response_class=HTMLResponse)
+async def panel_demo(request: Request) -> Response:
+    """Demo endpoint for detail panel infrastructure (Epic 75.2).
+
+    Returns a simple HTML fragment to verify panel HTMX loading works.
+    Specific panel routes (repo, workflow) are added in Stories 75.3–75.4.
+    """
+    return HTMLResponse(
+        content=(
+            '<div data-panel-title="Panel Demo" class="space-y-3">'
+            '<p class="text-gray-700">Detail panel infrastructure is operational.</p>'
+            '<p class="text-xs text-gray-400">'
+            "Stories 75.3–75.4 add repo and workflow panel routes."
+            "</p>"
+            "</div>"
+        )
+    )
+
+
 # --- Partial (HTMX fragment) Routes ---
 
 

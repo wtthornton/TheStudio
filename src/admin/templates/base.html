@@ -75,6 +75,40 @@
             outline: 2px solid #2563eb;
             outline-offset: 2px;
         }
+
+        /* ── Detail Panel — right-side slide-in, Epic 75.2 ─────────────────── */
+        .detail-panel-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.4);
+            z-index: 40;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+        }
+        .detail-panel-overlay.is-open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .detail-panel {
+            position: fixed;
+            top: 0;
+            right: 0;
+            height: 100%;
+            width: 480px;
+            max-width: 90vw;
+            background: #ffffff;
+            box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+            z-index: 50;
+            transform: translateX(100%);
+            transition: transform 0.25s ease;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .detail-panel.is-open {
+            transform: translateX(0);
+        }
     </style>
     {% block head %}{% endblock %}
 </head>
@@ -252,6 +286,52 @@
             </div>
         </main>
     </div>
+    <!-- ── Detail Panel Infrastructure — Epic 75.2 ──────────────────────────── -->
+    <!-- Backdrop overlay: click to dismiss -->
+    <div id="detail-panel-overlay"
+         class="detail-panel-overlay"
+         aria-hidden="true"></div>
+
+    <!-- Sliding panel: role=dialog, focus-trapped, Escape-dismissible -->
+    <div id="detail-panel"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="detail-panel-title"
+         aria-hidden="true"
+         hidden
+         class="detail-panel">
+        <!-- Panel header -->
+        <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200 flex-shrink-0 bg-white">
+            <h2 id="detail-panel-title" class="text-base font-semibold text-gray-900">Details</h2>
+            <button id="detail-panel-close"
+                    type="button"
+                    class="rounded p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                    aria-label="Close detail panel">
+                <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"
+                     aria-hidden="true" focusable="false">
+                    <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/>
+                </svg>
+            </button>
+        </div>
+        <!-- HTMX loading indicator (shown during hx-get requests) -->
+        <div id="detail-panel-loading"
+             class="htmx-indicator flex items-center gap-2 px-5 py-3 text-sm text-gray-500 flex-shrink-0">
+            <svg class="animate-spin w-4 h-4 text-blue-500" viewBox="0 0 24 24" fill="none"
+                 aria-hidden="true">
+                <circle class="opacity-25" cx="12" cy="12" r="10"
+                        stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+            Loading…
+        </div>
+        <!-- Content target: HTMX swaps HTML here -->
+        <div id="detail-panel-body"
+             class="flex-1 overflow-y-auto px-5 py-4 text-sm text-gray-700"
+             tabindex="-1"></div>
+    </div>
+    <!-- ── /Detail Panel ──────────────────────────────────────────────────────── -->
+
     {# HTMX load failures on settings (and other) sections — SG 5.3 #}
     <script>
     (function () {
@@ -275,6 +355,104 @@
         if (window.htmx) htmx.process(elt);
       });
     })();
+    </script>
+    <script>
+    /* ── Detail Panel JS — focus trap, Escape, click-outside — Epic 75.2 ─── */
+    window.detailPanel = (function () {
+      'use strict';
+      var panel, overlay, closeBtn, titleEl, lastFocused;
+      var FOCUSABLE_SEL = [
+        'a[href]', 'button:not([disabled])', 'input:not([disabled])',
+        'select:not([disabled])', 'textarea:not([disabled])',
+        '[tabindex]:not([tabindex="-1"])'
+      ].join(', ');
+
+      function init() {
+        panel    = document.getElementById('detail-panel');
+        overlay  = document.getElementById('detail-panel-overlay');
+        closeBtn = document.getElementById('detail-panel-close');
+        titleEl  = document.getElementById('detail-panel-title');
+        if (!panel) return;
+
+        /* Dismiss on backdrop click */
+        overlay.addEventListener('click', close);
+
+        /* Dismiss on Escape */
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape' && panel.classList.contains('is-open')) {
+            close();
+          }
+        });
+
+        /* Close button */
+        if (closeBtn) closeBtn.addEventListener('click', close);
+
+        /* Focus trap: Tab / Shift+Tab cycle within panel */
+        panel.addEventListener('keydown', trapFocus);
+      }
+
+      /** Open panel in loading state immediately (called on hx-before-request). */
+      function openLoading() {
+        lastFocused = document.activeElement;
+        panel.removeAttribute('hidden');
+        panel.setAttribute('aria-hidden', 'false');
+        panel.classList.add('is-open');
+        overlay.classList.add('is-open');
+        /* Focus close button while content loads */
+        if (closeBtn) closeBtn.focus();
+      }
+
+      /** Shift focus into content after HTMX settle (called on hx-after-settle). */
+      function onContentLoaded() {
+        var focusable = getFocusable();
+        if (focusable.length) focusable[0].focus();
+        /* Allow partials to update the panel title via data-panel-title attr */
+        var titleNode = document.querySelector('#detail-panel-body [data-panel-title]');
+        if (titleNode && titleEl) {
+          titleEl.textContent = titleNode.getAttribute('data-panel-title');
+        }
+      }
+
+      /** Close and reset the panel. */
+      function close() {
+        panel.classList.remove('is-open');
+        overlay.classList.remove('is-open');
+        panel.setAttribute('aria-hidden', 'true');
+        /* Clear content after slide-out animation completes */
+        setTimeout(function () {
+          if (!panel.classList.contains('is-open')) {
+            var body = document.getElementById('detail-panel-body');
+            if (body) body.innerHTML = '';
+            if (titleEl) titleEl.textContent = 'Details';
+            panel.setAttribute('hidden', '');
+          }
+        }, 275);
+        /* Return focus to the element that opened the panel */
+        if (lastFocused && typeof lastFocused.focus === 'function') {
+          lastFocused.focus();
+        }
+      }
+
+      function getFocusable() {
+        return Array.from(panel.querySelectorAll(FOCUSABLE_SEL));
+      }
+
+      function trapFocus(e) {
+        if (e.key !== 'Tab') return;
+        var focusable = getFocusable();
+        if (!focusable.length) return;
+        var first = focusable[0];
+        var last  = focusable[focusable.length - 1];
+        if (e.shiftKey) {
+          if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+        } else {
+          if (document.activeElement === last)  { e.preventDefault(); first.focus(); }
+        }
+      }
+
+      document.addEventListener('DOMContentLoaded', init);
+      return { openLoading: openLoading, onContentLoaded: onContentLoaded, close: close };
+    }());
     </script>
 </body>
 </html>
