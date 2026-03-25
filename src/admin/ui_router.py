@@ -42,9 +42,19 @@ from src.admin.tool_catalog import DEFAULT_PROFILES, get_tool_catalog
 from src.compliance.plane_registry import PlaneStatus, get_plane_registry
 from src.compliance.promotion import get_transitions
 from src.db.connection import get_async_session
+from sqlalchemy import func, select
+
+from src.models.taskpacket import TaskPacketRow, TaskPacketStatus
 from src.outcome.dead_letter import get_dead_letter_store
 from src.outcome.models import QuarantineReason
 from src.outcome.quarantine import get_quarantine_store
+
+# Terminal statuses for TaskPacket queue counts
+_PANEL_TERMINAL_STATUSES = {
+    TaskPacketStatus.PUBLISHED,
+    TaskPacketStatus.REJECTED,
+    TaskPacketStatus.FAILED,
+}
 
 logger = logging.getLogger(__name__)
 
@@ -389,6 +399,95 @@ async def partial_repo_detail(request: Request, repo_id: str) -> Response:
         "can_delete": _has_permission(role, Permission.REGISTER_REPO),
     }
     return templates.TemplateResponse(request, "partials/repo_detail_content.html", ctx)
+
+
+@ui_router.get("/panel/repos/{repo_id}", response_class=HTMLResponse)
+async def panel_repo_detail(request: Request, repo_id: str) -> Response:
+    """Render repo detail sliding panel partial (Epic 75.3).
+
+    Returns a compact panel view with config, trust tier, queue stats,
+    and quick-action buttons. Served into #detail-panel-body via HTMX.
+    """
+    repo_repo = get_repo_repository()
+    role = request.state.user_role
+
+    try:
+        async with get_async_session() as session:
+            row = await repo_repo.get(session, UUID(repo_id))
+    except Exception:
+        return HTMLResponse(
+            '<div class="p-4 text-red-500 text-sm">Repo not found</div>'
+        )
+
+    if row is None:
+        return HTMLResponse(
+            '<div class="p-4 text-red-500 text-sm">Repo not found</div>'
+        )
+
+    full_name = f"{row.owner}/{row.repo_name}"
+    health = "degraded" if row.status.value == "paused" else "healthy"
+
+    # Queue stats: count TaskPackets by terminal / non-terminal status
+    active_count = 0
+    completed_count = 0
+    failed_count = 0
+    try:
+        async with get_async_session() as session:
+            active_result = await session.execute(
+                select(func.count(TaskPacketRow.id)).where(
+                    TaskPacketRow.repo == full_name,
+                    TaskPacketRow.status.notin_(
+                        [s.value for s in _PANEL_TERMINAL_STATUSES]
+                    ),
+                )
+            )
+            active_count = active_result.scalar_one() or 0
+
+            completed_result = await session.execute(
+                select(func.count(TaskPacketRow.id)).where(
+                    TaskPacketRow.repo == full_name,
+                    TaskPacketRow.status == TaskPacketStatus.PUBLISHED.value,
+                )
+            )
+            completed_count = completed_result.scalar_one() or 0
+
+            failed_result = await session.execute(
+                select(func.count(TaskPacketRow.id)).where(
+                    TaskPacketRow.repo == full_name,
+                    TaskPacketRow.status == TaskPacketStatus.FAILED.value,
+                )
+            )
+            failed_count = failed_result.scalar_one() or 0
+    except Exception:
+        logger.debug("Could not fetch queue counts for repo %s", repo_id, exc_info=True)
+
+    repo_data = {
+        "id": str(row.id),
+        "owner": row.owner,
+        "repo": row.repo_name,
+        "tier": row.tier.value,
+        "status": row.status.value,
+        "health": health,
+        "installation_id": row.installation_id,
+        "default_branch": getattr(row, "default_branch", "main"),
+        "profile": {
+            "language": getattr(row, "language", ""),
+        },
+    }
+
+    ctx = {
+        "request": request,
+        "repo": repo_data,
+        "queue": {
+            "active": active_count,
+            "completed": completed_count,
+            "failed": failed_count,
+        },
+        "current_user_id": request.state.user_id,
+        "can_change_tier": _has_permission(role, Permission.CHANGE_REPO_TIER),
+        "can_pause": _has_permission(role, Permission.PAUSE_REPO),
+    }
+    return templates.TemplateResponse(request, "partials/repo_detail.html", ctx)
 
 
 @ui_router.get("/partials/workflows", response_class=HTMLResponse)

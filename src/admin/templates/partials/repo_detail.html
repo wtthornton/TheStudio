@@ -1,0 +1,142 @@
+{% from "components/status_badge.html" import tier_badge, health_badge, repo_status_badge %}
+
+{# data-panel-title updates the sliding panel header via JS in base.html #}
+<div data-panel-title="{{ repo.owner }}/{{ repo.repo }}" class="space-y-4">
+
+    {# ── Config ────────────────────────────────────────────────────────────── #}
+    <section aria-labelledby="panel-config-heading">
+        <h3 id="panel-config-heading"
+            class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+            Configuration
+        </h3>
+        <div class="bg-gray-50 rounded-lg border border-gray-200 divide-y divide-gray-100">
+            <div class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs text-gray-500">Repository</span>
+                <a href="/admin/ui/repos/{{ repo.id }}"
+                   class="text-sm font-medium text-blue-600 hover:underline">
+                    {{ repo.owner }}/{{ repo.repo }}
+                </a>
+            </div>
+            <div class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs text-gray-500">Installation ID</span>
+                <span class="text-sm font-mono text-gray-700">{{ repo.installation_id }}</span>
+            </div>
+            <div class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs text-gray-500">Default Branch</span>
+                <span class="text-sm font-mono text-gray-700">{{ repo.default_branch | default('main') }}</span>
+            </div>
+            {% if repo.profile and repo.profile.language %}
+            <div class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs text-gray-500">Language</span>
+                <span class="text-sm text-gray-700">{{ repo.profile.language }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+
+    {# ── Trust Tier ────────────────────────────────────────────────────────── #}
+    <section aria-labelledby="panel-tier-heading">
+        <h3 id="panel-tier-heading"
+            class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+            Trust Tier
+        </h3>
+        <div class="bg-gray-50 rounded-lg border border-gray-200 px-4 py-3 space-y-2">
+            <div class="flex items-center gap-2">
+                {{ tier_badge(repo.tier) }}
+                {{ repo_status_badge(repo.status) }}
+                {{ health_badge(repo.health) }}
+            </div>
+            <p class="text-xs text-gray-500">
+                {% if repo.tier == 'observe' %}
+                    Observe — agent reads issues and produces reports only. No code changes.
+                {% elif repo.tier == 'suggest' %}
+                    Suggest — agent produces draft PRs for human review before merge.
+                {% else %}
+                    Execute — agent can auto-merge PRs that pass all compliance gates.
+                {% endif %}
+            </p>
+            {% if can_change_tier %}
+            <div class="flex items-center gap-2 pt-1">
+                <select id="panel-tier-select-{{ repo.id }}"
+                        class="border border-gray-300 rounded px-2 py-1.5 text-xs">
+                    <option value="observe" {% if repo.tier == 'observe' %}selected{% endif %}>Observe</option>
+                    <option value="suggest" {% if repo.tier == 'suggest' %}selected{% endif %}>Suggest</option>
+                    <option value="execute" {% if repo.tier == 'execute' %}selected{% endif %}>Execute</option>
+                </select>
+                <button hx-patch="/admin/repos/{{ repo.id }}/tier"
+                        hx-headers='{"X-User-ID": "{{ current_user_id }}", "Content-Type": "application/json"}'
+                        hx-vals='js:{"tier": document.getElementById("panel-tier-select-{{ repo.id }}").value}'
+                        hx-target="#panel-tier-result-{{ repo.id }}" hx-swap="innerHTML"
+                        hx-confirm="Change trust tier?"
+                        class="px-2 py-1.5 bg-purple-600 text-white text-xs rounded hover:bg-purple-700">
+                    Change Tier
+                </button>
+            </div>
+            <div id="panel-tier-result-{{ repo.id }}" class="text-xs"></div>
+            {% endif %}
+        </div>
+    </section>
+
+    {# ── Queue ─────────────────────────────────────────────────────────────── #}
+    <section aria-labelledby="panel-queue-heading">
+        <h3 id="panel-queue-heading"
+            class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+            Queue &amp; Activity
+        </h3>
+        <div class="bg-gray-50 rounded-lg border border-gray-200 divide-y divide-gray-100">
+            <div class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs text-gray-500">Active Tasks</span>
+                <span class="text-sm font-medium text-gray-700">{{ queue.active | default(0) }}</span>
+            </div>
+            <div class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs text-gray-500">Completed (30d)</span>
+                <span class="text-sm font-medium text-gray-700">{{ queue.completed | default(0) }}</span>
+            </div>
+            <div class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs text-gray-500">Failed (30d)</span>
+                <span class="text-sm font-medium
+                    {% if (queue.failed | default(0)) > 0 %}text-red-600{% else %}text-gray-700{% endif %}">
+                    {{ queue.failed | default(0) }}
+                </span>
+            </div>
+        </div>
+    </section>
+
+    {# ── Actions ───────────────────────────────────────────────────────────── #}
+    <section aria-labelledby="panel-actions-heading">
+        <h3 id="panel-actions-heading"
+            class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+            Actions
+        </h3>
+        <div class="flex flex-wrap gap-2">
+            <a href="/admin/ui/repos/{{ repo.id }}"
+               class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700">
+                View Full Detail
+            </a>
+            <a href="/dashboard/?tab=pipeline&repo={{ (repo.owner ~ '/' ~ repo.repo) | urlencode }}"
+               class="inline-flex items-center px-3 py-1.5 bg-indigo-600 text-white text-xs rounded hover:bg-indigo-700">
+                View Pipeline
+            </a>
+            {% if can_pause %}
+            {% if repo.status == 'paused' %}
+            <button hx-post="/admin/repos/{{ repo.id }}/resume"
+                    hx-headers='{"X-User-ID": "{{ current_user_id }}"}'
+                    hx-target="#panel-action-result-{{ repo.id }}" hx-swap="innerHTML"
+                    class="px-3 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700">
+                Resume
+            </button>
+            {% else %}
+            <button hx-post="/admin/repos/{{ repo.id }}/pause"
+                    hx-headers='{"X-User-ID": "{{ current_user_id }}"}'
+                    hx-target="#panel-action-result-{{ repo.id }}" hx-swap="innerHTML"
+                    hx-confirm="Pause this repo?"
+                    class="px-3 py-1.5 bg-yellow-600 text-white text-xs rounded hover:bg-yellow-700">
+                Pause
+            </button>
+            {% endif %}
+            {% endif %}
+        </div>
+        <div id="panel-action-result-{{ repo.id }}" class="mt-2 text-xs"></div>
+    </section>
+
+</div>

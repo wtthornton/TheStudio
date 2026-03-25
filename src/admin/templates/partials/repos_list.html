@@ -1,5 +1,6 @@
 {% from "components/status_badge.html" import tier_badge, health_badge, repo_status_badge %}
 {% from "components/empty_state.html" import empty_state %}
+{% from "components/detail_panel.html" import panel_trigger_btn %}
 
 {% if repos %}
 <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -20,17 +21,22 @@
             {% for repo in repos %}
             <tr class="hover:bg-gray-50">
                 <td class="px-4 py-3 text-sm">
-                    <a href="/admin/ui/repos/{{ repo.id }}" class="text-blue-600 hover:underline font-medium">{{ repo.owner }}/{{ repo.repo }}</a>
+                    {{ panel_trigger_btn(
+                        hx_get="/admin/ui/panel/repos/" ~ repo.id,
+                        label=repo.owner ~ "/" ~ repo.repo,
+                        class="text-blue-600 hover:underline font-medium text-left",
+                        aria_label="Open detail panel for " ~ repo.owner ~ "/" ~ repo.repo
+                    ) }}
                 </td>
                 <td class="px-4 py-3">{{ tier_badge(repo.tier) }}</td>
                 <td class="px-4 py-3">{{ repo_status_badge(repo.status) }}</td>
                 <td class="px-4 py-3">{{ health_badge(repo.health) }}</td>
                 <td class="px-4 py-3 text-right">
-                    <a href="/admin/ui/repos/{{ repo.id }}" class="text-blue-600 hover:underline text-sm">View</a>
+                    <a href="/admin/ui/repos/{{ repo.id }}" class="text-blue-600 hover:underline text-sm">Full Detail</a>
                     <span class="mx-1 text-gray-300">|</span>
                     <a href="/dashboard/?tab=pipeline&repo={{ (repo.owner ~ '/' ~ repo.repo) | urlencode }}"
                        class="text-indigo-600 hover:underline text-sm"
-                       data-tooltip="Open Pipeline Dashboard filtered to this repo">View Pipeline</a>
+                       data-tooltip="Open Pipeline Dashboard filtered to this repo">Pipeline</a>
                 </td>
             </tr>
             {% endfor %}
