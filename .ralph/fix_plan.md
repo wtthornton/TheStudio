@@ -240,7 +240,7 @@
 
 > **7 stories, 29 pts.** Shared assertion libs: color/token validation, typography/spacing, component recipe validators, API endpoint helpers, interactive element utilities, WCAG 2.2 AA checker, visual snapshot framework.
 
-- [ ] **58.1:** Style Guide Color & Token Assertion Library (5 pts)
+- [x] **58.1:** Style Guide Color & Token Assertion Library (5 pts)
 - [ ] **58.2:** Typography & Spacing Assertion Library (3 pts)
 - [ ] **58.3:** Component Recipe Validators (5 pts)
 - [ ] **58.4:** API Endpoint Verification Helper (3 pts)
