@@ -246,7 +246,7 @@
 - [x] **58.4:** API Endpoint Verification Helper (3 pts)
 - [x] **58.5:** Interactive Element Test Utilities (3 pts)
 - [x] **58.6:** WCAG 2.2 AA Accessibility Checker (5 pts)
-- [ ] **58.7:** Visual Snapshot Baseline Framework (5 pts)
+- [x] **58.7:** Visual Snapshot Baseline Framework (5 pts)
 
 ### Epics 59–74 — Per-Page Test Suites (P1, each 6 stories / 19 pts)
 

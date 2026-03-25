@@ -1,0 +1,3 @@
+# Exclude "actual" screenshots captured during failed comparisons.
+# Baseline files (*-linux.png, *-darwin.png, *-win32.png) ARE tracked.
+*-actual-*.png

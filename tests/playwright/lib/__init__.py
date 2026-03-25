@@ -9,6 +9,7 @@ All helpers are importable from this package:
         api_helpers,
         interaction_helpers,
         accessibility_helpers,
+        snapshot_helpers,
     )
 
 Or import helpers directly:
@@ -39,12 +40,21 @@ Or import helpers directly:
         assert_no_color_only_indicators,
         run_axe_audit,
     )
+    from tests.playwright.lib.snapshot_helpers import (
+        capture_page_snapshot,
+        capture_element_snapshot,
+        compare_snapshot,
+        create_baseline,
+        snapshot_comparison,
+        SnapshotResult,
+    )
 """
 
 from tests.playwright.lib import accessibility_helpers
 from tests.playwright.lib import api_helpers
 from tests.playwright.lib import component_validators
 from tests.playwright.lib import interaction_helpers
+from tests.playwright.lib import snapshot_helpers
 from tests.playwright.lib import style_assertions
 from tests.playwright.lib import typography_assertions
 
@@ -53,6 +63,7 @@ __all__ = [
     "api_helpers",
     "component_validators",
     "interaction_helpers",
+    "snapshot_helpers",
     "style_assertions",
     "typography_assertions",
 ]
