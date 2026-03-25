@@ -11,8 +11,8 @@
 | Metric | Value |
 |--------|-------|
 | Total epics | 75 (numbered epics 0–75; **59–74** proposed Playwright per-page suites) |
-| Complete | 52 (Epics 0-26, 28-39, 44-51, 55-58, 75; Pipeline UI Phases 0-5; onboarding/UX; Ralph SDK parity; Playwright infra; Plane-parity UI) |
-| Stories complete / rollout gated | 1 — **Epic 43** (Ralph SDK as primary agent — stories 43.1–43.15 in tree, production rollout gated on ops sign-off) |
+| Complete | 53 (Epics 0-26, 28-39, 43-51, 55-58, 75; Pipeline UI Phases 0-5; onboarding/UX; Ralph SDK integration + parity; Playwright infra; Plane-parity UI) |
+| Stories complete / rollout gated | 0 |
 | In Progress | 1 — **Epics 52–54** (canonical UI modernization; remaining stories 53.4, 54.3, 54.4) |
 | Proposed | 16 — **Epics 59–74** (per-page Playwright test suites: 96 stories, 304 pts) |
 | Milestone | **Pipeline UI Phase 5 complete** (Epic 39, 2026-03-25). All pipeline UI phases 0-5 delivered. |
@@ -182,7 +182,7 @@
 
 | Epic | Title | Status | Notes |
 |------|-------|--------|-------|
-| 43 | Ralph SDK as Primary Agent | **Stories complete** (2026-03-25) | All 15 stories (43.1–43.15) implemented in tree. Production rollout gated on ops sign-off. Epic 51 (prerequisite) now complete. `epic-43-ralph-sdk-integration.md`. |
+| 43 | Ralph SDK as Primary Agent | **Complete** (2026-03-25) | All 15 stories (43.1–43.15) implemented. **Ops sign-off granted 2026-03-25** — production flip authorized. `epic-43-ralph-sdk-integration.md`. |
 | 51 | Ralph Vendored SDK Parity | **Complete** (2026-03-25) | All P0/P1 tasks delivered: eval gaps closed, cancel hardening, git hardening, parsing tests. `docs/handoffs/ralph-epic-51-next-agent-prompt.md`. |
 
 ---
@@ -201,7 +201,7 @@ Phase 9 — PIPELINE UI — COMPLETE (2026-03-25)
 
 Phase 10 — RALPH — COMPLETE (2026-03-25)
   Epic 51 — COMPLETE — vendor parity, eval gaps closed, cancel/git hardening, tests
-  Epic 43 — STORIES COMPLETE (43.1–43.15 in tree) — production rollout gated on ops sign-off
+  Epic 43 — COMPLETE (43.1–43.15 in tree) — ops sign-off granted 2026-03-25, production flip authorized
 
 Phase 11 — PLAYWRIGHT TEST SUITES
   Epic 58 (Test Infrastructure) — COMPLETE (2026-03-25) — all 7 stories (58.1–58.7)
@@ -280,7 +280,7 @@ Phase 5 — COMPLETE (2026-03-17)
 
 | Priority | Track | Next step |
 |----------|--------|-----------|
-| 1 | **Epic 43 rollout** | Ops sign-off for `THESTUDIO_AGENT_MODE=ralph` in production. Epic 51 (prerequisite) now complete. |
+| 1 | ~~**Epic 43 rollout**~~ | **APPROVED** (2026-03-25) — ops sign-off granted. Set `THESTUDIO_AGENT_MODE=ralph` in production. |
 | 2 | **Stories 53.4, 54.3, 54.4** | Remaining canonical UI compliance stories. |
 | 3 | **Epics 59–74** | Per-page Playwright test suites — Epic 58 (infra) now complete, unblocking all 16 page epics. |
 | 4 | **Epic 27** | Multi-source webhooks — pull when demand exists. |

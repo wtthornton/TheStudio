@@ -1,8 +1,9 @@
 # Epic 43 — Production Sign-Off Checklist
 
 > **Purpose:** Gate checklist before flipping `THESTUDIO_AGENT_MODE=ralph` in production.
-> **Status:** PENDING — all code complete, all tests passing (102/102).
+> **Status:** APPROVED — ops sign-off granted 2026-03-25. Production flip authorized.
 > **Date:** 2026-03-25
+> **Sign-off by:** Primary Developer (solo operator)
 
 ---
 
@@ -42,6 +43,7 @@
 
 ## Production Flip
 
+- [x] **Ops sign-off granted** (2026-03-25) — authorized to set `THESTUDIO_AGENT_MODE=ralph` in production
 - [ ] Set `THESTUDIO_AGENT_MODE=ralph` in production environment
 - [ ] Monitor first 10 production tasks — check OTel spans (`ralph.run`, `ralph.iteration`)
 - [ ] Confirm Temporal heartbeats are visible in Temporal UI for Ralph activities

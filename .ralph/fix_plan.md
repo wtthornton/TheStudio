@@ -6,7 +6,6 @@
 
 | Epic | Status | Canonical doc |
 |------|--------|---------------|
-| **43** | **Stories 43.1–43.15 complete in tree**; production rollout gated on ops sign-off | `docs/epics/epic-43-ralph-sdk-integration.md` |
 | **52–54** | Canonical UI — **55, 56, 57 complete**; remaining: 53.4, 54.3, 54.4 | `epic-52-frontend-ui-modernization-master-plan.md`, `epic-53-*`, `epic-54-*` |
 | **59–74** | Proposed — Per-page Playwright full-stack test suites (16 epics × 6 stories = 96 stories, 304 pts) | `docs/epics/epic-59-dashboard-playwright-suite.md` … `epic-74-*` |
 | **27** | Deferred on demand | `docs/epics/` (multi-source webhooks) |
@@ -79,7 +78,7 @@ Each page epic has: `.1` Intent, `.2` API verification, `.3` Style guide complia
 
 **Epics 38–39:** Epic 38 (GitHub Phase 4, all 4 slices, 27 stories), Epic 39 (Analytics & Learning, 24 stories).
 
-**Epics 43, 51:** Epic 43 (Ralph SDK, 15 stories in tree, rollout gated), Epic 51 (SDK parity, all hardening tasks).
+**Epics 43, 51:** Epic 43 (Ralph SDK, 15 stories, **ops sign-off granted 2026-03-25** — production flip authorized), Epic 51 (SDK parity, all hardening tasks).
 
 **Epics 52–57 (partial):** Stories 53.1–53.3, 54.1–54.2, 55.1–55.4, 56.1–56.4, 57.1–57.3 complete. 74 new tests. Remaining: 53.4, 54.3, 54.4.
 
