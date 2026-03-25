@@ -1,8 +1,16 @@
-/** Triage queue — list of issues awaiting developer review (Epic 36). */
+/**
+ * Triage queue — list of issues awaiting developer review (Epic 36).
+ *
+ * Story 54.3: orchestrates the TriageAcceptModal (prompt-first flow).
+ * When the user clicks "Accept & Plan" on a card, the queue opens the modal;
+ * acceptance only proceeds once the user confirms mode selection.
+ */
 
 import { useEffect, useState, useCallback } from 'react'
 import { useTriageStore } from '../../stores/triage-store'
 import { TriageCard } from './TriageCard'
+import { TriageAcceptModal } from './TriageAcceptModal'
+import type { TriageAcceptMode } from './TriageAcceptModal'
 import { EditPanel } from './EditPanel'
 import type { RejectionReason } from '../../lib/api'
 import { useRepoContext } from '../../contexts/RepoContext'
@@ -13,6 +21,8 @@ export function TriageQueue() {
   const { tasks, loading, error, loadTasks, accept, reject, edit } = useTriageStore()
   const { selectedRepo } = useRepoContext()
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
+  /** taskId waiting in the TriageAcceptModal (prompt-first flow) */
+  const [acceptingTaskId, setAcceptingTaskId] = useState<string | null>(null)
 
   useEffect(() => {
     void loadTasks(selectedRepo)
@@ -31,9 +41,24 @@ export function TriageQueue() {
     }
   }, [lastEvent, loadTasks, selectedRepo])
 
-  const handleAccept = useCallback((taskId: string) => {
-    void accept(taskId)
+  /** Open the prompt-first accept modal for this task. */
+  const handleAcceptIntent = useCallback((taskId: string) => {
+    setAcceptingTaskId(taskId)
+  }, [])
+
+  /** User confirmed acceptance + chosen mode in the modal. */
+  const handleAcceptConfirm = useCallback((_taskId: string, _mode: TriageAcceptMode) => {
+    // mode is recorded for future API integration (trust-tier propagation).
+    // For now, acceptance proceeds with standard pipeline entry.
+    void accept(_taskId)
+    setAcceptingTaskId(null)
   }, [accept])
+
+  /** User clicked "Edit First" inside the accept modal. */
+  const handleAcceptModalEdit = useCallback((taskId: string) => {
+    setAcceptingTaskId(null)
+    setEditingTaskId(taskId)
+  }, [])
 
   const handleReject = useCallback((taskId: string, reason: RejectionReason) => {
     void reject(taskId, reason)
@@ -131,7 +156,7 @@ export function TriageQueue() {
           <TriageCard
             key={task.id}
             task={task}
-            onAccept={handleAccept}
+            onAcceptIntent={handleAcceptIntent}
             onReject={handleReject}
             onEdit={handleEdit}
           />
@@ -147,6 +172,20 @@ export function TriageQueue() {
           onClose={() => setEditingTaskId(null)}
         />
       )}
+
+      {/* Prompt-first accept modal (Story 54.3) */}
+      {acceptingTaskId && (() => {
+        const acceptingTask = tasks.find((t) => t.id === acceptingTaskId)
+        if (!acceptingTask) return null
+        return (
+          <TriageAcceptModal
+            task={acceptingTask}
+            onConfirm={handleAcceptConfirm}
+            onEdit={handleAcceptModalEdit}
+            onClose={() => setAcceptingTaskId(null)}
+          />
+        )
+      })()}
     </div>
   )
 }

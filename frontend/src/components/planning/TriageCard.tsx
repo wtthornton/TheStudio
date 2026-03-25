@@ -1,4 +1,11 @@
-/** Triage card component — displays a single issue awaiting triage (Epic 36). */
+/**
+ * Triage card component — displays a single issue awaiting triage (Epic 36).
+ *
+ * Story 54.3: "Accept & Plan" now triggers the TriageAcceptModal (prompt-first
+ * flow) rather than accepting immediately. The card calls `onAcceptIntent` to
+ * signal the queue to open the modal; actual acceptance is deferred until the
+ * user completes the intent-preview → mode-selection → confirm sequence.
+ */
 
 import { useState } from 'react'
 import type { TriageTask, RejectionReason } from '../../lib/api'
@@ -18,7 +25,12 @@ const COMPLEXITY_COLORS = {
 
 interface TriageCardProps {
   task: TriageTask
-  onAccept: (taskId: string) => void
+  /**
+   * Called when the user clicks "Accept & Plan". The queue opens the
+   * TriageAcceptModal (prompt-first flow); actual pipeline acceptance is
+   * deferred until the user confirms mode selection.
+   */
+  onAcceptIntent: (taskId: string) => void
   onReject: (taskId: string, reason: RejectionReason) => void
   onEdit: (taskId: string) => void
 }
@@ -33,7 +45,7 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(hrs / 24)}d ago`
 }
 
-export function TriageCard({ task, onAccept, onReject, onEdit }: TriageCardProps) {
+export function TriageCard({ task, onAcceptIntent, onReject, onEdit }: TriageCardProps) {
   const [showReject, setShowReject] = useState(false)
   const enrichment = task.triage_enrichment
 
@@ -92,8 +104,9 @@ export function TriageCard({ task, onAccept, onReject, onEdit }: TriageCardProps
       ) : (
         <div className="flex items-center gap-2" data-tour="triage-actions">
           <button
-            onClick={() => onAccept(task.id)}
-            className="px-3 py-1.5 text-sm rounded bg-emerald-700 text-emerald-100 hover:bg-emerald-600"
+            onClick={() => onAcceptIntent(task.id)}
+            className="px-3 py-1.5 text-sm rounded bg-emerald-700 text-emerald-100 hover:bg-emerald-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+            data-testid="triage-card-accept-intent-btn"
           >
             Accept & Plan
           </button>
