@@ -1,5 +1,6 @@
 {% from "components/status_badge.html" import workflow_status_badge %}
 {% from "components/empty_state.html" import empty_state %}
+{% from "components/detail_panel.html" import panel_trigger_btn %}
 
 {% if workflows %}
 <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -7,7 +8,7 @@
         <thead class="bg-gray-50">
             <tr>
                 <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase"
-                    data-tooltip="Unique workflow identifier (truncated)">Workflow ID</th>
+                    data-tooltip="Unique workflow identifier (truncated) — click to open detail panel">Workflow ID</th>
                 <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Repo</th>
                 <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase"
                     data-tooltip="Current Temporal workflow execution state">Status</th>
@@ -22,14 +23,19 @@
             {% for wf in workflows %}
             <tr class="hover:bg-gray-50">
                 <td class="px-4 py-3 text-sm">
-                    <a href="/admin/ui/workflows/{{ wf.id }}" class="text-blue-600 hover:underline font-mono text-xs">{{ wf.id[:12] }}...</a>
+                    {{ panel_trigger_btn(
+                        hx_get="/admin/ui/panel/workflows/" ~ wf.id,
+                        label=wf.id[:12] ~ "…",
+                        class="text-blue-600 hover:underline font-mono text-xs text-left",
+                        aria_label="Open detail panel for workflow " ~ wf.id[:12]
+                    ) }}
                 </td>
                 <td class="px-4 py-3 text-sm">{{ wf.repo_name | default(wf.repo_id) }}</td>
                 <td class="px-4 py-3">{{ workflow_status_badge(wf.status) }}</td>
                 <td class="px-4 py-3 text-sm">{{ wf.current_step | default('-') }}</td>
                 <td class="px-4 py-3 text-sm text-right">{{ wf.attempt_count | default(1) }}</td>
                 <td class="px-4 py-3 text-right">
-                    <a href="/admin/ui/workflows/{{ wf.id }}" class="text-blue-600 hover:underline text-sm">Detail</a>
+                    <a href="/admin/ui/workflows/{{ wf.id }}" class="text-blue-600 hover:underline text-sm">Full Detail</a>
                     {% if wf.repo_name %}
                     <span class="mx-1 text-gray-300">|</span>
                     <a href="/dashboard/?tab=pipeline&repo={{ wf.repo_name | urlencode }}"

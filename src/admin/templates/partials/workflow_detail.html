@@ -1,0 +1,180 @@
+{% from "components/status_badge.html" import workflow_status_badge %}
+
+{# data-panel-title updates the sliding panel header via JS in base.html #}
+<div data-panel-title="{{ workflow.id[:12] }}…" class="space-y-4">
+
+    {# ── Summary ─────────────────────────────────────────────────────────────── #}
+    <section aria-labelledby="panel-wf-summary-heading">
+        <h3 id="panel-wf-summary-heading"
+            class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+            Summary
+        </h3>
+        <div class="bg-gray-50 rounded-lg border border-gray-200 divide-y divide-gray-100">
+            <div class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs text-gray-500">Status</span>
+                <span>{{ workflow_status_badge(workflow.status) }}</span>
+            </div>
+            <div class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs text-gray-500">Repo</span>
+                <span class="text-sm font-medium text-gray-700">{{ workflow.repo_name | default(workflow.repo_id) }}</span>
+            </div>
+            {% if workflow.issue_ref %}
+            <div class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs text-gray-500">Issue</span>
+                <span class="text-sm font-mono text-gray-700">{{ workflow.issue_ref }}</span>
+            </div>
+            {% endif %}
+            <div class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs text-gray-500">Current Step</span>
+                <span class="text-sm font-medium text-gray-700">{{ workflow.current_step | default('—') }}</span>
+            </div>
+            <div class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs text-gray-500">Attempts</span>
+                <span class="text-sm font-medium text-gray-700">{{ workflow.attempt_count | default(1) }}</span>
+            </div>
+            {% if workflow.complexity %}
+            <div class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs text-gray-500">Complexity</span>
+                <span class="text-sm font-medium text-gray-700">{{ workflow.complexity | upper }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+
+    {# ── Status Timeline ──────────────────────────────────────────────────────── #}
+    <section aria-labelledby="panel-wf-timeline-heading">
+        <h3 id="panel-wf-timeline-heading"
+            class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+            Status Timeline
+        </h3>
+        {% if workflow.timeline %}
+        <div class="bg-gray-50 rounded-lg border border-gray-200 px-4 py-3 space-y-3">
+            {% for step in workflow.timeline %}
+            <div class="flex items-start gap-3">
+                <div class="flex-shrink-0 mt-1.5">
+                    {% if step.status == 'ok' %}
+                    <span class="inline-block w-2.5 h-2.5 rounded-full bg-green-500"
+                          aria-label="Passed"></span>
+                    {% elif step.status == 'failed' %}
+                    <span class="inline-block w-2.5 h-2.5 rounded-full bg-red-500"
+                          aria-label="Failed"></span>
+                    {% elif step.status == 'running' %}
+                    <span class="inline-block w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"
+                          aria-label="Running"></span>
+                    {% else %}
+                    <span class="inline-block w-2.5 h-2.5 rounded-full bg-gray-300"
+                          aria-label="Pending"></span>
+                    {% endif %}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="text-xs font-medium text-gray-800 truncate">{{ step.name }}</span>
+                        {% if step.timestamp %}
+                        <span class="text-xs text-gray-400 flex-shrink-0">{{ step.timestamp[:19] }}</span>
+                        {% endif %}
+                    </div>
+                    {% if step.failure_reason %}
+                    <p class="text-xs text-red-600 mt-0.5">{{ step.failure_reason }}</p>
+                    {% endif %}
+                    {% if step.evidence %}
+                    <pre class="text-xs text-gray-500 mt-1 bg-white rounded border border-gray-200 p-2 overflow-x-auto max-h-24">{{ step.evidence }}</pre>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="bg-gray-50 rounded-lg border border-gray-200 px-4 py-3">
+            <p class="text-xs text-gray-400">No timeline data available yet.</p>
+        </div>
+        {% endif %}
+    </section>
+
+    {# ── Retry Info ───────────────────────────────────────────────────────────── #}
+    {% if workflow.retry_info %}
+    <section aria-labelledby="panel-wf-retry-heading">
+        <h3 id="panel-wf-retry-heading"
+            class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+            Retry Info
+        </h3>
+        <div class="bg-gray-50 rounded-lg border border-gray-200 divide-y divide-gray-100">
+            <div class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs text-gray-500">Next Retry</span>
+                <span class="text-xs font-mono text-gray-700">{{ workflow.retry_info.next_retry_time | default('—') }}</span>
+            </div>
+            <div class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs text-gray-500">Time in Step</span>
+                <span class="text-xs font-mono text-gray-700">{{ workflow.retry_info.time_in_current_step | default('—') }}</span>
+            </div>
+            <div class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs text-gray-500">Step Attempts</span>
+                <span class="text-sm font-medium text-gray-700">{{ workflow.retry_info.attempt_count_for_step | default('—') }}</span>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    {# ── Escalation ───────────────────────────────────────────────────────────── #}
+    {% if workflow.escalation %}
+    <section aria-labelledby="panel-wf-escalation-heading">
+        <h3 id="panel-wf-escalation-heading"
+            class="text-xs font-semibold text-yellow-600 uppercase tracking-wide mb-2">
+            Escalation
+        </h3>
+        <div class="bg-yellow-50 rounded-lg border border-yellow-200 divide-y divide-yellow-100">
+            <div class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs text-yellow-600">Trigger</span>
+                <span class="text-xs font-medium text-yellow-800">{{ workflow.escalation.trigger | default('—') }}</span>
+            </div>
+            <div class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs text-yellow-600">Owner</span>
+                <span class="text-xs font-medium text-yellow-800">{{ workflow.escalation.owner | default('—') }}</span>
+            </div>
+            <div class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs text-yellow-600">Human Wait</span>
+                <span class="text-xs font-medium text-yellow-800">{{ workflow.escalation.human_wait_state | string }}</span>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    {# ── Actions ──────────────────────────────────────────────────────────────── #}
+    <section aria-labelledby="panel-wf-actions-heading">
+        <h3 id="panel-wf-actions-heading"
+            class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+            Actions
+        </h3>
+        <div class="flex flex-wrap gap-2">
+            <a href="/admin/ui/workflows/{{ workflow.id }}"
+               class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700">
+                View Full Detail
+            </a>
+            {% if workflow.repo_name %}
+            <a href="/dashboard/?tab=pipeline&repo={{ workflow.repo_name | urlencode }}"
+               class="inline-flex items-center px-3 py-1.5 bg-indigo-600 text-white text-xs rounded hover:bg-indigo-700">
+                View Pipeline
+            </a>
+            {% endif %}
+            {% if can_rerun %}
+            <button hx-post="/admin/workflows/{{ workflow.id }}/rerun-verification"
+                    hx-headers='{"X-User-ID": "{{ current_user_id }}"}'
+                    hx-target="#panel-wf-action-result" hx-swap="innerHTML"
+                    hx-confirm="Rerun verification for this workflow?"
+                    class="px-3 py-1.5 bg-gray-600 text-white text-xs rounded hover:bg-gray-700">
+                Rerun Verification
+            </button>
+            {% endif %}
+            {% if can_escalate %}
+            <button hx-post="/admin/workflows/{{ workflow.id }}/escalate"
+                    hx-headers='{"X-User-ID": "{{ current_user_id }}"}'
+                    hx-target="#panel-wf-action-result" hx-swap="innerHTML"
+                    hx-confirm="Escalate this workflow for human review?"
+                    class="px-3 py-1.5 bg-yellow-600 text-white text-xs rounded hover:bg-yellow-700">
+                Escalate
+            </button>
+            {% endif %}
+        </div>
+        <div id="panel-wf-action-result" class="mt-2 text-xs"></div>
+    </section>
+
+</div>

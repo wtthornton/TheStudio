@@ -490,6 +490,86 @@ async def panel_repo_detail(request: Request, repo_id: str) -> Response:
     return templates.TemplateResponse(request, "partials/repo_detail.html", ctx)
 
 
+@ui_router.get("/panel/workflows/{workflow_id}", response_class=HTMLResponse)
+async def panel_workflow_detail(request: Request, workflow_id: str) -> Response:
+    """Render workflow detail sliding panel partial (Epic 75.4).
+
+    Returns a compact panel view with status timeline, step outputs, logs,
+    and quick-action buttons. Served into #detail-panel-body via HTMX.
+    """
+    console_svc = get_workflow_console_service()
+    role = request.state.user_role
+
+    try:
+        wf = await console_svc.get_workflow_detail(workflow_id)
+    except Exception:
+        return HTMLResponse(
+            '<div class="p-4 text-red-500 text-sm">Workflow not found</div>'
+        )
+
+    if wf is None:
+        return HTMLResponse(
+            '<div class="p-4 text-red-500 text-sm">Workflow not found</div>'
+        )
+
+    timeline = []
+    for step in getattr(wf, "timeline", []) or []:
+        step_status = step.status.value if hasattr(step.status, "value") else str(step.status)
+        evidence_str = None
+        if step.evidence:
+            evidence_str = (
+                "\n".join(step.evidence) if isinstance(step.evidence, list) else str(step.evidence)
+            )
+        timeline.append(
+            {
+                "name": step.step,
+                "status": step_status,
+                "timestamp": str(step.started_at or ""),
+                "failure_reason": step.failure_reason,
+                "evidence": evidence_str,
+            }
+        )
+
+    retry_info = None
+    if wf.retry_info:
+        retry_info = {
+            "next_retry_time": str(wf.retry_info.next_retry_time or "—"),
+            "time_in_current_step": f"{wf.retry_info.time_in_current_step_ms}ms",
+            "attempt_count_for_step": wf.retry_info.attempt_count_for_step,
+        }
+
+    escalation = None
+    if wf.escalation_info and (wf.escalation_info.trigger or wf.escalation_info.human_wait_state):
+        escalation = {
+            "trigger": wf.escalation_info.trigger or "—",
+            "owner": wf.escalation_info.owner or "—",
+            "human_wait_state": wf.escalation_info.human_wait_state,
+        }
+
+    workflow_data = {
+        "id": str(wf.workflow_id),
+        "repo_id": str(wf.repo_id) if wf.repo_id else None,
+        "repo_name": getattr(wf, "repo_name", str(wf.repo_id) if wf.repo_id else ""),
+        "status": wf.status.value,
+        "current_step": getattr(wf, "current_step", None),
+        "attempt_count": getattr(wf, "attempt_count", 1),
+        "complexity": getattr(wf, "complexity", None),
+        "issue_ref": getattr(wf, "issue_ref", None),
+        "timeline": timeline,
+        "retry_info": retry_info,
+        "escalation": escalation,
+    }
+
+    ctx = {
+        "request": request,
+        "workflow": workflow_data,
+        "current_user_id": request.state.user_id,
+        "can_rerun": _has_permission(role, Permission.RERUN_VERIFICATION),
+        "can_escalate": _has_permission(role, Permission.ESCALATE_WORKFLOW),
+    }
+    return templates.TemplateResponse(request, "partials/workflow_detail.html", ctx)
+
+
 @ui_router.get("/partials/workflows", response_class=HTMLResponse)
 async def partial_workflows(
     request: Request,
