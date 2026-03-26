@@ -103,7 +103,7 @@
 - [x] **67.2:** API Endpoint Verification (3 pts) — Compliance endpoints return valid data. **File:** `tests/playwright/test_compliance_api.py`.
 - [x] **67.3:** Style Guide Compliance (5 pts) — Status colors (§5.1), badge recipe, scorecard layout. **File:** `tests/playwright/test_compliance_style.py`.
 - [x] **67.4:** Interactive Elements (3 pts) — Repo filter, check detail expansion. **File:** `tests/playwright/test_compliance_interactions.py`.
-- [ ] **67.5:** Accessibility WCAG 2.2 AA (3 pts) — Status non-color cues, keyboard nav. **File:** `tests/playwright/test_compliance_a11y.py`.
+- [x] **67.5:** Accessibility WCAG 2.2 AA (3 pts) — Status non-color cues, keyboard nav. **File:** `tests/playwright/test_compliance_a11y.py`.
 - [ ] **67.6:** Visual Snapshot Baseline (2 pts) — Capture baseline. **File:** `tests/playwright/test_compliance_snapshot.py`. **RUN TESTS.**
 
 ### Epic 68 — Quarantine (`/admin/ui/quarantine`, 19 pts)
