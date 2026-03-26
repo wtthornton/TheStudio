@@ -255,7 +255,7 @@ export function NotificationBell({ onNavigate }: NotificationBellProps) {
   const close = useCallback(() => setOpen(false), [setOpen])
 
   return (
-    <div className="relative" ref={containerRef}>
+    <div className="relative" ref={containerRef} data-component="NotificationBell">
       <button
         onClick={toggle}
         aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}

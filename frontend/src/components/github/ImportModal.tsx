@@ -251,6 +251,7 @@ export default function ImportModal({ open, onClose, onImported }: ImportModalPr
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      data-component="ImportModal"
       onClick={handleBackdropClick}
     >
       <div

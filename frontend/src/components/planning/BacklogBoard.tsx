@@ -77,7 +77,7 @@ export default function BacklogBoard({ onTaskClick, onNavigateToPipeline }: Back
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4" data-component="BacklogBoard">
       {/* Board header */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-100">Backlog Board</h2>

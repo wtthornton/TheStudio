@@ -97,7 +97,7 @@ export function TriageQueue() {
   }
 
   return (
-    <div data-tour="triage-queue">
+    <div data-tour="triage-queue" data-component="TriageQueue">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-gray-100">

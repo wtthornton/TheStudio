@@ -18,18 +18,18 @@ const CONFIDENCE_STYLES: Record<
 > = {
   high: {
     label: 'High confidence',
-    textClass: 'text-emerald-400',
-    bgClass: 'bg-emerald-900/40',
+    textClass: 'text-green-500',
+    bgClass: 'bg-[rgba(22,163,74,0.2)]',
   },
   medium: {
     label: 'Medium confidence',
-    textClass: 'text-amber-400',
-    bgClass: 'bg-amber-900/40',
+    textClass: 'text-yellow-500',
+    bgClass: 'bg-[rgba(234,179,8,0.2)]',
   },
   low: {
     label: 'Low confidence',
-    textClass: 'text-red-400',
-    bgClass: 'bg-red-900/40',
+    textClass: 'text-red-500',
+    bgClass: 'bg-[rgba(239,68,68,0.2)]',
   },
 }
 
@@ -77,10 +77,10 @@ export function TrustMetadata({
           <span
             className={`inline-block h-1.5 w-1.5 rounded-full ${
               confidence === 'high'
-                ? 'bg-emerald-400'
+                ? 'bg-green-500'
                 : confidence === 'medium'
-                  ? 'bg-amber-400'
-                  : 'bg-red-400'
+                  ? 'bg-yellow-500'
+                  : 'bg-red-500'
             }`}
             aria-hidden="true"
           />

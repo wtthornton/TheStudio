@@ -67,7 +67,7 @@ export function HeaderBar({ onResumeWizard, onOpenApiDocs, activeTab, onSwitchTa
   const [helpPanelOpen, setHelpPanelOpen] = useState(false)
 
   return (
-    <div className="flex items-center gap-6 text-sm" data-testid="header-bar">
+    <div className="flex items-center gap-6 text-sm" data-testid="header-bar" data-component="HeaderBar">
       <AppSwitcher />
       <span
         className="text-gray-400"

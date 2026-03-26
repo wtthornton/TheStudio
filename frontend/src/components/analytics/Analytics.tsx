@@ -111,7 +111,7 @@ export function Analytics({ onNavigateToPipeline }: AnalyticsProps) {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-6 space-y-6">
+    <div className="mx-auto max-w-6xl px-6 py-6 space-y-6" data-component="Analytics">
       {/* Header row — data-tour target for period selector step */}
       <div className="flex items-center justify-between" data-tour="analytics-period">
         <div>

@@ -349,7 +349,7 @@ export function TriageAcceptModal({
               type="button"
               onClick={handleConfirm}
               disabled={step < 3}
-              className="rounded bg-emerald-700 px-4 py-1.5 text-xs font-medium text-emerald-100 hover:bg-emerald-600 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+              className="rounded bg-blue-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
               data-testid="triage-accept-confirm-btn"
             >
               Accept &amp; Start Pipeline

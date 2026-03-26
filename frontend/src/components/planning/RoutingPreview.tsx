@@ -112,7 +112,7 @@ export default function RoutingPreview({ taskId, onClose, onNavigateToPipeline }
   }
 
   return (
-    <div className="space-y-4" data-tour="routing-preview">
+    <div className="space-y-4" data-tour="routing-preview" data-component="RoutingPreview">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -186,7 +186,7 @@ export default function RoutingPreview({ taskId, onClose, onNavigateToPipeline }
         <button
           onClick={() => void approve()}
           disabled={saving}
-          className="bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-1.5 rounded transition-colors"
+          className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-1.5 rounded transition-colors"
         >
           {saving ? 'Approving…' : 'Approve Routing'}
         </button>

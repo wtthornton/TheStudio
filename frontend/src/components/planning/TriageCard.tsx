@@ -18,9 +18,9 @@ const REJECTION_REASONS: { value: RejectionReason; label: string }[] = [
 ]
 
 const COMPLEXITY_COLORS = {
-  low: 'bg-emerald-900 text-emerald-300',
-  medium: 'bg-amber-900 text-amber-300',
-  high: 'bg-red-900 text-red-300',
+  low: 'bg-[rgba(22,163,74,0.2)] text-green-500',
+  medium: 'bg-[rgba(234,179,8,0.2)] text-yellow-500',
+  high: 'bg-[rgba(239,68,68,0.2)] text-red-500',
 } as const
 
 interface TriageCardProps {
@@ -50,7 +50,7 @@ export function TriageCard({ task, onAcceptIntent, onReject, onEdit }: TriageCar
   const enrichment = task.triage_enrichment
 
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-900 p-4 hover:border-gray-600 transition-colors" data-tour="triage-card">
+    <div className="rounded-lg border border-gray-700 bg-gray-900 p-4 hover:border-gray-600 transition-colors" data-tour="triage-card" data-component="TriageCard">
       {/* Header */}
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2 min-w-0">
@@ -106,7 +106,7 @@ export function TriageCard({ task, onAcceptIntent, onReject, onEdit }: TriageCar
         <div className="flex items-center gap-2 flex-wrap" data-tour="triage-actions">
           <button
             onClick={() => onAcceptIntent(task.id)}
-            className="min-h-[44px] px-3 py-2 text-sm rounded bg-emerald-700 text-emerald-100 hover:bg-emerald-600 active:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+            className="min-h-[44px] px-3 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
             data-testid="triage-card-accept-intent-btn"
           >
             Accept & Plan

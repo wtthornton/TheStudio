@@ -174,7 +174,7 @@ export function DashboardCustomizer({ onViewChange }: DashboardCustomizerProps) 
           id="view-selector"
           value={activeViewName}
           onChange={(e) => handleSelectView(e.target.value)}
-          className="rounded border border-gray-700 bg-gray-800 px-2 py-1 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="rounded border border-gray-700 bg-gray-800 px-2 py-1 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
           data-testid="view-selector"
         >
           {views.map((v) => (
@@ -198,7 +198,7 @@ export function DashboardCustomizer({ onViewChange }: DashboardCustomizerProps) 
                 type="checkbox"
                 checked={widget.visible}
                 onChange={() => handleToggleWidget(widget.id)}
-                className="rounded border-gray-600 bg-gray-800 text-indigo-500 focus:ring-2 focus:ring-indigo-500"
+                className="rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-2 focus:ring-blue-500"
                 data-testid={`widget-toggle-${widget.id}`}
               />
               {widget.label}
@@ -208,7 +208,7 @@ export function DashboardCustomizer({ onViewChange }: DashboardCustomizerProps) 
                 type="button"
                 onClick={() => handleMoveUp(widget.id)}
                 disabled={idx === 0}
-                className="rounded px-1.5 py-0.5 text-xs text-gray-400 hover:text-gray-200 disabled:opacity-30 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="rounded px-1.5 py-0.5 text-xs text-gray-400 hover:text-gray-200 disabled:opacity-30 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 aria-label={`Move ${widget.label} up`}
                 data-testid={`widget-up-${widget.id}`}
               >
@@ -218,7 +218,7 @@ export function DashboardCustomizer({ onViewChange }: DashboardCustomizerProps) 
                 type="button"
                 onClick={() => handleMoveDown(widget.id)}
                 disabled={idx === sortedWidgets.length - 1}
-                className="rounded px-1.5 py-0.5 text-xs text-gray-400 hover:text-gray-200 disabled:opacity-30 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="rounded px-1.5 py-0.5 text-xs text-gray-400 hover:text-gray-200 disabled:opacity-30 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 aria-label={`Move ${widget.label} down`}
                 data-testid={`widget-down-${widget.id}`}
               >
@@ -236,7 +236,7 @@ export function DashboardCustomizer({ onViewChange }: DashboardCustomizerProps) 
           value={newViewName}
           onChange={(e) => setNewViewName(e.target.value)}
           placeholder="New view name..."
-          className="flex-1 rounded border border-gray-700 bg-gray-800 px-2 py-1 text-sm text-gray-200 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="flex-1 rounded border border-gray-700 bg-gray-800 px-2 py-1 text-sm text-gray-200 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
           data-testid="new-view-name"
           aria-label="New view name"
         />
@@ -244,7 +244,7 @@ export function DashboardCustomizer({ onViewChange }: DashboardCustomizerProps) 
           type="button"
           onClick={handleSaveView}
           disabled={!newViewName.trim()}
-          className="rounded bg-indigo-700 px-3 py-1 text-sm font-medium text-white hover:bg-indigo-600 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="rounded bg-blue-600 px-3 py-1 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
           data-testid="save-view-btn"
         >
           Save View
@@ -255,7 +255,7 @@ export function DashboardCustomizer({ onViewChange }: DashboardCustomizerProps) 
       <button
         type="button"
         onClick={handleResetToDefault}
-        className="rounded border border-gray-700 px-3 py-1 text-sm text-gray-400 hover:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        className="rounded border border-gray-700 px-3 py-1 text-sm text-gray-400 hover:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
         data-testid="reset-view-btn"
       >
         Reset to Team Standard

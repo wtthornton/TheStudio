@@ -5,8 +5,8 @@ interface IntentSpecProps {
 }
 
 const SOURCE_COLORS: Record<string, string> = {
-  auto: 'bg-blue-900 text-blue-300',
-  developer: 'bg-emerald-900 text-emerald-300',
+  auto: 'bg-[rgba(59,130,246,0.2)] text-blue-500',
+  developer: 'bg-[rgba(22,163,74,0.2)] text-green-500',
   refinement: 'bg-purple-900 text-purple-300',
 }
 

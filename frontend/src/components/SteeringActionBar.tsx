@@ -317,7 +317,7 @@ function RedirectModal() {
               type="button"
               onClick={handleSubmit}
               disabled={!isValid || saving || validTargets.length === 0}
-              className="rounded bg-violet-700 px-3 py-1.5 text-xs font-medium text-violet-100 hover:bg-violet-600 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+              className="rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
               data-testid="redirect-confirm-btn"
             >
               {saving ? 'Redirecting…' : 'Redirect Task'}
@@ -471,7 +471,7 @@ export function SteeringActionBar({ taskId, taskStatus, currentStage = null }: S
     return (
       <div className="flex items-center gap-2">
         {steeringStatus === 'aborted' && (
-          <span className="rounded bg-red-900/40 px-2 py-0.5 text-xs font-medium text-red-400" data-testid="status-aborted">
+          <span className="rounded bg-[rgba(239,68,68,0.2)] px-2 py-0.5 text-xs font-medium text-red-500" data-testid="status-aborted">
             Aborted
           </span>
         )}

@@ -75,8 +75,8 @@ function TestResult({ detail }: { detail: string }) {
   return (
     <div className="mt-1" data-testid="test-result">
       <div className="flex items-center gap-2 text-xs">
-        {passed > 0 && <span className="rounded bg-emerald-900/50 px-1.5 py-0.5 text-emerald-300">{passed} passed</span>}
-        {failed > 0 && <span className="rounded bg-red-900/50 px-1.5 py-0.5 text-red-300">{failed} failed</span>}
+        {passed > 0 && <span className="rounded bg-[rgba(22,163,74,0.2)] px-1.5 py-0.5 text-green-500">{passed} passed</span>}
+        {failed > 0 && <span className="rounded bg-[rgba(239,68,68,0.2)] px-1.5 py-0.5 text-red-500">{failed} failed</span>}
       </div>
       {failed > 0 && (
         <div className="mt-1">

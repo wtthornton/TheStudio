@@ -149,7 +149,7 @@ export default function IntentEditMode({ spec }: IntentEditModeProps) {
             type="button"
             onClick={handleSave}
             disabled={saving || unchanged || !goal.trim()}
-            className="rounded bg-emerald-700 px-3 py-1 text-xs font-medium text-emerald-100 hover:bg-emerald-600 disabled:opacity-50"
+            className="rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
             {saving ? 'Saving…' : 'Save'}
           </button>

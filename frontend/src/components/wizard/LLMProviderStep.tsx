@@ -167,8 +167,8 @@ export function LLMProviderStep() {
           className={[
             'flex items-start gap-2 rounded-lg border px-3 py-2 text-sm',
             keyConfigured
-              ? 'border-emerald-800 bg-emerald-950/40 text-emerald-300'
-              : 'border-yellow-800 bg-yellow-950/40 text-yellow-300',
+              ? 'border-green-700 bg-[rgba(22,163,74,0.2)] text-green-500'
+              : 'border-yellow-700 bg-[rgba(234,179,8,0.2)] text-yellow-500',
           ].join(' ')}
           role="status"
           data-testid="wizard-llm-key-status"

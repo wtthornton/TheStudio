@@ -69,7 +69,7 @@ export function DecisionControls({
           type="button"
           onClick={handleApprove}
           disabled={!!disabledActions.approve}
-          className="flex items-center gap-1.5 rounded bg-emerald-800/60 px-3 py-1.5 text-xs font-medium text-emerald-300 transition-colors hover:bg-emerald-700/60 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+          className="flex items-center gap-1.5 rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
           data-testid="decision-approve-btn"
         >
           <span aria-hidden="true">&#x2713;</span>
@@ -152,7 +152,7 @@ export function DecisionControls({
               <button
                 type="button"
                 onClick={handleConfirmApprove}
-                className="rounded bg-emerald-700 px-4 py-1.5 text-xs font-medium text-emerald-100 hover:bg-emerald-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                className="rounded bg-blue-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
                 data-testid="decision-confirm-approve-btn"
               >
                 Confirm Approval

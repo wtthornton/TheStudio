@@ -394,7 +394,7 @@ export function SteeringActivityLog() {
   const handleNext = useCallback(() => setPage((p) => p + 1), [])
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-6 space-y-6">
+    <div className="mx-auto max-w-7xl px-6 py-6 space-y-6" data-component="SteeringActivityLog">
       {/* Page header */}
       <div className="flex items-center gap-3">
         <span className="text-2xl">🔧</span>

@@ -88,6 +88,7 @@ export function StageDetailPanel() {
     <div
       className="fixed inset-y-0 right-0 z-50 flex"
       data-testid="stage-detail-panel"
+      data-component="StageDetailPanel"
     >
       {/* Backdrop */}
       <div className="fixed inset-0 bg-black/30" onClick={close} />

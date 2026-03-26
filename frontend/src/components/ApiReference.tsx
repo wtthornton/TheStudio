@@ -10,6 +10,7 @@ export function ApiReference() {
     <div
       className="h-[calc(100vh-7rem)] w-full min-h-[400px] overflow-hidden rounded-lg border border-gray-800 bg-gray-950"
       data-testid="api-reference-root"
+      data-component="ApiReference"
     >
       <ApiReferenceReact
         configuration={{

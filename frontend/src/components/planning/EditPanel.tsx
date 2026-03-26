@@ -83,7 +83,7 @@ export function EditPanel({ task, onSave, onSaveAndAccept, onClose }: EditPanelP
         <button
           type="button"
           onClick={() => onSaveAndAccept(task.id, fields)}
-          className="px-3 py-1.5 text-sm rounded bg-emerald-700 text-emerald-100 hover:bg-emerald-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+          className="px-3 py-1.5 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
         >
           Save & Accept
         </button>

@@ -121,7 +121,7 @@ export function CommentThread({ artifactId, currentUser = 'You' }: CommentThread
           onChange={(e) => setNewText(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Add a comment..."
-          className="flex-1 rounded border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm text-gray-200 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="flex-1 rounded border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm text-gray-200 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
           data-testid="comment-input"
           aria-label="Add a comment"
         />
@@ -129,7 +129,7 @@ export function CommentThread({ artifactId, currentUser = 'You' }: CommentThread
           type="button"
           onClick={handleSubmit}
           disabled={!newText.trim()}
-          className="rounded bg-indigo-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-600 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
           data-testid="comment-submit"
         >
           Submit

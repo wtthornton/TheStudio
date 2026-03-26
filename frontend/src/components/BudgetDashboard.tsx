@@ -58,7 +58,7 @@ function PeriodSelector({ value, onChange }: PeriodSelectorProps) {
           onClick={() => onChange(opt.value)}
           className={`rounded px-3 py-1 text-sm font-medium transition-colors ${
             value === opt.value
-              ? 'bg-indigo-600 text-white'
+              ? 'bg-blue-600 text-white'
               : 'text-gray-400 hover:text-gray-200'
           }`}
           data-tooltip-id="budget-tip"
@@ -98,7 +98,7 @@ function SummaryCards() {
           ? 'text-red-400'
           : weeklyCapPct !== null && weeklyCapPct >= 75
             ? 'text-yellow-400'
-            : 'text-indigo-400',
+            : 'text-blue-400',
       tooltip: 'Total LLM API cost in the selected period',
     },
     {
@@ -466,7 +466,7 @@ function BudgetAlertConfig() {
                 (config[field.key as keyof typeof config] as number)
               }
               onChange={(e) => handleNumberChange(field.key, e.target.value)}
-              className="w-full rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-gray-100 focus:border-indigo-500 focus:outline-none"
+              className="w-full rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-gray-100 focus:border-blue-500 focus:outline-none"
             />
             <p className="mt-0.5 text-xs text-gray-500">{field.help}</p>
           </div>
@@ -495,7 +495,7 @@ function BudgetAlertConfig() {
               className={`mt-0.5 flex h-5 w-9 shrink-0 cursor-pointer rounded-full transition-colors focus:outline-none ${
                 ((form[field.key] as boolean | undefined) ??
                   (config[field.key as keyof typeof config] as boolean))
-                  ? 'bg-indigo-600'
+                  ? 'bg-blue-600'
                   : 'bg-gray-600'
               }`}
             >
@@ -527,7 +527,7 @@ function BudgetAlertConfig() {
         <button
           onClick={handleSave}
           disabled={saving || !dirty}
-          className="rounded bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {saving ? 'Saving…' : 'Save Configuration'}
         </button>
@@ -559,7 +559,7 @@ export function BudgetDashboard() {
   }, [loadAll])
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-6">
+    <div className="mx-auto max-w-6xl px-6 py-6" data-component="BudgetDashboard">
       {/* Header row */}
       <div className="mb-6 flex items-center justify-between" data-tour="budget-dashboard">
         <h2 className="text-lg font-semibold text-gray-100">Budget Dashboard</h2>

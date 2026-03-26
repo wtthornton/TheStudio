@@ -241,7 +241,7 @@ export function RepoSettings() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-6 space-y-6">
+    <div className="mx-auto max-w-5xl px-6 py-6 space-y-6" data-component="RepoSettings">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-100">Repository Settings</h2>

@@ -42,8 +42,8 @@ function diffList(
 }
 
 const STATUS_CLASSES: Record<string, string> = {
-  added: 'bg-emerald-900/40 text-emerald-300',
-  removed: 'bg-red-900/40 text-red-300 line-through',
+  added: 'bg-[rgba(22,163,74,0.2)] text-green-500',
+  removed: 'bg-[rgba(239,68,68,0.2)] text-red-500 line-through',
   unchanged: 'text-gray-300',
 }
 
@@ -64,8 +64,8 @@ function DiffListSection({
       <ul className="space-y-1 pl-5">
         {items.map((item, i) => (
           <li key={`${item.status}-${i}`} className={`text-sm ${STATUS_CLASSES[item.status]}`}>
-            {item.status === 'added' && <span className="mr-1 text-emerald-400">+</span>}
-            {item.status === 'removed' && <span className="mr-1 text-red-400">−</span>}
+            {item.status === 'added' && <span className="mr-1 text-green-500">+</span>}
+            {item.status === 'removed' && <span className="mr-1 text-red-500">−</span>}
             {item.value}
           </li>
         ))}
@@ -93,8 +93,8 @@ export default function VersionDiff({ left, right }: VersionDiffProps) {
         </h4>
         {goalChanged ? (
           <div className="space-y-1">
-            <p className="text-sm bg-red-900/40 text-red-300 line-through">{left.goal}</p>
-            <p className="text-sm bg-emerald-900/40 text-emerald-300">{right.goal}</p>
+            <p className="text-sm bg-[rgba(239,68,68,0.2)] text-red-500 line-through">{left.goal}</p>
+            <p className="text-sm bg-[rgba(22,163,74,0.2)] text-green-500">{right.goal}</p>
           </div>
         ) : (
           <p className="text-sm text-gray-300">{right.goal}</p>

@@ -172,7 +172,7 @@ export default function IntentEditor({ taskId, onNavigateToPipeline }: IntentEdi
   }
 
   return (
-    <div className="flex flex-col gap-4" data-tour="intent-editor">
+    <div className="flex flex-col gap-4" data-tour="intent-editor" data-component="IntentEditor">
       {/* Toolbar: version selector + action buttons */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -226,7 +226,7 @@ export default function IntentEditor({ taskId, onNavigateToPipeline }: IntentEdi
             type="button"
             onClick={handleApprove}
             disabled={saving}
-            className="rounded bg-emerald-700 px-3 py-1.5 text-xs font-medium text-emerald-100 hover:bg-emerald-600 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+            className="rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
           >
             {saving ? 'Saving…' : 'Approve'}
           </button>

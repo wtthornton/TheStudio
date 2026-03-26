@@ -19,10 +19,10 @@ export interface AuditEntry {
 }
 
 const STATUS_STYLES: Record<AuditEntry['status'], { label: string; className: string }> = {
-  completed: { label: 'Completed', className: 'bg-emerald-900/40 text-emerald-400' },
-  pending: { label: 'Pending', className: 'bg-blue-900/40 text-blue-400' },
-  reverted: { label: 'Reverted', className: 'bg-gray-700 text-gray-400' },
-  failed: { label: 'Failed', className: 'bg-red-900/40 text-red-400' },
+  completed: { label: 'Completed', className: 'bg-[rgba(22,163,74,0.2)] text-green-500' },
+  pending: { label: 'Pending', className: 'bg-[rgba(59,130,246,0.2)] text-blue-500' },
+  reverted: { label: 'Reverted', className: 'bg-gray-800 text-gray-400' },
+  failed: { label: 'Failed', className: 'bg-[rgba(239,68,68,0.2)] text-red-500' },
 }
 
 const ACTOR_LABELS: Record<AuditEntry['actor'], string> = {

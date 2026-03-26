@@ -250,7 +250,7 @@ function SafetyBoundsPanel() {
           <button
             disabled={saving}
             onClick={handleSave}
-            className="rounded bg-violet-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-violet-600 disabled:opacity-50"
+            className="rounded bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
             {saving ? 'Saving…' : 'Save bounds'}
           </button>
@@ -480,7 +480,7 @@ function RuleBuilder({ existingRule, onSave, onCancel, saving }: RuleBuilderProp
         <button
           onClick={handleSubmit}
           disabled={saving}
-          className="rounded bg-violet-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-violet-600 disabled:opacity-50"
+          className="rounded bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
         >
           {saving ? 'Saving…' : existingRule ? 'Update rule' : 'Add rule'}
         </button>
@@ -597,7 +597,7 @@ export function TrustConfiguration() {
   )
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-6">
+    <div className="mx-auto max-w-4xl px-6 py-6" data-component="TrustConfiguration">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-gray-100">Trust Tier Configuration</h2>
@@ -642,7 +642,7 @@ export function TrustConfiguration() {
         {!ruleFormOpen && (
           <button
             onClick={() => openEditRule(null)}
-            className="rounded bg-violet-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-600"
+            className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
             data-tooltip-id="trust-tip"
             data-tooltip-content="Create a conditional rule to assign trust tiers based on task properties"
           >

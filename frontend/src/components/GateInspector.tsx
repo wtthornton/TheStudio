@@ -26,11 +26,11 @@ function GateFilterBar({ filters, onChange }: { filters: FilterState; onChange: 
           onClick={() => onChange({ ...filters, result: '' })}
         >All</button>
         <button
-          className={`px-2 py-1 ${filters.result === 'pass' ? 'bg-emerald-900 text-emerald-300' : 'text-gray-400'}`}
+          className={`px-2 py-1 ${filters.result === 'pass' ? 'bg-[rgba(22,163,74,0.2)] text-green-500' : 'text-gray-400'}`}
           onClick={() => onChange({ ...filters, result: 'pass' })}
         >Pass</button>
         <button
-          className={`px-2 py-1 ${filters.result === 'fail' ? 'bg-red-900 text-red-300' : 'text-gray-400'}`}
+          className={`px-2 py-1 ${filters.result === 'fail' ? 'bg-[rgba(239,68,68,0.2)] text-red-500' : 'text-gray-400'}`}
           onClick={() => onChange({ ...filters, result: 'fail' })}
         >Fail</button>
       </div>
@@ -200,7 +200,7 @@ export function GateInspector() {
   useEffect(() => { void loadData() }, [loadData])
 
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-900" data-testid="gate-inspector" data-tour="gate-inspector">
+    <div className="rounded-lg border border-gray-700 bg-gray-900" data-testid="gate-inspector" data-tour="gate-inspector" data-component="GateInspector">
       <div className="flex items-center justify-between border-b border-gray-700 px-4 py-2">
         <h3 className="text-sm font-semibold">Gate Inspector</h3>
         <button onClick={loadData} className="text-xs text-blue-400 hover:underline">Refresh</button>
@@ -259,7 +259,7 @@ export function GateInspector() {
 
                     {/* Issue count */}
                     {issueCount > 0 && (
-                      <span className="rounded bg-red-900/50 px-1.5 py-0.5 text-xs text-red-300">
+                      <span className="rounded bg-[rgba(239,68,68,0.2)] px-1.5 py-0.5 text-xs text-red-500">
                         {issueCount} issues
                       </span>
                     )}

@@ -23,6 +23,7 @@ export function EventLog() {
     <div
       className="rounded-lg border border-gray-800 bg-gray-900 p-3"
       data-testid="event-log"
+      data-component="EventLog"
     >
       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
         Recent Events
