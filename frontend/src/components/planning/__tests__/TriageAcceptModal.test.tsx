@@ -28,10 +28,14 @@ import type { TriageTask } from '../../../lib/api'
 
 const baseTask: TriageTask = {
   id: 'task-001',
+  repo: 'owner/repo',
   issue_id: 42,
+  status: 'triaged',
   issue_title: 'Add retry logic to webhook handler',
   issue_body: 'When the webhook fails, we need automatic retries.',
   created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  rejection_reason: null,
   triage_enrichment: {
     complexity_hint: 'medium',
     file_count_estimate: 3,
@@ -41,10 +45,14 @@ const baseTask: TriageTask = {
 
 const taskWithoutEnrichment: TriageTask = {
   id: 'task-002',
+  repo: 'owner/repo',
   issue_id: 99,
+  status: 'triaged',
   issue_title: 'Fix the login bug',
   issue_body: null,
   created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  rejection_reason: null,
   triage_enrichment: null,
 }
 
