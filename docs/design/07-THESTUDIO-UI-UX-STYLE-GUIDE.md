@@ -450,6 +450,59 @@ and overlay patterns introduced in Epic 75:
 
 ---
 
+### 4.7 For Developers: Using Design Tokens
+
+#### Canonical source
+
+The canonical implementation of all design tokens is:
+
+```
+static/css/tokens.css
+```
+
+Both frontend surfaces import this file:
+
+- **Admin UI (Jinja2):** `<link rel="stylesheet" href="/static/css/tokens.css">` in `base.html`
+- **React Dashboard:** `frontend/src/theme.css` (synced copy, imported in `index.css`)
+
+#### Jinja2 template usage (Admin UI)
+
+Use Tailwind CDN arbitrary value syntax to reference tokens:
+
+```html
+<div class="bg-[var(--color-bg-surface)] border border-[var(--color-border-primary)] rounded-lg p-4">
+  <h3 class="text-[var(--color-text-primary)]">Card Title</h3>
+  <p class="text-[var(--color-text-secondary)]">Description</p>
+  <button class="bg-[var(--color-interactive-primary)] hover:bg-[var(--color-interactive-hover)] text-white px-4 py-2 rounded">
+    Action
+  </button>
+</div>
+```
+
+#### React component usage
+
+React components can use tokens via Tailwind v4 `@theme` utilities or directly via CSS custom properties:
+
+```tsx
+// Via Tailwind v4 @theme utilities:
+<div className="bg-surface border border-primary rounded-lg p-4">
+  <h3 className="text-primary">Card Title</h3>
+  <p className="text-secondary">Description</p>
+</div>
+
+// Or via CSS custom properties directly:
+<div style={{ backgroundColor: 'var(--color-bg-surface)' }}>
+```
+
+#### Adding a new token
+
+1. Add the token to `static/css/tokens.css` (both `:root` and `.dark` / `[data-theme="dark"]`)
+2. Copy the change to `frontend/src/theme.css`
+3. If needed, add a `@theme` mapping in `frontend/src/index.css`
+4. Both surfaces pick up the new token automatically
+
+---
+
 ## 5. Color System
 
 ### 5.1 Status and Severity

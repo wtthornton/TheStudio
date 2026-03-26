@@ -1,4 +1,4 @@
-<div class="divide-y divide-gray-100" id="infrastructure-card">
+<div class="divide-y divide-[var(--color-border-secondary)]" id="infrastructure-card">
     {% if restart_required %}
     <div class="px-6 py-3 bg-yellow-50 border-b border-yellow-200">
         <p class="text-sm text-yellow-800 font-medium">
@@ -11,7 +11,7 @@
         <div class="flex items-center justify-between">
             <div class="flex-1">
                 <div class="flex items-center gap-2">
-                    <span class="text-sm font-medium text-gray-700">{{ setting.key }}</span>
+                    <span class="text-sm font-medium text-[var(--color-text-tertiary)]">{{ setting.key }}</span>
                     <span class="inline-block px-1.5 py-0.5 rounded text-xs font-medium
                         {% if setting.source == 'db' %}bg-green-100 text-green-700{% else %}bg-blue-100 text-blue-700{% endif %}">
                         {{ setting.source }}
@@ -23,11 +23,11 @@
                     {% endif %}
                 </div>
                 <div class="mt-1" id="infra-display-{{ setting.key }}">
-                    <code class="text-sm text-gray-600 bg-gray-50 px-2 py-1 rounded">{{ setting.value }}</code>
+                    <code class="text-sm text-[var(--color-text-tertiary)] bg-[var(--color-bg-elevated)] px-2 py-1 rounded">{{ setting.value }}</code>
                 </div>
             </div>
             <div class="ml-4">
-                <button class="text-xs text-gray-500 hover:text-gray-700 border border-gray-300 rounded px-2 py-1"
+                <button class="text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text-tertiary)] border border-[var(--color-border-primary)] rounded px-2 py-1"
                         onclick="document.getElementById('infra-edit-{{ setting.key }}').classList.toggle('hidden');
                                  document.getElementById('infra-display-{{ setting.key }}').classList.toggle('hidden');">
                     Edit
@@ -42,9 +42,9 @@
                 <div class="flex items-center gap-2">
                     <input type="text" name="value" value="{{ setting.value if not setting.sensitive else '' }}"
                            placeholder="{{ 'Enter new value' if setting.sensitive else setting.value }}"
-                           class="flex-1 text-sm border border-gray-300 rounded px-3 py-1.5 focus:ring-2 focus:ring-blue-500">
-                    <button type="submit" class="text-xs bg-blue-600 text-white rounded px-3 py-1.5 hover:bg-blue-700">Save</button>
-                    <button type="button" class="text-xs text-gray-500 border border-gray-300 rounded px-3 py-1.5"
+                           class="flex-1 text-sm border border-[var(--color-border-primary)] rounded px-3 py-1.5 focus:ring-2 focus:ring-blue-500">
+                    <button type="submit" class="text-xs bg-[var(--color-interactive-primary)] text-white rounded px-3 py-1.5 hover:bg-[var(--color-interactive-hover)]">Save</button>
+                    <button type="button" class="text-xs text-[var(--color-text-secondary)] border border-[var(--color-border-primary)] rounded px-3 py-1.5"
                             onclick="document.getElementById('infra-edit-{{ setting.key }}').classList.add('hidden');
                                      document.getElementById('infra-display-{{ setting.key }}').classList.remove('hidden');">Cancel</button>
                 </div>

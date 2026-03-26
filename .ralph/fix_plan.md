@@ -2,11 +2,10 @@
 
 ## Open epics — active backlog
 
-> **Rollup:** `docs/epics/EPIC-STATUS-TRACKER.md` (2026-03-26). Epics 76-77 complete. Epic 78 active (Sprint 4).
+> **Rollup:** `docs/epics/EPIC-STATUS-TRACKER.md` (2026-03-26). All epics complete (0-78) except Epic 27 (deferred).
 
 | Epic | Status | Canonical doc |
 |------|--------|---------------|
-| **78** | **Active** — Sprint 4 — Design Token Unification (8 stories, 28 pts, P2) | `docs/epics/epic-78-design-token-unification.md` |
 | **27** | Deferred on demand | `docs/epics/` (multi-source webhooks) |
 
 ---
@@ -18,14 +17,14 @@
 > **Gate:** `grep -cE "bg-gray-|text-gray-|border-gray-" src/admin/templates/*.html` returns 0 for page templates
 > TESTS_STATUS: DEFERRED until 78.8
 
-- [ ] **78.1:** Create shared token CSS file + static mount (3 pts)
-- [ ] **78.2:** Integrate tokens into React frontend (2 pts) — depends on Epic 77 COMPLETE
-- [ ] **78.3:** Integrate tokens into Admin UI base template (3 pts) — theme selector: both `.dark` and `[data-theme="dark"]`
-- [ ] **78.4:** Admin migration batch 1: Dashboard, Repos, Workflows, Audit (5 pts)
-- [ ] **78.5:** Admin migration batch 2: Metrics, Experts, Tools, Models (5 pts)
-- [ ] **78.6:** Admin migration batch 3: Compliance, Quarantine, DLQ, Planes, Settings, Cost, Portfolio (5 pts)
-- [ ] **78.7:** Component template migration + cross-surface validation (3 pts)
-- [ ] **78.8:** Token documentation in style guide (2 pts) — **RUN TESTS.**
+- [x] **78.1:** Create shared token CSS file + static mount (3 pts)
+- [x] **78.2:** Integrate tokens into React frontend (2 pts) — depends on Epic 77 COMPLETE
+- [x] **78.3:** Integrate tokens into Admin UI base template (3 pts) — theme selector: both `.dark` and `[data-theme="dark"]`
+- [x] **78.4:** Admin migration batch 1: Dashboard, Repos, Workflows, Audit (5 pts)
+- [x] **78.5:** Admin migration batch 2: Metrics, Experts, Tools, Models (5 pts)
+- [x] **78.6:** Admin migration batch 3: Compliance, Quarantine, DLQ, Planes, Settings, Cost, Portfolio (5 pts)
+- [x] **78.7:** Component template migration + cross-surface validation (3 pts)
+- [x] **78.8:** Token documentation in style guide (2 pts) — **RUN TESTS.**
 
 ---
 
@@ -44,6 +43,8 @@
 ---
 
 ## Completed
+
+**Epic 78 (Design Token Unification):** All 8 stories, 28 pts **complete** (2026-03-26). Shared `static/css/tokens.css` consumed by both React + Admin UI. 41 Admin templates migrated. Style guide Section 4.7 added with developer docs.
 
 **Epic 76 (Pipeline Dashboard Playwright Suite):** All 14 stories, 73 pts **complete** (2026-03-26). 75 test files across 12 React dashboard tabs + cross-tab compliance. 6 test types per tab: intent, API, style, interactions, a11y, snapshot.
 

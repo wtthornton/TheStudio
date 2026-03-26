@@ -8,6 +8,8 @@
     <title>{% block title %}Admin{% endblock %} - TheStudio</title>
     <!-- Dark mode FOUC prevention — must execute before any rendering (Epic 75.7) -->
     <script>(function(){var t=localStorage.getItem('ts-theme');if(t==='dark'||(t!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark')}})();</script>
+    <!-- Shared design tokens — canonical --color-* and --sidebar-* variables (Story 78.3) -->
+    <link rel="stylesheet" href="/static/css/tokens.css">
     <script src="https://cdn.tailwindcss.com/3.4.17"></script>
     <!-- Enable class-based dark mode for Tailwind dark: variants -->
     <script>tailwind.config={darkMode:'class'}</script>
@@ -15,42 +17,6 @@
     <!-- SortableJS — drag-and-drop for kanban views (Epic 75.5) -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
     <style>
-        /* ── Design tokens — Epic 75.7 ─────────────────────────────────────────── */
-        :root {
-            /* Surfaces */
-            --ts-bg:          #f9fafb;  /* gray-50   */
-            --ts-surface:     #ffffff;  /* white     */
-            --ts-surface-alt: #f3f4f6;  /* gray-100  */
-            --ts-border:      #e5e7eb;  /* gray-200  */
-            --ts-border-sub:  #f3f4f6;  /* gray-100  */
-            /* Text */
-            --ts-text:        #111827;  /* gray-900  */
-            --ts-text-muted:  #6b7280;  /* gray-500  */
-            --ts-text-faint:  #9ca3af;  /* gray-400  */
-            /* Sidebar (already dark in light mode) */
-            --ts-nav-bg:      #111827;  /* gray-900  */
-            --ts-nav-text:    #f3f4f6;  /* gray-100  */
-            --ts-nav-border:  #374151;  /* gray-700  */
-            --ts-nav-hover:   #1f2937;  /* gray-800  */
-            /* Interactive accent */
-            --ts-focus:       #2563eb;  /* blue-600  */
-        }
-        .dark {
-            --ts-bg:          #0f172a;  /* slate-900  */
-            --ts-surface:     #1e293b;  /* slate-800  */
-            --ts-surface-alt: #0f172a;  /* slate-900  */
-            --ts-border:      #334155;  /* slate-700  */
-            --ts-border-sub:  #1e293b;  /* slate-800  */
-            --ts-text:        #f1f5f9;  /* slate-100  */
-            --ts-text-muted:  #94a3b8;  /* slate-400  */
-            --ts-text-faint:  #64748b;  /* slate-500  */
-            --ts-nav-bg:      #020617;  /* slate-950  */
-            --ts-nav-text:    #e2e8f0;  /* slate-200  */
-            --ts-nav-border:  #1e293b;  /* slate-800  */
-            --ts-nav-hover:   #1e293b;  /* slate-800  */
-        }
-        /* ── /Design tokens ──────────────────────────────────────────────────────── */
-
         .htmx-indicator { display: none; }
         .htmx-request .htmx-indicator { display: inline-block; }
         .htmx-request.htmx-indicator { display: inline-block; }
@@ -139,7 +105,7 @@
             height: 100%;
             width: 480px;
             max-width: 90vw;
-            background: var(--ts-surface);
+            background: var(--color-bg-surface);
             box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
             z-index: 50;
             transform: translateX(100%);

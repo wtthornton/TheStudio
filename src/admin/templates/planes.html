@@ -2,7 +2,7 @@
 {% block title %}Execution Planes{% endblock %}
 {% block page_title %}Execution Planes{% endblock %}
 {% block header_right %}
-<span class="htmx-indicator text-gray-400 text-xs">Loading...</span>
+<span class="htmx-indicator text-[var(--color-text-secondary)] text-xs">Loading...</span>
 {% endblock %}
 {% block content %}
 <div id="planes-content"
@@ -12,6 +12,6 @@
      hx-trigger="load"
      hx-swap="innerHTML"
      hx-indicator="closest div">
-    <div class="text-center py-12 text-gray-400 text-sm htmx-indicator" role="status" aria-live="polite">Loading execution planes...</div>
+    <div class="text-center py-12 text-[var(--color-text-secondary)] text-sm htmx-indicator" role="status" aria-live="polite">Loading execution planes...</div>
 </div>
 {% endblock %}

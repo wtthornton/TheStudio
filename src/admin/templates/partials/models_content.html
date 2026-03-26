@@ -6,7 +6,7 @@
         <h3 class="text-lg font-semibold mb-4">Model Providers</h3>
         <table class="w-full text-sm">
             <thead>
-                <tr class="text-left text-gray-500 border-b">
+                <tr class="text-left text-[var(--color-text-secondary)] border-b">
                     <th scope="col" class="py-2">Provider</th>
                     <th scope="col" class="py-2">Model</th>
                     <th scope="col" class="py-2">Class</th>
@@ -51,7 +51,7 @@
         <h3 class="text-lg font-semibold mb-4">Routing Rules</h3>
         <table class="w-full text-sm">
             <thead>
-                <tr class="text-left text-gray-500 border-b">
+                <tr class="text-left text-[var(--color-text-secondary)] border-b">
                     <th scope="col" class="py-2">Step</th>
                     <th scope="col" class="py-2">Default Class</th>
                     <th scope="col" class="py-2">Overrides</th>
@@ -70,7 +70,7 @@
                         <span class="text-purple-600 font-medium">STRONG</span>
                         {% endif %}
                     </td>
-                    <td class="py-2 text-xs text-gray-500">
+                    <td class="py-2 text-xs text-[var(--color-text-secondary)]">
                         {% if rule.overlay_overrides %}overlay: {{ rule.overlay_overrides | join(', ') }}{% endif %}
                         {% if rule.tier_overrides %}tier: {{ rule.tier_overrides | join(', ') }}{% endif %}
                         {% if not rule.overlay_overrides and not rule.tier_overrides %}&mdash;{% endif %}
@@ -86,7 +86,7 @@
         <h3 class="text-lg font-semibold mb-4">Routing Simulator</h3>
         <div class="grid grid-cols-4 gap-3 text-sm">
             <div>
-                <label class="block text-xs text-gray-500 mb-1">Step</label>
+                <label class="block text-xs text-[var(--color-text-secondary)] mb-1">Step</label>
                 <select id="sim-step" class="w-full border rounded px-2 py-1 text-sm">
                     {% for rule in rules %}
                     <option value="{{ rule.step }}">{{ rule.step }}</option>
@@ -94,7 +94,7 @@
                 </select>
             </div>
             <div>
-                <label class="block text-xs text-gray-500 mb-1">Role</label>
+                <label class="block text-xs text-[var(--color-text-secondary)] mb-1">Role</label>
                 <select id="sim-role" class="w-full border rounded px-2 py-1 text-sm">
                     <option value="">none</option>
                     <option value="developer">developer</option>
@@ -102,7 +102,7 @@
                 </select>
             </div>
             <div>
-                <label class="block text-xs text-gray-500 mb-1">Overlay</label>
+                <label class="block text-xs text-[var(--color-text-secondary)] mb-1">Overlay</label>
                 <select id="sim-overlay" class="w-full border rounded px-2 py-1 text-sm">
                     <option value="">none</option>
                     <option value="security">security</option>
@@ -110,7 +110,7 @@
                 </select>
             </div>
             <div>
-                <label class="block text-xs text-gray-500 mb-1">Tier</label>
+                <label class="block text-xs text-[var(--color-text-secondary)] mb-1">Tier</label>
                 <select id="sim-tier" class="w-full border rounded px-2 py-1 text-sm">
                     <option value="">default</option>
                     <option value="observe">observe</option>
@@ -119,7 +119,7 @@
                 </select>
             </div>
         </div>
-        <div id="sim-result" class="mt-3 text-sm text-gray-600"></div>
+        <div id="sim-result" class="mt-3 text-sm text-[var(--color-text-secondary)]"></div>
     </div>
 
 </div>

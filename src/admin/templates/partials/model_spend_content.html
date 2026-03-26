@@ -4,17 +4,17 @@
     <!-- Summary -->
     <div class="grid grid-cols-3 gap-4">
         <div class="bg-white rounded-lg border border-gray-200 p-4">
-            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Spend</p>
+            <p class="text-xs font-medium text-[var(--color-text-secondary)] uppercase tracking-wide">Total Spend</p>
             <p class="text-2xl font-bold mt-1">${{ "%.4f" | format(report.total_cost) }}</p>
-            <p class="text-xs text-gray-400 mt-1">Last {{ report.window_hours }}h</p>
+            <p class="text-xs text-[var(--color-text-secondary)] mt-1">Last {{ report.window_hours }}h</p>
         </div>
         <div class="bg-white rounded-lg border border-gray-200 p-4">
-            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Calls</p>
+            <p class="text-xs font-medium text-[var(--color-text-secondary)] uppercase tracking-wide">Total Calls</p>
             <p class="text-2xl font-bold mt-1">{{ report.total_calls }}</p>
-            <p class="text-xs text-gray-400 mt-1">Last {{ report.window_hours }}h</p>
+            <p class="text-xs text-[var(--color-text-secondary)] mt-1">Last {{ report.window_hours }}h</p>
         </div>
         <div class="bg-white rounded-lg border border-gray-200 p-4">
-            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Avg Cost/Call</p>
+            <p class="text-xs font-medium text-[var(--color-text-secondary)] uppercase tracking-wide">Avg Cost/Call</p>
             <p class="text-2xl font-bold mt-1">
                 {% if report.total_calls > 0 %}
                 ${{ "%.6f" | format(report.total_cost / report.total_calls) }}
@@ -22,7 +22,7 @@
                 $0.00
                 {% endif %}
             </p>
-            <p class="text-xs text-gray-400 mt-1">Last {{ report.window_hours }}h</p>
+            <p class="text-xs text-[var(--color-text-secondary)] mt-1">Last {{ report.window_hours }}h</p>
         </div>
     </div>
 
@@ -32,7 +32,7 @@
         {% if report.by_provider %}
         <table class="w-full text-sm">
             <thead>
-                <tr class="border-b border-gray-200 text-left text-xs text-gray-500 uppercase tracking-wide">
+                <tr class="border-b border-gray-200 text-left text-xs text-[var(--color-text-secondary)] uppercase tracking-wide">
                     <th scope="col" class="pb-2 pr-4">Provider</th>
                     <th scope="col" class="pb-2 pr-4">Cost</th>
                     <th scope="col" class="pb-2 pr-4">Calls</th>
@@ -47,8 +47,8 @@
                     <td class="py-2 pr-4 font-medium">{{ s.key }}</td>
                     <td class="py-2 pr-4">${{ "%.4f" | format(s.total_cost) }}</td>
                     <td class="py-2 pr-4">{{ s.call_count }}</td>
-                    <td class="py-2 pr-4 text-gray-500">{{ s.total_tokens }}</td>
-                    <td class="py-2 pr-4 text-gray-500">{{ "%.0f" | format(s.avg_latency_ms) }}ms</td>
+                    <td class="py-2 pr-4 text-[var(--color-text-secondary)]">{{ s.total_tokens }}</td>
+                    <td class="py-2 pr-4 text-[var(--color-text-secondary)]">{{ "%.0f" | format(s.avg_latency_ms) }}ms</td>
                     <td class="py-2">
                         {% if s.error_count > 0 %}
                         <span class="text-red-600">{{ s.error_count }}</span>
@@ -71,7 +71,7 @@
         {% if report.by_step %}
         <table class="w-full text-sm">
             <thead>
-                <tr class="border-b border-gray-200 text-left text-xs text-gray-500 uppercase tracking-wide">
+                <tr class="border-b border-gray-200 text-left text-xs text-[var(--color-text-secondary)] uppercase tracking-wide">
                     <th scope="col" class="pb-2 pr-4">Step</th>
                     <th scope="col" class="pb-2 pr-4">Cost</th>
                     <th scope="col" class="pb-2 pr-4">Calls</th>
@@ -85,7 +85,7 @@
                     <td class="py-2 pr-4 font-medium">{{ s.key }}</td>
                     <td class="py-2 pr-4">${{ "%.4f" | format(s.total_cost) }}</td>
                     <td class="py-2 pr-4">{{ s.call_count }}</td>
-                    <td class="py-2 pr-4 text-gray-500">{{ s.total_tokens }}</td>
+                    <td class="py-2 pr-4 text-[var(--color-text-secondary)]">{{ s.total_tokens }}</td>
                     <td class="py-2">{{ s.error_count }}</td>
                 </tr>
                 {% endfor %}
@@ -102,7 +102,7 @@
         {% if report.by_model %}
         <table class="w-full text-sm">
             <thead>
-                <tr class="border-b border-gray-200 text-left text-xs text-gray-500 uppercase tracking-wide">
+                <tr class="border-b border-gray-200 text-left text-xs text-[var(--color-text-secondary)] uppercase tracking-wide">
                     <th scope="col" class="pb-2 pr-4">Model</th>
                     <th scope="col" class="pb-2 pr-4">Cost</th>
                     <th scope="col" class="pb-2 pr-4">Calls</th>

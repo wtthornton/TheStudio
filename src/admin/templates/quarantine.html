@@ -2,10 +2,10 @@
 {% block title %}Quarantine{% endblock %}
 {% block page_title %}Quarantine Operations{% endblock %}
 {% block header_right %}
-<span class="htmx-indicator text-gray-400 text-xs">Loading...</span>
+<span class="htmx-indicator text-[var(--color-text-secondary)] text-xs">Loading...</span>
 {% endblock %}
 {% block content %}
-<p class="text-sm text-gray-500 mb-4">Quarantine holds risky or policy-blocked payloads. Use the audit log for a full history of admin actions.</p>
+<p class="text-sm text-[var(--color-text-secondary)] mb-4">Quarantine holds risky or policy-blocked payloads. Use the audit log for a full history of admin actions.</p>
 <div id="quarantine-content"
      data-admin-htmx-section="true"
      aria-label="Quarantine events"
@@ -13,6 +13,6 @@
      hx-trigger="load"
      hx-swap="innerHTML"
      hx-indicator="closest div">
-    <div class="text-center py-12 text-gray-400 text-sm htmx-indicator" role="status" aria-live="polite">Loading quarantine events...</div>
+    <div class="text-center py-12 text-[var(--color-text-secondary)] text-sm htmx-indicator" role="status" aria-live="polite">Loading quarantine events...</div>
 </div>
 {% endblock %}

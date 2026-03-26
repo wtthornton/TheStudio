@@ -1,19 +1,19 @@
 <!-- Budget Utilization widget — loaded via HTMX (Story 32.14) -->
-<div class="bg-white rounded-lg border border-gray-200 p-4 fade-in">
-    <h4 class="text-sm font-semibold text-gray-700 mb-4">Budget Utilization by Trust Tier</h4>
+<div class="bg-[var(--color-bg-surface)] rounded-lg border border-[var(--color-border-primary)] p-4 fade-in">
+    <h4 class="text-sm font-semibold text-[var(--color-text-tertiary)] mb-4">Budget Utilization by Trust Tier</h4>
     <div class="grid grid-cols-3 gap-4">
         {% for tier in utilization %}
-        <div class="border border-gray-100 rounded-lg p-4">
+        <div class="border border-[var(--color-border-secondary)] rounded-lg p-4">
             <div class="flex items-center justify-between mb-2">
                 <span class="text-sm font-semibold capitalize">{{ tier.tier }}</span>
-                <span class="text-xs text-gray-500">{{ tier.active_tasks }} task{{ "s" if tier.active_tasks != 1 else "" }}</span>
+                <span class="text-xs text-[var(--color-text-secondary)]">{{ tier.active_tasks }} task{{ "s" if tier.active_tasks != 1 else "" }}</span>
             </div>
             <!-- Budget gauge -->
-            <div class="w-full bg-gray-200 rounded-full h-4 mb-2">
+            <div class="w-full bg-[var(--color-bg-elevated)] rounded-full h-4 mb-2">
                 <div class="h-4 rounded-full {% if tier.utilization_pct >= 90 %}bg-red-500{% elif tier.utilization_pct >= 70 %}bg-yellow-500{% else %}bg-green-500{% endif %}"
                      style="width: {{ [tier.utilization_pct, 100] | min }}%"></div>
             </div>
-            <div class="flex items-center justify-between text-xs text-gray-500">
+            <div class="flex items-center justify-between text-xs text-[var(--color-text-secondary)]">
                 <span>${{ "%.4f" | format(tier.current_spend) }} used</span>
                 <span>${{ "%.2f" | format(tier.budget_limit) }} limit</span>
             </div>

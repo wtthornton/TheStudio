@@ -3,11 +3,11 @@
 
 <div class="space-y-6">
     <!-- Header -->
-    <div class="bg-white rounded-lg border border-gray-200 p-6">
+    <div class="bg-[var(--color-bg-surface)] rounded-lg border border-[var(--color-border-primary)] p-6">
         <div class="flex items-center justify-between mb-4">
             <div>
                 <h3 class="text-lg font-semibold">{{ repo.owner }}/{{ repo.repo }}</h3>
-                <p class="text-sm text-gray-500 mt-1">ID: {{ repo.id }}</p>
+                <p class="text-sm text-[var(--color-text-secondary)] mt-1">ID: {{ repo.id }}</p>
             </div>
             <div class="flex items-center gap-2">
                 {{ tier_badge(repo.tier) }}
@@ -29,15 +29,15 @@
         </div>
         <div class="grid grid-cols-3 gap-4 text-sm">
             <div>
-                <span class="text-gray-500">Installation ID:</span>
+                <span class="text-[var(--color-text-secondary)]">Installation ID:</span>
                 <span class="ml-1 font-medium">{{ repo.installation_id }}</span>
             </div>
             <div>
-                <span class="text-gray-500">Default Branch:</span>
+                <span class="text-[var(--color-text-secondary)]">Default Branch:</span>
                 <span class="ml-1 font-medium">{{ repo.default_branch | default('main') }}</span>
             </div>
             <div>
-                <span class="text-gray-500">Created:</span>
+                <span class="text-[var(--color-text-secondary)]">Created:</span>
                 <span class="ml-1 font-medium">{{ repo.created_at }}</span>
             </div>
         </div>
@@ -45,8 +45,8 @@
 
     <!-- Profile -->
     {% if repo.profile %}
-    <div class="bg-white rounded-lg border border-gray-200 p-6">
-        <h4 class="text-sm font-semibold text-gray-700 mb-4">Repo Profile</h4>
+    <div class="bg-[var(--color-bg-surface)] rounded-lg border border-[var(--color-border-primary)] p-6">
+        <h4 class="text-sm font-semibold text-[var(--color-text-secondary)] mb-4">Repo Profile</h4>
         {% if can_update_profile %}
         <form hx-patch="/admin/repos/{{ repo.id }}/profile" hx-target="#profile-result" hx-swap="innerHTML"
               hx-headers='{"X-User-ID": "{{ current_user_id }}", "Content-Type": "application/json"}'
@@ -54,50 +54,50 @@
         {% endif %}
         <div class="grid grid-cols-2 gap-4">
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Language</label>
+                <label class="block text-xs font-medium text-[var(--color-text-tertiary)] mb-1">Language</label>
                 <input type="text" name="language" value="{{ repo.profile.language | default('') }}"
                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                        {% if not can_update_profile %}disabled{% endif %}>
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Build Commands</label>
+                <label class="block text-xs font-medium text-[var(--color-text-tertiary)] mb-1">Build Commands</label>
                 <input type="text" name="build_commands" value="{{ repo.profile.build_commands | default('') }}"
                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                        {% if not can_update_profile %}disabled{% endif %}>
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Required Checks</label>
+                <label class="block text-xs font-medium text-[var(--color-text-tertiary)] mb-1">Required Checks</label>
                 <input type="text" name="required_checks" value="{{ repo.profile.required_checks | default('') }}"
                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                        {% if not can_update_profile %}disabled{% endif %}>
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Risk Paths</label>
+                <label class="block text-xs font-medium text-[var(--color-text-tertiary)] mb-1">Risk Paths</label>
                 <input type="text" name="risk_paths" value="{{ repo.profile.risk_paths | default('') }}"
                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                        {% if not can_update_profile %}disabled{% endif %}>
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Enable Issue Polling</label>
+                <label class="block text-xs font-medium text-[var(--color-text-tertiary)] mb-1">Enable Issue Polling</label>
                 <select name="poll_enabled" class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                         {% if not can_update_profile %}disabled{% endif %}>
                     <option value="true" {% if repo.profile.poll_enabled %}selected{% endif %}>Enabled</option>
                     <option value="false" {% if not repo.profile.poll_enabled %}selected{% endif %}>Disabled</option>
                 </select>
-                <p class="text-xs text-gray-400 mt-1">Polling checks GitHub for new/updated issues. Use when webhooks are not available (e.g. no public URL).</p>
+                <p class="text-xs text-[var(--color-text-secondary)] mt-1">Polling checks GitHub for new/updated issues. Use when webhooks are not available (e.g. no public URL).</p>
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Poll Interval (minutes)</label>
+                <label class="block text-xs font-medium text-[var(--color-text-tertiary)] mb-1">Poll Interval (minutes)</label>
                 <input type="number" name="poll_interval_minutes" min="5" max="60"
                        value="{{ repo.profile.poll_interval_minutes | default(10) }}"
                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                        {% if not can_update_profile %}disabled{% endif %}>
-                <p class="text-xs text-gray-400 mt-1">How often to check for new issues (5-60 min). Leave at default unless this repo needs a different cadence.</p>
+                <p class="text-xs text-[var(--color-text-secondary)] mt-1">How often to check for new issues (5-60 min). Leave at default unless this repo needs a different cadence.</p>
             </div>
         </div>
         {% if can_update_profile %}
         <div class="mt-4">
-            <button type="submit" class="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">Update Profile</button>
+            <button type="submit" class="px-4 py-2 bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] text-sm rounded hover:bg-[var(--color-interactive-hover)]">Update Profile</button>
         </div>
         </form>
         <div id="profile-result" class="mt-3"></div>
@@ -106,21 +106,21 @@
     {% endif %}
 
     <!-- Merge Mode -->
-    <div class="bg-white rounded-lg border border-gray-200 p-6">
-        <h4 class="text-sm font-semibold text-gray-700 mb-4">Merge Mode</h4>
+    <div class="bg-[var(--color-bg-surface)] rounded-lg border border-[var(--color-border-primary)] p-6">
+        <h4 class="text-sm font-semibold text-[var(--color-text-secondary)] mb-4">Merge Mode</h4>
         <div id="merge-mode-{{ repo.id }}"
              data-admin-htmx-section="true"
              aria-label="Merge mode for this repository"
              hx-get="/admin/ui/partials/merge-mode/{{ repo.id }}"
              hx-trigger="load"
              hx-swap="innerHTML">
-            <span class="text-gray-400 text-sm" role="status" aria-live="polite">Loading merge mode…</span>
+            <span class="text-[var(--color-text-secondary)] text-sm" role="status" aria-live="polite">Loading merge mode…</span>
         </div>
     </div>
 
     <!-- Actions -->
-    <div class="bg-white rounded-lg border border-gray-200 p-6">
-        <h4 class="text-sm font-semibold text-gray-700 mb-4">Actions</h4>
+    <div class="bg-[var(--color-bg-surface)] rounded-lg border border-[var(--color-border-primary)] p-6">
+        <h4 class="text-sm font-semibold text-[var(--color-text-secondary)] mb-4">Actions</h4>
         {# §13.1 Tier escalation intent preview — EXECUTE is a high-impact autonomy change (SG §13.6) #}
         {% if can_change_tier %}
         <div class="mb-4" id="tier-intent-preview">
@@ -139,7 +139,7 @@
         <div class="flex flex-wrap gap-3" id="repo-actions">
             {% if can_change_tier %}
             <div class="flex items-center gap-2">
-                <select id="tier-select" class="border border-gray-300 rounded px-3 py-2 text-sm"
+                <select id="tier-select" class="border border-[var(--color-border-primary)] rounded px-3 py-2 text-sm"
                         aria-label="Select new trust tier">
                     <option value="observe" {% if repo.tier == 'observe' %}selected{% endif %}>Observe</option>
                     <option value="suggest" {% if repo.tier == 'suggest' %}selected{% endif %}>Suggest</option>
@@ -192,7 +192,7 @@
                     hx-headers='{"X-User-ID": "{{ current_user_id }}"}'
                     hx-target="#action-result" hx-swap="innerHTML"
                     hx-confirm="Delete this repo? This action is soft-delete and can be reversed."
-                    class="px-3 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700">
+                    class="px-3 py-2 bg-[var(--color-interactive-destructive)] text-white text-sm rounded hover:bg-red-700">
                 Delete
             </button>
             {% endif %}
@@ -201,15 +201,15 @@
     </div>
 
     <!-- Promotion History -->
-    <div class="bg-white rounded-lg border border-gray-200 p-6">
-        <h4 class="text-sm font-semibold text-gray-700 mb-4">Promotion History</h4>
+    <div class="bg-[var(--color-bg-surface)] rounded-lg border border-[var(--color-border-primary)] p-6">
+        <h4 class="text-sm font-semibold text-[var(--color-text-secondary)] mb-4">Promotion History</h4>
         <div id="promotion-history-{{ repo.id }}"
              data-admin-htmx-section="true"
              aria-label="Trust tier promotion history"
              hx-get="/admin/ui/partials/promotion-history/{{ repo.id }}"
              hx-trigger="load"
              hx-swap="innerHTML">
-            <span class="text-gray-400 text-sm" role="status" aria-live="polite">Loading promotion history…</span>
+            <span class="text-[var(--color-text-secondary)] text-sm" role="status" aria-live="polite">Loading promotion history…</span>
         </div>
     </div>
 </div>

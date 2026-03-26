@@ -3,25 +3,25 @@
 {% from "components/detail_panel.html" import panel_trigger_btn %}
 
 {% if workflows %}
-<div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
-    <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
+<div class="bg-[var(--color-bg-surface)] rounded-lg border border-[var(--color-border-primary)] overflow-hidden">
+    <table class="min-w-full divide-y divide-[var(--color-border-primary)]">
+        <thead class="bg-[var(--color-bg-elevated)]">
             <tr>
-                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-[var(--color-text-secondary)] uppercase"
                     data-tooltip="Unique workflow identifier (truncated) — click to open detail panel">Workflow ID</th>
-                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Repo</th>
-                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-[var(--color-text-secondary)] uppercase">Repo</th>
+                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-[var(--color-text-secondary)] uppercase"
                     data-tooltip="Current Temporal workflow execution state">Status</th>
-                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-[var(--color-text-secondary)] uppercase"
                     data-tooltip="Pipeline stage the workflow is currently executing">Step</th>
-                <th scope="col" class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase"
+                <th scope="col" class="px-4 py-3 text-right text-xs font-medium text-[var(--color-text-secondary)] uppercase"
                     data-tooltip="Total number of execution attempts including retries">Attempts</th>
-                <th scope="col" class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                <th scope="col" class="px-4 py-3 text-right text-xs font-medium text-[var(--color-text-secondary)] uppercase">Actions</th>
             </tr>
         </thead>
-        <tbody class="divide-y divide-gray-100">
+        <tbody class="divide-y divide-[var(--color-border-secondary)]">
             {% for wf in workflows %}
-            <tr class="hover:bg-gray-50">
+            <tr class="hover:bg-[var(--color-bg-elevated)]">
                 <td class="px-4 py-3 text-sm">
                     {{ panel_trigger_btn(
                         hx_get="/admin/ui/panel/workflows/" ~ wf.id,
@@ -37,7 +37,7 @@
                 <td class="px-4 py-3 text-right">
                     <a href="/admin/ui/workflows/{{ wf.id }}" class="text-blue-600 hover:underline text-sm">Full Detail</a>
                     {% if wf.repo_name %}
-                    <span class="mx-1 text-gray-300">|</span>
+                    <span class="mx-1 text-[var(--color-border-primary)]">|</span>
                     <a href="/dashboard/?tab=pipeline&repo={{ wf.repo_name | urlencode }}"
                        class="text-indigo-600 hover:underline text-sm"
                        data-tooltip="Open Pipeline Dashboard filtered to this repo">View Pipeline</a>

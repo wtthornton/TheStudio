@@ -1,9 +1,9 @@
 <div class="space-y-6">
     <!-- API Keys Card -->
-    <div class="bg-white rounded-lg shadow border border-gray-200">
-        <div class="px-6 py-4 border-b border-gray-200">
-            <h3 class="text-lg font-medium text-gray-900">API Keys</h3>
-            <p class="text-sm text-gray-500 mt-1">Manage external service API keys</p>
+    <div class="bg-[var(--color-bg-surface)] rounded-lg shadow border border-[var(--color-border-primary)]">
+        <div class="px-6 py-4 border-b border-[var(--color-border-primary)]">
+            <h3 class="text-lg font-medium text-[var(--color-text-primary)]">API Keys</h3>
+            <p class="text-sm text-[var(--color-text-secondary)] mt-1">Manage external service API keys</p>
         </div>
         <div id="settings-api-keys"
              data-admin-htmx-section="true"
@@ -11,15 +11,15 @@
              hx-get="/admin/ui/partials/settings/api-keys"
              hx-trigger="load"
              hx-swap="innerHTML">
-            <div class="px-6 py-4 text-gray-400 text-sm" role="status" aria-live="polite">Loading API keys…</div>
+            <div class="px-6 py-4 text-[var(--color-text-secondary)] text-sm" role="status" aria-live="polite">Loading API keys…</div>
         </div>
     </div>
 
     <!-- Infrastructure Card -->
-    <div class="bg-white rounded-lg shadow border border-gray-200">
-        <div class="px-6 py-4 border-b border-gray-200">
-            <h3 class="text-lg font-medium text-gray-900">Infrastructure</h3>
-            <p class="text-sm text-gray-500 mt-1">Database, messaging, and observability connections</p>
+    <div class="bg-[var(--color-bg-surface)] rounded-lg shadow border border-[var(--color-border-primary)]">
+        <div class="px-6 py-4 border-b border-[var(--color-border-primary)]">
+            <h3 class="text-lg font-medium text-[var(--color-text-primary)]">Infrastructure</h3>
+            <p class="text-sm text-[var(--color-text-secondary)] mt-1">Database, messaging, and observability connections</p>
         </div>
         <div id="settings-infrastructure"
              data-admin-htmx-section="true"
@@ -27,15 +27,15 @@
              hx-get="/admin/ui/partials/settings/infrastructure"
              hx-trigger="load"
              hx-swap="innerHTML">
-            <div class="px-6 py-4 text-gray-400 text-sm" role="status" aria-live="polite">Loading infrastructure…</div>
+            <div class="px-6 py-4 text-[var(--color-text-secondary)] text-sm" role="status" aria-live="polite">Loading infrastructure…</div>
         </div>
     </div>
 
     <!-- Feature Flags Card -->
-    <div class="bg-white rounded-lg shadow border border-gray-200">
-        <div class="px-6 py-4 border-b border-gray-200">
-            <h3 class="text-lg font-medium text-gray-900">Feature Flags</h3>
-            <p class="text-sm text-gray-500 mt-1">Provider and backend toggles</p>
+    <div class="bg-[var(--color-bg-surface)] rounded-lg shadow border border-[var(--color-border-primary)]">
+        <div class="px-6 py-4 border-b border-[var(--color-border-primary)]">
+            <h3 class="text-lg font-medium text-[var(--color-text-primary)]">Feature Flags</h3>
+            <p class="text-sm text-[var(--color-text-secondary)] mt-1">Provider and backend toggles</p>
         </div>
         <div id="settings-feature-flags"
              data-admin-htmx-section="true"
@@ -43,15 +43,15 @@
              hx-get="/admin/ui/partials/settings/feature-flags"
              hx-trigger="load"
              hx-swap="innerHTML">
-            <div class="px-6 py-4 text-gray-400 text-sm" role="status" aria-live="polite">Loading feature flags…</div>
+            <div class="px-6 py-4 text-[var(--color-text-secondary)] text-sm" role="status" aria-live="polite">Loading feature flags…</div>
         </div>
     </div>
 
     <!-- Agent Config Card -->
-    <div class="bg-white rounded-lg shadow border border-gray-200">
-        <div class="px-6 py-4 border-b border-gray-200">
-            <h3 class="text-lg font-medium text-gray-900">Agent Configuration</h3>
-            <p class="text-sm text-gray-500 mt-1">Model selection and execution limits</p>
+    <div class="bg-[var(--color-bg-surface)] rounded-lg shadow border border-[var(--color-border-primary)]">
+        <div class="px-6 py-4 border-b border-[var(--color-border-primary)]">
+            <h3 class="text-lg font-medium text-[var(--color-text-primary)]">Agent Configuration</h3>
+            <p class="text-sm text-[var(--color-text-secondary)] mt-1">Model selection and execution limits</p>
         </div>
         <div id="settings-agent-config"
              data-admin-htmx-section="true"
@@ -59,15 +59,15 @@
              hx-get="/admin/ui/partials/settings/agent-config"
              hx-trigger="load"
              hx-swap="innerHTML">
-            <div class="px-6 py-4 text-gray-400 text-sm" role="status" aria-live="polite">Loading agent configuration…</div>
+            <div class="px-6 py-4 text-[var(--color-text-secondary)] text-sm" role="status" aria-live="polite">Loading agent configuration…</div>
         </div>
     </div>
 
     <!-- Budget Controls Card (Epic 32, Story 32.7) -->
-    <div class="bg-white rounded-lg shadow border border-gray-200">
-        <div class="px-6 py-4 border-b border-gray-200">
-            <h3 class="text-lg font-medium text-gray-900">Budget Controls</h3>
-            <p class="text-sm text-gray-500 mt-1">Per-tier pipeline budget caps (USD per issue)</p>
+    <div class="bg-[var(--color-bg-surface)] rounded-lg shadow border border-[var(--color-border-primary)]">
+        <div class="px-6 py-4 border-b border-[var(--color-border-primary)]">
+            <h3 class="text-lg font-medium text-[var(--color-text-primary)]">Budget Controls</h3>
+            <p class="text-sm text-[var(--color-text-secondary)] mt-1">Per-tier pipeline budget caps (USD per issue)</p>
         </div>
         <div id="settings-budget-controls"
              data-admin-htmx-section="true"
@@ -75,15 +75,15 @@
              hx-get="/admin/ui/partials/settings/budget-controls"
              hx-trigger="load"
              hx-swap="innerHTML">
-            <div class="px-6 py-4 text-gray-400 text-sm" role="status" aria-live="polite">Loading budget controls…</div>
+            <div class="px-6 py-4 text-[var(--color-text-secondary)] text-sm" role="status" aria-live="polite">Loading budget controls…</div>
         </div>
     </div>
 
     <!-- Secrets Card -->
-    <div class="bg-white rounded-lg shadow border border-gray-200">
-        <div class="px-6 py-4 border-b border-gray-200">
-            <h3 class="text-lg font-medium text-gray-900">Secrets</h3>
-            <p class="text-sm text-gray-500 mt-1">Encryption keys and webhook secrets</p>
+    <div class="bg-[var(--color-bg-surface)] rounded-lg shadow border border-[var(--color-border-primary)]">
+        <div class="px-6 py-4 border-b border-[var(--color-border-primary)]">
+            <h3 class="text-lg font-medium text-[var(--color-text-primary)]">Secrets</h3>
+            <p class="text-sm text-[var(--color-text-secondary)] mt-1">Encryption keys and webhook secrets</p>
         </div>
         <div id="settings-secrets"
              data-admin-htmx-section="true"
@@ -91,7 +91,7 @@
              hx-get="/admin/ui/partials/settings/secrets"
              hx-trigger="load"
              hx-swap="innerHTML">
-            <div class="px-6 py-4 text-gray-400 text-sm" role="status" aria-live="polite">Loading secrets…</div>
+            <div class="px-6 py-4 text-[var(--color-text-secondary)] text-sm" role="status" aria-live="polite">Loading secrets…</div>
         </div>
     </div>
 </div>

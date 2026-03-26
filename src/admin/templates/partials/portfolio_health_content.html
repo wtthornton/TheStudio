@@ -1,8 +1,8 @@
 {% if not has_data %}
 <div class="text-center py-12">
-    <div class="text-gray-400 text-4xl mb-4">&#9829;</div>
-    <h3 class="text-lg font-medium text-gray-600">No Portfolio Reviews Yet</h3>
-    <p class="text-sm text-gray-400 mt-2">
+    <div class="text-[var(--color-text-secondary)] text-4xl mb-4">&#9829;</div>
+    <h3 class="text-lg font-medium text-[var(--color-text-tertiary)]">No Portfolio Reviews Yet</h3>
+    <p class="text-sm text-[var(--color-text-secondary)] mt-2">
         Enable <code>meridian_portfolio_enabled</code> in settings and
         the scheduled review will populate this dashboard.
     </p>
@@ -20,7 +20,7 @@
             {% elif latest.overall_health == 'warning' %}WARNING
             {% else %}CRITICAL{% endif %}
         </div>
-        <div class="text-sm text-gray-500">
+        <div class="text-sm text-[var(--color-text-secondary)]">
             Last reviewed: {{ latest.reviewed_at }}
         </div>
     </div>
@@ -30,8 +30,8 @@
 {% if latest.metrics %}
 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
     {% for key, value in latest.metrics.items() %}
-    <div class="bg-white border border-gray-200 rounded-lg p-4">
-        <div class="text-xs text-gray-500 uppercase tracking-wide">{{ key }}</div>
+    <div class="bg-[var(--color-bg-surface)] border border-[var(--color-border-primary)] rounded-lg p-4">
+        <div class="text-xs text-[var(--color-text-secondary)] uppercase tracking-wide">{{ key }}</div>
         <div class="text-2xl font-semibold mt-1">
             {% if value is number and value < 1.0 %}
                 {{ "%.1f"|format(value * 100) }}%
@@ -64,9 +64,9 @@
                     {{ flag.category }} &mdash; {{ flag.severity }}
                 </span>
             </div>
-            <p class="text-sm text-gray-700">{{ flag.description }}</p>
+            <p class="text-sm text-[var(--color-text-tertiary)]">{{ flag.description }}</p>
             {% if flag.affected_items %}
-            <div class="mt-2 text-xs text-gray-500">
+            <div class="mt-2 text-xs text-[var(--color-text-secondary)]">
                 Affected: {{ flag.affected_items[:5]|join(', ') }}
                 {% if flag.affected_items|length > 5 %}
                     and {{ flag.affected_items|length - 5 }} more
@@ -87,7 +87,7 @@
 {% if latest.recommendations %}
 <div class="mb-6">
     <h3 class="text-lg font-semibold mb-3">Recommendations</h3>
-    <ul class="list-disc list-inside space-y-1 text-sm text-gray-700">
+    <ul class="list-disc list-inside space-y-1 text-sm text-[var(--color-text-tertiary)]">
         {% for rec in latest.recommendations %}
         <li>{{ rec }}</li>
         {% endfor %}
@@ -102,15 +102,15 @@
     <div class="overflow-x-auto">
         <table class="min-w-full text-sm">
             <thead>
-                <tr class="border-b border-gray-200">
-                    <th scope="col" class="text-left py-2 px-3 text-gray-500 font-medium">Date</th>
-                    <th scope="col" class="text-left py-2 px-3 text-gray-500 font-medium">Health</th>
-                    <th scope="col" class="text-left py-2 px-3 text-gray-500 font-medium">Flags</th>
+                <tr class="border-b border-[var(--color-border-primary)]">
+                    <th scope="col" class="text-left py-2 px-3 text-[var(--color-text-secondary)] font-medium">Date</th>
+                    <th scope="col" class="text-left py-2 px-3 text-[var(--color-text-secondary)] font-medium">Health</th>
+                    <th scope="col" class="text-left py-2 px-3 text-[var(--color-text-secondary)] font-medium">Flags</th>
                 </tr>
             </thead>
             <tbody>
                 {% for r in trend %}
-                <tr class="border-b border-gray-100">
+                <tr class="border-b border-[var(--color-border-secondary)]">
                     <td class="py-2 px-3">{{ r.reviewed_at }}</td>
                     <td class="py-2 px-3">
                         <span class="inline-block px-2 py-0.5 rounded text-xs font-medium

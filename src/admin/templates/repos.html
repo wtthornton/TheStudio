@@ -7,7 +7,7 @@
 {% block header_right %}
 {% if current_user_role and current_user_role.value == 'admin' %}
 <button onclick="document.getElementById('register-form').classList.toggle('hidden')"
-        class="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
+        class="px-3 py-1.5 bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] text-sm rounded hover:bg-[var(--color-interactive-hover)]">
     Register Repo
 </button>
 {% endif %}
@@ -16,36 +16,36 @@
 {% block content %}
 <!-- Register Form (hidden by default); anchor for empty-state CTA (Epic 46.7) -->
 <div id="register-repo-section"></div>
-<div id="register-form" class="hidden mb-6 bg-white rounded-lg border border-gray-200 p-6">
-    <h3 class="text-sm font-semibold text-gray-700 mb-4">Register New Repository</h3>
+<div id="register-form" class="hidden mb-6 bg-[var(--color-bg-surface)] rounded-lg border border-[var(--color-border-primary)] p-6">
+    <h3 class="text-sm font-semibold text-[var(--color-text-secondary)] mb-4">Register New Repository</h3>
     <form hx-post="/admin/repos" hx-target="#register-result" hx-swap="innerHTML"
           hx-headers='{"X-User-ID": "{{ current_user_id }}"}'>
         <div class="grid grid-cols-2 gap-4 mb-4">
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Owner</label>
+                <label class="block text-xs font-medium text-[var(--color-text-tertiary)] mb-1">Owner</label>
                 <input type="text" name="owner" required
                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500">
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Repository</label>
+                <label class="block text-xs font-medium text-[var(--color-text-tertiary)] mb-1">Repository</label>
                 <input type="text" name="repo" required
                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500">
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Installation ID</label>
+                <label class="block text-xs font-medium text-[var(--color-text-tertiary)] mb-1">Installation ID</label>
                 <input type="number" name="installation_id" required
                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500">
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Default Branch</label>
+                <label class="block text-xs font-medium text-[var(--color-text-tertiary)] mb-1">Default Branch</label>
                 <input type="text" name="default_branch" value="main"
                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500">
             </div>
         </div>
         <div class="flex items-center gap-3">
-            <button type="submit" class="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">Register</button>
+            <button type="submit" class="px-4 py-2 bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] text-sm rounded hover:bg-[var(--color-interactive-hover)]">Register</button>
             <button type="button" onclick="document.getElementById('register-form').classList.add('hidden')"
-                    class="px-4 py-2 text-gray-600 text-sm hover:text-gray-800">Cancel</button>
+                    class="px-4 py-2 text-[var(--color-text-tertiary)] text-sm hover:text-[var(--color-text-secondary)]">Cancel</button>
         </div>
     </form>
     <div id="register-result" class="mt-3"></div>
@@ -59,7 +59,7 @@
      hx-trigger="load"
      hx-swap="innerHTML"
      hx-headers='{"X-User-ID": "{{ current_user_id }}"}'>
-    <div class="text-center py-12 text-gray-400 text-sm" role="status" aria-live="polite">Loading repos...</div>
+    <div class="text-center py-12 text-[var(--color-text-secondary)] text-sm" role="status" aria-live="polite">Loading repos...</div>
 </div>
 <script>
 (function () {

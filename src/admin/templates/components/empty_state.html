@@ -8,10 +8,10 @@
     "settings","inbox","arrow-right","check-circle","x-circle","exclamation-circle"
 ] %}
 {% macro empty_state(message, icon="inbox", cta_text="", cta_url="", cta_icon="arrow-right") %}
-<div class="text-center py-12 text-gray-400 dark:text-slate-500">
+<div class="text-center py-12 text-[var(--color-text-secondary)]">
     <div class="mb-3 flex justify-center">
         {% if icon in _known_icons %}
-            {{ render_icon(icon, class="w-10 h-10 text-gray-300 dark:text-slate-600") }}
+            {{ render_icon(icon, class="w-10 h-10 text-[var(--color-text-tertiary)]") }}
         {% else %}
             {# Legacy Unicode passthrough for backward compatibility #}
             <span class="text-4xl">{{ icon }}</span>
@@ -21,10 +21,9 @@
     {% if cta_text and cta_url %}
     <a href="{{ cta_url }}"
        class="inline-flex items-center gap-1.5 mt-4 px-4 py-2 text-sm font-medium rounded-md
-              bg-blue-600 text-white hover:bg-blue-700
-              dark:bg-blue-700 dark:hover:bg-blue-600
-              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-              focus:ring-offset-white dark:focus:ring-offset-slate-900
+              bg-[var(--color-interactive-primary)] text-[var(--color-text-inverse)] hover:bg-[var(--color-interactive-hover)]
+              focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:ring-offset-2
+              focus:ring-offset-[var(--color-bg-surface)]
               transition-colors">
         {% if cta_icon in _known_icons %}
             {{ render_icon(cta_icon, class="w-4 h-4") }}

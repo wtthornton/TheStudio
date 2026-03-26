@@ -230,6 +230,11 @@ app.include_router(approval_router)
 app.include_router(chat_router)
 app.include_router(dashboard_router)
 
+# Shared static assets (design tokens CSS, icons, etc.) served at /static/
+_STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+if _STATIC_DIR.is_dir():
+    app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
+
 # Conditional static mount: serve frontend/dist/ at /dashboard/ when built
 _dashboard_logger = logging.getLogger("thestudio.dashboard")
 if _FRONTEND_DIST.is_dir() and (_FRONTEND_DIST / "index.html").is_file():

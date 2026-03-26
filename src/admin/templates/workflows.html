@@ -6,12 +6,12 @@
 {% block page_title %}Workflow Console{% endblock %}
 
 {% block content %}
-<p class="text-sm text-gray-500 mb-4">Workflows are created when the pipeline runs. Use the pipeline dashboard to import issues or open runs from registered repos.</p>
+<p class="text-sm text-[var(--color-text-secondary)] mb-4">Workflows are created when the pipeline runs. Use the pipeline dashboard to import issues or open runs from registered repos.</p>
 <!-- Filters -->
-<div class="bg-white rounded-lg border border-gray-200 p-4 mb-6">
+<div class="bg-[var(--color-bg-surface)] rounded-lg border border-[var(--color-border-primary)] p-4 mb-6">
     <div class="flex items-center gap-4 flex-wrap">
         <div>
-            <label class="block text-xs font-medium text-gray-600 mb-1">Status</label>
+            <label class="block text-xs font-medium text-[var(--color-text-tertiary)] mb-1">Status</label>
             <select id="wf-status-filter" class="border border-gray-300 rounded px-3 py-2 text-sm"
                     name="status">
                 <option value="">All</option>
@@ -22,12 +22,12 @@
             </select>
         </div>
         <div>
-            <label class="block text-xs font-medium text-gray-600 mb-1">Repo ID</label>
+            <label class="block text-xs font-medium text-[var(--color-text-tertiary)] mb-1">Repo ID</label>
             <input type="text" id="wf-repo-filter" name="repo_id" placeholder="Filter by repo..."
                    class="border border-gray-300 rounded px-3 py-2 text-sm">
         </div>
         <div>
-            <label class="block text-xs font-medium text-gray-600 mb-1">Limit</label>
+            <label class="block text-xs font-medium text-[var(--color-text-tertiary)] mb-1">Limit</label>
             <select id="wf-limit-filter" name="limit" class="border border-gray-300 rounded px-3 py-2 text-sm">
                 <option value="20">20</option>
                 <option value="50">50</option>
@@ -37,7 +37,7 @@
         <div class="self-end">
             <button id="wf-apply-btn"
                     type="button"
-                    class="px-4 py-2 bg-gray-600 text-white text-sm rounded hover:bg-gray-700">
+                    class="px-4 py-2 bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)] text-sm rounded hover:bg-[var(--color-border-primary)]">
                 Apply
             </button>
         </div>
@@ -46,8 +46,8 @@
         <div class="self-end ml-auto flex items-center gap-2">
             <!-- Hidden input carries current view preference so HTMX includes it -->
             <input type="hidden" id="wf-view" name="view" value="list">
-            <span class="text-xs font-medium text-gray-500 hidden sm:block">View:</span>
-            <div class="flex items-center border border-gray-200 rounded overflow-hidden shadow-sm"
+            <span class="text-xs font-medium text-[var(--color-text-secondary)] hidden sm:block">View:</span>
+            <div class="flex items-center border border-[var(--color-border-secondary)] rounded overflow-hidden shadow-sm"
                  role="group"
                  aria-label="Workflow view toggle">
                 <!-- List view button -->
@@ -56,7 +56,7 @@
                         aria-label="Switch to list view"
                         aria-pressed="true"
                         data-tooltip="List view"
-                        class="wf-view-btn px-3 py-2 text-sm flex items-center gap-1.5 bg-gray-700 text-white transition-colors">
+                        class="wf-view-btn px-3 py-2 text-sm flex items-center gap-1.5 bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)] transition-colors">
                     <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                         <path fill-rule="evenodd" d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 10.5a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75a.75.75 0 01-.75-.75zM2 10a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 10z" clip-rule="evenodd"/>
                     </svg>
@@ -68,7 +68,7 @@
                         aria-label="Switch to kanban view"
                         aria-pressed="false"
                         data-tooltip="Kanban view"
-                        class="wf-view-btn px-3 py-2 text-sm flex items-center gap-1.5 bg-white text-gray-600 hover:bg-gray-50 border-l border-gray-200 transition-colors">
+                        class="wf-view-btn px-3 py-2 text-sm flex items-center gap-1.5 bg-[var(--color-bg-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-elevated)] border-l border-[var(--color-border-secondary)] transition-colors">
                     <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                         <path d="M3 3a1 1 0 000 2h1a1 1 0 000-2H3zM3 7a1 1 0 000 2h1a1 1 0 000-2H3zM3 11a1 1 0 100 2h1a1 1 0 100-2H3zM9 3a1 1 0 000 2h1a1 1 0 000-2H9zM9 7a1 1 0 000 2h1a1 1 0 000-2H9zM9 11a1 1 0 100 2h1a1 1 0 100-2H9zM15 3a1 1 0 000 2h1a1 1 0 000-2h-1zM15 7a1 1 0 000 2h1a1 1 0 000-2h-1zM15 11a1 1 0 100 2h1a1 1 0 100-2h-1z"/>
                     </svg>
@@ -90,7 +90,7 @@
      data-admin-htmx-section="true"
      aria-label="Workflow content"
      aria-live="polite">
-    <div class="text-center py-12 text-gray-400 text-sm" role="status">Loading workflows…</div>
+    <div class="text-center py-12 text-[var(--color-text-secondary)] text-sm" role="status">Loading workflows…</div>
 </div>
 
 <script>
@@ -136,16 +136,16 @@
         if (!btnList || !btnKanban) return;
 
         var isKanban = view === 'kanban';
-        /* Active button: dark background; inactive: white with hover */
+        /* Active button: dark background; inactive: surface with hover */
         btnList.setAttribute('aria-pressed', isKanban ? 'false' : 'true');
         btnKanban.setAttribute('aria-pressed', isKanban ? 'true' : 'false');
 
         if (isKanban) {
-            btnList.className   = 'wf-view-btn px-3 py-2 text-sm flex items-center gap-1.5 bg-white text-gray-600 hover:bg-gray-50 transition-colors';
-            btnKanban.className = 'wf-view-btn px-3 py-2 text-sm flex items-center gap-1.5 bg-gray-700 text-white border-l border-gray-200 transition-colors';
+            btnList.className   = 'wf-view-btn px-3 py-2 text-sm flex items-center gap-1.5 bg-[var(--color-bg-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-elevated)] transition-colors';
+            btnKanban.className = 'wf-view-btn px-3 py-2 text-sm flex items-center gap-1.5 bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)] border-l border-[var(--color-border-secondary)] transition-colors';
         } else {
-            btnList.className   = 'wf-view-btn px-3 py-2 text-sm flex items-center gap-1.5 bg-gray-700 text-white transition-colors';
-            btnKanban.className = 'wf-view-btn px-3 py-2 text-sm flex items-center gap-1.5 bg-white text-gray-600 hover:bg-gray-50 border-l border-gray-200 transition-colors';
+            btnList.className   = 'wf-view-btn px-3 py-2 text-sm flex items-center gap-1.5 bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)] transition-colors';
+            btnKanban.className = 'wf-view-btn px-3 py-2 text-sm flex items-center gap-1.5 bg-[var(--color-bg-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-elevated)] border-l border-[var(--color-border-secondary)] transition-colors';
         }
     }
 

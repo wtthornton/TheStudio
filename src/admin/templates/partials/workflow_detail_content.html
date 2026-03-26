@@ -3,12 +3,12 @@
 
 <div class="space-y-6">
     <!-- Header -->
-    <div class="bg-white rounded-lg border border-gray-200 p-6 dark:bg-slate-800 dark:border-slate-700">
+    <div class="bg-[var(--color-bg-surface)] rounded-lg border border-[var(--color-border-primary)] p-6 dark:bg-slate-800 dark:border-slate-700">
         <div class="flex items-center justify-between mb-4">
             <div>
                 <h3 class="text-lg font-semibold font-mono">{{ workflow.id }}</h3>
                 {% if workflow.issue_ref %}
-                <p class="text-sm text-gray-500 mt-1 dark:text-slate-400">Issue: {{ workflow.issue_ref }}</p>
+                <p class="text-sm text-[var(--color-text-secondary)] mt-1 dark:text-slate-400">Issue: {{ workflow.issue_ref }}</p>
                 {% endif %}
             </div>
             <div class="flex items-center gap-2">
@@ -19,19 +19,19 @@
         </div>
         <div class="grid grid-cols-4 gap-4 text-sm mb-4">
             <div>
-                <span class="text-gray-500 dark:text-slate-400">Repo:</span>
+                <span class="text-[var(--color-text-secondary)] dark:text-slate-400">Repo:</span>
                 <span class="ml-1 font-medium dark:text-slate-300">{{ workflow.repo_name | default(workflow.repo_id) }}</span>
             </div>
             <div>
-                <span class="text-gray-500 dark:text-slate-400">Current Step:</span>
+                <span class="text-[var(--color-text-secondary)] dark:text-slate-400">Current Step:</span>
                 <span class="ml-1 font-medium dark:text-slate-300">{{ workflow.current_step | default('-') }}</span>
             </div>
             <div>
-                <span class="text-gray-500 dark:text-slate-400">Attempts:</span>
+                <span class="text-[var(--color-text-secondary)] dark:text-slate-400">Attempts:</span>
                 <span class="ml-1 font-medium dark:text-slate-300">{{ workflow.attempt_count | default(1) }}</span>
             </div>
             <div>
-                <span class="text-gray-500 dark:text-slate-400">Complexity:</span>
+                <span class="text-[var(--color-text-secondary)] dark:text-slate-400">Complexity:</span>
                 <span class="ml-1 font-medium dark:text-slate-300">{{ workflow.complexity | default('-') | upper }}</span>
             </div>
         </div>
@@ -44,8 +44,8 @@
     </div>
 
     <!-- Timeline -->
-    <div class="bg-white rounded-lg border border-gray-200 p-6 dark:bg-slate-800 dark:border-slate-700">
-        <h4 class="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-4">Timeline</h4>
+    <div class="bg-[var(--color-bg-surface)] rounded-lg border border-[var(--color-border-primary)] p-6 dark:bg-slate-800 dark:border-slate-700">
+        <h4 class="text-sm font-semibold text-[var(--color-text-secondary)] dark:text-slate-300 mb-4">Timeline</h4>
         {% if workflow.timeline %}
         <div class="space-y-3">
             {% for step in workflow.timeline %}
@@ -61,7 +61,7 @@
                     <span class="inline-block w-3 h-3 rounded-full bg-blue-500 animate-pulse"
                           role="img" aria-label="Running"></span>
                     {% else %}
-                    <span class="inline-block w-3 h-3 rounded-full bg-gray-300 dark:bg-slate-600"
+                    <span class="inline-block w-3 h-3 rounded-full bg-[var(--color-border-primary)] dark:bg-slate-600"
                           role="img" aria-label="Pending"></span>
                     {% endif %}
                 </div>
@@ -69,7 +69,7 @@
                     <div class="flex items-center justify-between">
                         <span class="text-sm font-medium dark:text-slate-300">{{ step.name }}</span>
                         {% if step.timestamp %}
-                        <span class="text-xs text-gray-400 dark:text-slate-500">{{ step.timestamp }}</span>
+                        <span class="text-xs text-[var(--color-text-secondary)] dark:text-slate-500">{{ step.timestamp }}</span>
                         {% endif %}
                     </div>
                     {% if step.failure_reason %}
@@ -81,7 +81,7 @@
                         <div class="flex items-center gap-1.5 mb-1">
                             {{ ai_label(generated_by="Evidence") }}
                         </div>
-                        <pre class="text-xs text-gray-500 dark:text-slate-400 bg-gray-50 dark:bg-slate-900 rounded p-2 overflow-x-auto">{{ step.evidence }}</pre>
+                        <pre class="text-xs text-[var(--color-text-secondary)] dark:text-slate-400 bg-[var(--color-bg-elevated)] dark:bg-slate-900 rounded p-2 overflow-x-auto">{{ step.evidence }}</pre>
                     </div>
                     {% endif %}
                 </div>
@@ -89,25 +89,25 @@
             {% endfor %}
         </div>
         {% else %}
-        <p class="text-sm text-gray-400 dark:text-slate-500">No timeline data available.</p>
+        <p class="text-sm text-[var(--color-text-secondary)] dark:text-slate-500">No timeline data available.</p>
         {% endif %}
     </div>
 
     <!-- Retry Info -->
     {% if workflow.retry_info %}
-    <div class="bg-white rounded-lg border border-gray-200 p-6 dark:bg-slate-800 dark:border-slate-700">
-        <h4 class="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-4">Retry Info</h4>
+    <div class="bg-[var(--color-bg-surface)] rounded-lg border border-[var(--color-border-primary)] p-6 dark:bg-slate-800 dark:border-slate-700">
+        <h4 class="text-sm font-semibold text-[var(--color-text-secondary)] dark:text-slate-300 mb-4">Retry Info</h4>
         <div class="grid grid-cols-3 gap-4 text-sm">
             <div>
-                <span class="text-gray-500 dark:text-slate-400">Next Retry:</span>
+                <span class="text-[var(--color-text-secondary)] dark:text-slate-400">Next Retry:</span>
                 <span class="ml-1 font-medium dark:text-slate-300">{{ workflow.retry_info.next_retry_time | default('-') }}</span>
             </div>
             <div>
-                <span class="text-gray-500 dark:text-slate-400">Time in Step:</span>
+                <span class="text-[var(--color-text-secondary)] dark:text-slate-400">Time in Step:</span>
                 <span class="ml-1 font-medium dark:text-slate-300">{{ workflow.retry_info.time_in_current_step | default('-') }}</span>
             </div>
             <div>
-                <span class="text-gray-500 dark:text-slate-400">Step Attempts:</span>
+                <span class="text-[var(--color-text-secondary)] dark:text-slate-400">Step Attempts:</span>
                 <span class="ml-1 font-medium dark:text-slate-300">{{ workflow.retry_info.attempt_count_for_step | default('-') }}</span>
             </div>
         </div>
@@ -137,8 +137,8 @@
 
     <!-- Controls (§13.1 prompt-first: intent preview → action buttons → override controls) -->
     {% if can_rerun or can_send_to_agent or can_escalate %}
-    <div class="bg-white rounded-lg border border-gray-200 p-6 dark:bg-slate-800 dark:border-slate-700">
-        <h4 class="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-4">Controls</h4>
+    <div class="bg-[var(--color-bg-surface)] rounded-lg border border-[var(--color-border-primary)] p-6 dark:bg-slate-800 dark:border-slate-700">
+        <h4 class="text-sm font-semibold text-[var(--color-text-secondary)] dark:text-slate-300 mb-4">Controls</h4>
 
         {# §13.1 Step 2 — Intent Preview: what the AI will do before the operator confirms #}
         {% if can_send_to_agent or can_rerun %}
@@ -175,7 +175,7 @@
                     hx-headers='{"X-User-ID": "{{ current_user_id }}"}'
                     hx-target="#wf-action-result" hx-swap="innerHTML"
                     hx-confirm="Rerun verification for this workflow? This will re-execute lint, test, and security checks."
-                    class="px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700
+                    class="px-3 py-2 bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] text-sm rounded-md hover:bg-[var(--color-interactive-hover)]
                            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
                 Rerun Verification
             </button>

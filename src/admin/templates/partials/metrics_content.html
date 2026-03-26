@@ -10,15 +10,15 @@
                 <p class="text-3xl font-bold {% if single_pass.overall_rate_7d >= 0.6 %}text-green-600{% elif single_pass.overall_rate_7d >= 0.4 %}text-yellow-600{% else %}text-red-600{% endif %}">
                     {{ "%.1f"|format(single_pass.overall_rate_7d * 100) }}%
                 </p>
-                <p class="text-sm text-gray-500">7-day rate</p>
-                <p class="text-xs text-gray-400">{{ single_pass.successful_7d }}/{{ single_pass.total_workflows_7d }} workflows</p>
+                <p class="text-sm text-[var(--color-text-secondary)]">7-day rate</p>
+                <p class="text-xs text-[var(--color-text-secondary)]">{{ single_pass.successful_7d }}/{{ single_pass.total_workflows_7d }} workflows</p>
             </div>
             <div class="text-center">
                 <p class="text-3xl font-bold text-gray-700">
                     {{ "%.1f"|format(single_pass.overall_rate_30d * 100) }}%
                 </p>
-                <p class="text-sm text-gray-500">30-day rate</p>
-                <p class="text-xs text-gray-400">{{ single_pass.successful_30d }}/{{ single_pass.total_workflows_30d }} workflows</p>
+                <p class="text-sm text-[var(--color-text-secondary)]">30-day rate</p>
+                <p class="text-xs text-[var(--color-text-secondary)]">{{ single_pass.successful_30d }}/{{ single_pass.total_workflows_30d }} workflows</p>
             </div>
         </div>
     </div>
@@ -40,30 +40,30 @@
                 <p class="text-2xl font-bold {% if success_gate.met %}text-green-600{% else %}text-red-600{% endif %}">
                     {{ "%.1f"|format(success_gate.current_rate * 100) }}%
                 </p>
-                <p class="text-sm text-gray-500">Current Rate</p>
+                <p class="text-sm text-[var(--color-text-secondary)]">Current Rate</p>
             </div>
             <div>
                 <p class="text-2xl font-bold text-gray-700">{{ "%.0f"|format(success_gate.threshold * 100) }}%</p>
-                <p class="text-sm text-gray-500">Threshold</p>
+                <p class="text-sm text-[var(--color-text-secondary)]">Threshold</p>
             </div>
             <div>
                 <p class="text-2xl font-bold text-gray-700">{{ success_gate.sample_count }}</p>
-                <p class="text-sm text-gray-500">Samples ({{ success_gate.window_days }}d)</p>
+                <p class="text-sm text-[var(--color-text-secondary)]">Samples ({{ success_gate.window_days }}d)</p>
             </div>
         </div>
         {% if success_gate.insufficient_data %}
-        <p class="text-xs text-gray-400 mt-3">Not enough data for enforcement. Minimum 10 workflows required.</p>
+        <p class="text-xs text-[var(--color-text-secondary)] mt-3">Not enough data for enforcement. Minimum 10 workflows required.</p>
         {% endif %}
     </div>
 
     <!-- Loopback Breakdown -->
     <div class="bg-white rounded-lg border border-gray-200 p-6" id="loopback-card">
         <h3 class="text-lg font-semibold mb-4">Verification Loopbacks</h3>
-        <p class="text-sm text-gray-500 mb-3">Total: {{ loopbacks.total_loopbacks }}</p>
+        <p class="text-sm text-[var(--color-text-secondary)] mb-3">Total: {{ loopbacks.total_loopbacks }}</p>
         {% if loopbacks.categories %}
         <table class="w-full text-sm">
             <thead>
-                <tr class="text-left text-gray-500 border-b">
+                <tr class="text-left text-[var(--color-text-secondary)] border-b">
                     <th scope="col" class="py-2">Category</th>
                     <th scope="col" class="py-2 text-right">Count</th>
                     <th scope="col" class="py-2 text-right">%</th>
@@ -88,16 +88,16 @@
     <div class="bg-white rounded-lg border border-gray-200 p-6" id="reopen-card">
         <h3 class="text-lg font-semibold mb-4">Reopen Rate</h3>
         {% if reopen.note %}
-        <p class="text-sm text-gray-400">{{ reopen.note }}</p>
+        <p class="text-sm text-[var(--color-text-secondary)]">{{ reopen.note }}</p>
         {% else %}
         <div class="grid grid-cols-2 gap-4 mb-4">
             <div class="text-center">
                 <p class="text-3xl font-bold text-gray-700">{{ reopen.total_reopened }}</p>
-                <p class="text-sm text-gray-500">Total Reopened</p>
+                <p class="text-sm text-[var(--color-text-secondary)]">Total Reopened</p>
             </div>
             <div class="text-center">
                 <p class="text-3xl font-bold">{{ "%.1f"|format(reopen.reopen_rate * 100) }}%</p>
-                <p class="text-sm text-gray-500">Reopen Rate</p>
+                <p class="text-sm text-[var(--color-text-secondary)]">Reopen Rate</p>
             </div>
         </div>
         <h4 class="text-sm font-medium text-gray-600 mb-2">Attribution Breakdown</h4>
