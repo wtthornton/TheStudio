@@ -56,8 +56,8 @@ services:
       THESTUDIO_OTEL_EXPORTER: "${THESTUDIO_OTEL_EXPORTER:-console}"
       # Approval auto-bypass (Story 30.14) — NEVER auto-bypass in production
       THESTUDIO_APPROVAL_AUTO_BYPASS: "${THESTUDIO_APPROVAL_AUTO_BYPASS:-false}"
-      THESTUDIO_AGENT_MODE: "${THESTUDIO_AGENT_MODE:-ralph}"
-      THESTUDIO_AGENT_ISOLATION: "${THESTUDIO_AGENT_ISOLATION:-process}"
+      THESTUDIO_AGENT_MODE: "${THESTUDIO_AGENT_MODE:-container}"
+      THESTUDIO_AGENT_ISOLATION: "${THESTUDIO_AGENT_ISOLATION:-container}"
       THESTUDIO_AGENT_ISOLATION_FALLBACK: "${THESTUDIO_AGENT_ISOLATION_FALLBACK:-{\"observe\":\"allow\",\"suggest\":\"allow\",\"execute\":\"deny\"}}"
       # Preflight plan review gate (Epic 28)
       THESTUDIO_PREFLIGHT_ENABLED: "${THESTUDIO_PREFLIGHT_ENABLED:-false}"
@@ -264,6 +264,19 @@ services:
           cpus: "0.5"
     networks:
       - thestudio-net
+
+  # Agent image builder — build-only service (no running container).
+  # ContainerManager spawns ephemeral agent containers on demand using
+  # the thestudio-agent:latest image. This service only builds the image.
+  agent-image:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.agent
+    image: thestudio-agent:latest
+    profiles:
+      - build
+    networks:
+      - agent-net
 
 networks:
   thestudio-net:

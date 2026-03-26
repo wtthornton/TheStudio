@@ -1,0 +1,76 @@
+# Agent container image — ephemeral execution environment for the Primary Agent.
+#
+# This image runs INSIDE the agent-net network (Epic 25). It has:
+# - Claude CLI (claude-code) for RalphAgent subprocess calls
+# - Ralph SDK + TheStudio source for container_runner.py
+# - Git for repo operations
+# - Outbound HTTPS (GitHub API, Anthropic API)
+# - NO access to Postgres, Temporal, NATS, or the app
+#
+# Communication with the platform is via mounted volume:
+#   /workspace/task.json  → input  (written by ContainerManager)
+#   /workspace/result.json → output (written by container_runner.py)
+#
+# Architecture: docs/architecture/agent-container-isolation.md
+
+# ---- build stage: install Python deps ----
+FROM python:3.12-slim AS builder
+
+WORKDIR /app
+
+# Build-time deps
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc libpq-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy vendor dependencies and pyproject
+COPY vendor/ vendor/
+COPY pyproject.toml .
+
+# Rewrite local-dev ralph-sdk path for container
+RUN sed -i 's|ralph-sdk @ file:///C:/cursor/ralph/ralph-claude-code/sdk|ralph-sdk @ file:///app/vendor/ralph-sdk|' pyproject.toml
+
+# Install Python packages
+RUN pip install --no-cache-dir hatchling && \
+    pip install --no-cache-dir .
+
+COPY src/ src/
+
+# ---- runtime stage ----
+FROM python:3.12-slim AS runtime
+
+WORKDIR /app
+
+# Runtime system deps: git (repo ops), curl (health), Node.js (Claude CLI)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git curl libpq5 ca-certificates gnupg && \
+    # Install Node.js 22 LTS (required for Claude CLI)
+    curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
+    apt-get install -y --no-install-recommends nodejs && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Claude CLI globally
+RUN npm install -g @anthropic-ai/claude-code@latest && \
+    # Verify installation
+    claude --version || echo "Claude CLI installed (version check may require auth)"
+
+# Copy Python packages from builder
+COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Copy application source (container_runner.py needs src/)
+COPY src/ src/
+
+# Create workspace directory
+RUN mkdir -p /workspace/repo
+
+# Non-root user for security
+RUN useradd --create-home --shell /bin/bash agent && \
+    chown -R agent:agent /workspace /app
+USER agent
+
+# Git config for agent commits
+RUN git config --global user.email "agent@thestudio.dev" && \
+    git config --global user.name "TheStudio Agent"
+
+ENTRYPOINT ["python", "-m", "src.agent.container_runner"]
