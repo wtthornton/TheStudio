@@ -10,11 +10,11 @@
 
 | Metric | Value |
 |--------|-------|
-| Total epics | 75 (numbered epics 0–75) |
+| Total epics | 76 (numbered epics 0–76) |
 | Complete | 74 (Epics 0-75 except Epic 27 deferred) |
 | Stories complete / rollout gated | 0 |
 | In Progress | 0 |
-| Proposed | 0 |
+| Proposed | 1 — **Epic 76** (Playwright test calibration: 8 stories, 25 pts) |
 | Milestone | **Playwright full-stack test suites complete** (Epics 59–74, 2026-03-26). All 16 admin pages covered. |
 | Deferred | 1 (Epic 27) |
 | Tests passing | 3,366+ unit, 9 E2E pipeline, ~244 integration, 23 P0 harness, 98 Ralph-specific, 96 Playwright page suites |

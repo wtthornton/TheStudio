@@ -6,9 +6,26 @@
 
 | Epic | Status | Canonical doc |
 |------|--------|---------------|
+| **76** | **Proposed** — Playwright test calibration — fix 392 failures, 8 stories, 25 pts | `docs/epics/epic-76-playwright-test-calibration.md` |
 | **27** | Deferred on demand | `docs/epics/` (multi-source webhooks) |
 
-**No open tasks.** All 75 epics (0–75) are complete. Epic 27 is deferred until demand.
+---
+
+## Epic 76 — Playwright Test Calibration (25 pts)
+
+> **Goal:** 77% → 95%+ pass rate by fixing test calibration (not app bugs).
+> **Order:** 76.4 → 76.3 → 76.1 → 76.2 → 76.6 → 76.5 → 76.7 → 76.8
+> **Gate:** `pytest tests/playwright/ -q` pass rate >= 95%
+> TESTS_STATUS: DEFERRED until 76.8
+
+- [ ] **76.4:** Fix assert_focus_visible() Signature (2 pts, S) — Align function signature with all callers across a11y tests. **File:** `tests/playwright/lib/accessibility_helpers.py`.
+- [ ] **76.3:** Fix axe-core Integration (3 pts, M) — Fix run_axe_audit() return type, update all a11y test files. **File:** `tests/playwright/lib/accessibility_helpers.py`.
+- [ ] **76.1:** Fix Design Token Assertions (5 pts, L) — Read actual :root tokens from base.html, update style_assertions.py and 16 test_*_style.py files. **Files:** `tests/playwright/lib/style_assertions.py`, `src/admin/templates/base.html`.
+- [ ] **76.2:** Fix Typography Assertions (5 pts, L) — Capture actual computed font values, update typography_assertions.py and 16 test files. **File:** `tests/playwright/lib/typography_assertions.py`.
+- [ ] **76.6:** Fix Tools API Tests (2 pts, S) — Match endpoint URLs and response schema to actual admin API. **Files:** `tests/playwright/test_tools_api.py`, `src/admin/router.py`.
+- [ ] **76.5:** Fix Kanban/Toggle Tests (3 pts, M) — Click toggle before asserting kanban, handle localStorage default. **Files:** `tests/playwright/test_workflows_*.py`.
+- [ ] **76.7:** Fix Real Accessibility Bugs (3 pts, M) — Add table captions, ARIA labels in admin templates. **Files:** `src/admin/templates/`.
+- [ ] **76.8:** Validation Run (2 pts, S) — Full suite >= 95% pass rate, document remaining failures, update playwright-guide.md. **RUN TESTS.**
 
 ---
 
