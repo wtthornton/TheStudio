@@ -105,6 +105,16 @@
             "statusMessage": "Checking file protection..."
           }
         ]
+      },
+      {
+        "matcher": "Edit\\",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "Write",
+            "statusMessage": "bash .ralph/hooks/protect-ralph-files.sh|Checking file protection..."
+          }
+        ]
       }
     ],
     "PostToolUse": [

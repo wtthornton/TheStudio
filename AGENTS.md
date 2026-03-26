@@ -1,9 +1,11 @@
-<!-- tapps-agents-version: 1.12.0 -->
+<!-- tapps-agents-version: 1.14.0 -->
 # TappsMCP - instructions for AI assistants
 
 When the **TappsMCP** MCP server is configured, you have access to tools for **code quality, doc lookup, and domain expert advice**. Use them to avoid hallucinated APIs, missed quality steps, and inconsistent output.
 
 **File paths:** Use paths relative to project root (e.g. `src/main.py`). Absolute host paths also work when `TAPPS_MCP_HOST_PROJECT_ROOT` is set.
+
+---
 
 ## Frontend Style Source of Truth (REQUIRED)
 

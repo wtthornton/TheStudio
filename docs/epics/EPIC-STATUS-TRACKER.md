@@ -1,6 +1,6 @@
 # Epic Status Tracker
 
-> Consolidated status of all epics as of **2026-03-25** (rollup: Epics 0–58, 75 complete; Epic 43 ops sign-off granted; Epics 52–54 canonical UI complete).
+> Consolidated status of all epics as of **2026-03-26** (rollup: all 75 epics complete except Epic 27 deferred).
 > **Canonical UI/UX:** `docs/design/07-THESTUDIO-UI-UX-STYLE-GUIDE.md` — referenced from README, AGENTS.md, CLAUDE.md, Copilot instructions, and `.cursor/rules/frontend-style-source-of-truth.mdc`. **MCP frontend experts:** `docs/TAPPS_MCP_FRONTEND_EXPERTS_BRIEF.md` + `.tapps-mcp/experts.yaml`.
 > Source of truth for epic status is each epic's own file. This tracker is a rollup view.
 
@@ -10,17 +10,17 @@
 
 | Metric | Value |
 |--------|-------|
-| Total epics | 75 (numbered epics 0–75; **59–74** proposed Playwright per-page suites) |
-| Complete | 56 (Epics 0-26, 28-39, 43-58, 75; all phases delivered; canonical UI complete) |
+| Total epics | 75 (numbered epics 0–75) |
+| Complete | 74 (Epics 0-75 except Epic 27 deferred) |
 | Stories complete / rollout gated | 0 |
 | In Progress | 0 |
-| Proposed | 16 — **Epics 59–74** (per-page Playwright test suites: 96 stories, 304 pts) |
-| Milestone | **Pipeline UI Phase 5 complete** (Epic 39, 2026-03-25). All pipeline UI phases 0-5 delivered. |
+| Proposed | 0 |
+| Milestone | **Playwright full-stack test suites complete** (Epics 59–74, 2026-03-26). All 16 admin pages covered. |
 | Deferred | 1 (Epic 27) |
-| Tests passing | 3,366+ unit (zero failures), 9 E2E pipeline, ~244 integration, 23 P0 harness, 98 Ralph-specific |
+| Tests passing | 3,366+ unit, 9 E2E pipeline, ~244 integration, 23 P0 harness, 98 Ralph-specific, 96 Playwright page suites |
 | Eval tests | 20/25 passed with real Claude (~$5/run) |
 | Coverage | 84% |
-| Version | **v0.2.1** (2026-03-25) — Ralph SDK v2.0.3, epic status sync, ops checklist |
+| Version | **v0.3.0** (2026-03-26) — Playwright full-stack suites, Plane-parity UI, style guide §9.13-9.15 |
 
 ---
 
@@ -205,7 +205,7 @@ Phase 10 — RALPH — COMPLETE (2026-03-25)
 
 Phase 11 — PLAYWRIGHT TEST SUITES
   Epic 58 (Test Infrastructure) — COMPLETE (2026-03-25) — all 7 stories (58.1–58.7)
-  Epics 59-74 (Per-page suites) — PROPOSED — 16 epics, 96 stories, 304 pts
+  Epics 59-74 (Per-page suites) — COMPLETE (2026-03-26) — 16 epics, 96 stories, 304 pts delivered by Ralph (95 commits)
 
 Prior rollup (2026-03-21)
   Epic 34 (Phase 0: SSE PoC) — COMPLETE. 14 stories. Dashboard infra.
@@ -282,7 +282,7 @@ Phase 5 — COMPLETE (2026-03-17)
 |----------|--------|-----------|
 | 1 | ~~**Epic 43 rollout**~~ | **APPROVED** (2026-03-25) — ops sign-off granted. Set `THESTUDIO_AGENT_MODE=ralph` in production. |
 | 2 | ~~**Stories 53.4, 54.3, 54.4**~~ | **COMPLETE** (2026-03-25) — all canonical UI stories delivered. |
-| 3 | **Epics 59–74** | Per-page Playwright test suites — Epic 58 (infra) now complete, unblocking all 16 page epics. |
+| 3 | ~~**Epics 59–74**~~ | **COMPLETE** (2026-03-26) — all 96 stories delivered across 16 per-page Playwright test suites. |
 | 4 | **Epic 27** | Multi-source webhooks — pull when demand exists. |
 
 > **Recently completed (2026-03-25):** Epic 43 (ops sign-off), Epic 75 (Plane-Parity Admin UI, 31 pts), Epics 52-54 (canonical UI — stories 53.4, 54.3, 54.4).

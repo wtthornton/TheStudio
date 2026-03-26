@@ -13,7 +13,8 @@
       ],
       "env": {
         "TAPPS_MCP_PROJECT_ROOT": ".",
-        "TAPPS_MCP_CONTEXT7_API_KEY": "ctx7sk-534b7c8b-6e58-4019-8206-a084b4939e1e"
+        "TAPPS_MCP_CONTEXT7_API_KEY": "ctx7sk-534b7c8b-6e58-4019-8206-a084b4939e1e",
+        "VIRTUAL_ENV": ""
       },
       "instructions": "Code quality scoring (0-100 across 7 categories), security scanning (Bandit + secret detection), quality gates (pass/fail against configurable presets), documentation lookup, domain expert consultation, and project profiling for Python projects."
     },
@@ -29,7 +30,8 @@
         "serve"
       ],
       "env": {
-        "DOCS_MCP_PROJECT_ROOT": "."
+        "DOCS_MCP_PROJECT_ROOT": ".",
+        "VIRTUAL_ENV": ""
       }
     },
     "playwright": {
