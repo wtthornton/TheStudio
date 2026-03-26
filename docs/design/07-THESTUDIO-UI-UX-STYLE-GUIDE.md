@@ -347,6 +347,107 @@ colors: {
 }
 ```
 
+### 4.5 Theme Switching and FOUC Prevention
+
+**Three-way preference model:** Light / System / Dark. The user's explicit choice
+is stored in `localStorage` (`thestudio_theme`). When set to "System" (or no
+stored value), the `prefers-color-scheme` media query controls the theme.
+
+**Flash of Wrong Theme (FOUC) prevention:** A blocking inline script in `<head>`
+reads `localStorage` synchronously and sets `data-theme` on `<html>` before
+the first paint. This runs before any stylesheet or body content renders.
+
+```html
+<script>
+  (function() {
+    var stored = localStorage.getItem('thestudio_theme');
+    var prefersDark = window.matchMedia &&
+      window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var theme = stored || (prefersDark ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.classList.add('no-transition');
+  })();
+</script>
+```
+
+```css
+.no-transition * { transition: none !important; }
+```
+
+Remove `no-transition` after first paint to restore animations:
+
+```javascript
+window.addEventListener('load', function() {
+  requestAnimationFrame(function() {
+    document.documentElement.classList.remove('no-transition');
+  });
+});
+```
+
+**System preference listener:** When the user selects "System", watch for OS
+changes and update in real time:
+
+```javascript
+window.matchMedia('(prefers-color-scheme: dark)')
+  .addEventListener('change', function(e) {
+    if (!localStorage.getItem('thestudio_theme')) {
+      document.documentElement.setAttribute('data-theme',
+        e.matches ? 'dark' : 'light');
+    }
+  });
+```
+
+**Sidebar-invariant rule:** The sidebar is dark in both themes. Sidebar tokens
+(`--sidebar-bg`, `--sidebar-text`, `--sidebar-active-bg`) are **not overridden**
+in the `[data-theme="dark"]` block. In dark mode the content area darkens to
+match the sidebar — the sidebar does not lighten.
+
+**Contrast enforcement:** Both themes must pass WCAG 2.2 AA minimums:
+
+| Pairing | Minimum ratio | Notes |
+|---------|---------------|-------|
+| Body text on surface | 4.5:1 | Primary readability |
+| Secondary text on surface | 4.5:1 | Subtitles, metadata |
+| Tertiary text on surface | 3:1 | Large/bold text only (>= 18px or 14px bold) |
+| Interactive elements on surface | 3:1 | Buttons, links, icons |
+| Status badge text on badge bg | 4.5:1 | Dark mode badges may need `font-semibold` |
+| Non-text contrast (icons, borders) | 3:1 | SC 1.4.11 |
+
+### 4.6 Extended Token Categories
+
+These tokens extend the base semantic tier (Section 4.2) for state, motion,
+and overlay patterns introduced in Epic 75:
+
+```css
+:root, [data-theme="light"] {
+  /* State overlays */
+  --state-hover-overlay:    rgba(0, 0, 0, 0.04);
+  --state-active-overlay:   rgba(0, 0, 0, 0.08);
+  --state-disabled-opacity: 0.5;
+  --state-selected-bg:      var(--primitive-blue-50);
+
+  /* Motion */
+  --motion-duration-instant: 0ms;
+  --motion-duration-fast:    100ms;
+  --motion-duration-normal:  200ms;
+  --motion-duration-slow:    300ms;
+  --motion-easing-default:   cubic-bezier(0.4, 0, 0.2, 1);
+  --motion-easing-enter:     cubic-bezier(0, 0, 0.2, 1);
+  --motion-easing-exit:      cubic-bezier(0.4, 0, 1, 1);
+
+  /* Overlay / scrim */
+  --color-bg-scrim:   rgba(0, 0, 0, 0.5);
+  --color-bg-overlay: rgba(255, 255, 255, 0.97);
+}
+
+[data-theme="dark"] {
+  --state-hover-overlay:  rgba(255, 255, 255, 0.06);
+  --state-active-overlay: rgba(255, 255, 255, 0.10);
+  --state-selected-bg:    var(--primitive-blue-950);
+  --color-bg-overlay:     rgba(17, 24, 39, 0.97);
+}
+```
+
 ---
 
 ## 5. Color System
@@ -872,6 +973,289 @@ Every error state communicates three things:
 </div>
 ```
 
+### 9.13 Icon System
+
+All UI icons use inline SVG with `currentColor` for color inheritance. Never use
+icon fonts, `<img>` embeds, or hardcoded fill/stroke colors.
+
+**Library assignment (never mix libraries on the same surface):**
+
+| Surface | Library | Rationale |
+|---------|---------|-----------|
+| Admin Console (Jinja2/HTMX) | Heroicons v2 (inline SVG macro) | No build step; consistent 24px grid |
+| Pipeline Dashboard (React) | Lucide React (`lucide-react`) | Tree-shakeable; clean TypeScript types |
+
+**Size grid:** Icons render on a fixed optical grid. Using non-standard sizes
+(18px, 22px) causes subpixel blurring on non-retina displays.
+
+| Size | Token | Use case |
+|------|-------|----------|
+| 16px | `h-4 w-4` | Dense/inline indicators, table cells, badges |
+| 20px | `h-5 w-5` | UI default — buttons, navigation, form inputs |
+| 24px | `h-6 w-6` | Section headers, page titles, empty states |
+| 32px | `h-8 w-8` | Hero illustrations, onboarding |
+
+**Variant rule:** Choose one variant per surface and do not mix. Outline (1.5px
+stroke) for general UI; Solid (filled) for emphasis and status indicators only.
+
+**Color:** All icons use `stroke="currentColor"` (outline) or
+`fill="currentColor"` (solid). This inherits the parent element's text color
+and automatically adapts to dark mode via semantic tokens.
+
+**Accessibility rules:**
+
+| Context | Pattern |
+|---------|---------|
+| Decorative icon alongside text label | `aria-hidden="true"` on `<svg>` |
+| Icon-only button | `aria-label` on the `<button>`, `aria-hidden="true"` on `<svg>` |
+| Standalone meaningful icon (status) | `role="img"` + `aria-label` on `<svg>` |
+| Non-text contrast | Icons conveying state must meet 3:1 against background (SC 1.4.11) |
+
+**Jinja2 macro recipe (Admin Console):**
+
+```html
+{%- macro icon(name, size="md", class="") -%}
+  {%- set sizes = {"sm": "h-4 w-4", "md": "h-5 w-5", "lg": "h-6 w-6"} -%}
+  <svg class="{{ sizes[size] }} {{ class }}" aria-hidden="true" fill="none"
+    viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+    {%- if name == "dashboard" -%}
+      <path stroke-linecap="round" stroke-linejoin="round"
+        d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25..." />
+    {%- elif name == "close" -%}
+      <path stroke-linecap="round" stroke-linejoin="round"
+        d="M6 18L18 6M6 6l12 12" />
+    {%- endif -%}
+  </svg>
+{%- endmacro -%}
+```
+
+**React recipe:**
+
+```tsx
+import { X, Plus, AlertCircle } from 'lucide-react';
+
+// With label — icon is decorative
+<button className="inline-flex items-center gap-2 px-3 py-2 text-sm">
+  <Plus className="h-4 w-4" aria-hidden="true" />
+  Add task
+</button>
+
+// Icon-only button
+<button aria-label="Close panel" className="p-2 rounded-md">
+  <X className="h-5 w-5" aria-hidden="true" />
+</button>
+
+// Standalone meaningful icon
+<AlertCircle className="h-5 w-5 text-red-600"
+  role="img" aria-label="Pipeline failed" />
+```
+
+**Anti-patterns:**
+- Icon fonts (pseudo-element abuse, breaks high-contrast mode)
+- Hardcoded `fill="#374151"` (breaks dark mode and token system)
+- `<img src="icon.svg">` (cannot inherit color, CORS issues)
+- Mixing outline and solid variants on the same surface
+- `aria-label` on the `<svg>` (inconsistent AT support; put it on the `<button>`)
+- Sizes outside the grid (18px, 22px — subpixel blur)
+
+### 9.14 Inspector Panel (Sliding Detail View)
+
+The inspector panel is the primary detail-view pattern. It slides in from the
+right edge when a list row or card is clicked, preserving the underlying list
+context. This pattern replaces full-page navigation for entity inspection.
+
+**Role selection:**
+
+| Use case | ARIA role | Focus behavior |
+|----------|-----------|----------------|
+| Browsable inspector (click row, view details, click another row) | `role="complementary"` + `aria-label` | No focus trap — user can Tab back to list |
+| Action panel (requires input before returning) | `role="dialog"` + `aria-modal="true"` | Full focus trap |
+
+**Specifications:**
+
+| Property | Value | Notes |
+|----------|-------|-------|
+| Default width | 400px (`w-[400px]`) | Detail view, metadata, audit trail |
+| Wide variant | 560px (`w-[560px]`) | Code diffs, evidence review, multi-section forms |
+| Position | `fixed right-0 top-0 bottom-0` | Full height, flush right |
+| Z-index | `z-40` | Below command palette (z-50+), above content |
+| Enter animation | `translateX(100%) → translateX(0)`, 200ms `ease-out` | GPU-accelerated via `transform` |
+| Exit animation | `translateX(0) → translateX(100%)`, 150ms `ease-in` | Exit faster than enter |
+| Backdrop (dialog variant only) | `bg-black/40`, clickable to dismiss | Not used for complementary panels |
+| Keyboard dismiss | `Escape` always closes | Returns focus to trigger element |
+| Focus on open | Close button or first focusable element | After transition completes |
+| Focus on close | Return to the element that triggered open | Store ref before opening |
+| Content loading | Skeleton screen, not spinner | Panel opens immediately; content streams in |
+| >= 1280px viewport | Push layout (content area shrinks) | Preferred — avoids obscuring data |
+| 768–1279px viewport | Overlay with backdrop | Panel overlaps content |
+| < 768px viewport | Full-screen takeover | Mobile fallback |
+
+**Keyboard contract:**
+
+| Key | Behavior |
+|-----|----------|
+| `Escape` | Close panel, return focus to trigger |
+| `Tab` | Navigate within panel (complementary: can also Tab to list) |
+| `Shift+Tab` | Navigate backward |
+
+**HTML structure (complementary/inspector):**
+
+```html
+<aside
+  id="detail-panel"
+  role="complementary"
+  aria-label="Repository detail"
+  aria-hidden="true"
+  class="fixed right-0 top-0 bottom-0 w-[400px] bg-white border-l
+    border-gray-200 shadow-xl z-40 transform translate-x-full
+    transition-transform duration-200 ease-out
+    data-[open]:translate-x-0">
+  <!-- Sticky header -->
+  <div class="sticky top-0 flex items-center justify-between
+    px-6 py-4 border-b border-gray-200 bg-white z-10">
+    <h2 class="text-base font-semibold text-gray-900">Repository detail</h2>
+    <button aria-label="Close detail panel"
+      class="p-2 rounded-md text-gray-500 hover:bg-gray-100
+        focus-visible:ring-2 focus-visible:ring-blue-600">
+      <svg class="h-5 w-5" aria-hidden="true" fill="none" viewBox="0 0 24 24"
+        stroke="currentColor" stroke-width="1.5">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+  <!-- Scrollable content -->
+  <div class="overflow-y-auto h-full pb-20 px-6 py-4">
+    <!-- Content or skeleton -->
+  </div>
+</aside>
+```
+
+**Dark mode:** Panel background uses `var(--color-bg-surface)`. Border uses
+`var(--color-border-primary)`. All content inside follows semantic tokens.
+
+**Anti-patterns:**
+- `role="dialog"` + `aria-modal` for a browsable inspector (traps focus, wrong semantics)
+- Animating `right` property (triggers layout recalculation; use `transform`)
+- Loading content before panel opens (perceived latency; open with skeleton)
+- No `aria-hidden` on closed panel (screen readers discover off-screen content)
+- Panel z-index above command palette (palette must always be topmost)
+
+### 9.15 Kanban Board
+
+The kanban board is a column-based view for workflow state visualization. It
+serves as an alternative to the table view, toggled by the user. Columns
+represent pipeline or workflow states; cards represent individual work items.
+
+**Layout specifications:**
+
+| Property | Value | Notes |
+|----------|-------|-------|
+| Column width | 280px fixed (`w-[280px]`) | Fixed width, not fluid |
+| Column gap | 16px (`gap-4`) | Between columns |
+| Column header | 40px height | Status label + count badge |
+| Card padding | `p-3` (compact) | Dense operational view |
+| Card gap | 8px (`gap-2`) | Within column |
+| Card border-radius | `rounded-md` (6px) | Matches card standard |
+| Status indicator | 3px colored left border (`border-l-[3px]`) | Never background-fill the whole card |
+| Column scroll | `overflow-y-auto max-h-[calc(100vh-12rem)]` | Columns scroll independently |
+| Board scroll | `overflow-x-auto` on container | Horizontal scroll for > 4 columns |
+
+**Status border colors:**
+
+| Status | Border class | Token |
+|--------|-------------|-------|
+| Queued / Pending | `border-l-gray-300` | `--color-status-neutral` |
+| In Progress / Running | `border-l-yellow-500` | `--color-status-warning` |
+| Blocked / Failed | `border-l-red-500` | `--color-status-error` |
+| Review | `border-l-blue-500` | `--color-status-info` |
+| Complete / Done | `border-l-green-500` | `--color-status-success` |
+
+**Drag-and-drop:**
+
+| Property | Specification |
+|----------|---------------|
+| Library (Admin/HTMX) | SortableJS v1.15 with keyboard plugin |
+| Library (React) | dnd-kit (`@dnd-kit/core` + `@dnd-kit/sortable`) |
+| Drag handle | Explicit grip icon (`GripVertical`, 20x20px) — never make the whole card draggable |
+| Drag overlay | Semi-transparent clone at 80% opacity |
+| Drop zone highlight | `ring-2 ring-blue-500 bg-blue-50/30` on target column |
+| Activation constraint | 8px distance threshold (prevents accidental drags) |
+
+**Keyboard alternative (required — drag-and-drop must not be the only path):**
+
+| Key | Behavior |
+|-----|----------|
+| `Space` or `Enter` | Pick up focused card |
+| Arrow keys | Move card between positions/columns |
+| `Space` or `Enter` | Drop card at current position |
+| `Escape` | Cancel drag, return to original position |
+
+**Accessibility requirements:**
+
+1. Board container: `role="region"` + `aria-label="Workflow board"`
+2. Each column: `role="group"` + `aria-label="[column name] — N tasks"`
+3. Drag operations announced via `aria-live="assertive"` region
+4. Visually-hidden instruction block referenced by `aria-describedby` on each
+   drag handle: "Press Space to pick up. Use arrow keys to move. Press Space
+   to drop or Escape to cancel."
+5. Cards focusable and activatable (Enter/Space) to open inspector panel
+6. Status conveyed by text label AND color (never color alone)
+7. Drag overlay has `aria-hidden="true"`
+8. Card count in column header has `aria-label="N cards"`
+
+**Column header recipe:**
+
+```html
+<div class="flex items-center justify-between px-3 py-2
+  border-b border-gray-200 bg-gray-50 rounded-t-md">
+  <div class="flex items-center gap-2">
+    <span class="h-2 w-2 rounded-full bg-yellow-500" aria-hidden="true"></span>
+    <h3 class="text-sm font-semibold text-gray-700">Running</h3>
+  </div>
+  <span class="inline-flex items-center justify-center h-5 min-w-[1.25rem]
+    px-1.5 rounded-full bg-gray-200 text-xs font-semibold text-gray-600"
+    aria-label="3 tasks">3</span>
+</div>
+```
+
+**Card recipe:**
+
+```html
+<div class="bg-white rounded-md border border-gray-200 p-3
+  border-l-[3px] border-l-yellow-500 hover:shadow-sm transition-shadow"
+  role="article" aria-label="Task: Fix auth bug, status: Running">
+  <div class="flex items-start gap-2">
+    <button aria-label="Reorder task: Fix auth bug"
+      aria-describedby="kanban-instructions"
+      class="mt-0.5 p-0.5 rounded text-gray-300 hover:text-gray-500
+        focus-visible:ring-2 cursor-grab active:cursor-grabbing">
+      <svg class="h-4 w-4" aria-hidden="true"><!-- GripVertical --></svg>
+    </button>
+    <div class="flex-1 min-w-0">
+      <p class="text-sm font-medium text-gray-900 truncate">Fix auth bug</p>
+      <p class="text-xs text-gray-500 mt-1 font-mono">#TPK-142</p>
+    </div>
+  </div>
+</div>
+<p id="kanban-instructions" class="sr-only">
+  Press Space or Enter to pick up. Use arrow keys to move between columns.
+  Press Space or Enter to drop, or Escape to cancel.
+</p>
+```
+
+**Dark mode:** Card background uses `var(--color-bg-surface)`. Status border
+colors are invariant across themes (already high-contrast). Column header
+background uses `var(--color-bg-elevated)`.
+
+**Anti-patterns:**
+- Making the whole card the drag target (prevents text selection)
+- Coloring the full column background by status (fails at 5+ columns)
+- No `activationConstraint` on pointer sensor (every click becomes a drag)
+- Re-fetching all columns after every drop (use optimistic update)
+- Horizontal scroll without visual affordance (add fade-out on right edge)
+- No keyboard alternative to drag-and-drop (WCAG failure)
+
 ---
 
 ## 10. State Design Rules
@@ -1189,6 +1573,47 @@ Capabilities:
 
 Commands with side effects show a confirmation summary before execution.
 The palette supports fuzzy matching and recency-weighted ranking.
+
+**Specifications:**
+
+| Property | Value | Notes |
+|----------|-------|-------|
+| Trigger | `Ctrl+K` / `Cmd+K` | Global, works from any focus state |
+| Close | `Escape`, backdrop click | Always dismissible |
+| Z-index | `z-[60]` | Above all other layers (panels z-40, modals z-50) |
+| Backdrop | `bg-black/50`, `fixed inset-0` | Clickable to dismiss, `aria-hidden="true"` |
+| Width | `max-w-2xl w-full` (672px) | Centered horizontally, top 20% vertically |
+| Max height | `max-h-[60vh]` | Results scroll; input stays visible |
+| Input height | 52px | Comfortable typing target |
+| Result item height | 40px | Consistent for keyboard scanning |
+| Debounce (local) | 80ms | Navigation items, recent history |
+| Debounce (remote) | 250ms | API-backed entity search |
+| Default state | Last 5 recent items | Shown before user types |
+| Animation | Fade + scale, 200ms `ease-out` | `opacity-0 scale-95` → `opacity-100 scale-100` |
+
+**Result categories:** Navigation / Actions / Recent / Search results.
+Each category has a header (`role="presentation"`, non-focusable).
+
+**Keyboard navigation:**
+
+| Key | Behavior |
+|-----|----------|
+| `ArrowDown` / `ArrowUp` | Cycle through results (wraps at boundaries) |
+| `Enter` | Activate selected result |
+| `Escape` | Close palette, return focus to previous element |
+
+**WAI-ARIA pattern:** Combobox (`role="combobox"` on input) controlling a
+listbox (`role="listbox"` with `role="option"` children). The input tracks
+`aria-activedescendant` as arrow keys move selection. Category headers use
+`role="presentation"`. Empty state uses a disabled option
+(`aria-disabled="true"`) — never an empty listbox.
+
+**Anti-patterns:**
+- `role="search"` + `role="listitem"` (wrong pattern; combobox + listbox required)
+- Debounce > 200ms for local data (feels broken)
+- Opening to empty state with no recent items (show suggested actions)
+- Z-index below modals (palette becomes inaccessible)
+- No `aria-activedescendant` updates (screen readers lose track of selection)
 
 ### 14.2 Customizable Views
 
