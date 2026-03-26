@@ -66,7 +66,7 @@
 ### Epic 64 — Expert Performance (`/admin/ui/experts`, 19 pts)
 
 - [x] **64.1:** Page Intent & Semantic Content (3 pts) — Expert table with trust tier, confidence, drift signals. **File:** `tests/playwright/test_experts_intent.py`.
-- [ ] **64.2:** API Endpoint Verification (3 pts) — Expert list/detail endpoints return valid data. **File:** `tests/playwright/test_experts_api.py`.
+- [x] **64.2:** API Endpoint Verification (3 pts) — Expert list/detail endpoints return valid data. **File:** `tests/playwright/test_experts_api.py`.
 - [ ] **64.3:** Style Guide Compliance (5 pts) — Trust tier badges (§5.2), table recipe, card layout. **File:** `tests/playwright/test_experts_style.py`.
 - [ ] **64.4:** Interactive Elements (3 pts) — Row click opens detail, filter/sort controls. **File:** `tests/playwright/test_experts_interactions.py`.
 - [ ] **64.5:** Accessibility WCAG 2.2 AA (3 pts) — Table headers, badge non-color cues, focus management. **File:** `tests/playwright/test_experts_a11y.py`.
