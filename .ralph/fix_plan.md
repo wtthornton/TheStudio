@@ -153,7 +153,7 @@
 
 ### Epic 73 — Portfolio Health (`/admin/ui/portfolio-health`, 19 pts)
 
-- [ ] **73.1:** Page Intent & Semantic Content (3 pts) — Cross-repo health overview, risk distribution. **File:** `tests/playwright/test_portfolio_health_intent.py`.
+- [x] **73.1:** Page Intent & Semantic Content (3 pts) — Cross-repo health overview, risk distribution. **File:** `tests/playwright/test_portfolio_health_intent.py`.
 - [ ] **73.2:** API Endpoint Verification (3 pts) — Portfolio health endpoints. **File:** `tests/playwright/test_portfolio_health_api.py`.
 - [ ] **73.3:** Style Guide Compliance (5 pts) — Health status colors, card recipe, risk badges. **File:** `tests/playwright/test_portfolio_health_style.py`.
 - [ ] **73.4:** Interactive Elements (3 pts) — Repo drill-down, risk filter. **File:** `tests/playwright/test_portfolio_health_interactions.py`.
