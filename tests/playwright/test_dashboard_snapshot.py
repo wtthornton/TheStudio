@@ -1,11 +1,11 @@
-"""Epic 59.6 — Fleet Dashboard: Visual Snapshot Baseline.
+"""Epic 59.6 - Fleet Dashboard: Visual Snapshot Baseline.
 
 Captures baseline screenshots for /admin/ui/dashboard and registers them for
 visual-regression comparison on subsequent runs.
 
 Snapshot strategy
 -----------------
-- Full-page baseline at the canonical 1280×720 viewport.
+- Full-page baseline at the canonical 1280x720 viewport.
 - Component-level baselines for the three primary dashboard sections:
     * System Health
     * Workflow Summary
@@ -13,7 +13,7 @@ Snapshot strategy
 
 First run
 ~~~~~~~~~
-No baseline files exist → ``compare_snapshot`` auto-creates them; every test
+No baseline files exist - ``compare_snapshot`` auto-creates them; every test
 passes with ``is_new_baseline=True``.
 
 Subsequent runs
@@ -28,11 +28,11 @@ always pass.
 
 Related suites
 ~~~~~~~~~~~~~~
-- 59.1 test_dashboard_intent.py   — semantic content
-- 59.2 test_dashboard_api.py      — API endpoints
-- 59.3 test_dashboard_style.py    — style-guide compliance
-- 59.4 test_dashboard_interactions.py — interactive elements
-- 59.5 test_dashboard_a11y.py     — WCAG 2.2 AA
+- 59.1 test_dashboard_intent.py   - semantic content
+- 59.2 test_dashboard_api.py      - API endpoints
+- 59.3 test_dashboard_style.py    - style-guide compliance
+- 59.4 test_dashboard_interactions.py - interactive elements
+- 59.5 test_dashboard_a11y.py     - WCAG 2.2 AA
 """
 
 from __future__ import annotations
@@ -70,7 +70,7 @@ class TestDashboardFullPageSnapshot:
     """
 
     def test_full_page_baseline(self, page: object, base_url: str) -> None:
-        """Capture full-page baseline at 1280×720 viewport.
+        """Capture full-page baseline at 1280x720 viewport.
 
         On first run a new baseline PNG is written to
         ``tests/playwright/snapshots/fleet-dashboard/``.  On subsequent runs
@@ -140,7 +140,7 @@ class TestDashboardSectionSnapshots:
                     )
                     section_found = True
                     break
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: S112
                     continue
 
         if not section_found:
@@ -178,7 +178,7 @@ class TestDashboardSectionSnapshots:
                     )
                     section_found = True
                     break
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: S112
                     continue
 
         if not section_found:
@@ -214,7 +214,7 @@ class TestDashboardSectionSnapshots:
                     )
                     section_found = True
                     break
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: S112
                     continue
 
         if not section_found:
@@ -236,7 +236,7 @@ class TestDashboardSnapshotRegression:
     on first run (baseline auto-created) and fail only when a subsequent run
     produces a pixel-diff above the threshold.
 
-    Override the threshold with ``SNAPSHOT_THRESHOLD=0.002`` (0.2 %) for
+    Override the threshold with ``SNAPSHOT_THRESHOLD=0.002`` (0.2%) for
     environments where minor antialiasing differences are expected.
     """
 
