@@ -139,7 +139,7 @@ All repos start at **Observe** tier. Higher tiers require explicit promotion.
 **Key safety properties:**
 - Observe tier **never writes to GitHub** unless `THESTUDIO_GITHUB_PROVIDER=real` is set
 - Suggest tier creates PRs but **never merges** — a human must click merge
-- Execute tier **auto-merges after human approval** but requires container isolation to prevent untrusted code from accessing internal infrastructure
+- Execute tier **auto-merges after human approval** and requires container isolation (`THESTUDIO_AGENT_MODE=container`, the production default) to prevent untrusted code from accessing internal infrastructure
 - You can **pause** any repo at any time via Admin UI or `POST /admin/repos/{id}/pause`
 
 ## 7. Troubleshooting
@@ -169,4 +169,5 @@ All repos start at **Observe** tier. Higher tiers require explicit promotion.
 | `THESTUDIO_LLM_PROVIDER` | No | `anthropic` (real LLM) or `mock` (default, stub responses) |
 | `THESTUDIO_GITHUB_PROVIDER` | No | `real` (real GitHub API) or `mock` (default, no GitHub writes) |
 | `THESTUDIO_ANTHROPIC_API_KEY` | For real LLM | Anthropic API key for Claude |
-| `THESTUDIO_AGENT_ISOLATION` | No | `process` (default) or `container` (Docker isolation, required for Execute tier) |
+| `THESTUDIO_AGENT_MODE` | No | `legacy` (default local), `ralph`, or `container` (**production default**). See `docs/architecture/agent-container-isolation.md` |
+| `THESTUDIO_AGENT_ISOLATION` | No | `process` (default local) or `container` (**production default**, required for Execute tier) |

@@ -26,9 +26,9 @@ No trailing slash on base URLs. Configurable via `THESTUDIO_BASE_URL` (productio
 |------|--------|----------|---------|
 | `/healthz` | GET | 200, `{"status":"ok"}` | Liveness (Docker, load balancers) |
 | `/readyz` | GET | 200, `{"status":"ready"}` | Readiness (DB connectivity) |
-| `/health/ralph` | GET | 200, `{"status":"ok", ...}` | Ralph agent mode readiness (SDK + CLI) |
+| `/health/ralph` | GET | 200, `{"status":"ok", ...}` | Agent mode health (SDK + CLI availability) |
 
-The `/health/ralph` endpoint returns `agent_mode`, `sdk_importable`, `cli_available`, and `status` (`ok` / `degraded` / `unavailable`). Returns 503 when `agent_mode=ralph` but required components are missing.
+The `/health/ralph` endpoint returns `agent_mode` (legacy/ralph/container), `sdk_importable`, `cli_available`, and `status` (`ok` / `degraded` / `unavailable`). In `container` mode, `cli_available=false` in the app container is expected — the CLI runs in the agent container instead. Returns 503 only when `agent_mode=ralph` (in-process) but the CLI is missing.
 
 **Examples:**
 - Dev: `http://localhost:8000/healthz`

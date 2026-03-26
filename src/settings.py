@@ -127,8 +127,9 @@ class Settings(BaseSettings):
     #   "legacy"    — current PrimaryAgentRunner (Claude Agent SDK, single-call)
     #   "ralph"     — RalphAgent from ralph_sdk (loop, session continuity, circuit breaking)
     #   "container" — Docker-isolated agent (Epic 25)
-    # Default is "legacy" for safe rollout. Switch to "ralph" after validation.
-    # Requires THESTUDIO_AGENT_LLM_ENABLED__DEVELOPER=true to take effect.
+    # Default is "legacy" for local dev safety. Production (docker-compose.prod.yml)
+    # overrides to "container" for network-isolated agent execution.
+    # See docs/architecture/agent-container-isolation.md.
     agent_mode: str = "legacy"  # "legacy" | "ralph" | "container"
 
     # Ralph state backend (Epic 43 Story 43.8 — State persistence)
@@ -144,7 +145,8 @@ class Settings(BaseSettings):
     ralph_timeout_minutes: int = 30  # env: THESTUDIO_RALPH_TIMEOUT_MINUTES
 
     # Container isolation (Epic 25)
-    # Global mode: "process" (in-process, default) or "container" (Docker isolation)
+    # Default "process" for local dev. Production (docker-compose.prod.yml) overrides
+    # to "container" for Docker isolation. See docs/architecture/agent-container-isolation.md.
     agent_isolation: str = "process"  # "process" or "container"
     # Per-tier fallback policy: what happens when container mode is requested
     # but Docker is unavailable. "allow" = fall back to in-process,

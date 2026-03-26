@@ -88,12 +88,21 @@ docker compose -f docker-compose.prod.yml up -d
 
 **Services:** app, postgres, temporal, nats, caddy (TLS reverse proxy), backup sidecar
 
+**Agent modes** (controls how the Primary Agent writes code):
+| Mode | Set via | Description |
+|------|---------|-------------|
+| `legacy` | `THESTUDIO_AGENT_MODE=legacy` | Claude Agent SDK → Anthropic API (direct HTTP, no CLI needed) |
+| `ralph` | `THESTUDIO_AGENT_MODE=ralph` | Ralph SDK → `claude` CLI subprocess (in app process) |
+| `container` | `THESTUDIO_AGENT_MODE=container` | Ralph SDK → `claude` CLI in **isolated Docker container** (production default) |
+
+Container mode runs agents on the `agent-net` network with no access to Postgres, Temporal, or NATS. See [docs/architecture/agent-container-isolation.md](docs/architecture/agent-container-isolation.md).
+
 **Health checks:**
 | Endpoint | Purpose |
 |----------|---------|
 | `/healthz` | Liveness (Docker healthcheck, load balancers) |
 | `/readyz` | Readiness (DB connectivity) |
-| `/health/ralph` | Ralph agent mode status (SDK + CLI availability) |
+| `/health/ralph` | Agent mode status — reports `agent_mode`, SDK/CLI availability |
 
 **URLs:** Dev at `http://localhost:8000`. Production at `https://localhost:9443` (Caddy, self-signed TLS). See [docs/URLs.md](docs/URLs.md) for the full reference.
 

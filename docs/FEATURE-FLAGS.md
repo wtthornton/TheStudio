@@ -43,7 +43,8 @@ Example: `THESTUDIO_PREFLIGHT_ENABLED=true` enables the preflight gate.
 | `llm_provider` | `str` | `"mock"` | 8 | LLM backend: `"mock"` (rule-based) or `"anthropic"` (real API) |
 | `github_provider` | `str` | `"mock"` | 8 | GitHub backend: `"mock"` or `"real"` |
 | `store_backend` | `str` | `"memory"` | 8 | Storage backend: `"memory"` (in-process) or `"postgres"` |
-| `agent_isolation` | `str` | `"process"` | 25 | Execution mode: `"process"` (in-process) or `"container"` (Docker) |
+| `agent_mode` | `str` | `"legacy"` | 43 | Agent engine: `"legacy"` (Claude Agent SDK), `"ralph"` (Ralph SDK + CLI in-process), `"container"` (Ralph SDK + CLI in ephemeral Docker container). **Production default: `container`** (set in `docker-compose.prod.yml`). |
+| `agent_isolation` | `str` | `"process"` | 25 | Execution isolation: `"process"` (in-process) or `"container"` (Docker). **Production default: `container`** (set in `docker-compose.prod.yml`). |
 
 ### Per-Agent LLM Toggles
 
@@ -52,6 +53,14 @@ Example: `THESTUDIO_PREFLIGHT_ENABLED=true` enables the preflight gate.
 | `agent_llm_enabled` | `dict[str, bool]` | All `False` | 23 | Per-agent toggle: when `False`, agent uses rule-based fallback instead of LLM |
 
 Supported agents: `primary_agent`, `intake_agent`, `context_agent`, `intent_agent`, `router_agent`, `recruiter_agent`, `assembler_agent`, `qa_agent`, `preflight_agent`
+
+### Agent Mode and Container Isolation
+
+> **Production default:** `THESTUDIO_AGENT_MODE=container` and `THESTUDIO_AGENT_ISOLATION=container`
+> are set in `docker-compose.prod.yml`. The `settings.py` defaults (`legacy` / `process`)
+> apply only to local development without Docker.
+>
+> See `docs/architecture/agent-container-isolation.md` for the full architecture.
 
 ### Container Isolation Configuration
 

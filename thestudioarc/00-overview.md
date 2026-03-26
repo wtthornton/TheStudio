@@ -160,6 +160,13 @@ Per-Repo Execution Plane (scoped, repeatable)
 - workspace checkout, repo-scoped tool servers, Primary Agent workers, Verification runner, Publisher
 - credentials, caches, and toolchains scoped per repo profile
 
+Agent Container Isolation (Epics 25, 43 — production default)
+- The Primary Agent runs in an **ephemeral Docker container** (`thestudio-agent:latest`) on the isolated `agent-net` network
+- Agent containers have Claude CLI + Ralph SDK but **cannot reach** Postgres, Temporal, NATS, or the app
+- Communication is via mounted volume: `/workspace/task.json` → `/workspace/result.json`
+- Execute tier requires container isolation (deny fallback); Observe/Suggest allow in-process fallback
+- See `docs/architecture/agent-container-isolation.md` for the full architecture
+
 This hybrid model prevents repo-specific build and security concerns from leaking into the global plane, while still allowing global experts and learning to compound across repos.
 
 ## Repo Registration Profile

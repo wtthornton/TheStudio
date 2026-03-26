@@ -123,6 +123,34 @@ Anthropic restricts OAuth token usage to first-party tools (Claude Code, Claude 
 
 Cost optimization (Epic 32) reduces API key costs by ~50% through model routing (cheap agents → Haiku), prompt caching, and batch API for async agents. This is the recommended cost reduction strategy for production.
 
+### Agent Mode and Container Isolation (Epics 25, 43)
+
+| Variable | Default (settings.py) | Production Default | Description |
+|----------|----------------------|-------------------|-------------|
+| `THESTUDIO_AGENT_MODE` | `legacy` | **`container`** | Agent engine: `legacy` (Claude Agent SDK direct API), `ralph` (Ralph SDK + CLI in-process), `container` (Ralph SDK + CLI in ephemeral Docker container) |
+| `THESTUDIO_AGENT_ISOLATION` | `process` | **`container`** | Execution isolation: `process` (in-process) or `container` (Docker) |
+| `THESTUDIO_RALPH_STATE_BACKEND` | `null` | `null` | Ralph state persistence: `null` (no persistence) or `postgres` (session continuity) |
+
+> **Production deployment (`docker-compose.prod.yml`) overrides `settings.py` defaults.**
+> Container mode is the recommended architecture. See `docs/architecture/agent-container-isolation.md`.
+
+**How the three modes work:**
+
+| Mode | Who writes code | Needs CLI | Needs Docker | Security |
+|------|----------------|-----------|-------------|----------|
+| `legacy` | Claude Agent SDK → Anthropic API (direct HTTP) | No | No | Runs in app process |
+| `ralph` | Ralph SDK → `claude` CLI subprocess | Yes (in app) | No | Runs in app process |
+| `container` | Ralph SDK → `claude` CLI subprocess | Yes (in agent image) | Yes | **Isolated network** — no DB/Temporal/NATS access |
+
+**Building the agent image:**
+
+```bash
+cd infra
+docker compose -f docker-compose.prod.yml --profile build build agent-image
+```
+
+The agent image (`thestudio-agent:latest`) contains the Claude CLI, Ralph SDK, Git, and the container runner entrypoint. The app image does NOT contain the Claude CLI.
+
 ### Per-Agent LLM Toggles (Epic 23)
 
 Each agent can be individually switched from rule-based fallback to real LLM. All default to `false`.
