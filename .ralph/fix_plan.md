@@ -121,7 +121,7 @@
 - [x] **69.2:** API Endpoint Verification (3 pts) — Dead-letter list endpoint. **File:** `tests/playwright/test_dead_letters_api.py`.
 - [x] **69.3:** Style Guide Compliance (5 pts) — Error colors, table recipe, badge usage. **File:** `tests/playwright/test_dead_letters_style.py`.
 - [x] **69.4:** Interactive Elements (3 pts) — Event detail expansion, retry actions. **File:** `tests/playwright/test_dead_letters_interactions.py`.
-- [ ] **69.5:** Accessibility WCAG 2.2 AA (3 pts) — Table semantics, action ARIA. **File:** `tests/playwright/test_dead_letters_a11y.py`.
+- [x] **69.5:** Accessibility WCAG 2.2 AA (3 pts) — Table semantics, action ARIA. **File:** `tests/playwright/test_dead_letters_a11y.py`.
 - [ ] **69.6:** Visual Snapshot Baseline (2 pts) — Capture baseline. **File:** `tests/playwright/test_dead_letters_snapshot.py`. **RUN TESTS.**
 
 ### Epic 70 — Execution Planes (`/admin/ui/planes`, 19 pts)
