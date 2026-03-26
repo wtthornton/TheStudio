@@ -74,11 +74,11 @@
 
 ### Epic 65 — Tool Hub (`/admin/ui/tools`, 19 pts)
 
-- [ ] **65.1:** Page Intent & Semantic Content (3 pts) — Tool catalog with approval status badges, profiles. **File:** `tests/playwright/test_tools_intent.py`.
-- [ ] **65.2:** API Endpoint Verification (3 pts) — Tool list endpoint returns valid data. **File:** `tests/playwright/test_tools_api.py`.
-- [ ] **65.3:** Style Guide Compliance (5 pts) — Badge recipe (§9.3), card layout, status colors. **File:** `tests/playwright/test_tools_style.py`.
-- [ ] **65.4:** Interactive Elements (3 pts) — Tool detail expansion, approval actions. **File:** `tests/playwright/test_tools_interactions.py`.
-- [ ] **65.5:** Accessibility WCAG 2.2 AA (3 pts) — Status badges non-color, keyboard nav, ARIA. **File:** `tests/playwright/test_tools_a11y.py`.
+- [x] **65.1:** Page Intent & Semantic Content (3 pts) — Tool catalog with approval status badges, profiles. **File:** `tests/playwright/test_tools_intent.py`.
+- [x] **65.2:** API Endpoint Verification (3 pts) — Tool list endpoint returns valid data. **File:** `tests/playwright/test_tools_api.py`.
+- [x] **65.3:** Style Guide Compliance (5 pts) — Badge recipe (§9.3), card layout, status colors. **File:** `tests/playwright/test_tools_style.py`.
+- [x] **65.4:** Interactive Elements (3 pts) — Tool detail expansion, approval actions. **File:** `tests/playwright/test_tools_interactions.py`.
+- [x] **65.5:** Accessibility WCAG 2.2 AA (3 pts) — Status badges non-color, keyboard nav, ARIA. **File:** `tests/playwright/test_tools_a11y.py`.
 - [ ] **65.6:** Visual Snapshot Baseline (2 pts) — Capture baseline. **File:** `tests/playwright/test_tools_snapshot.py`. **RUN TESTS.**
 
 ---
