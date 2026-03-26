@@ -149,7 +149,7 @@
 - [x] **72.3:** Style Guide Compliance (5 pts) — KPI cards, cost formatting, chart colors. **File:** `tests/playwright/test_cost_dashboard_style.py`.
 - [x] **72.4:** Interactive Elements (3 pts) — Period selector, budget threshold controls. **File:** `tests/playwright/test_cost_dashboard_interactions.py`.
 - [x] **72.5:** Accessibility WCAG 2.2 AA (3 pts) — Chart alternatives, focus indicators. **File:** `tests/playwright/test_cost_dashboard_a11y.py`.
-- [ ] **72.6:** Visual Snapshot Baseline (2 pts) — Capture baseline. **File:** `tests/playwright/test_cost_dashboard_snapshot.py`. **RUN TESTS.**
+- [x] **72.6:** Visual Snapshot Baseline (2 pts) — Capture baseline. **File:** `tests/playwright/test_cost_dashboard_snapshot.py`. **RUN TESTS.**
 
 ### Epic 73 — Portfolio Health (`/admin/ui/portfolio-health`, 19 pts)
 
