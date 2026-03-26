@@ -137,7 +137,7 @@
 
 - [x] **71.1:** Page Intent & Semantic Content (3 pts) — 6-tab config hub: API keys, infra, flags, agent, budget, secrets. **File:** `tests/playwright/test_settings_intent.py`.
 - [x] **71.2:** API Endpoint Verification (3 pts) — Settings GET/PUT endpoints. **File:** `tests/playwright/test_settings_api.py`.
-- [ ] **71.3:** Style Guide Compliance (5 pts) — Form inputs (§9.8), tab navigation, card layout. **File:** `tests/playwright/test_settings_style.py`.
+- [x] **71.3:** Style Guide Compliance (5 pts) — Form inputs (§9.8), tab navigation, card layout. **File:** `tests/playwright/test_settings_style.py`.
 - [ ] **71.4:** Interactive Elements (3 pts) — Tab switching, form submission, validation feedback. **File:** `tests/playwright/test_settings_interactions.py`.
 - [ ] **71.5:** Accessibility WCAG 2.2 AA (3 pts) — Tab ARIA (`role="tablist"`), form labels, error messages. **File:** `tests/playwright/test_settings_a11y.py`.
 - [ ] **71.6:** Visual Snapshot Baseline (2 pts) — Capture baseline. **File:** `tests/playwright/test_settings_snapshot.py`. **RUN TESTS.**
