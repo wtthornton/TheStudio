@@ -49,8 +49,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
-# Copy application source and entrypoint
+# Copy application source, static assets, and entrypoint
 COPY src/ src/
+COPY static/ static/
 COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
 COPY docker-entrypoint.sh .
 RUN chmod +x docker-entrypoint.sh
