@@ -34,7 +34,7 @@
 - [x] **60.3:** Style Guide Compliance (5 pts) — Trust tier badges (§5.2), status badges (§5.1), table recipe (§9.2). **File:** `tests/playwright/test_repos_style.py`.
 - [x] **60.4:** Interactive Elements (3 pts) — Row click opens detail panel (§9.14), HTMX loads detail content. **File:** `tests/playwright/test_repos_interactions.py`.
 - [x] **60.5:** Accessibility WCAG 2.2 AA (3 pts) — Table headers `scope="col"`, panel ARIA, focus management. **File:** `tests/playwright/test_repos_a11y.py`.
-- [ ] **60.6:** Visual Snapshot Baseline (2 pts) — Capture baseline. **File:** `tests/playwright/test_repos_snapshot.py`. **RUN TESTS.**
+- [x] **60.6:** Visual Snapshot Baseline (2 pts) — Capture baseline. **File:** `tests/playwright/test_repos_snapshot.py`. **RUN TESTS.**
 
 ### Epic 61 — Workflow Console (`/admin/ui/workflows`, 19 pts)
 
