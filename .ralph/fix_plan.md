@@ -146,7 +146,7 @@
 
 - [x] **72.1:** Page Intent & Semantic Content (3 pts) — Model spend, budget utilization, cost breakdown. **File:** `tests/playwright/test_cost_dashboard_intent.py`.
 - [x] **72.2:** API Endpoint Verification (3 pts) — Cost API endpoints. **File:** `tests/playwright/test_cost_dashboard_api.py`.
-- [ ] **72.3:** Style Guide Compliance (5 pts) — KPI cards, cost formatting, chart colors. **File:** `tests/playwright/test_cost_dashboard_style.py`.
+- [x] **72.3:** Style Guide Compliance (5 pts) — KPI cards, cost formatting, chart colors. **File:** `tests/playwright/test_cost_dashboard_style.py`.
 - [ ] **72.4:** Interactive Elements (3 pts) — Period selector, budget threshold controls. **File:** `tests/playwright/test_cost_dashboard_interactions.py`.
 - [ ] **72.5:** Accessibility WCAG 2.2 AA (3 pts) — Chart alternatives, focus indicators. **File:** `tests/playwright/test_cost_dashboard_a11y.py`.
 - [ ] **72.6:** Visual Snapshot Baseline (2 pts) — Capture baseline. **File:** `tests/playwright/test_cost_dashboard_snapshot.py`. **RUN TESTS.**
