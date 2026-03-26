@@ -10,12 +10,12 @@
 
 | Metric | Value |
 |--------|-------|
-| Total epics | 76 (numbered epics 0–76) |
-| Complete | 74 (Epics 0-75 except Epic 27 deferred) |
+| Total epics | 78 (numbered epics 0–78) |
+| Complete | 76 (Epics 0-77 except Epic 27 deferred) |
 | Stories complete / rollout gated | 0 |
-| In Progress | 0 |
-| Proposed | 1 — **Epic 76** (Playwright test calibration: 8 stories, 25 pts) |
-| Milestone | **Playwright full-stack test suites complete** (Epics 59–74, 2026-03-26). All 16 admin pages covered. |
+| In Progress | 1 — **Epic 78** (Design Token Unification: 8 stories, 28 pts, P2) |
+| Proposed | 0 |
+| Milestone | **Pipeline Dashboard full Playwright coverage + style guide compliance** (Epics 76–77, 2026-03-26). 12 React tabs covered, 143 design tokens, 75 test files. |
 | Deferred | 1 (Epic 27) |
 | Tests passing | 3,366+ unit, 9 E2E pipeline, ~244 integration, 23 P0 harness, 98 Ralph-specific, 96 Playwright page suites |
 | Eval tests | 20/25 passed with real Claude (~$5/run) |
@@ -206,6 +206,11 @@ Phase 10 — RALPH — COMPLETE (2026-03-25)
 Phase 11 — PLAYWRIGHT TEST SUITES
   Epic 58 (Test Infrastructure) — COMPLETE (2026-03-25) — all 7 stories (58.1–58.7)
   Epics 59-74 (Per-page suites) — COMPLETE (2026-03-26) — 16 epics, 96 stories, 304 pts delivered by Ralph (95 commits)
+
+Phase 12 — PIPELINE DASHBOARD COVERAGE + STYLE COMPLIANCE
+  Epic 76 (Pipeline Dashboard Playwright Suite) — COMPLETE (2026-03-26) — 14 stories, 73 pts, 75 test files across 12 React tabs
+  Epic 77 (Pipeline Dashboard Style Guide Compliance) — COMPLETE (2026-03-26) — 9 stories, 30 pts, 143 design tokens, button/badge/focus/recipe fixes
+  Epic 78 (Design Token Unification) — IN PROGRESS (Sprint 4) — 8 stories, 28 pts, P2
 
 Prior rollup (2026-03-21)
   Epic 34 (Phase 0: SSE PoC) — COMPLETE. 14 stories. Dashboard infra.

@@ -1,6 +1,6 @@
 # Epic 78: Unified Design Token System Across All Frontend Surfaces
 
-**Status:** Proposed
+**Status:** Active — Sprint 4 (2026-03-26)
 **Priority:** P2 -- Nice to Have
 **Estimated LoE:** 4-6 weeks (8 stories, single developer)
 **Dependencies:** Epic 77 (Pipeline Dashboard Style Guide Compliance), Epic 53 (Admin UI Canonical Compliance -- COMPLETE)

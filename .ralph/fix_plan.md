@@ -2,30 +2,30 @@
 
 ## Open epics — active backlog
 
-> **Rollup:** `docs/epics/EPIC-STATUS-TRACKER.md` (2026-03-26). All epics complete except Epic 27 (deferred).
+> **Rollup:** `docs/epics/EPIC-STATUS-TRACKER.md` (2026-03-26). Epics 76-77 complete. Epic 78 active (Sprint 4).
 
 | Epic | Status | Canonical doc |
 |------|--------|---------------|
-| **76** | **Proposed** — Playwright test calibration — fix 392 failures, 8 stories, 25 pts | `docs/epics/epic-76-playwright-test-calibration.md` |
+| **78** | **Active** — Sprint 4 — Design Token Unification (8 stories, 28 pts, P2) | `docs/epics/epic-78-design-token-unification.md` |
 | **27** | Deferred on demand | `docs/epics/` (multi-source webhooks) |
 
 ---
 
-## Epic 76 — Playwright Test Calibration (25 pts)
+## Epic 78 — Design Token Unification (28 pts)
 
-> **Goal:** 77% → 95%+ pass rate by fixing test calibration (not app bugs).
-> **Order:** 76.4 → 76.3 → 76.1 → 76.2 → 76.6 → 76.5 → 76.7 → 76.8
-> **Gate:** `pytest tests/playwright/ -q` pass rate >= 95%
-> TESTS_STATUS: DEFERRED until 76.8
+> **Goal:** Single shared `static/css/tokens.css` consumed by both React + Admin UI.
+> **Order:** 78.1 → 78.2 → 78.3 → 78.4 → 78.5 → 78.6 → 78.7 → 78.8
+> **Gate:** `grep -cE "bg-gray-|text-gray-|border-gray-" src/admin/templates/*.html` returns 0 for page templates
+> TESTS_STATUS: DEFERRED until 78.8
 
-- [ ] **76.4:** Fix assert_focus_visible() Signature (2 pts, S) — Align function signature with all callers across a11y tests. **File:** `tests/playwright/lib/accessibility_helpers.py`.
-- [ ] **76.3:** Fix axe-core Integration (3 pts, M) — Fix run_axe_audit() return type, update all a11y test files. **File:** `tests/playwright/lib/accessibility_helpers.py`.
-- [ ] **76.1:** Fix Design Token Assertions (5 pts, L) — Read actual :root tokens from base.html, update style_assertions.py and 16 test_*_style.py files. **Files:** `tests/playwright/lib/style_assertions.py`, `src/admin/templates/base.html`.
-- [ ] **76.2:** Fix Typography Assertions (5 pts, L) — Capture actual computed font values, update typography_assertions.py and 16 test files. **File:** `tests/playwright/lib/typography_assertions.py`.
-- [ ] **76.6:** Fix Tools API Tests (2 pts, S) — Match endpoint URLs and response schema to actual admin API. **Files:** `tests/playwright/test_tools_api.py`, `src/admin/router.py`.
-- [ ] **76.5:** Fix Kanban/Toggle Tests (3 pts, M) — Click toggle before asserting kanban, handle localStorage default. **Files:** `tests/playwright/test_workflows_*.py`.
-- [ ] **76.7:** Fix Real Accessibility Bugs (3 pts, M) — Add table captions, ARIA labels in admin templates. **Files:** `src/admin/templates/`.
-- [ ] **76.8:** Validation Run (2 pts, S) — Full suite >= 95% pass rate, document remaining failures, update playwright-guide.md. **RUN TESTS.**
+- [ ] **78.1:** Create shared token CSS file + static mount (3 pts)
+- [ ] **78.2:** Integrate tokens into React frontend (2 pts) — depends on Epic 77 COMPLETE
+- [ ] **78.3:** Integrate tokens into Admin UI base template (3 pts) — theme selector: both `.dark` and `[data-theme="dark"]`
+- [ ] **78.4:** Admin migration batch 1: Dashboard, Repos, Workflows, Audit (5 pts)
+- [ ] **78.5:** Admin migration batch 2: Metrics, Experts, Tools, Models (5 pts)
+- [ ] **78.6:** Admin migration batch 3: Compliance, Quarantine, DLQ, Planes, Settings, Cost, Portfolio (5 pts)
+- [ ] **78.7:** Component template migration + cross-surface validation (3 pts)
+- [ ] **78.8:** Token documentation in style guide (2 pts) — **RUN TESTS.**
 
 ---
 
@@ -44,6 +44,10 @@
 ---
 
 ## Completed
+
+**Epic 76 (Pipeline Dashboard Playwright Suite):** All 14 stories, 73 pts **complete** (2026-03-26). 75 test files across 12 React dashboard tabs + cross-tab compliance. 6 test types per tab: intent, API, style, interactions, a11y, snapshot.
+
+**Epic 77 (Pipeline Dashboard Style Guide Compliance):** All 9 stories, 30 pts **complete** (2026-03-26). 143 design tokens in theme.css, button/badge colors standardized, data-component/data-status/data-tier attributes on 20+ components, Inter + JetBrains Mono typography, recipe alignment, focus ring fixes, empty/error state fixes. Validated: Vite build pass, 355/364 Vitest pass (9 pre-existing).
 
 **Epics 59–74 (Playwright Full-Stack Test Suites):** All 16 epics, 96 stories, 304 pts **complete** (2026-03-26). Per-page test suites for all Admin UI pages: intent, API verification, style guide compliance (§9.13-9.15), interactive elements, WCAG 2.2 AA accessibility, visual snapshot baselines. Delivered by Ralph in 95 commits.
 
