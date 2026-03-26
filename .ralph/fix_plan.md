@@ -47,7 +47,7 @@
 
 ### Epic 62 — Audit Log (`/admin/ui/audit`, 19 pts)
 
-- [ ] **62.1:** Page Intent & Semantic Content (3 pts) — Event log table with timestamp, actor, action, target columns. **File:** `tests/playwright/test_audit_intent.py`.
+- [x] **62.1:** Page Intent & Semantic Content (3 pts) — Event log table with timestamp, actor, action, target columns. **File:** `tests/playwright/test_audit_intent.py`.
 - [ ] **62.2:** API Endpoint Verification (3 pts) — Audit list endpoint returns 200, valid JSON with pagination. **File:** `tests/playwright/test_audit_api.py`.
 - [ ] **62.3:** Style Guide Compliance (5 pts) — Table recipe (§9.2), typography, timestamp formatting. **File:** `tests/playwright/test_audit_style.py`.
 - [ ] **62.4:** Interactive Elements (3 pts) — Time-range filter, pagination, row expansion. **File:** `tests/playwright/test_audit_interactions.py`.
