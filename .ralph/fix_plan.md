@@ -90,7 +90,7 @@
 
 ### Epic 66 — Model Gateway (`/admin/ui/models`, 19 pts)
 
-- [ ] **66.1:** Page Intent & Semantic Content (3 pts) — Model providers, routing rules, cost info. **File:** `tests/playwright/test_models_intent.py`.
+- [x] **66.1:** Page Intent & Semantic Content (3 pts) — Model providers, routing rules, cost info. **File:** `tests/playwright/test_models_intent.py`.
 - [ ] **66.2:** API Endpoint Verification (3 pts) — Model list endpoint returns valid data. **File:** `tests/playwright/test_models_api.py`.
 - [ ] **66.3:** Style Guide Compliance (5 pts) — Table/card recipes, cost formatting. **File:** `tests/playwright/test_models_style.py`.
 - [ ] **66.4:** Interactive Elements (3 pts) — Routing rule toggles, provider detail. **File:** `tests/playwright/test_models_interactions.py`.
