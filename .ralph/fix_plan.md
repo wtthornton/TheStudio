@@ -168,7 +168,7 @@
 - [x] **74.2:** API Endpoint Verification (3 pts) — Detail endpoints return valid entity data. **File:** `tests/playwright/test_detail_pages_api.py`.
 - [x] **74.3:** Style Guide Compliance (5 pts) — Inspector panel specs (§9.14), badge usage, typography. **File:** `tests/playwright/test_detail_pages_style.py`.
 - [x] **74.4:** Interactive Elements (3 pts) — Tier change actions, navigation between entities. **File:** `tests/playwright/test_detail_pages_interactions.py`.
-- [ ] **74.5:** Accessibility WCAG 2.2 AA (3 pts) — Panel ARIA, action button labels, focus management. **File:** `tests/playwright/test_detail_pages_a11y.py`.
+- [x] **74.5:** Accessibility WCAG 2.2 AA (3 pts) — Panel ARIA, action button labels, focus management. **File:** `tests/playwright/test_detail_pages_a11y.py`.
 - [ ] **74.6:** Visual Snapshot Baseline (2 pts) — Capture baseline. **File:** `tests/playwright/test_detail_pages_snapshot.py`. **RUN TESTS.**
 
 ---
