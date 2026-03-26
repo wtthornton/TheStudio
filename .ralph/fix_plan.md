@@ -117,7 +117,7 @@
 
 ### Epic 69 — Dead-Letter Inspector (`/admin/ui/dead-letters`, 19 pts)
 
-- [ ] **69.1:** Page Intent & Semantic Content (3 pts) — Dead-lettered events, failure reasons, attempt counts. **File:** `tests/playwright/test_dead_letters_intent.py`.
+- [x] **69.1:** Page Intent & Semantic Content (3 pts) — Dead-lettered events, failure reasons, attempt counts. **File:** `tests/playwright/test_dead_letters_intent.py`.
 - [ ] **69.2:** API Endpoint Verification (3 pts) — Dead-letter list endpoint. **File:** `tests/playwright/test_dead_letters_api.py`.
 - [ ] **69.3:** Style Guide Compliance (5 pts) — Error colors, table recipe, badge usage. **File:** `tests/playwright/test_dead_letters_style.py`.
 - [ ] **69.4:** Interactive Elements (3 pts) — Event detail expansion, retry actions. **File:** `tests/playwright/test_dead_letters_interactions.py`.
