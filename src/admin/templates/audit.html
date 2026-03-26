@@ -8,7 +8,7 @@
 <div class="bg-white rounded-lg border border-gray-200 p-4 mb-6">
     <div class="flex items-center gap-4">
         <div>
-            <label class="block text-xs font-medium text-gray-600 mb-1">Event Type</label>
+            <label for="audit-type-filter" class="block text-xs font-medium text-gray-600 mb-1">Event Type</label>
             <select id="audit-type-filter" name="event_type" class="border border-gray-300 rounded px-3 py-2 text-sm">
                 <option value="">All</option>
                 <option value="repo_registered">Repo Registered</option>
@@ -23,17 +23,17 @@
             </select>
         </div>
         <div>
-            <label class="block text-xs font-medium text-gray-600 mb-1">Actor</label>
+            <label for="audit-actor-filter" class="block text-xs font-medium text-gray-600 mb-1">Actor</label>
             <input type="text" id="audit-actor-filter" name="actor" placeholder="user@example.com"
                    class="border border-gray-300 rounded px-3 py-2 text-sm">
         </div>
         <div>
-            <label class="block text-xs font-medium text-gray-600 mb-1">Target ID</label>
+            <label for="audit-target-filter" class="block text-xs font-medium text-gray-600 mb-1">Target ID</label>
             <input type="text" id="audit-target-filter" name="target_id" placeholder="UUID..."
                    class="border border-gray-300 rounded px-3 py-2 text-sm">
         </div>
         <div>
-            <label class="block text-xs font-medium text-gray-600 mb-1">Time Range</label>
+            <label for="audit-hours-filter" class="block text-xs font-medium text-gray-600 mb-1">Time Range</label>
             <select id="audit-hours-filter" name="hours" class="border border-gray-300 rounded px-3 py-2 text-sm">
                 <option value="1">Last 1h</option>
                 <option value="6">Last 6h</option>
