@@ -56,7 +56,7 @@
 
 ### Epic 63 — Metrics (`/admin/ui/metrics`, 19 pts)
 
-- [ ] **63.1:** Page Intent & Semantic Content (3 pts) — Success rates, gate status, loopback breakdown display. **File:** `tests/playwright/test_metrics_intent.py`.
+- [x] **63.1:** Page Intent & Semantic Content (3 pts) — Success rates, gate status, loopback breakdown display. **File:** `tests/playwright/test_metrics_intent.py`.
 - [ ] **63.2:** API Endpoint Verification (3 pts) — Metrics endpoints return valid data. **File:** `tests/playwright/test_metrics_api.py`.
 - [ ] **63.3:** Style Guide Compliance (5 pts) — Card recipe (§9.1), KPI typography, status colors (§5.1). **File:** `tests/playwright/test_metrics_style.py`.
 - [ ] **63.4:** Interactive Elements (3 pts) — Period selector, chart interactions, metric drill-down. **File:** `tests/playwright/test_metrics_interactions.py`.
