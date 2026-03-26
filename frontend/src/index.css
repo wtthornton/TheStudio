@@ -1,4 +1,69 @@
+@import "./theme.css";
 @import "tailwindcss";
+
+/* ============================================================
+ * Tailwind v4 @theme — maps design tokens to Tailwind utilities
+ * Section 4.4: Tailwind Integration (CSS-first, no config file)
+ *
+ * Usage examples:
+ *   bg-surface        → var(--color-bg-surface)
+ *   bg-elevated       → var(--color-bg-elevated)
+ *   bg-sidebar        → var(--color-bg-sidebar)
+ *   text-primary      → var(--color-text-primary)
+ *   text-secondary    → var(--color-text-secondary)
+ *   border-primary    → var(--color-border-primary)
+ *   bg-interactive    → var(--color-interactive-primary)
+ *   bg-destructive    → var(--color-interactive-destructive)
+ * ============================================================ */
+@theme {
+  /* Background utilities */
+  --color-surface:  var(--color-bg-surface);
+  --color-elevated: var(--color-bg-elevated);
+  --color-sidebar:  var(--color-bg-sidebar);
+  --color-overlay:  var(--color-bg-overlay);
+  --color-scrim:    var(--color-bg-scrim);
+
+  /* Text utilities */
+  --color-text-primary:    var(--color-text-primary);
+  --color-text-secondary:  var(--color-text-secondary);
+  --color-text-tertiary:   var(--color-text-tertiary);
+  --color-text-inverse:    var(--color-text-inverse);
+  --color-text-on-sidebar: var(--color-text-on-sidebar);
+
+  /* Border utilities */
+  --color-border-primary:   var(--color-border-primary);
+  --color-border-secondary: var(--color-border-secondary);
+
+  /* Interactive utilities */
+  --color-interactive: var(--color-interactive-primary);
+  --color-primary:     var(--color-interactive-primary);
+  --color-destructive: var(--color-interactive-destructive);
+  --color-focus:       var(--color-focus-ring);
+
+  /* Status: Success */
+  --color-status-success:      var(--color-status-success-bg);
+  --color-status-success-text: var(--color-status-success-text);
+  --color-status-success-kpi:  var(--color-status-success-kpi);
+
+  /* Status: Warning */
+  --color-status-warning:      var(--color-status-warning-bg);
+  --color-status-warning-text: var(--color-status-warning-text);
+  --color-status-warning-kpi:  var(--color-status-warning-kpi);
+
+  /* Status: Error */
+  --color-status-error:      var(--color-status-error-bg);
+  --color-status-error-text: var(--color-status-error-text);
+  --color-status-error-kpi:  var(--color-status-error-kpi);
+
+  /* Status: Info */
+  --color-status-info:      var(--color-status-info-bg);
+  --color-status-info-text: var(--color-status-info-text);
+  --color-status-info-kpi:  var(--color-status-info-kpi);
+
+  /* Status: Neutral */
+  --color-status-neutral:      var(--color-status-neutral-bg);
+  --color-status-neutral-text: var(--color-status-neutral-text);
+}
 
 /* Utility: hide scrollbar while preserving scroll functionality (Epic 54.4) */
 .scrollbar-none {

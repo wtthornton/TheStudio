@@ -1,0 +1,263 @@
+/* TheStudio Design Tokens — Single source of truth
+ * Implements docs/design/07-THESTUDIO-UI-UX-STYLE-GUIDE.md Sections 4.1-4.6
+ */
+
+/* ============================================================
+ * Section 4.1: Primitive Tokens (Tier 1)
+ * Raw values with no implied meaning. These are the palette.
+ * ============================================================ */
+:root {
+  /* Grays */
+  --primitive-gray-50:  #f9fafb;
+  --primitive-gray-100: #f3f4f6;
+  --primitive-gray-200: #e5e7eb;
+  --primitive-gray-300: #d1d5db;
+  --primitive-gray-400: #9ca3af;
+  --primitive-gray-500: #6b7280;
+  --primitive-gray-600: #4b5563;
+  --primitive-gray-700: #374151;
+  --primitive-gray-800: #1f2937;
+  --primitive-gray-900: #111827;
+  --primitive-gray-950: #030712;
+
+  /* Blue */
+  --primitive-blue-50:  #eff6ff;
+  --primitive-blue-100: #dbeafe;
+  --primitive-blue-500: #3b82f6;
+  --primitive-blue-600: #2563eb;
+  --primitive-blue-700: #1d4ed8;
+  --primitive-blue-950: #172554;
+
+  /* Green */
+  --primitive-green-50:  #f0fdf4;
+  --primitive-green-100: #dcfce7;
+  --primitive-green-500: #22c55e;
+  --primitive-green-600: #16a34a;
+  --primitive-green-800: #166534;
+
+  /* Red */
+  --primitive-red-50:  #fef2f2;
+  --primitive-red-100: #fee2e2;
+  --primitive-red-500: #ef4444;
+  --primitive-red-600: #dc2626;
+  --primitive-red-800: #991b1b;
+
+  /* Yellow */
+  --primitive-yellow-50:  #fefce8;
+  --primitive-yellow-100: #fef9c3;
+  --primitive-yellow-500: #eab308;
+  --primitive-yellow-600: #ca8a04;
+  --primitive-yellow-800: #854d0e;
+
+  /* Purple */
+  --primitive-purple-50:  #faf5ff;
+  --primitive-purple-100: #f3e8ff;
+  --primitive-purple-500: #a855f7;
+  --primitive-purple-600: #9333ea;
+  --primitive-purple-800: #6b21a8;
+
+  /* Indigo */
+  --primitive-indigo-600: #4f46e5;
+  --primitive-indigo-800: #3730a3;
+}
+
+/* ============================================================
+ * Section 4.2: Semantic Tokens — Light Theme (default)
+ * Meaning-based tokens that map to primitives.
+ * ============================================================ */
+:root,
+[data-theme="light"] {
+  /* Backgrounds */
+  --color-bg-primary:  var(--primitive-gray-50);
+  --color-bg-surface:  #ffffff;
+  --color-bg-elevated: #ffffff;
+  --color-bg-sidebar:  var(--primitive-gray-900);
+  --color-bg-overlay:  rgba(0, 0, 0, 0.5);
+
+  /* Text */
+  --color-text-primary:    var(--primitive-gray-900);
+  --color-text-secondary:  var(--primitive-gray-500);
+  --color-text-tertiary:   var(--primitive-gray-400);
+  --color-text-inverse:    #ffffff;
+  --color-text-on-sidebar: var(--primitive-gray-100);
+
+  /* Borders */
+  --color-border-primary:   var(--primitive-gray-200);
+  --color-border-secondary: var(--primitive-gray-100);
+
+  /* Interactive */
+  --color-interactive-primary:     var(--primitive-blue-600);
+  --color-interactive-hover:       var(--primitive-blue-700);
+  --color-interactive-destructive: var(--primitive-red-600);
+  --color-interactive-secondary:   var(--primitive-gray-600);
+
+  /* Focus */
+  --color-focus-ring: var(--primitive-blue-600);
+
+  /* Status: Success */
+  --color-status-success-bg:   var(--primitive-green-100);
+  --color-status-success-text: var(--primitive-green-800);
+  --color-status-success-kpi:  var(--primitive-green-600);
+
+  /* Status: Warning */
+  --color-status-warning-bg:   var(--primitive-yellow-100);
+  --color-status-warning-text: var(--primitive-yellow-800);
+  --color-status-warning-kpi:  var(--primitive-yellow-600);
+
+  /* Status: Error */
+  --color-status-error-bg:   var(--primitive-red-100);
+  --color-status-error-text: var(--primitive-red-800);
+  --color-status-error-kpi:  var(--primitive-red-600);
+
+  /* Status: Info */
+  --color-status-info-bg:   var(--primitive-blue-100);
+  --color-status-info-text: var(--primitive-blue-700);
+  --color-status-info-kpi:  var(--primitive-blue-600);
+
+  /* Status: Neutral */
+  --color-status-neutral-bg:   var(--primitive-gray-100);
+  --color-status-neutral-text: var(--primitive-gray-700);
+}
+
+/* ============================================================
+ * Section 4.2: Semantic Tokens — Dark Theme
+ * ============================================================ */
+[data-theme="dark"] {
+  /* Backgrounds */
+  --color-bg-primary:  var(--primitive-gray-950);
+  --color-bg-surface:  var(--primitive-gray-900);
+  --color-bg-elevated: var(--primitive-gray-800);
+  --color-bg-sidebar:  var(--primitive-gray-950);
+  --color-bg-overlay:  rgba(0, 0, 0, 0.7);
+
+  /* Text */
+  --color-text-primary:    var(--primitive-gray-50);
+  --color-text-secondary:  var(--primitive-gray-400);
+  --color-text-tertiary:   var(--primitive-gray-500);
+  --color-text-inverse:    var(--primitive-gray-900);
+  --color-text-on-sidebar: var(--primitive-gray-300);
+
+  /* Borders */
+  --color-border-primary:   var(--primitive-gray-700);
+  --color-border-secondary: var(--primitive-gray-800);
+
+  /* Interactive */
+  --color-interactive-primary:     var(--primitive-blue-500);
+  --color-interactive-hover:       var(--primitive-blue-600);
+  --color-interactive-destructive: var(--primitive-red-500);
+  --color-interactive-secondary:   var(--primitive-gray-400);
+
+  /* Focus */
+  --color-focus-ring: var(--primitive-blue-500);
+
+  /* Status: Success (dark) */
+  --color-status-success-bg:   rgba(22, 163, 74, 0.2);
+  --color-status-success-text: var(--primitive-green-500);
+  --color-status-success-kpi:  var(--primitive-green-500);
+
+  /* Status: Warning (dark) */
+  --color-status-warning-bg:   rgba(234, 179, 8, 0.2);
+  --color-status-warning-text: var(--primitive-yellow-500);
+  --color-status-warning-kpi:  var(--primitive-yellow-500);
+
+  /* Status: Error (dark) */
+  --color-status-error-bg:   rgba(239, 68, 68, 0.2);
+  --color-status-error-text: var(--primitive-red-500);
+  --color-status-error-kpi:  var(--primitive-red-500);
+
+  /* Status: Info (dark) */
+  --color-status-info-bg:   rgba(59, 130, 246, 0.2);
+  --color-status-info-text: var(--primitive-blue-500);
+  --color-status-info-kpi:  var(--primitive-blue-500);
+
+  /* Status: Neutral (dark) */
+  --color-status-neutral-bg:   var(--primitive-gray-800);
+  --color-status-neutral-text: var(--primitive-gray-400);
+}
+
+/* ============================================================
+ * Section 4.3: Component Tokens (Tier 3)
+ * Specific to a component or region. Defined in terms of
+ * semantic tokens. Sidebar tokens are NOT overridden in dark
+ * theme — sidebar is dark in both themes (Section 4.5 rule).
+ * ============================================================ */
+:root {
+  /* Sidebar */
+  --sidebar-bg:              var(--color-bg-sidebar);
+  --sidebar-text:            var(--color-text-on-sidebar);
+  --sidebar-active-bg:       var(--primitive-gray-800);
+  --sidebar-hover-bg:        var(--primitive-gray-800);
+  --sidebar-width:           14rem;           /* 224px */
+  --sidebar-width-collapsed: 3.5rem;          /* 56px */
+
+  /* Cards */
+  --card-bg:      var(--color-bg-surface);
+  --card-border:  var(--color-border-primary);
+  --card-radius:  0.5rem;
+  --card-padding: 1rem;
+
+  /* Header */
+  --header-bg:     var(--color-bg-surface);
+  --header-border: var(--color-border-primary);
+  --header-height: 3.5rem;
+
+  /* Tables */
+  --table-header-bg: var(--color-bg-primary);
+  --table-row-hover: var(--color-bg-primary);
+  --table-border:    var(--color-border-secondary);
+}
+
+/* ============================================================
+ * Section 4.6: Extended Tokens — Light Theme
+ * State overlays, motion, overlay/scrim
+ * ============================================================ */
+:root,
+[data-theme="light"] {
+  /* State overlays */
+  --state-hover-overlay:    rgba(0, 0, 0, 0.04);
+  --state-active-overlay:   rgba(0, 0, 0, 0.08);
+  --state-disabled-opacity: 0.5;
+  --state-selected-bg:      var(--primitive-blue-50);
+
+  /* Motion */
+  --motion-duration-instant: 0ms;
+  --motion-duration-fast:    100ms;
+  --motion-duration-normal:  200ms;
+  --motion-duration-slow:    300ms;
+  --motion-easing-default:   cubic-bezier(0.4, 0, 0.2, 1);
+  --motion-easing-enter:     cubic-bezier(0, 0, 0.2, 1);
+  --motion-easing-exit:      cubic-bezier(0.4, 0, 1, 1);
+
+  /* Overlay / scrim */
+  --color-bg-scrim:   rgba(0, 0, 0, 0.5);
+  --color-bg-overlay: rgba(255, 255, 255, 0.97);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+
+  /* Z-index scale */
+  --z-dropdown: 1000;
+  --z-modal:    1100;
+  --z-toast:    1200;
+  --z-tooltip:  1300;
+}
+
+/* ============================================================
+ * Section 4.6: Extended Tokens — Dark Theme overrides
+ * ============================================================ */
+[data-theme="dark"] {
+  --state-hover-overlay:  rgba(255, 255, 255, 0.06);
+  --state-active-overlay: rgba(255, 255, 255, 0.10);
+  --state-selected-bg:    var(--primitive-blue-950);
+  --color-bg-overlay:     rgba(17, 24, 39, 0.97);
+}
+
+/* ============================================================
+ * Section 4.5: FOUC Prevention Helper
+ * Applied by inline <head> script; removed after first paint.
+ * ============================================================ */
+.no-transition * {
+  transition: none !important;
+}
