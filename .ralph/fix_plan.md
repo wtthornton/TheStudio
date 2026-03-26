@@ -155,7 +155,7 @@
 
 - [x] **73.1:** Page Intent & Semantic Content (3 pts) — Cross-repo health overview, risk distribution. **File:** `tests/playwright/test_portfolio_health_intent.py`.
 - [x] **73.2:** API Endpoint Verification (3 pts) — Portfolio health endpoints. **File:** `tests/playwright/test_portfolio_health_api.py`.
-- [ ] **73.3:** Style Guide Compliance (5 pts) — Health status colors, card recipe, risk badges. **File:** `tests/playwright/test_portfolio_health_style.py`.
+- [x] **73.3:** Style Guide Compliance (5 pts) — Health status colors, card recipe, risk badges. **File:** `tests/playwright/test_portfolio_health_style.py`.
 - [ ] **73.4:** Interactive Elements (3 pts) — Repo drill-down, risk filter. **File:** `tests/playwright/test_portfolio_health_interactions.py`.
 - [ ] **73.5:** Accessibility WCAG 2.2 AA (3 pts) — Status non-color cues, keyboard nav. **File:** `tests/playwright/test_portfolio_health_a11y.py`.
 - [ ] **73.6:** Visual Snapshot Baseline (2 pts) — Capture baseline. **File:** `tests/playwright/test_portfolio_health_snapshot.py`. **RUN TESTS.**
