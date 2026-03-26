@@ -140,7 +140,7 @@
 - [x] **71.3:** Style Guide Compliance (5 pts) — Form inputs (§9.8), tab navigation, card layout. **File:** `tests/playwright/test_settings_style.py`.
 - [x] **71.4:** Interactive Elements (3 pts) — Tab switching, form submission, validation feedback. **File:** `tests/playwright/test_settings_interactions.py`.
 - [x] **71.5:** Accessibility WCAG 2.2 AA (3 pts) — Tab ARIA (`role="tablist"`), form labels, error messages. **File:** `tests/playwright/test_settings_a11y.py`.
-- [ ] **71.6:** Visual Snapshot Baseline (2 pts) — Capture baseline. **File:** `tests/playwright/test_settings_snapshot.py`. **RUN TESTS.**
+- [x] **71.6:** Visual Snapshot Baseline (2 pts) — Capture baseline. **File:** `tests/playwright/test_settings_snapshot.py`. **RUN TESTS.**
 
 ### Epic 72 — Cost Dashboard (`/admin/ui/cost-dashboard`, 19 pts)
 
