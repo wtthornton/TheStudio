@@ -20,7 +20,7 @@
 
 ### Epic 59 — Fleet Dashboard (`/admin/ui/dashboard`, 19 pts)
 
-- [ ] **59.1:** Page Intent & Semantic Content (3 pts) — Validate system health section shows Temporal/Postgres status, workflow summary shows Running/Stuck/Failed/Queue, repo activity table renders. **File:** `tests/playwright/test_dashboard_intent.py`.
+- [x] **59.1:** Page Intent & Semantic Content (3 pts) — Validate system health section shows Temporal/Postgres status, workflow summary shows Running/Stuck/Failed/Queue, repo activity table renders. **File:** `tests/playwright/test_dashboard_intent.py`.
 - [ ] **59.2:** API Endpoint Verification (3 pts) — All backing endpoints return 200 with valid JSON schema. **File:** `tests/playwright/test_dashboard_api.py`.
 - [ ] **59.3:** Style Guide Compliance (5 pts) — Colors, typography, spacing, component recipes match style guide §4-9. **File:** `tests/playwright/test_dashboard_style.py`.
 - [ ] **59.4:** Interactive Elements (3 pts) — Buttons, HTMX swaps, refresh polling, detail panel triggers. **File:** `tests/playwright/test_dashboard_interactions.py`.
