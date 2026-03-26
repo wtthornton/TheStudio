@@ -79,7 +79,7 @@
 - [x] **65.3:** Style Guide Compliance (5 pts) — Badge recipe (§9.3), card layout, status colors. **File:** `tests/playwright/test_tools_style.py`.
 - [x] **65.4:** Interactive Elements (3 pts) — Tool detail expansion, approval actions. **File:** `tests/playwright/test_tools_interactions.py`.
 - [x] **65.5:** Accessibility WCAG 2.2 AA (3 pts) — Status badges non-color, keyboard nav, ARIA. **File:** `tests/playwright/test_tools_a11y.py`.
-- [ ] **65.6:** Visual Snapshot Baseline (2 pts) — Capture baseline. **File:** `tests/playwright/test_tools_snapshot.py`. **RUN TESTS.**
+- [x] **65.6:** Visual Snapshot Baseline (2 pts) — Capture baseline. **File:** `tests/playwright/test_tools_snapshot.py`. **RUN TESTS.**
 
 ---
 
