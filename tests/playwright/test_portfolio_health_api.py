@@ -57,8 +57,9 @@ class TestPortfolioHealthPartialEndpoint:
             f"Expected 200 from {_PORTFOLIO_PARTIAL}, got {response.status}"
         )
         body = response.text()
-        assert body and len(body.strip()) > 0, (
-            f"Portfolio health partial at {_PORTFOLIO_PARTIAL} returned an empty body"
+        assert body, f"Portfolio health partial at {_PORTFOLIO_PARTIAL} returned an empty body"
+        assert len(body.strip()) > 0, (
+            f"Portfolio health partial at {_PORTFOLIO_PARTIAL} returned a whitespace-only body"
         )
 
     def test_portfolio_partial_no_error_status(self, page, base_url: str) -> None:
@@ -131,9 +132,11 @@ class TestReposHealthEndpoint:
             f"Repos health response must contain a 'total' field. "
             f"Present keys: {list(data.keys())!r}"
         )
-        assert isinstance(data["total"], int) and data["total"] >= 0, (
-            f"'total' from {_REPOS_HEALTH} must be a non-negative integer, "
-            f"got {data.get('total')!r}"
+        assert isinstance(data["total"], int), (
+            f"'total' from {_REPOS_HEALTH} must be an integer, got {data.get('total')!r}"
+        )
+        assert data["total"] >= 0, (
+            f"'total' from {_REPOS_HEALTH} must be non-negative, got {data.get('total')!r}"
         )
 
     def test_repos_health_items_have_identity(self, page, base_url: str) -> None:

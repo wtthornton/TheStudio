@@ -6,7 +6,7 @@ Validates that /admin/ui/portfolio-health meets WCAG 2.2 AA accessibility requir
   - ARIA landmarks           — main, nav, or region roles present (SC 1.3.6)
   - Keyboard navigation      — all interactive elements Tab-reachable (SC 2.1.1)
   - Focus indicators         — visible focus ring on interactive elements (SC 2.4.11)
-  - Touch targets            — buttons/links meet 24×24 px minimum (SC 2.5.8)
+  - Touch targets            — buttons/links meet 24x24 px minimum (SC 2.5.8)
   - Health badge text        — risk/health badges carry accessible text labels (SC 1.3.1)
   - axe-core WCAG 2.x AA     — zero critical/serious violations
 
@@ -426,12 +426,12 @@ class TestPortfolioHealthAriaLandmarks:
 
 
 class TestPortfolioHealthTouchTargets:
-    """Buttons and links must meet the 24×24 px minimum touch target (SC 2.5.8)."""
+    """Buttons and links must meet the 24x24 px minimum touch target (SC 2.5.8)."""
 
     def test_touch_targets_meet_minimum_size(
         self, page: object, base_url: str
     ) -> None:
-        """All buttons and links on the portfolio health page meet the 24×24 px touch target."""
+        """All buttons and links on the portfolio health page meet the 24x24 px touch target."""
         _go(page, base_url)
         assert_touch_targets(page)  # type: ignore[arg-type]
 

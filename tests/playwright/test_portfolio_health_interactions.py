@@ -82,7 +82,7 @@ class TestPortfolioHealthRiskFilter:
                         f"Risk filter control ({sel!r}) must be visible"
                     )
                     return
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: S112
                 continue
 
         # Sortable column headers provide implicit navigation / filtering
@@ -128,7 +128,7 @@ class TestPortfolioHealthRiskFilter:
                     f"Risk filter control ({sel!r}) must not be permanently disabled"
                 )
                 return
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: S112
                 continue
 
         pytest.skip(
@@ -170,7 +170,7 @@ class TestPortfolioHealthRiskFilter:
                         "body HTML was identical before and after filter change"
                     )
                     return
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: S112
                 continue
 
         # Try text input filter
@@ -197,7 +197,7 @@ class TestPortfolioHealthRiskFilter:
                     "body HTML was identical before and after typing"
                 )
                 return
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: S112
                 continue
 
         pytest.skip(
@@ -503,7 +503,7 @@ class TestPortfolioHealthHtmxSwaps:
             try:
                 if page.locator(target_sel).count() == 0:  # type: ignore[attr-defined]
                     missing.append(target_sel)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: S110
                 pass
 
         assert not missing, (

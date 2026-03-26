@@ -101,9 +101,7 @@ class TestPortfolioHealthFullPageSnapshot:
         _go(page, base_url)
         result = create_baseline(page, "full-page-explicit", page_name=PAGE_NAME)
         assert result.passed, result.summary()
-        assert result.is_new_baseline, (
-            "create_baseline must always report is_new_baseline=True"
-        )
+        assert result.is_new_baseline, "create_baseline must always report is_new_baseline=True"
 
 
 # ---------------------------------------------------------------------------
@@ -118,9 +116,7 @@ class TestPortfolioHealthSectionSnapshots:
     not fail the health summary cards snapshot.
     """
 
-    def test_health_summary_cards_snapshot(
-        self, page: object, base_url: str
-    ) -> None:
+    def test_health_summary_cards_snapshot(self, page: object, base_url: str) -> None:
         """Capture a snapshot of the health summary / KPI cards section.
 
         The healthy/degraded/critical repo count cards must remain visually
@@ -154,23 +150,17 @@ class TestPortfolioHealthSectionSnapshots:
                     dest = capture_element_snapshot(
                         page, selector, "health-summary-cards", page_name=PAGE_NAME
                     )
-                    assert dest.exists(), (
-                        f"Element snapshot was not written to disk: {dest}"
-                    )
+                    assert dest.exists(), f"Element snapshot was not written to disk: {dest}"
                     section_found = True
                     break
                 except Exception:  # noqa: S112
                     continue
 
         if not section_found:
-            result = compare_snapshot(
-                page, "health-summary-cards-fallback", page_name=PAGE_NAME
-            )
+            result = compare_snapshot(page, "health-summary-cards-fallback", page_name=PAGE_NAME)
             assert result.passed, result.summary()
 
-    def test_risk_distribution_snapshot(
-        self, page: object, base_url: str
-    ) -> None:
+    def test_risk_distribution_snapshot(self, page: object, base_url: str) -> None:
         """Capture a snapshot of the risk distribution section.
 
         The risk distribution chart or card grid must render correctly and
@@ -213,9 +203,7 @@ class TestPortfolioHealthSectionSnapshots:
                         dest = capture_element_snapshot(
                             page, selector, "risk-distribution-chart", page_name=PAGE_NAME
                         )
-                        assert dest.exists(), (
-                            f"Element snapshot was not written to disk: {dest}"
-                        )
+                        assert dest.exists(), f"Element snapshot was not written to disk: {dest}"
                         return
                     except Exception:  # noqa: S112
                         continue
@@ -229,23 +217,17 @@ class TestPortfolioHealthSectionSnapshots:
                     dest = capture_element_snapshot(
                         page, selector, "risk-distribution", page_name=PAGE_NAME
                     )
-                    assert dest.exists(), (
-                        f"Element snapshot was not written to disk: {dest}"
-                    )
+                    assert dest.exists(), f"Element snapshot was not written to disk: {dest}"
                     section_found = True
                     break
                 except Exception:  # noqa: S112
                     continue
 
         if not section_found:
-            result = compare_snapshot(
-                page, "risk-distribution-fallback", page_name=PAGE_NAME
-            )
+            result = compare_snapshot(page, "risk-distribution-fallback", page_name=PAGE_NAME)
             assert result.passed, result.summary()
 
-    def test_repo_health_table_snapshot(
-        self, page: object, base_url: str
-    ) -> None:
+    def test_repo_health_table_snapshot(self, page: object, base_url: str) -> None:
         """Capture a snapshot of the repo health table or card grid.
 
         The per-repository health listing must remain visually consistent —
@@ -276,18 +258,14 @@ class TestPortfolioHealthSectionSnapshots:
                     dest = capture_element_snapshot(
                         page, selector, "repo-health-table", page_name=PAGE_NAME
                     )
-                    assert dest.exists(), (
-                        f"Element snapshot was not written to disk: {dest}"
-                    )
+                    assert dest.exists(), f"Element snapshot was not written to disk: {dest}"
                     section_found = True
                     break
                 except Exception:  # noqa: S112
                     continue
 
         if not section_found:
-            result = compare_snapshot(
-                page, "repo-health-table-fallback", page_name=PAGE_NAME
-            )
+            result = compare_snapshot(page, "repo-health-table-fallback", page_name=PAGE_NAME)
             assert result.passed, result.summary()
 
     def test_risk_filter_snapshot(self, page: object, base_url: str) -> None:
@@ -325,18 +303,14 @@ class TestPortfolioHealthSectionSnapshots:
                     dest = capture_element_snapshot(
                         page, selector, "risk-filter", page_name=PAGE_NAME
                     )
-                    assert dest.exists(), (
-                        f"Element snapshot was not written to disk: {dest}"
-                    )
+                    assert dest.exists(), f"Element snapshot was not written to disk: {dest}"
                     section_found = True
                     break
                 except Exception:  # noqa: S112
                     continue
 
         if not section_found:
-            result = compare_snapshot(
-                page, "risk-filter-fallback", page_name=PAGE_NAME
-            )
+            result = compare_snapshot(page, "risk-filter-fallback", page_name=PAGE_NAME)
             assert result.passed, result.summary()
 
 
@@ -359,9 +333,7 @@ class TestPortfolioHealthSnapshotRegression:
     def test_full_page_regression(self, page: object, base_url: str) -> None:
         """Full-page pixel-diff must not exceed the configured threshold."""
         _go(page, base_url)
-        result = compare_snapshot(
-            page, "regression-full-page", page_name=PAGE_NAME
-        )
+        result = compare_snapshot(page, "regression-full-page", page_name=PAGE_NAME)
         assert result.passed, result.summary()
 
     def test_no_critical_console_errors(
@@ -371,9 +343,7 @@ class TestPortfolioHealthSnapshotRegression:
         _go(page, base_url)
         compare_snapshot(page, "console-check", page_name=PAGE_NAME)
 
-        critical_errors = [
-            e for e in console_errors if "TypeError" in e or "ReferenceError" in e
-        ]
+        critical_errors = [e for e in console_errors if "TypeError" in e or "ReferenceError" in e]
         assert not critical_errors, (
             f"Portfolio health page emitted {len(critical_errors)} critical JS error(s) "
             f"during snapshot capture: {critical_errors[:3]}"
