@@ -126,7 +126,7 @@
 
 ### Epic 70 — Execution Planes (`/admin/ui/planes`, 19 pts)
 
-- [ ] **70.1:** Page Intent & Semantic Content (3 pts) — Worker clusters, health, registration status. **File:** `tests/playwright/test_planes_intent.py`.
+- [x] **70.1:** Page Intent & Semantic Content (3 pts) — Worker clusters, health, registration status. **File:** `tests/playwright/test_planes_intent.py`.
 - [ ] **70.2:** API Endpoint Verification (3 pts) — Planes list endpoint. **File:** `tests/playwright/test_planes_api.py`.
 - [ ] **70.3:** Style Guide Compliance (5 pts) — Health status colors, card recipe, badges. **File:** `tests/playwright/test_planes_style.py`.
 - [ ] **70.4:** Interactive Elements (3 pts) — Pause/resume actions, registration controls. **File:** `tests/playwright/test_planes_interactions.py`.
