@@ -99,7 +99,7 @@
 
 ### Epic 67 — Compliance Scorecard (`/admin/ui/compliance`, 19 pts)
 
-- [ ] **67.1:** Page Intent & Semantic Content (3 pts) — Per-repo compliance status, check results. **File:** `tests/playwright/test_compliance_intent.py`.
+- [x] **67.1:** Page Intent & Semantic Content (3 pts) — Per-repo compliance status, check results. **File:** `tests/playwright/test_compliance_intent.py`.
 - [ ] **67.2:** API Endpoint Verification (3 pts) — Compliance endpoints return valid data. **File:** `tests/playwright/test_compliance_api.py`.
 - [ ] **67.3:** Style Guide Compliance (5 pts) — Status colors (§5.1), badge recipe, scorecard layout. **File:** `tests/playwright/test_compliance_style.py`.
 - [ ] **67.4:** Interactive Elements (3 pts) — Repo filter, check detail expansion. **File:** `tests/playwright/test_compliance_interactions.py`.
