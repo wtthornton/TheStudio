@@ -25,7 +25,7 @@
 - [x] **59.3:** Style Guide Compliance (5 pts) — Colors, typography, spacing, component recipes match style guide §4-9. **File:** `tests/playwright/test_dashboard_style.py`.
 - [x] **59.4:** Interactive Elements (3 pts) — Buttons, HTMX swaps, refresh polling, detail panel triggers. **File:** `tests/playwright/test_dashboard_interactions.py`.
 - [x] **59.5:** Accessibility WCAG 2.2 AA (3 pts) — Focus indicators, keyboard nav, ARIA roles, contrast ratios via axe-core. **File:** `tests/playwright/test_dashboard_a11y.py`.
-- [ ] **59.6:** Visual Snapshot Baseline (2 pts) — Capture baseline screenshot, commit to repo. **File:** `tests/playwright/test_dashboard_snapshot.py`. **RUN TESTS.**
+- [x] **59.6:** Visual Snapshot Baseline (2 pts) — Capture baseline screenshot, commit to repo. **File:** `tests/playwright/test_dashboard_snapshot.py`. **RUN TESTS.**
 
 ### Epic 60 — Repo Management (`/admin/ui/repos`, 19 pts)
 
