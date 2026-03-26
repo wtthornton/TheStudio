@@ -93,7 +93,7 @@
 - [x] **66.1:** Page Intent & Semantic Content (3 pts) — Model providers, routing rules, cost info. **File:** `tests/playwright/test_models_intent.py`.
 - [x] **66.2:** API Endpoint Verification (3 pts) — Model list endpoint returns valid data. **File:** `tests/playwright/test_models_api.py`.
 - [x] **66.3:** Style Guide Compliance (5 pts) — Table/card recipes, cost formatting. **File:** `tests/playwright/test_models_style.py`.
-- [ ] **66.4:** Interactive Elements (3 pts) — Routing rule toggles, provider detail. **File:** `tests/playwright/test_models_interactions.py`.
+- [x] **66.4:** Interactive Elements (3 pts) — Routing rule toggles, provider detail. **File:** `tests/playwright/test_models_interactions.py`.
 - [ ] **66.5:** Accessibility WCAG 2.2 AA (3 pts) — Table semantics, toggle ARIA, focus. **File:** `tests/playwright/test_models_a11y.py`.
 - [ ] **66.6:** Visual Snapshot Baseline (2 pts) — Capture baseline. **File:** `tests/playwright/test_models_snapshot.py`. **RUN TESTS.**
 
