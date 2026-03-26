@@ -39,7 +39,7 @@
 ### Epic 61 — Workflow Console (`/admin/ui/workflows`, 19 pts)
 
 - [x] **61.1:** Page Intent & Semantic Content (3 pts) — Workflow table with ID, repo, status, duration; kanban toggle visible. **File:** `tests/playwright/test_workflows_intent.py`.
-- [ ] **61.2:** API Endpoint Verification (3 pts) — Workflow list/detail/kanban endpoints return valid data. **File:** `tests/playwright/test_workflows_api.py`.
+- [x] **61.2:** API Endpoint Verification (3 pts) — Workflow list/detail/kanban endpoints return valid data. **File:** `tests/playwright/test_workflows_api.py`.
 - [ ] **61.3:** Style Guide Compliance (5 pts) — Status badges, kanban column specs (§9.15), card border colors. **File:** `tests/playwright/test_workflows_style.py`.
 - [ ] **61.4:** Interactive Elements (3 pts) — List/kanban toggle, drag-and-drop, row click opens detail panel, view preference persistence. **File:** `tests/playwright/test_workflows_interactions.py`.
 - [ ] **61.5:** Accessibility WCAG 2.2 AA (3 pts) — Kanban keyboard reorder (§9.15), drag handle ARIA, panel focus. **File:** `tests/playwright/test_workflows_a11y.py`.
