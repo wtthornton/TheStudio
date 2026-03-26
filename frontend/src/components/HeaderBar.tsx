@@ -117,7 +117,7 @@ export function HeaderBar({ onResumeWizard, onOpenApiDocs, activeTab, onSwitchTa
       )}
       <a
         href="/admin/ui/settings"
-        className="ml-auto rounded px-2.5 py-1 text-xs text-gray-500 hover:text-gray-300 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+        className="ml-auto rounded px-2.5 py-1 text-xs text-gray-500 hover:text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500"
         title="Admin Settings"
         data-testid="admin-settings-link"
         aria-label="Admin Settings"

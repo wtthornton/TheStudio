@@ -448,8 +448,8 @@ export default function ImportModal({ open, onClose, onImported }: ImportModalPr
           {issues.length > 0 && (
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-700">
-                  <th className="pb-2 pr-3 text-left">
+                <tr className="bg-gray-800 border-b border-gray-700">
+                  <th scope="col" className="pb-2 pr-3 text-left">
                     <input
                       type="checkbox"
                       checked={selectedNumbers.size === issues.length && issues.length > 0}
@@ -465,10 +465,10 @@ export default function ImportModal({ open, onClose, onImported }: ImportModalPr
                       aria-label="Select all"
                     />
                   </th>
-                  <th className="pb-2 pr-3 text-left text-xs font-medium text-gray-400">#</th>
-                  <th className="pb-2 pr-3 text-left text-xs font-medium text-gray-400">Title</th>
-                  <th className="pb-2 pr-3 text-left text-xs font-medium text-gray-400">Labels</th>
-                  <th className="pb-2 text-left text-xs font-medium text-gray-400">Status</th>
+                  <th scope="col" className="pb-2 pr-3 text-left text-xs font-medium text-gray-400">#</th>
+                  <th scope="col" className="pb-2 pr-3 text-left text-xs font-medium text-gray-400">Title</th>
+                  <th scope="col" className="pb-2 pr-3 text-left text-xs font-medium text-gray-400">Labels</th>
+                  <th scope="col" className="pb-2 text-left text-xs font-medium text-gray-400">Status</th>
                 </tr>
               </thead>
               <tbody>

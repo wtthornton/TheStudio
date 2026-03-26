@@ -16,6 +16,10 @@
  *   bg-destructive    → var(--color-interactive-destructive)
  * ============================================================ */
 @theme {
+  /* Typography utilities — Section 6.1 */
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
   /* Background utilities */
   --color-surface:  var(--color-bg-surface);
   --color-elevated: var(--color-bg-elevated);
@@ -63,6 +67,19 @@
   /* Status: Neutral */
   --color-status-neutral:      var(--color-status-neutral-bg);
   --color-status-neutral-text: var(--color-status-neutral-text);
+}
+
+/* Base typography — apply font stacks globally (Section 6.1) */
+html,
+body {
+  font-family: var(--font-sans);
+}
+
+code,
+kbd,
+samp,
+pre {
+  font-family: var(--font-mono);
 }
 
 /* Utility: hide scrollbar while preserving scroll functionality (Epic 54.4) */

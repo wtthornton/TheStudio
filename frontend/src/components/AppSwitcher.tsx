@@ -64,7 +64,7 @@ export function AppSwitcher() {
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="flex items-center gap-1.5 rounded border border-gray-700 bg-gray-900 px-3 py-1.5 text-sm font-medium text-gray-200 hover:border-gray-500 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        className="flex items-center gap-1.5 rounded border border-gray-700 bg-gray-900 px-3 py-1.5 text-sm font-medium text-gray-200 hover:border-gray-500 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
         data-testid="app-switcher-trigger"
       >
         <span className="h-2 w-2 rounded-full bg-indigo-400" aria-hidden="true" />

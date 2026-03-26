@@ -50,6 +50,7 @@ export function DisconnectionBanner() {
   if (showRestored) {
     return (
       <div
+        role="status"
         className="fixed top-4 left-1/2 z-50 -translate-x-1/2 rounded-lg border border-emerald-700 bg-emerald-900/90 px-4 py-2 shadow-lg"
         data-testid="connection-restored-toast"
       >
@@ -62,6 +63,7 @@ export function DisconnectionBanner() {
 
   return (
     <div
+      role="alert"
       className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center gap-4 bg-amber-900/90 px-4 py-2 shadow-lg"
       data-testid="disconnection-banner"
     >
@@ -93,7 +95,7 @@ interface ErrorCardProps {
 
 export function ErrorCard({ message, onRetry, onDismiss }: ErrorCardProps) {
   return (
-    <div className="rounded-lg border border-red-800 bg-red-900/20 p-4" data-testid="error-card">
+    <div role="alert" className="rounded-lg border border-red-800 bg-red-900/20 p-4" data-testid="error-card">
       <div className="flex items-start gap-3">
         <span className="text-red-400 text-lg shrink-0">!</span>
         <div className="flex-1">

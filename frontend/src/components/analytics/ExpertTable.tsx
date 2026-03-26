@@ -112,11 +112,12 @@ export function ExpertTable({ onSelectExpert }: ExpertTableProps) {
     }
   }
 
-  function colHeader(key: SortKey, label: string) {
+  function colHeader(key: SortKey, label: string, align: 'left' | 'right' = 'left') {
     const active = sortKey === key
     return (
       <th
-        className="px-3 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer select-none hover:text-gray-200"
+        scope="col"
+        className={`px-3 py-2 text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer select-none hover:text-gray-200 ${align === 'right' ? 'text-right' : 'text-left'}`}
         onClick={() => toggleSort(key)}
       >
         {label}
@@ -184,15 +185,15 @@ export function ExpertTable({ onSelectExpert }: ExpertTableProps) {
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-700">
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+            <tr className="bg-gray-800 border-b border-gray-700">
+              <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                 Expert
               </th>
               {colHeader('trust_tier', 'Tier')}
-              {colHeader('avg_weight', 'Weight')}
-              {colHeader('total_samples', 'Samples')}
-              {colHeader('avg_confidence', 'Confidence')}
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+              {colHeader('avg_weight', 'Weight', 'right')}
+              {colHeader('total_samples', 'Samples', 'right')}
+              {colHeader('avg_confidence', 'Confidence', 'right')}
+              <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                 Trend
               </th>
             </tr>
@@ -212,13 +213,13 @@ export function ExpertTable({ onSelectExpert }: ExpertTableProps) {
                   <td className={`px-3 py-2 text-xs font-medium capitalize ${tierColor(expert.trust_tier)}`}>
                     {expert.trust_tier}
                   </td>
-                  <td className="px-3 py-2 text-xs text-gray-200">
+                  <td className="px-3 py-2 text-xs text-gray-200 text-right">
                     {(expert.avg_weight * 100).toFixed(1)}%
                   </td>
-                  <td className="px-3 py-2 text-xs text-gray-400">
+                  <td className="px-3 py-2 text-xs text-gray-400 text-right">
                     {expert.total_samples}
                   </td>
-                  <td className="px-3 py-2 text-xs text-gray-400">
+                  <td className="px-3 py-2 text-xs text-gray-400 text-right">
                     {(expert.avg_confidence * 100).toFixed(0)}%
                   </td>
                   <td className={`px-3 py-2 text-xs font-medium ${drift.color}`}>

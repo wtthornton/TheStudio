@@ -188,7 +188,7 @@ function SafetyBoundsPanel() {
             value={maxLines}
             onChange={(e) => { setMaxLines(e.target.value); mark() }}
             placeholder="unlimited"
-            className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-gray-100 placeholder-gray-600 focus:border-violet-500 focus:outline-none"
+            className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-gray-100 placeholder-gray-600 focus:border-blue-500 focus:outline-none"
           />
         </label>
         <label className="flex flex-col gap-1">
@@ -205,7 +205,7 @@ function SafetyBoundsPanel() {
             value={maxCost}
             onChange={(e) => { setMaxCost(e.target.value); mark() }}
             placeholder="unlimited"
-            className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-gray-100 placeholder-gray-600 focus:border-violet-500 focus:outline-none"
+            className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-gray-100 placeholder-gray-600 focus:border-blue-500 focus:outline-none"
           />
         </label>
         <label className="flex flex-col gap-1">
@@ -222,7 +222,7 @@ function SafetyBoundsPanel() {
             value={maxLoopbacks}
             onChange={(e) => { setMaxLoopbacks(e.target.value); mark() }}
             placeholder="unlimited"
-            className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-gray-100 placeholder-gray-600 focus:border-violet-500 focus:outline-none"
+            className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-gray-100 placeholder-gray-600 focus:border-blue-500 focus:outline-none"
           />
         </label>
       </div>
@@ -241,7 +241,7 @@ function SafetyBoundsPanel() {
           value={patterns}
           onChange={(e) => { setPatterns(e.target.value); mark() }}
           placeholder="e.g. src/auth/**&#10;migrations/**"
-          className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-gray-100 placeholder-gray-600 focus:border-violet-500 focus:outline-none"
+          className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-gray-100 placeholder-gray-600 focus:border-blue-500 focus:outline-none"
         />
       </label>
 
@@ -279,7 +279,7 @@ function ConditionRow({ condition, onChange, onRemove }: ConditionRowProps) {
         value={condition.field}
         onChange={(e) => onChange({ ...condition, field: e.target.value })}
         placeholder="field"
-        className="w-44 rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs text-gray-100 placeholder-gray-600 focus:border-violet-500 focus:outline-none"
+        className="w-44 rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs text-gray-100 placeholder-gray-600 focus:border-blue-500 focus:outline-none"
       />
       <datalist id="trust-fields">
         {KNOWN_FIELDS.map((f) => (
@@ -291,7 +291,7 @@ function ConditionRow({ condition, onChange, onRemove }: ConditionRowProps) {
       <select
         value={condition.op}
         onChange={(e) => onChange({ ...condition, op: e.target.value as ConditionOperator })}
-        className="rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs text-gray-100 focus:border-violet-500 focus:outline-none"
+        className="rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs text-gray-100 focus:border-blue-500 focus:outline-none"
       >
         {OPERATORS.map((op) => (
           <option key={op} value={op}>
@@ -305,7 +305,7 @@ function ConditionRow({ condition, onChange, onRemove }: ConditionRowProps) {
         value={String(condition.value)}
         onChange={(e) => onChange({ ...condition, value: e.target.value })}
         placeholder="value"
-        className="flex-1 rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs text-gray-100 placeholder-gray-600 focus:border-violet-500 focus:outline-none"
+        className="flex-1 rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs text-gray-100 placeholder-gray-600 focus:border-blue-500 focus:outline-none"
       />
 
       <button
@@ -436,7 +436,7 @@ function RuleBuilder({ existingRule, onSave, onCancel, saving }: RuleBuilderProp
             max={9999}
             value={priority}
             onChange={(e) => setPriority(e.target.value)}
-            className="w-24 rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-gray-100 focus:border-violet-500 focus:outline-none"
+            className="w-24 rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-gray-100 focus:border-blue-500 focus:outline-none"
           />
         </label>
         <label className="flex cursor-pointer items-center gap-2 pt-4">
@@ -464,7 +464,7 @@ function RuleBuilder({ existingRule, onSave, onCancel, saving }: RuleBuilderProp
           onChange={(e) => setDescription(e.target.value)}
           maxLength={500}
           placeholder="E.g. High-complexity tasks → observe"
-          className="rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-gray-100 placeholder-gray-600 focus:border-violet-500 focus:outline-none"
+          className="rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-gray-100 placeholder-gray-600 focus:border-blue-500 focus:outline-none"
         />
       </label>
 

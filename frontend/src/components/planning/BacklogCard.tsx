@@ -49,7 +49,7 @@ export function BacklogCard({ task, onClick }: BacklogCardProps) {
   return (
     <button
       onClick={() => onClick(task.id)}
-      className="w-full text-left rounded-lg border border-gray-700 bg-gray-900 p-3
+      className="w-full text-left rounded-lg border border-gray-700 bg-gray-900 p-4
                  hover:border-gray-500 hover:bg-gray-800 transition-colors focus:outline-none
                  focus:ring-1 focus:ring-gray-500"
     >

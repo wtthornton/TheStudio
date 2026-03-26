@@ -221,7 +221,7 @@ export function HelpMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Help menu"
-        className="flex h-8 w-8 items-center justify-center rounded border border-gray-700 bg-gray-900 text-gray-400 hover:border-gray-500 hover:bg-gray-800 hover:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        className="flex h-8 w-8 items-center justify-center rounded border border-gray-700 bg-gray-900 text-gray-400 hover:border-gray-500 hover:bg-gray-800 hover:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
         data-testid="help-menu-trigger"
         data-spotlight="help-panel"
       >

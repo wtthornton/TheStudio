@@ -47,12 +47,12 @@ export function EmptyState({
 }: EmptyStateProps) {
   return (
     <div
-      className={`flex flex-col items-center gap-4 py-12 px-6 text-center ${className}`}
+      className={`flex flex-col items-center justify-center gap-4 py-12 px-6 text-center ${className}`}
       data-testid={testId}
       data-component="EmptyState"
     >
       {icon && (
-        <div className="text-gray-500" data-testid={`${testId}-icon`}>
+        <div className="text-gray-400" data-testid={`${testId}-icon`}>
           {icon}
         </div>
       )}

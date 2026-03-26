@@ -288,7 +288,7 @@ function RedirectModal() {
           placeholder="e.g. Context was enriched incorrectly, need to re-run intent analysis with updated constraints…"
           rows={3}
           disabled={saving || validTargets.length === 0}
-          className="w-full rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-gray-200 placeholder-gray-500 focus:border-violet-500 focus:outline-none disabled:opacity-50"
+          className="w-full rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-gray-200 placeholder-gray-500 focus:border-blue-500 focus:outline-none disabled:opacity-50"
           data-testid="redirect-reason-input"
         />
 
@@ -308,7 +308,7 @@ function RedirectModal() {
               type="button"
               onClick={() => setRedirectModalOpen(false)}
               disabled={saving}
-              className="rounded px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+              className="rounded px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
               data-testid="redirect-cancel-btn"
             >
               Cancel

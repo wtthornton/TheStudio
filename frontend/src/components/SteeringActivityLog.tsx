@@ -148,7 +148,7 @@ function FilterBar({ actionFilter, onActionChange, onRefresh, loading }: FilterB
       <select
         value={actionFilter}
         onChange={(e) => onActionChange(e.target.value as SteeringAction | '')}
-        className="rounded border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm text-gray-200 focus:border-indigo-500 focus:outline-none"
+        className="rounded border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm text-gray-200 focus:border-blue-500 focus:outline-none"
       >
         <option value="">All actions</option>
         {ALL_ACTIONS.map((a) => (

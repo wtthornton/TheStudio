@@ -160,7 +160,7 @@ export function HelpPanel({
           <button
             type="button"
             onClick={onClose}
-            className="rounded p-1 text-gray-400 hover:bg-gray-700 hover:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="rounded p-1 text-gray-400 hover:bg-gray-700 hover:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
             aria-label="Close help panel"
             data-testid="help-panel-close"
           >
@@ -212,7 +212,7 @@ export function HelpPanel({
               placeholder="Search help articles…"
               aria-label="Search help articles"
               data-testid="help-search-input"
-              className="w-full rounded border border-gray-700 bg-gray-800 py-2 pl-8 pr-3 text-sm text-gray-200 placeholder-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full rounded border border-gray-700 bg-gray-800 py-2 pl-8 pr-3 text-sm text-gray-200 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
         </div>
@@ -232,7 +232,7 @@ export function HelpPanel({
                     <button
                       type="button"
                       onClick={() => handleResultClick(item)}
-                      className="w-full rounded px-3 py-2.5 text-left hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full rounded px-3 py-2.5 text-left hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       data-testid={`help-result-${item.key}`}
                     >
                       <span className="block font-medium text-gray-100">

@@ -67,7 +67,7 @@ export function TourBeacon({
         'rounded-full border border-indigo-500/40 bg-indigo-900/20',
         'px-3 py-1.5 text-xs font-medium text-indigo-300',
         'transition-colors hover:bg-indigo-900/40 hover:text-indigo-200',
-        'focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500',
+        'focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
         className,
       ].join(' ')}
       aria-label={`Start guided tour: ${label}`}

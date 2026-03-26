@@ -193,7 +193,7 @@ export function RepoConfigForm({ repo, onSaved }: RepoConfigFormProps) {
       <button
         type="submit"
         disabled={saving}
-        className="rounded bg-blue-700 px-4 py-1.5 text-xs font-medium text-white hover:bg-blue-600 disabled:opacity-50"
+        className="min-h-[44px] rounded bg-blue-700 px-4 py-1.5 text-xs font-medium text-white hover:bg-blue-600 disabled:opacity-50"
       >
         {saving ? 'Saving…' : 'Save Configuration'}
       </button>
