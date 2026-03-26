@@ -108,7 +108,7 @@
 
 ### Epic 68 — Quarantine (`/admin/ui/quarantine`, 19 pts)
 
-- [ ] **68.1:** Page Intent & Semantic Content (3 pts) — Quarantined events table, failure reasons. **File:** `tests/playwright/test_quarantine_intent.py`.
+- [x] **68.1:** Page Intent & Semantic Content (3 pts) — Quarantined events table, failure reasons. **File:** `tests/playwright/test_quarantine_intent.py`.
 - [ ] **68.2:** API Endpoint Verification (3 pts) — Quarantine list endpoint. **File:** `tests/playwright/test_quarantine_api.py`.
 - [ ] **68.3:** Style Guide Compliance (5 pts) — Error status colors, table recipe, empty state. **File:** `tests/playwright/test_quarantine_style.py`.
 - [ ] **68.4:** Interactive Elements (3 pts) — Replay/delete actions, confirmation dialogs. **File:** `tests/playwright/test_quarantine_interactions.py`.
