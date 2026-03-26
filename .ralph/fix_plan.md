@@ -51,7 +51,7 @@
 - [x] **62.2:** API Endpoint Verification (3 pts) — Audit list endpoint returns 200, valid JSON with pagination. **File:** `tests/playwright/test_audit_api.py`.
 - [x] **62.3:** Style Guide Compliance (5 pts) — Table recipe (§9.2), typography, timestamp formatting. **File:** `tests/playwright/test_audit_style.py`.
 - [x] **62.4:** Interactive Elements (3 pts) — Time-range filter, pagination, row expansion. **File:** `tests/playwright/test_audit_interactions.py`.
-- [ ] **62.5:** Accessibility WCAG 2.2 AA (3 pts) — Table semantics, filter ARIA, keyboard pagination. **File:** `tests/playwright/test_audit_a11y.py`.
+- [x] **62.5:** Accessibility WCAG 2.2 AA (3 pts) — Table semantics, filter ARIA, keyboard pagination. **File:** `tests/playwright/test_audit_a11y.py`.
 - [ ] **62.6:** Visual Snapshot Baseline (2 pts) — Capture baseline. **File:** `tests/playwright/test_audit_snapshot.py`. **RUN TESTS.**
 
 ### Epic 63 — Metrics (`/admin/ui/metrics`, 19 pts)
