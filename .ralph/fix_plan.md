@@ -130,7 +130,7 @@
 - [x] **70.2:** API Endpoint Verification (3 pts) — Planes list endpoint. **File:** `tests/playwright/test_planes_api.py`.
 - [x] **70.3:** Style Guide Compliance (5 pts) — Health status colors, card recipe, badges. **File:** `tests/playwright/test_planes_style.py`.
 - [x] **70.4:** Interactive Elements (3 pts) — Pause/resume actions, registration controls. **File:** `tests/playwright/test_planes_interactions.py`.
-- [ ] **70.5:** Accessibility WCAG 2.2 AA (3 pts) — Action button ARIA, status non-color cues. **File:** `tests/playwright/test_planes_a11y.py`.
+- [x] **70.5:** Accessibility WCAG 2.2 AA (3 pts) — Action button ARIA, status non-color cues. **File:** `tests/playwright/test_planes_a11y.py`.
 - [ ] **70.6:** Visual Snapshot Baseline (2 pts) — Capture baseline. **File:** `tests/playwright/test_planes_snapshot.py`. **RUN TESTS.**
 
 ### Epic 71 — Settings (`/admin/ui/settings`, 19 pts)
