@@ -60,7 +60,7 @@
 - [x] **63.2:** API Endpoint Verification (3 pts) — Metrics endpoints return valid data. **File:** `tests/playwright/test_metrics_api.py`.
 - [x] **63.3:** Style Guide Compliance (5 pts) — Card recipe (§9.1), KPI typography, status colors (§5.1). **File:** `tests/playwright/test_metrics_style.py`.
 - [x] **63.4:** Interactive Elements (3 pts) — Period selector, chart interactions, metric drill-down. **File:** `tests/playwright/test_metrics_interactions.py`.
-- [ ] **63.5:** Accessibility WCAG 2.2 AA (3 pts) — Chart alternatives, focus indicators, screen reader support. **File:** `tests/playwright/test_metrics_a11y.py`.
+- [x] **63.5:** Accessibility WCAG 2.2 AA (3 pts) — Chart alternatives, focus indicators, screen reader support. **File:** `tests/playwright/test_metrics_a11y.py`.
 - [ ] **63.6:** Visual Snapshot Baseline (2 pts) — Capture baseline. **File:** `tests/playwright/test_metrics_snapshot.py`. **RUN TESTS.**
 
 ### Epic 64 — Expert Performance (`/admin/ui/experts`, 19 pts)
