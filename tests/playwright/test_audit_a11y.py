@@ -8,7 +8,7 @@ Validates that /admin/ui/audit meets WCAG 2.2 AA accessibility requirements:
   - Focus indicators visible on all interactive elements (SC 2.4.11)
   - ARIA landmark regions present (SC 1.3.6)
   - Status badges pair colour with text or icon (SC 1.4.1)
-  - Buttons and links meet 24×24 px minimum touch target (SC 2.5.8)
+  - Buttons and links meet 24x24 px minimum touch target (SC 2.5.8)
   - axe-core WCAG 2.x AA audit reports zero critical/serious violations
 
 These tests verify *accessibility compliance*, not content or visual appearance.
@@ -326,10 +326,10 @@ class TestAuditColorIndicators:
 
 
 class TestAuditTouchTargets:
-    """Buttons and links must meet the 24×24 px minimum touch target (SC 2.5.8)."""
+    """Buttons and links must meet the 24x24 px minimum touch target (SC 2.5.8)."""
 
     def test_touch_targets_meet_minimum_size(self, page, base_url: str) -> None:
-        """All buttons and links on the audit page meet the 24×24 px touch target."""
+        """All buttons and links on the audit page meet the 24x24 px touch target."""
         _go(page, base_url)
         assert_touch_targets(page)  # type: ignore[arg-type]
 

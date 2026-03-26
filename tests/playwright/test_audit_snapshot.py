@@ -133,7 +133,7 @@ class TestAuditSectionSnapshots:
                     )
                     section_found = True
                     break
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: S112
                     continue
 
         if not section_found:
@@ -173,7 +173,7 @@ class TestAuditSectionSnapshots:
                     )
                     section_found = True
                     break
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: S112
                     continue
 
         if not section_found:
@@ -214,7 +214,7 @@ class TestAuditSectionSnapshots:
                     )
                     section_found = True
                     break
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: S112
                     continue
 
         if not section_found:

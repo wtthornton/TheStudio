@@ -122,7 +122,7 @@ class TestAuditTimeRangeFilter:
             # Page must still have content after interaction
             body = page.locator("body").inner_text()  # type: ignore[attr-defined]
             assert len(body) > 0, "Page became empty after interacting with time-range filter"
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             pytest.skip(f"Time-range filter interaction raised: {exc}")
 
     def test_time_range_filter_affects_url_or_content(self, page, base_url: str) -> None:
@@ -152,7 +152,7 @@ class TestAuditTimeRangeFilter:
                         "Selecting a time-range preset must update the URL or page content"
                     )
                     return
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: S112
                     continue
 
         pytest.skip(
@@ -218,7 +218,7 @@ class TestAuditPagination:
                     body = page.locator("body").inner_text()  # type: ignore[attr-defined]
                     assert len(body.strip()) > 0, "Page became empty after clicking Next"
                     return
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:
                     pytest.skip(f"Next page click raised: {exc}")
 
         pytest.skip("No 'Next' pagination button found — skipping navigation check")
@@ -331,7 +331,7 @@ class TestAuditRowExpansion:
                         "Row expansion must reveal additional event detail content"
                     )
                     return
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: S112
                     continue
 
         # Try clicking the first row directly
@@ -343,7 +343,7 @@ class TestAuditRowExpansion:
             body_after = page.locator("body").inner_text()  # type: ignore[attr-defined]
             # Passes if content changed or no assertion to make (row may just highlight)
             assert len(body_after.strip()) > 0, "Page became empty after clicking audit row"
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             pytest.skip(f"Row click interaction raised: {exc}")
 
     def test_detail_panel_or_expanded_row_visible_after_click(
@@ -361,7 +361,7 @@ class TestAuditRowExpansion:
             first_row = page.locator("table tbody tr").first  # type: ignore[attr-defined]
             first_row.click()
             page.wait_for_timeout(600)  # type: ignore[attr-defined]
-        except Exception:  # noqa: BLE001
+        except Exception:
             pytest.skip("Could not click first audit event row")
 
         # Check for a detail panel, expanded row, or drawer

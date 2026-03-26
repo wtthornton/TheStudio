@@ -1,7 +1,7 @@
 """Epic 62.3 — Audit Log: Style Guide Compliance.
 
 Validates that /admin/ui/audit conforms to the TheStudio style guide
-(docs/design/07-THESTUDIO-UI-UX-STYLE-GUIDE.md) sections 4–9:
+(docs/design/07-THESTUDIO-UI-UX-STYLE-GUIDE.md) sections 4-9:
 
   §4.1     — CSS design tokens registered on :root
   §4.2     — Focus ring color
@@ -190,7 +190,7 @@ class TestAuditTypography:
     """
 
     def test_heading_scale_compliance(self, page: object, base_url: str) -> None:
-        """All h1–h3 elements follow the §6.2 heading scale."""
+        """All h1-h3 elements follow the §6.2 heading scale."""
         _navigate_to_audit(page, base_url)
         assert_heading_scale(page)  # type: ignore[arg-type]
 
