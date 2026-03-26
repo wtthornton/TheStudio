@@ -29,7 +29,7 @@
 
 ### Epic 60 — Repo Management (`/admin/ui/repos`, 19 pts)
 
-- [ ] **60.1:** Page Intent & Semantic Content (3 pts) — Repo table renders with name, tier badge, status, queue depth; empty state with CTA. **File:** `tests/playwright/test_repos_intent.py`.
+- [x] **60.1:** Page Intent & Semantic Content (3 pts) — Repo table renders with name, tier badge, status, queue depth; empty state with CTA. **File:** `tests/playwright/test_repos_intent.py`.
 - [ ] **60.2:** API Endpoint Verification (3 pts) — Repo list/detail endpoints return 200, valid JSON. **File:** `tests/playwright/test_repos_api.py`.
 - [ ] **60.3:** Style Guide Compliance (5 pts) — Trust tier badges (§5.2), status badges (§5.1), table recipe (§9.2). **File:** `tests/playwright/test_repos_style.py`.
 - [ ] **60.4:** Interactive Elements (3 pts) — Row click opens detail panel (§9.14), HTMX loads detail content. **File:** `tests/playwright/test_repos_interactions.py`.
