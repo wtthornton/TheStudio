@@ -56,6 +56,7 @@ services:
       THESTUDIO_OTEL_EXPORTER: "${THESTUDIO_OTEL_EXPORTER:-console}"
       # Approval auto-bypass (Story 30.14) — NEVER auto-bypass in production
       THESTUDIO_APPROVAL_AUTO_BYPASS: "${THESTUDIO_APPROVAL_AUTO_BYPASS:-false}"
+      THESTUDIO_AGENT_MODE: "${THESTUDIO_AGENT_MODE:-ralph}"
       THESTUDIO_AGENT_ISOLATION: "${THESTUDIO_AGENT_ISOLATION:-process}"
       THESTUDIO_AGENT_ISOLATION_FALLBACK: "${THESTUDIO_AGENT_ISOLATION_FALLBACK:-{\"observe\":\"allow\",\"suggest\":\"allow\",\"execute\":\"deny\"}}"
       # Preflight plan review gate (Epic 28)
