@@ -18,7 +18,7 @@ export function useInitialLoad(): void {
     async function loadTasks() {
       setTasksLoading(true)
       try {
-        const { items } = await fetchTasks({ limit: 100, status: 'IN_PROGRESS' })
+        const { items } = await fetchTasks({ limit: 100, status: 'in_progress' })
         if (cancelled) return
         for (const task of items) {
           if (task.stage_timings) {

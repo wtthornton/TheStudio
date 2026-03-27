@@ -126,6 +126,7 @@ export function RepoRegistrationStep() {
           <label htmlFor="wizard-owner" className="mb-1 block text-sm font-medium text-gray-300">
             Owner
           </label>
+          <p className="mb-1 text-xs text-gray-500">GitHub org or username that owns the repo.</p>
           <input
             id="wizard-owner"
             name="owner"
@@ -149,6 +150,9 @@ export function RepoRegistrationStep() {
           <label htmlFor="wizard-repo" className="mb-1 block text-sm font-medium text-gray-300">
             Repository
           </label>
+          <p className="mb-1 text-xs text-gray-500">
+            Repository name only (do not include owner or URL).
+          </p>
           <input
             id="wizard-repo"
             name="repo"
@@ -175,6 +179,18 @@ export function RepoRegistrationStep() {
           >
             Installation ID
           </label>
+          <p className="mb-1 text-xs text-gray-500">
+            Numeric GitHub App installation ID from{' '}
+            <a
+              href="https://github.com/settings/installations"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-400 underline-offset-2 hover:text-blue-300 hover:underline"
+            >
+              GitHub Settings → Installations
+            </a>
+            .
+          </p>
           <input
             id="wizard-installation-id"
             name="installation_id"

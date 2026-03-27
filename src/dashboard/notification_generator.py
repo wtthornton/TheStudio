@@ -239,14 +239,17 @@ async def start_notification_generator(
         nc = await nats.connect(nats_url)
         js = nc.jetstream()
 
-        # Ensure the PIPELINE stream exists (may already be created by
-        # events_publisher / budget_checker at application startup).
-        stream_name = "PIPELINE"
+        # Ensure the THESTUDIO_PIPELINE stream exists (may already be created
+        # by events_publisher / budget_checker at application startup).
+        stream_name = "THESTUDIO_PIPELINE"
         try:
             await js.find_stream_name_by_subject("pipeline.>")
         except Exception:
             try:
-                await js.add_stream(name=stream_name, subjects=["pipeline.>"])
+                await js.add_stream(
+                    name=stream_name,
+                    subjects=["pipeline.>", "github.event.>"],
+                )
                 logger.info("Created JetStream stream %s", stream_name)
             except Exception:
                 logger.debug(

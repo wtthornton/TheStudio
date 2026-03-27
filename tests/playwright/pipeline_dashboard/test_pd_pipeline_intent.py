@@ -8,6 +8,9 @@ Validates that /dashboard/?tab=pipeline delivers its core purpose:
   - Event Log section ("RECENT EVENTS") is always present.
   - Gate Inspector section ("Gate Inspector") is always present.
   - Stage nodes carry visible stage name labels when tasks are active.
+  - Setup wizard (when shown for a fresh session): repo-registration step
+    exposes inline field help and links to GitHub Installations for the
+    Installation ID.
 
 These tests check *what* the page communicates, not *how* it looks.
 Style compliance is in test_pd_pipeline_style.py (Story 76.4).
@@ -31,6 +34,10 @@ PIPELINE_STAGE_LABELS = [
     "QA",
     "Publish",
 ]
+
+_SETUP_COMPLETE_KEY = "thestudio_setup_complete"
+_SETUP_SKIPPED_KEY = "thestudio_setup_skipped"
+_INSTALLATIONS_URL = "https://github.com/settings/installations"
 
 
 # ---------------------------------------------------------------------------
@@ -277,3 +284,55 @@ class TestGateInspectorSection:
         assert "All" in bar_text, "Gate filter bar must show 'All' filter option"
         assert "Pass" in bar_text, "Gate filter bar must show 'Pass' filter option"
         assert "Fail" in bar_text, "Gate filter bar must show 'Fail' filter option"
+
+
+# ---------------------------------------------------------------------------
+# Setup wizard — repo registration (Epic 44)
+# ---------------------------------------------------------------------------
+
+
+def _open_repo_registration_step(page: object, base_url: str) -> None:
+    """Open dashboard with wizard shown and advance to step 2 (repo registration)."""
+    page.add_init_script(  # type: ignore[attr-defined]
+        f"""
+        localStorage.removeItem({_SETUP_COMPLETE_KEY!r});
+        localStorage.removeItem({_SETUP_SKIPPED_KEY!r});
+        """
+    )
+    page.goto(  # type: ignore[attr-defined]
+        f"{base_url}/dashboard/?tab=pipeline", wait_until="domcontentloaded"
+    )
+    page.wait_for_timeout(500)  # type: ignore[attr-defined]
+
+    next_btn = page.get_by_test_id("wizard-next")  # type: ignore[attr-defined]
+    assert next_btn.count() > 0, "Setup wizard should be visible for fresh sessions"
+    next_btn.click()
+    page.wait_for_timeout(250)  # type: ignore[attr-defined]
+
+    step = page.get_by_test_id("wizard-step-repo-registration")  # type: ignore[attr-defined]
+    assert step.count() > 0, "Step 2 (repo registration) should render after clicking Next"
+
+
+class TestSetupWizardRepoRegistrationGuidance:
+    """Repo-registration step should provide actionable field guidance."""
+
+    def test_repo_registration_field_help_text_present(self, page, base_url: str) -> None:
+        """Owner/repo/installation fields include helper copy."""
+        _open_repo_registration_step(page, base_url)
+
+        body = page.locator("body").inner_text()  # type: ignore[attr-defined]
+        assert "GitHub org or username that owns the repo." in body
+        assert "Repository name only (do not include owner or URL)." in body
+        assert "Numeric GitHub App installation ID" in body
+
+    def test_installation_id_guidance_links_to_github_installations(
+        self, page, base_url: str
+    ) -> None:
+        """Step contains Installation ID guidance links to GitHub Settings."""
+        _open_repo_registration_step(page, base_url)
+
+        links = page.locator(f"a[href='{_INSTALLATIONS_URL}']")  # type: ignore[attr-defined]
+        assert links.count() >= 2, (
+            "Repo registration step should expose GitHub Installations link in both "
+            "intro copy and Installation ID field help."
+        )

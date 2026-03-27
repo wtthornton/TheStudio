@@ -226,13 +226,16 @@ async def start_budget_checker(
 
         # Ensure the pipeline stream exists (may already be created by
         # events_publisher / gate_consumer at application startup).
-        stream_name = "PIPELINE"
+        stream_name = "THESTUDIO_PIPELINE"
         subject = "pipeline.cost_update"
         try:
             await js.find_stream_name_by_subject(subject)
         except Exception:
             try:
-                await js.add_stream(name=stream_name, subjects=["pipeline.>"])
+                await js.add_stream(
+                    name=stream_name,
+                    subjects=["pipeline.>", "github.event.>"],
+                )
                 logger.info("Created JetStream stream %s", stream_name)
             except Exception:
                 logger.debug(

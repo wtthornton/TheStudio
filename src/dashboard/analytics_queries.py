@@ -11,6 +11,8 @@ Design rationale:
 - Each function handles missing/empty data gracefully (returns empty lists,
   zero values) rather than raising errors.
 - Period arithmetic uses PostgreSQL ``interval`` casting for reliability.
+- Interval/days values are inlined (from a hardcoded map) to avoid asyncpg
+  parameter type inference issues with interval and integer casts.
 """
 
 from __future__ import annotations
@@ -32,16 +34,13 @@ _PIPELINE_STAGES = (
     "agent", "verification", "qa", "publisher",
 )
 
-
-def _period_to_interval(period: str) -> str:
-    """Convert a period string (7d, 30d, 90d) to a PostgreSQL interval literal."""
-    days = {"7d": 7, "30d": 30, "90d": 90}.get(period, 30)
-    return f"{days} days"
+# Safe period-to-days mapping — only these values are ever inlined into SQL
+_PERIOD_DAYS_MAP = {"7d": 7, "30d": 30, "90d": 90}
 
 
 def _period_days(period: str) -> int:
     """Return the number of days in a period string."""
-    return {"7d": 7, "30d": 30, "90d": 90}.get(period, 30)
+    return _PERIOD_DAYS_MAP.get(period, 30)
 
 
 # ---------------------------------------------------------------------------
@@ -65,21 +64,21 @@ async def query_throughput(
 
     Returns ``{"period": "30d", "bucket": "day", "data": [{"date": "...", "count": N}, ...]}``.
     """
-    interval = _period_to_interval(period)
+    days = _period_days(period)
     trunc = "day" if bucket == "day" else "week"
 
-    sql = text("""
+    sql = text(f"""
         SELECT date_trunc(:trunc, completed_at)::date AS bucket_date,
                count(*)::int AS cnt
         FROM taskpacket
         WHERE status IN ('published', 'rejected', 'failed', 'aborted')
           AND completed_at IS NOT NULL
-          AND completed_at >= now() - :interval ::interval
-          AND (:repo IS NULL OR repo = :repo)
+          AND completed_at >= now() - interval '{days} days'
+          AND (CAST(:repo AS text) IS NULL OR repo = :repo)
         GROUP BY bucket_date
         ORDER BY bucket_date
     """)
-    result = await session.execute(sql, {"trunc": trunc, "interval": interval, "repo": repo})
+    result = await session.execute(sql, {"trunc": trunc, "repo": repo})
     rows = result.fetchall()
 
     return {
@@ -112,10 +111,10 @@ async def query_bottlenecks(
 
     Returns ``{"period": "...", "stages": [...]}``.
     """
-    interval = _period_to_interval(period)
+    days = _period_days(period)
 
     # Extract stage timings from JSONB, compute duration per stage
-    sql = text("""
+    sql = text(f"""
         WITH stage_data AS (
             SELECT
                 key AS stage_name,
@@ -126,11 +125,11 @@ async def query_bottlenecks(
                  jsonb_each(stage_timings::jsonb) AS kv(key, value)
             WHERE status IN ('published', 'rejected', 'failed', 'aborted')
               AND completed_at IS NOT NULL
-              AND completed_at >= now() - :interval ::interval
+              AND completed_at >= now() - interval '{days} days'
               AND stage_timings IS NOT NULL
               AND value->>'end' IS NOT NULL
               AND value->>'start' IS NOT NULL
-              AND (:repo IS NULL OR repo = :repo)
+              AND (CAST(:repo AS text) IS NULL OR repo = :repo)
         ),
         stage_stats AS (
             SELECT
@@ -150,7 +149,7 @@ async def query_bottlenecks(
         FROM stage_stats
         ORDER BY avg_seconds DESC
     """)
-    result = await session.execute(sql, {"interval": interval, "repo": repo})
+    result = await session.execute(sql, {"repo": repo})
     rows = result.fetchall()
 
     return {
@@ -190,9 +189,9 @@ async def query_categories(
         period: Lookback period (7d, 30d, 90d).
         repo: Optional repo full_name filter (owner/repo).
     """
-    interval = _period_to_interval(period)
+    days = _period_days(period)
 
-    sql = text("""
+    sql = text(f"""
         WITH categorised AS (
             SELECT
                 t.id,
@@ -202,8 +201,8 @@ async def query_categories(
             FROM taskpacket t
             WHERE t.status IN ('published', 'rejected', 'failed', 'aborted')
               AND t.completed_at IS NOT NULL
-              AND t.completed_at >= now() - :interval ::interval
-              AND (:repo IS NULL OR t.repo = :repo)
+              AND t.completed_at >= now() - interval '{days} days'
+              AND (CAST(:repo AS text) IS NULL OR t.repo = :repo)
         ),
         cost_per_task AS (
             SELECT
@@ -220,8 +219,8 @@ async def query_categories(
             FROM taskpacket t
             WHERE t.status IN ('published', 'rejected', 'failed', 'aborted')
               AND t.completed_at IS NOT NULL
-              AND t.completed_at >= now() - :interval ::interval
-              AND (:repo IS NULL OR t.repo = :repo)
+              AND t.completed_at >= now() - interval '{days} days'
+              AND (CAST(:repo AS text) IS NULL OR t.repo = :repo)
         )
         SELECT
             c.category,
@@ -237,7 +236,7 @@ async def query_categories(
         ORDER BY cnt DESC
     """)
 
-    result = await session.execute(sql, {"interval": interval, "repo": repo})
+    result = await session.execute(sql, {"repo": repo})
     rows = result.fetchall()
 
     categories = []
@@ -279,17 +278,16 @@ async def query_failures(
         repo: Optional repo full_name filter — joins gate_evidence to taskpacket.
     """
     days = _period_days(period)
-    interval = _period_to_interval(period)
 
     # Current period failures — join taskpacket when repo filter is needed
-    sql = text("""
+    sql = text(f"""
         WITH current_period AS (
             SELECT ge.stage, ge.defect_category, count(*)::int AS cnt
             FROM gate_evidence ge
             LEFT JOIN taskpacket t ON t.id = ge.task_id
             WHERE ge.result = 'fail'
-              AND ge.created_at >= now() - :interval ::interval
-              AND (:repo IS NULL OR t.repo = :repo)
+              AND ge.created_at >= now() - interval '{days} days'
+              AND (CAST(:repo AS text) IS NULL OR t.repo = :repo)
             GROUP BY ge.stage, ge.defect_category
         ),
         previous_period AS (
@@ -297,9 +295,9 @@ async def query_failures(
             FROM gate_evidence ge
             LEFT JOIN taskpacket t ON t.id = ge.task_id
             WHERE ge.result = 'fail'
-              AND ge.created_at >= now() - (:days * 2)::int * interval '1 day'
-              AND ge.created_at < now() - :interval ::interval
-              AND (:repo IS NULL OR t.repo = :repo)
+              AND ge.created_at >= now() - interval '{days * 2} days'
+              AND ge.created_at < now() - interval '{days} days'
+              AND (CAST(:repo AS text) IS NULL OR t.repo = :repo)
             GROUP BY ge.stage, ge.defect_category
         )
         SELECT
@@ -314,7 +312,7 @@ async def query_failures(
         ORDER BY cp.stage, cp.cnt DESC
     """)
 
-    result = await session.execute(sql, {"interval": interval, "days": days, "repo": repo})
+    result = await session.execute(sql, {"repo": repo})
     rows = result.fetchall()
 
     # Group by stage
@@ -371,11 +369,10 @@ async def query_summary(
         period: Lookback period (7d, 30d, 90d).
         repo: Optional repo full_name filter (owner/repo).
     """
-    interval = _period_to_interval(period)
     days = _period_days(period)
 
     # Current period stats — repo filter applied to taskpacket; spend joined to taskpacket
-    sql = text("""
+    sql = text(f"""
         WITH current_tasks AS (
             SELECT
                 count(*)::int AS completed,
@@ -385,8 +382,8 @@ async def query_summary(
             FROM taskpacket
             WHERE status IN ('published', 'rejected', 'failed', 'aborted')
               AND completed_at IS NOT NULL
-              AND completed_at >= now() - :interval ::interval
-              AND (:repo IS NULL OR repo = :repo)
+              AND completed_at >= now() - interval '{days} days'
+              AND (CAST(:repo AS text) IS NULL OR repo = :repo)
         ),
         previous_tasks AS (
             SELECT
@@ -397,24 +394,24 @@ async def query_summary(
             FROM taskpacket
             WHERE status IN ('published', 'rejected', 'failed', 'aborted')
               AND completed_at IS NOT NULL
-              AND completed_at >= now() - (:days * 2)::int * interval '1 day'
-              AND completed_at < now() - :interval ::interval
-              AND (:repo IS NULL OR repo = :repo)
+              AND completed_at >= now() - interval '{days * 2} days'
+              AND completed_at < now() - interval '{days} days'
+              AND (CAST(:repo AS text) IS NULL OR repo = :repo)
         ),
         current_spend AS (
             SELECT round(coalesce(sum(mca.cost), 0)::numeric, 6) AS total
             FROM model_call_audit mca
             LEFT JOIN taskpacket t ON t.id = mca.task_id
-            WHERE mca.created_at >= now() - :interval ::interval
-              AND (:repo IS NULL OR mca.task_id IS NULL OR t.repo = :repo)
+            WHERE mca.created_at >= now() - interval '{days} days'
+              AND (CAST(:repo AS text) IS NULL OR mca.task_id IS NULL OR t.repo = :repo)
         ),
         previous_spend AS (
             SELECT round(coalesce(sum(mca.cost), 0)::numeric, 6) AS total
             FROM model_call_audit mca
             LEFT JOIN taskpacket t ON t.id = mca.task_id
-            WHERE mca.created_at >= now() - (:days * 2)::int * interval '1 day'
-              AND mca.created_at < now() - :interval ::interval
-              AND (:repo IS NULL OR mca.task_id IS NULL OR t.repo = :repo)
+            WHERE mca.created_at >= now() - interval '{days * 2} days'
+              AND mca.created_at < now() - interval '{days} days'
+              AND (CAST(:repo AS text) IS NULL OR mca.task_id IS NULL OR t.repo = :repo)
         )
         SELECT
             ct.completed AS cur_completed,
@@ -430,7 +427,7 @@ async def query_summary(
         FROM current_tasks ct, previous_tasks pt, current_spend cs, previous_spend ps
     """)
 
-    result = await session.execute(sql, {"interval": interval, "days": days, "repo": repo})
+    result = await session.execute(sql, {"repo": repo})
     row = result.fetchone()
 
     if row is None:

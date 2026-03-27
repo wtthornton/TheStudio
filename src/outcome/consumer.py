@@ -50,6 +50,25 @@ async def start_signal_consumer(
         nc = await nats.connect(nats_url)
         js = nc.jetstream()
 
+        # Ensure streams exist before subscribing (may already be created
+        # by verification/QA signal publishers or the gate_consumer).
+        for stream_name, subjects in [
+            ("THESTUDIO_VERIFICATION", ["thestudio.verification.>"]),
+            ("THESTUDIO_QA", ["thestudio.qa.>"]),
+        ]:
+            try:
+                await js.find_stream_name_by_subject(subjects[0])
+            except Exception:
+                try:
+                    await js.add_stream(name=stream_name, subjects=subjects)
+                    logger.info("Created JetStream stream %s", stream_name)
+                except Exception:
+                    logger.debug(
+                        "Could not create stream %s (may already exist)",
+                        stream_name,
+                        exc_info=True,
+                    )
+
         async def _on_verification(msg: Any) -> None:
             try:
                 await _process_message(msg.data)
