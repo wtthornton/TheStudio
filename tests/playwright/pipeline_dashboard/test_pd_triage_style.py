@@ -344,14 +344,20 @@ class TestTriageDesignTokens:
             raise
 
     def test_surface_app_token_registered(self, page, base_url: str) -> None:
-        """CSS custom property --color-surface-app is registered on :root (§4.1)."""
+        """§4.1 app surface: ``--color-bg-surface`` on :root (see ``frontend/src/theme.css``).
+
+        Tailwind maps ``--color-surface`` → ``var(--color-bg-surface)`` in
+        ``frontend/src/index.css`` @theme; there is no ``--color-surface-app`` alias.
+        """
         _navigate(page, base_url)
         try:
-            val = get_css_variable(page, "--color-surface-app")
-            assert val, "--color-surface-app is empty — §4.1 requires a surface token"
+            val = get_css_variable(page, "--color-bg-surface")
+            assert val, "--color-bg-surface is empty — §4.1 requires a surface token"
         except AssertionError as exc:
             if "not found" in str(exc).lower():
-                pytest.skip("--color-surface-app not present; token may be named differently")
+                pytest.skip(
+                    "--color-bg-surface not present; stylesheet may load differently"
+                )
             raise
 
 

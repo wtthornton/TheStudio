@@ -217,8 +217,12 @@ export function HelpPanel({
           </div>
         </div>
 
-        {/* Panel body — scrollable */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 text-sm text-gray-300">
+        {/* Panel body — scrollable only when open (closed panel stays off-screen but
+            must not expose a scrollable region to axe while translated away). */}
+        <div
+          className={`flex-1 px-5 py-4 text-sm text-gray-300 ${open ? 'overflow-y-auto' : 'overflow-hidden'}`}
+          tabIndex={open ? 0 : undefined}
+        >
           {isSearching ? (
             /* Search results list */
             searchResults.length > 0 ? (

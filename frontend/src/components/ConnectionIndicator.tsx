@@ -11,7 +11,7 @@ export function ConnectionIndicator() {
         className={`inline-block h-2.5 w-2.5 rounded-full ${connected ? 'bg-emerald-500' : 'bg-red-500 animate-pulse'}`}
         data-testid="connection-dot"
       />
-      <span className="text-xs text-gray-400" data-testid="connection-label">
+      <span className="text-xs text-gray-300" data-testid="connection-label">
         {connected ? 'Connected' : 'Disconnected'}
       </span>
     </div>

@@ -62,7 +62,7 @@ export function EmptyState({
           {heading}
         </h3>
         {description && (
-          <p className="text-sm text-gray-400" data-testid={`${testId}-description`}>
+          <p className="text-sm text-gray-300" data-testid={`${testId}-description`}>
             {description}
           </p>
         )}
@@ -74,15 +74,16 @@ export function EmptyState({
             (primaryAction.href ? (
               <a
                 href={primaryAction.href}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-gray-950"
                 data-testid={`${testId}-primary-action`}
               >
                 {primaryAction.label}
               </a>
             ) : (
               <button
+                type="button"
                 onClick={primaryAction.onClick}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-gray-950"
                 data-testid={`${testId}-primary-action`}
               >
                 {primaryAction.label}
@@ -93,15 +94,16 @@ export function EmptyState({
             (secondaryAction.href ? (
               <a
                 href={secondaryAction.href}
-                className="text-sm text-gray-400 hover:text-gray-200 underline underline-offset-2 transition-colors rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+                className="inline-flex min-h-8 min-w-8 items-center justify-center box-border px-4 py-2.5 text-sm leading-normal text-gray-100 underline underline-offset-2 transition-colors rounded-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-gray-950 hover:text-white"
                 data-testid={`${testId}-secondary-action`}
               >
                 {secondaryAction.label}
               </a>
             ) : (
               <button
+                type="button"
                 onClick={secondaryAction.onClick}
-                className="text-sm text-gray-400 hover:text-gray-200 underline underline-offset-2 transition-colors rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+                className="inline-flex min-h-8 min-w-8 items-center justify-center box-border px-4 py-2.5 text-sm leading-normal text-gray-100 underline underline-offset-2 transition-colors rounded-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-gray-950 hover:text-white"
                 data-testid={`${testId}-secondary-action`}
               >
                 {secondaryAction.label}

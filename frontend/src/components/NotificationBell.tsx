@@ -148,8 +148,9 @@ function NotificationDropdown({ onNavigate, onClose }: NotificationDropdownProps
         <h3 className="text-sm font-semibold text-gray-100">Notifications</h3>
         {unreadCount > 0 && (
           <button
+            type="button"
             onClick={handleMarkAll}
-            className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+            className="min-h-6 rounded px-2 py-1 text-xs text-blue-300 hover:text-blue-200 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900"
             data-testid="mark-all-read"
           >
             Mark all read
@@ -157,8 +158,11 @@ function NotificationDropdown({ onNavigate, onClose }: NotificationDropdownProps
         )}
       </div>
 
-      {/* Body */}
-      <div className="max-h-96 overflow-y-auto">
+      {/* Body — tabIndex allows keyboard focus for scroll (axe scrollable-region-focusable). */}
+      <div
+        className="max-h-96 overflow-y-auto rounded-b-lg focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+        tabIndex={0}
+      >
         {loading && notifications.length === 0 ? (
           <div className="px-4 py-8 text-center text-sm text-gray-500">Loading…</div>
         ) : notifications.length === 0 ? (
@@ -257,10 +261,11 @@ export function NotificationBell({ onNavigate }: NotificationBellProps) {
   return (
     <div className="relative" ref={containerRef} data-component="NotificationBell">
       <button
+        type="button"
         onClick={toggle}
         aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
         data-testid="notification-bell"
-        className={`relative p-1.5 rounded transition-colors ${
+        className={`relative min-h-9 min-w-9 inline-flex items-center justify-center rounded p-1.5 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-950 ${
           open
             ? 'bg-gray-700 text-gray-100'
             : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'

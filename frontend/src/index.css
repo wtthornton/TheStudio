@@ -250,3 +250,17 @@ pre {
   border-radius: 6px;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4), 0 0 0 9999px rgba(0, 0, 0, 0.55);
 }
+
+/* ---------------------------------------------------------------------------
+ * Pipeline dashboard — focus fallback (WCAG 2.4.11)
+ * Playwright a11y uses element.focus() without a prior key event; Chromium
+ * may not match :focus-visible, so Tailwind ring utilities may not paint.
+ * Scoped !important outline ensures script-driven focus still shows a ring.
+ * --------------------------------------------------------------------------- */
+[data-dashboard-shell] button:focus,
+[data-dashboard-shell] a[href]:focus,
+[data-dashboard-shell] select:focus,
+[data-dashboard-shell] nav[aria-label='Primary navigation']:focus {
+  outline: 2px solid var(--color-focus-ring, #2563eb) !important;
+  outline-offset: 2px !important;
+}

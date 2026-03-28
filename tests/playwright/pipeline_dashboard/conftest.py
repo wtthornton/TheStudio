@@ -12,6 +12,25 @@ from tests.playwright.conftest import navigate
 pytestmark = pytest.mark.playwright
 
 # ---------------------------------------------------------------------------
+# Setup wizard — do not block dashboard tests (Epic 44)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _dashboard_bypass_setup_wizard(page: object) -> None:
+    """Mark setup wizard complete before any dashboard document runs JS.
+
+    Without this, the Epic 44 modal intercepts clicks on the tab bar and breaks
+    interaction tests; it also inflates a11y checks with wizard-only controls.
+    Mirrors ``frontend/src/components/wizard/wizardStorage.ts`` keys.
+    """
+    # Playwright: runs before any page script on each navigation in this context.
+    page.context.add_init_script(
+        "localStorage.setItem('thestudio_setup_complete', 'true');"
+    )
+
+
+# ---------------------------------------------------------------------------
 # URL / tab registry
 # ---------------------------------------------------------------------------
 

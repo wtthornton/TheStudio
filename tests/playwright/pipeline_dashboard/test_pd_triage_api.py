@@ -3,9 +3,9 @@
 Validates that the backing API endpoints for the triage tab return HTTP 200
 with valid JSON conforming to the expected schema.
 
-Triage backing endpoints:
-  - GET /api/v1/dashboard/tasks?status=triaging   — triage task list
-  - GET /api/v1/dashboard/tasks?status=triaging&limit=N — limit parameter
+Triage backing endpoints (must match ``frontend/src/lib/api.ts`` ``fetchTriageTasks``):
+  - GET /api/v1/dashboard/tasks?status=triage   — triage task list (enum value on server)
+  - GET /api/v1/dashboard/tasks?status=triage&limit=N — limit parameter
   - GET /api/v1/tasks/{id} (item-level, skipped if no tasks present)
 
 These tests check *contract stability*, not visual presentation.
@@ -27,15 +27,15 @@ pytestmark = pytest.mark.playwright
 # API route constants
 # ---------------------------------------------------------------------------
 
-_TASKS_TRIAGING = "/api/v1/dashboard/tasks?status=triaging"
-_TASKS_TRIAGING_LIMIT = "/api/v1/dashboard/tasks?status=triaging&limit=5"
+_TASKS_TRIAGE_FILTERED = "/api/v1/dashboard/tasks?status=triage"
+_TASKS_TRIAGE_LIMIT = "/api/v1/dashboard/tasks?status=triage&limit=5"
 _TASKS_ALL = "/api/v1/dashboard/tasks"
 
 # Fallback routes — some builds expose tasks under a different prefix.
 _TASKS_FALLBACK_ROUTES = [
-    "/api/v1/tasks?status=triaging",
+    "/api/v1/tasks?status=triage",
     "/api/v1/tasks",
-    "/admin/tasks?status=triaging",
+    "/admin/tasks?status=triage",
 ]
 
 
@@ -50,31 +50,31 @@ def _navigate_to_triage(page, base_url: str) -> None:
 
 
 class TestTriageTaskListEndpoint:
-    """GET /api/v1/dashboard/tasks?status=triaging must return a valid task list.
+    """GET /api/v1/dashboard/tasks?status=triage must return a valid task list.
 
     The TriageQueue component sources its data from this endpoint.  A failing
     or malformed response results in an empty queue even when tasks exist.
     """
 
-    def test_tasks_triaging_returns_200(self, page, base_url: str) -> None:
-        """GET /api/v1/dashboard/tasks?status=triaging returns HTTP 200."""
+    def test_tasks_triage_returns_200(self, page, base_url: str) -> None:
+        """GET /api/v1/dashboard/tasks?status=triage returns HTTP 200."""
         _navigate_to_triage(page, base_url)
-        assert_api_endpoint(page, "GET", _TASKS_TRIAGING, 200)
+        assert_api_endpoint(page, "GET", _TASKS_TRIAGE_FILTERED, 200)
 
-    def test_tasks_triaging_returns_valid_json(self, page, base_url: str) -> None:
-        """GET /api/v1/dashboard/tasks?status=triaging returns parseable JSON."""
+    def test_tasks_triage_returns_valid_json(self, page, base_url: str) -> None:
+        """GET /api/v1/dashboard/tasks?status=triage returns parseable JSON."""
         _navigate_to_triage(page, base_url)
-        data = assert_api_endpoint(page, "GET", _TASKS_TRIAGING, 200)
+        data = assert_api_endpoint(page, "GET", _TASKS_TRIAGE_FILTERED, 200)
         assert data is not None, (
-            "GET /api/v1/dashboard/tasks?status=triaging must return a JSON body"
+            "GET /api/v1/dashboard/tasks?status=triage must return a JSON body"
         )
 
-    def test_tasks_triaging_returns_list_or_object_with_list(
+    def test_tasks_triage_returns_list_or_object_with_list(
         self, page, base_url: str
     ) -> None:
         """Response is either a JSON list or an object with a list field."""
         _navigate_to_triage(page, base_url)
-        data = assert_api_endpoint(page, "GET", _TASKS_TRIAGING, 200)
+        data = assert_api_endpoint(page, "GET", _TASKS_TRIAGE_FILTERED, 200)
 
         is_list = isinstance(data, list)
         is_object_with_list = isinstance(data, dict) and any(
@@ -85,10 +85,10 @@ class TestTriageTaskListEndpoint:
             "a list field (e.g. {\"tasks\": [...]})"
         )
 
-    def test_tasks_triaging_no_error_body(self, page, base_url: str) -> None:
-        """GET /api/v1/dashboard/tasks?status=triaging contains no error payload."""
+    def test_tasks_triage_no_error_body(self, page, base_url: str) -> None:
+        """GET /api/v1/dashboard/tasks?status=triage contains no error payload."""
         _navigate_to_triage(page, base_url)
-        assert_api_no_error(page, _TASKS_TRIAGING)
+        assert_api_no_error(page, _TASKS_TRIAGE_FILTERED)
 
 
 # ---------------------------------------------------------------------------
@@ -107,7 +107,7 @@ class TestTriageTaskItemSchema:
     def _get_tasks(self, page, base_url: str) -> list:
         """Return the list of tasks from the API response."""
         _navigate_to_triage(page, base_url)
-        data = assert_api_endpoint(page, "GET", _TASKS_TRIAGING, 200)
+        data = assert_api_endpoint(page, "GET", _TASKS_TRIAGE_FILTERED, 200)
         if isinstance(data, list):
             return data
         if isinstance(data, dict):
@@ -181,14 +181,14 @@ class TestTriageTaskLimitParameter:
     """
 
     def test_limit_parameter_returns_200(self, page, base_url: str) -> None:
-        """GET /api/v1/dashboard/tasks?status=triaging&limit=5 returns HTTP 200."""
+        """GET /api/v1/dashboard/tasks?status=triage&limit=5 returns HTTP 200."""
         _navigate_to_triage(page, base_url)
-        assert_api_endpoint(page, "GET", _TASKS_TRIAGING_LIMIT, 200)
+        assert_api_endpoint(page, "GET", _TASKS_TRIAGE_LIMIT, 200)
 
     def test_limit_parameter_respects_count(self, page, base_url: str) -> None:
         """Response with limit=5 returns at most 5 task items."""
         _navigate_to_triage(page, base_url)
-        data = assert_api_endpoint(page, "GET", _TASKS_TRIAGING_LIMIT, 200)
+        data = assert_api_endpoint(page, "GET", _TASKS_TRIAGE_LIMIT, 200)
 
         tasks: list = []
         if isinstance(data, list):
@@ -210,7 +210,7 @@ class TestTriageTaskLimitParameter:
     def test_limit_parameter_no_error(self, page, base_url: str) -> None:
         """Applying limit=5 does not produce an error response."""
         _navigate_to_triage(page, base_url)
-        assert_api_no_error(page, _TASKS_TRIAGING_LIMIT)
+        assert_api_no_error(page, _TASKS_TRIAGE_LIMIT)
 
 
 # ---------------------------------------------------------------------------

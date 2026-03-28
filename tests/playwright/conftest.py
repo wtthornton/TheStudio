@@ -102,11 +102,15 @@ def _require_playwright_stack(base_url: str) -> None:
 
 
 def navigate(page, url: str) -> None:
-    """Navigate to URL and assert response is valid. Waits for network idle."""
-    response = page.goto(url)
+    """Navigate to URL and assert response is valid.
+
+    Uses ``load`` (not ``networkidle``): React/HTMX SPAs and long-lived connections
+    often prevent *networkidle* from ever firing, which caused 30s timeouts.
+    """
+    response = page.goto(url, wait_until="load")
     assert response is not None, f"No response from {url}"
     assert response.status == 200, f"{url} returned status {response.status}"
-    page.wait_for_load_state("networkidle")
+    page.wait_for_load_state("load")
 
 
 @pytest.fixture

@@ -70,7 +70,7 @@ export function HeaderBar({ onResumeWizard, onOpenApiDocs, activeTab, onSwitchTa
     <div className="flex items-center gap-6 text-sm" data-testid="header-bar" data-component="HeaderBar">
       <AppSwitcher />
       <span
-        className="text-gray-400"
+        className="text-gray-300"
         data-testid="active-count"
         data-tooltip-id="header-tip"
         data-tooltip-content="Tasks currently processing through the pipeline"
@@ -78,7 +78,7 @@ export function HeaderBar({ onResumeWizard, onOpenApiDocs, activeTab, onSwitchTa
         <span className="font-medium text-emerald-400">{activeCount}</span> active
       </span>
       <span
-        className="text-gray-400"
+        className="text-gray-300"
         data-testid="queued-count"
         data-tooltip-id="header-tip"
         data-tooltip-content="Tasks waiting in the Intake queue"
@@ -86,7 +86,7 @@ export function HeaderBar({ onResumeWizard, onOpenApiDocs, activeTab, onSwitchTa
         <span className="font-medium text-amber-400">{queuedCount}</span> queued
       </span>
       <span
-        className="text-gray-400"
+        className="text-gray-300"
         data-testid="running-cost"
         data-tooltip-id="header-tip"
         data-tooltip-content="Cumulative LLM API spend this session"
@@ -117,7 +117,7 @@ export function HeaderBar({ onResumeWizard, onOpenApiDocs, activeTab, onSwitchTa
       )}
       <a
         href="/admin/ui/settings"
-        className="ml-auto rounded px-2.5 py-1 text-xs text-gray-500 hover:text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        className="ml-auto inline-flex min-h-6 items-center rounded px-2.5 py-1.5 text-xs text-gray-300 hover:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-950"
         title="Admin Settings"
         data-testid="admin-settings-link"
         aria-label="Admin Settings"

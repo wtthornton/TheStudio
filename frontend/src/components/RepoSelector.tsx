@@ -42,7 +42,7 @@ export function RepoSelector() {
       <select
         value={selectedRepo ?? ''}
         onChange={(e) => setSelectedRepo(e.target.value || null)}
-        className="rounded border border-gray-700 bg-gray-800 px-2 py-1 text-xs text-gray-300 focus:border-blue-500 focus:outline-none"
+        className="rounded border border-gray-700 bg-gray-800 px-2 py-1 text-xs text-gray-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-950"
         data-testid="repo-selector-dropdown"
       >
         <option value="">All Repos</option>

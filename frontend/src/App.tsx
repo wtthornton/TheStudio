@@ -75,6 +75,15 @@ const VALID_TABS: Tab[] = [
   'trust', 'budget', 'activity', 'analytics', 'reputation', 'repos', 'api',
 ]
 
+/** Primary nav tab styles: visible :focus ring for keyboard + programmatic focus (WCAG 2.4.11). */
+function primaryNavTabClass(active: boolean): string {
+  const ring =
+    'shrink-0 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-950'
+  return active
+    ? `${ring} bg-gray-700 text-gray-100`
+    : `${ring} text-gray-300 hover:text-gray-100`
+}
+
 /** Parse ?tab= from the current URL, returning it if valid or 'pipeline'. */
 function getInitialTab(): Tab {
   const param = new URLSearchParams(window.location.search).get('tab')
@@ -163,7 +172,10 @@ function App() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100 pb-16">
+    <div
+      className="min-h-screen bg-gray-950 text-gray-100 pb-16"
+      data-dashboard-shell
+    >
       {showSetupWizard ? (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
@@ -196,77 +208,93 @@ function App() {
         <div className="flex items-center gap-2 sm:gap-4 min-w-0 overflow-hidden">
           <h1 className="text-lg font-semibold shrink-0 hidden md:block">TheStudio Pipeline Dashboard</h1>
           <h1 className="text-sm font-semibold shrink-0 md:hidden">TheStudio</h1>
-          <nav className="flex gap-1 overflow-x-auto scrollbar-none flex-nowrap" aria-label="Primary navigation">
+          <nav
+            className="flex gap-1 overflow-x-auto scrollbar-none flex-nowrap rounded-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-950"
+            aria-label="Primary navigation"
+            tabIndex={0}
+          >
             <button
+              type="button"
               onClick={() => setActiveTab('pipeline')}
-              className={`px-3 py-1.5 text-sm rounded ${activeTab === 'pipeline' ? 'bg-gray-700 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}
+              className={primaryNavTabClass(activeTab === 'pipeline')}
             >
               Pipeline
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('triage')}
-              className={`px-3 py-1.5 text-sm rounded ${activeTab === 'triage' ? 'bg-gray-700 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}
+              className={primaryNavTabClass(activeTab === 'triage')}
             >
               Triage
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('intent')}
-              className={`px-3 py-1.5 text-sm rounded ${activeTab === 'intent' ? 'bg-gray-700 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}
+              className={primaryNavTabClass(activeTab === 'intent')}
             >
               Intent Review
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('routing')}
-              className={`px-3 py-1.5 text-sm rounded ${activeTab === 'routing' ? 'bg-gray-700 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}
+              className={primaryNavTabClass(activeTab === 'routing')}
             >
               Routing Review
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('board')}
-              className={`px-3 py-1.5 text-sm rounded ${activeTab === 'board' ? 'bg-gray-700 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}
+              className={primaryNavTabClass(activeTab === 'board')}
             >
               Backlog
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('trust')}
-              className={`px-3 py-1.5 text-sm rounded ${activeTab === 'trust' ? 'bg-gray-700 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}
+              className={primaryNavTabClass(activeTab === 'trust')}
             >
               Trust Tiers
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('budget')}
-              className={`px-3 py-1.5 text-sm rounded ${activeTab === 'budget' ? 'bg-gray-700 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}
+              className={primaryNavTabClass(activeTab === 'budget')}
             >
               Budget
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('activity')}
-              className={`px-3 py-1.5 text-sm rounded ${activeTab === 'activity' ? 'bg-gray-700 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}
+              className={primaryNavTabClass(activeTab === 'activity')}
             >
               Activity Log
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('analytics')}
-              className={`px-3 py-1.5 text-sm rounded ${activeTab === 'analytics' ? 'bg-gray-700 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}
+              className={primaryNavTabClass(activeTab === 'analytics')}
             >
               Analytics
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('reputation')}
-              className={`px-3 py-1.5 text-sm rounded ${activeTab === 'reputation' ? 'bg-gray-700 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}
+              className={primaryNavTabClass(activeTab === 'reputation')}
             >
               Reputation
             </button>
             {/* Epic 41 — Repo Settings tab */}
             <button
+              type="button"
               onClick={() => setActiveTab('repos')}
-              className={`px-3 py-1.5 text-sm rounded ${activeTab === 'repos' ? 'bg-gray-700 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}
+              className={primaryNavTabClass(activeTab === 'repos')}
             >
               Repos
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('api')}
-              className={`px-3 py-1.5 text-sm rounded ${activeTab === 'api' ? 'bg-gray-700 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}
+              className={primaryNavTabClass(activeTab === 'api')}
               data-spotlight="api-tab"
             >
               API
@@ -278,8 +306,9 @@ function App() {
           <RepoSelector />
           {/* Epic 38 — Import GitHub Issues */}
           <button
+            type="button"
             onClick={() => setImportModalOpen(true)}
-            className="rounded bg-blue-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-600"
+            className="rounded bg-blue-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-gray-950"
           >
             ↓ Import Issues
           </button>
